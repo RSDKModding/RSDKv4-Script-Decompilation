@@ -1,0 +1,152 @@
+//--------------------Sonic 1 / Sonic 2 Elevator Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 45: TYPE_ELEVATOR
+
+// Function declarations
+#function Elevator_Function111
+#function Elevator_Function112
+
+
+
+//Unknown Variables
+#constant 0:constant0x10F7C
+
+function Elevator_Function111
+	TempValue0=Object[0].Value17
+	TempValue0-=Elevator_constant33
+	DrawSprite(TempValue0)
+endfunction
+
+
+function Elevator_Function112
+	CreateTempObject(TypeName[Elevator],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value1=Object.YPos
+	Object[TempObjectPos].Value2=Object.YPos
+	Object[TempObjectPos].Value2-=0x420000
+	Object[TempObjectPos].Value3=Object.YPos
+	Object[TempObjectPos].Value3-=0x800000
+	Object[TempObjectPos].Frame=Object[0].Value17
+	Object[TempObjectPos].Frame-=Elevator_constant33
+endfunction
+
+
+sub ObjectMain
+	TempValue6=Object.YPos
+	switch Object.State
+	case 0
+		if Object.Value5==1
+			Object.State=1
+			if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+				Object.Priority=PRIORITY_ACTIVE
+			endif
+		endif
+		break
+	case 1
+		if Object.YPos>=Object.Value2
+			Object.YVelocity-=0x680
+		else
+			Object.YVelocity+=0x680
+		endif
+		Object.YPos+=Object.YVelocity
+		if Object.PropertyValue==0
+			if Object.YPos<=Object.Value3
+				Object.YPos=Object.Value3
+				Object.YVelocity=0
+				Object.State=2
+			endif
+		else
+			if Object.YPos>=Object.Value3
+				Object.YPos=Object.Value3
+				Object.YVelocity=0
+				Object.State=2
+			endif
+		endif
+		break
+	case 2
+		break
+
+	endswitch
+	Object.Value5=0
+	TempValue0=Object.YPos
+	TempValue6&=-0x10000
+	Object.Value4=Object.YPos
+	Object.Value4&=-0x10000
+	Object.Value4-=TempValue6
+	Object.YPos=TempValue6
+	foreach TypeGroup[256],PlayerObjectPos
+		if Object.Frame==0
+			PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-64,-12,64,12,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		else
+			PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-32,-12,32,12,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		endif
+		if CheckResult==1
+			Object[PlayerObjectPos].YPos+=Object.Value4
+			Object.Value5=1
+		endif
+	floop
+	Object.YPos=TempValue0
+	if Object.OutOfBounds==1
+		TempValue0=Object.YPos
+		Object.YPos=Object.Value1
+		if Object.OutOfBounds==1
+			Object.State=0
+			if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+				Object.Priority=PRIORITY_ACTIVE_BOUNDS
+			endif
+			Object.Value5=0
+			Object.YVelocity=0
+		else
+			Object.YPos=TempValue0
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-64,-12,128,24,127,1)
+	SpriteFrame(-32,-12,64,24,141,26)
+	foreach TypeName[Elevator],ArrayPos0
+		Object[ArrayPos0].YPos+=0x40000
+		Object[ArrayPos0].Value1=Object[ArrayPos0].YPos
+		Object[ArrayPos0].Value2=Object[ArrayPos0].YPos
+		Object[ArrayPos0].Value3=Object[ArrayPos0].YPos
+		TempValue0=Object[ArrayPos0].PropertyValue
+		TempValue0&=127
+		TempValue0<<=18
+		Object[ArrayPos0].PropertyValue>>=7
+		if Object[ArrayPos0].PropertyValue==1
+			Object[ArrayPos0].YPos-=TempValue0
+			Object[ArrayPos0].Value1-=TempValue0
+			Object[ArrayPos0].Value3+=TempValue0
+			Object[ArrayPos0].Value2+=0x20000
+		else
+			Object[ArrayPos0].YPos+=TempValue0
+			Object[ArrayPos0].Value1+=TempValue0
+			Object[ArrayPos0].Value3-=TempValue0
+			Object[ArrayPos0].Value2-=0x20000
+		endif
+	floop
+	TempValue0=0
+	Elevator_constant33=DebugMode_constant25
+	while TempValue0<2
+		SetArrayValue(45,DebugMode_constant25,DebugMode_array12)
+		SetArrayValue(111,DebugMode_constant25,DebugMode_array13)
+		SetArrayValue(112,DebugMode_constant25,DebugMode_array11)
+		DebugMode_constant25++
+		TempValue0++
+	loop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

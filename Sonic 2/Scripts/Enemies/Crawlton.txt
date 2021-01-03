@@ -1,0 +1,203 @@
+//--------------------Sonic 1 / Sonic 2 Crawlton Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 56: TYPE_CRAWLTON
+
+// Function declarations
+#function Crawlton_Function134
+#function Crawlton_Function135
+#function Crawlton_Function136
+
+
+
+function Crawlton_Function134
+	DrawSpriteFX(0,FX_FLIP,Object.XPos,Object.YPos)
+endfunction
+
+
+function Crawlton_Function135
+	CreateTempObject(TypeName[Crawlton],0,Object.XPos,Object.YPos)
+endfunction
+
+
+function Crawlton_Function136
+	TempValue0=Object[PlayerObjectPos].XPos
+	TempValue0-=Object.XPos
+	TempValue0>>=16
+	Object.Value6=TempValue0
+	Object.Value6*=TempValue0
+	TempValue0=Object[PlayerObjectPos].YPos
+	TempValue0-=Object.YPos
+	TempValue0>>=16
+	TempValue1=TempValue0
+	TempValue1*=TempValue0
+	Object.Value6+=TempValue1
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object.State==0
+				if Object[PlayerObjectPos].XPos<Object.XPos
+					Object.Direction=FLIP_NONE
+				else
+					Object.Direction=FLIP_X
+				endif
+				CallFunction(Crawlton_Function136)
+				if Object.Value6<0x4000
+					Object.Value7=PlayerObjectPos
+					Object.State=1
+				endif
+			endif
+		floop
+		break
+	case 1
+		PlayerObjectPos=Object.Value7
+		if Object[PlayerObjectPos].XPos<Object.XPos
+			Object.Direction=FLIP_NONE
+		else
+			Object.Direction=FLIP_X
+		endif
+		Object.Value0++
+		if Object.Value0==32
+			CallFunction(Crawlton_Function136)
+			if Object.Value6<0x4000
+				Object.Value2=Object[PlayerObjectPos].XPos
+				Object.Value2-=Object.XPos
+				Object.Value2/=0x12000
+				Object.Value3=Object[PlayerObjectPos].YPos
+				Object.Value3-=Object.YPos
+				Object.Value3/=0x12000
+			else
+				TempValue0=Object[PlayerObjectPos].XPos
+				TempValue0-=Object.XPos
+				TempValue1=Object[PlayerObjectPos].YPos
+				TempValue1-=Object.YPos
+				ATan2(TempValue2,TempValue0,TempValue1)
+				Cos256(Object.Value2,TempValue2)
+				Sin256(Object.Value3,TempValue2)
+				Object.Value2*=224
+				Object.Value3*=224
+				Object.Value2>>=9
+				Object.Value3>>=9
+			endif
+			Object.Value0=0
+			Object.State=2
+		endif
+		break
+	case 2
+		if Object.Value1<0x1C0000
+			Object.Value1+=0x10000
+		else
+			Object.State=3
+		endif
+		break
+	case 3
+		Object.Value0++
+		if Object.Value0==32
+			Object.Value0=0
+			Object.State=4
+		endif
+		break
+	case 4
+		if Object.Value1>0
+			Object.Value1-=0x10000
+		else
+			Object.State=0
+		endif
+		break
+
+	endswitch
+	Object.Value4=Object.Value2
+	Object.Value4*=Object.Value1
+	Object.Value4/=28
+	Object.Value4+=Object.XPos
+	Object.Value5=Object.Value3
+	Object.Value5*=Object.Value1
+	Object.Value5/=28
+	Object.Value5+=Object.YPos
+	TempValue6=Object.XPos
+	TempValue7=Object.YPos
+	Object.XPos=Object.Value4
+	Object.YPos=Object.Value5
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_TOUCH,Object.EntityNo,-10,-8,10,8,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+		if CheckResult==1
+			CallFunction(PlayerObject_Function44)
+		endif
+	floop
+	if Object.Type==TypeName[Crawlton]
+		Object.XPos=TempValue6
+		Object.YPos=TempValue7
+		if Object.OutOfBounds==1
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(1,FX_FLIP,Object.XPos,Object.YPos)
+	switch Object.State
+	case 2
+		TempValue0=Object.Value1
+		TempValue0&=0x3FFFF
+		while TempValue0<Object.Value1
+			TempValue1=Object.Value2
+			TempValue1*=TempValue0
+			TempValue1/=28
+			TempValue1+=Object.XPos
+			TempValue2=Object.Value3
+			TempValue2*=TempValue0
+			TempValue2/=28
+			TempValue2+=Object.YPos
+			DrawSpriteFX(1,FX_FLIP,TempValue1,TempValue2)
+			TempValue0+=0x40000
+		loop
+		break
+	case 3
+	case 4
+		TempValue0=0x40000
+		while TempValue0<Object.Value1
+			TempValue1=Object.Value2
+			TempValue1*=TempValue0
+			TempValue1/=28
+			TempValue1+=Object.XPos
+			TempValue2=Object.Value3
+			TempValue2*=TempValue0
+			TempValue2/=28
+			TempValue2+=Object.YPos
+			DrawSpriteFX(1,FX_FLIP,TempValue1,TempValue2)
+			TempValue0+=0x40000
+		loop
+		break
+
+	endswitch
+	DrawSpriteFX(0,FX_FLIP,Object.Value4,Object.Value5)
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone06")
+	if CheckResult==1
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-16,-8,24,16,152,114)
+		SpriteFrame(-8,-8,16,15,135,114)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16,-8,24,16,152,114)
+		SpriteFrame(-8,-8,16,15,135,114)
+	endif
+	SetArrayValue(56,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(134,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(135,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

@@ -1,0 +1,219 @@
+//--------------------Sonic 1 / Sonic 2 Button Bridge Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 57: TYPE_BUTTONBRIDGE
+
+// Function declarations
+#function ButtonBridge_Function127
+#function ButtonBridge_Function128
+#function ButtonBridge_Function129
+
+#constant 0:ButtonBridge_constant38
+
+
+function ButtonBridge_Function127
+	Object[ArrayPos0].Priority=PRIORITY_ACTIVE
+	Object[ArrayPos0].Value0=64
+	Object[ArrayPos0].Value1=Object[ArrayPos0].XPos
+	if Object[ArrayPos0].Direction==FLIP_NONE
+		Object[ArrayPos0].Value1-=0x4C0000
+	else
+		Object[ArrayPos0].Value1+=0x4C0000
+	endif
+	if Object[ArrayPos0].PropertyValue==1
+		if Object[ArrayPos0].Direction==FLIP_NONE
+			Object[ArrayPos0].XPos-=0x800000
+		else
+			Object[ArrayPos0].XPos+=0x800000
+		endif
+	endif
+endfunction
+
+
+function ButtonBridge_Function128
+	TempValue0=Object[0].Value17
+	TempValue0-=ButtonBridge_constant38
+	TempValue1=Object.XPos
+	if Object.Direction==FLIP_NONE
+		TempValue1-=0x4C0000
+	else
+		TempValue1+=0x4C0000
+	endif
+	DrawSpriteXY(0,TempValue1,Object.YPos)
+	TempValue1=Object.XPos
+	if TempValue0==1
+		if Object.Direction==FLIP_NONE
+			TempValue1-=0x800000
+		else
+			TempValue1+=0x800000
+		endif
+	endif
+	DrawSpriteXY(4,TempValue1,Object.YPos)
+endfunction
+
+
+function ButtonBridge_Function129
+	TempValue0=Object[0].Value17
+	TempValue0-=ButtonBridge_constant38
+	CreateTempObject(TypeName[ButtonBridge],TempValue0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Direction=Object.Direction
+	ArrayPos0=Object[TempObjectPos].EntityNo
+	CallFunction(ButtonBridge_Function127)
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		if Object[+1].Value0==1
+			if Object.PropertyValue==0
+				Object.State=1
+			else
+				Object.State=3
+			endif
+		endif
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-64,-12,64,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		floop
+		break
+	case 1
+		TempValue0=Object.XPos
+		TempValue0&=-0x10000
+		if Object.Direction==FLIP_NONE
+			Object.XPos-=0x20000
+			Object.Frame++
+		else
+			Object.XPos+=0x20000
+			Object.Frame--
+		endif
+		Object.Frame&=3
+		Object.Value0--
+		if Object.Value0<=0
+			if Object.PropertyValue==0
+				Object.State=2
+			else
+				Object.State=0
+				Object.Value0=64
+			endif
+		endif
+		TempValue1=Object.XPos
+		TempValue1&=-0x10000
+		TempValue1-=TempValue0
+		TempValue2=Object.XPos
+		Object.XPos=TempValue0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-64,-12,64,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			switch CheckResult
+			case 1
+				Object[PlayerObjectPos].XPos+=TempValue1
+				break
+			case 2
+			case 3
+				if Object[PlayerObjectPos].State==24
+					Object[PlayerObjectPos].Value1=0
+					Object[PlayerObjectPos].Animation=ANI_GLIDING_DROP
+					Object[PlayerObjectPos].State=22
+				endif
+				break
+
+			endswitch
+		floop
+		Object.XPos=TempValue2
+		break
+	case 2
+		Object.Value0++
+		if Object.Value0==180
+			Object.Value0=0
+			if Object.PropertyValue==0
+				Object.State=3
+			else
+				Object.State=1
+			endif
+			Object.Value0=64
+		endif
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-64,-12,64,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		floop
+		break
+	case 3
+		TempValue0=Object.XPos
+		TempValue0&=-0x10000
+		if Object.Direction==FLIP_NONE
+			Object.XPos+=0x20000
+			Object.Frame--
+		else
+			Object.XPos-=0x20000
+			Object.Frame++
+		endif
+		Object.Frame&=3
+		Object.Value0--
+		if Object.Value0<=0
+			if Object.PropertyValue==0
+				Object.State=0
+				Object.Value0=64
+			else
+				Object.State=2
+			endif
+		endif
+		TempValue1=Object.XPos
+		TempValue1&=-0x10000
+		TempValue1-=TempValue0
+		TempValue2=Object.XPos
+		Object.XPos=TempValue0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-64,-12,64,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			switch CheckResult
+			case 1
+				Object[PlayerObjectPos].XPos+=TempValue1
+				break
+			case 2
+			case 3
+				if Object[PlayerObjectPos].State==24
+					Object[PlayerObjectPos].Value1=0
+					Object[PlayerObjectPos].Animation=ANI_GLIDING_DROP
+					Object[PlayerObjectPos].State=22
+				endif
+				break
+
+			endswitch
+		floop
+		Object.XPos=TempValue2
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteXY(Object.Frame,Object.Value1,Object.YPos)
+	DrawSprite(4)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-12,8,24,24,133,126)
+	SpriteFrame(-12,8,24,24,158,126)
+	SpriteFrame(-12,8,24,24,158,126)
+	SpriteFrame(-12,8,24,24,183,126)
+	SpriteFrame(-64,-12,128,24,350,182)
+	foreach TypeName[ButtonBridge],ArrayPos0
+		CallFunction(ButtonBridge_Function127)
+	floop
+	TempValue0=0
+	ButtonBridge_constant38=DebugMode_constant25
+	while TempValue0<2
+		SetArrayValue(57,DebugMode_constant25,DebugMode_array12)
+		SetArrayValue(128,DebugMode_constant25,DebugMode_array13)
+		SetArrayValue(129,DebugMode_constant25,DebugMode_array11)
+		DebugMode_constant25++
+		TempValue0++
+	loop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

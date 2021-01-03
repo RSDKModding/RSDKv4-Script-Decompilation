@@ -1,0 +1,161 @@
+//--------------------Sonic 1 / Sonic 2 V Plunger Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 46: TYPE_VPLUNGER
+
+// Function declarations
+#function VPlunger_Function114
+#function VPlunger_Function115
+
+
+
+function VPlunger_Function114
+	DrawSprite(5)
+endfunction
+
+
+function VPlunger_Function115
+	CreateTempObject(TypeName[VPlunger],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].YPos&=-0x10000
+	Object[TempObjectPos].InkEffect=INK_ALPHA
+endfunction
+
+
+sub ObjectMain
+	if Object.Value2==1
+		if Object.Value1<0x210000
+			Object.Value1+=0x4000
+		endif
+	else
+		if Object.Value1>0
+			Object.Value1-=0x20000
+			if Object.Value1<0
+				Object.Value1=0
+			endif
+		else
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+		endif
+	endif
+	TempValue2=Object.Value2
+	Object.Value2=0
+	foreach TypeGroup[256],PlayerObjectPos
+		CheckEqual(Object[PlayerObjectPos].State,28)
+		TempValue7=CheckResult
+		CheckEqual(Object[PlayerObjectPos].State,26)
+		TempValue7|=CheckResult
+		if TempValue7==0
+			TempValue0=Object.Value1
+			TempValue0>>=16
+			TempValue0-=28
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-11,TempValue0,11,28,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			TempValue1=TempValue0
+			TempValue0-=2
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-11,TempValue0,11,TempValue1,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				Object[PlayerObjectPos].State=1
+				Object[PlayerObjectPos].Gravity=GRAVITY_GROUND
+				Object[PlayerObjectPos].TrackScroll=0
+				Object[PlayerObjectPos].Animation=ANI_JUMPING
+				Object[PlayerObjectPos].XPos=Object.XPos
+				Object[PlayerObjectPos].YPos=Object[PlayerObjectPos].CollisionBottom
+				FlipSign(Object[PlayerObjectPos].YPos)
+				Object[PlayerObjectPos].YPos<<=16
+				Object[PlayerObjectPos].YPos-=0x1C0000
+				Object[PlayerObjectPos].YPos+=Object.Value1
+				Object[PlayerObjectPos].YPos&=-0x10000
+				Object[PlayerObjectPos].YPos+=Object.YPos
+				Object[PlayerObjectPos].XVelocity=0
+				Object[PlayerObjectPos].YVelocity=1
+				Object.Value2|=Object[PlayerObjectPos].JumpHold
+			endif
+		endif
+	floop
+	if Object.Value1>0x60000
+		if TempValue2==1
+			if Object.Value2==0
+				Object.Priority=PRIORITY_ACTIVE
+				foreach TypeGroup[256],PlayerObjectPos
+					CheckEqual(Object[PlayerObjectPos].State,28)
+					TempValue7=CheckResult
+					CheckEqual(Object[PlayerObjectPos].State,26)
+					TempValue7|=CheckResult
+					if TempValue7==0
+						if Object[PlayerObjectPos].State==1
+							PlayerObjectCollision(C_TOUCH,Object.EntityNo,-11,-28,11,28,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+							if CheckResult==1
+								Object[PlayerObjectPos].State=12
+								Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+								Object[PlayerObjectPos].Value1=0
+								Object[PlayerObjectPos].XVelocity=0
+								Object[PlayerObjectPos].Speed=0
+								Object[PlayerObjectPos].YVelocity=Object.Value1
+								Object[PlayerObjectPos].YVelocity*=3
+								Object[PlayerObjectPos].YVelocity>>=2
+								FlipSign(Object[PlayerObjectPos].YVelocity)
+								PlaySfx(SFXName[Plunger],0)
+							endif
+						endif
+					endif
+				floop
+			endif
+		endif
+	endif
+	TempValue0=Object.Value1
+	TempValue0>>=15
+	Object.Angle+=TempValue0
+	Sin(TempValue1,Object.Angle)
+	TempValue1>>=4
+	TempValue0=Object.Value1
+	TempValue0>>=13
+	TempValue0-=64
+	TempValue0+=TempValue1
+	Object.Alpha=TempValue0
+endsub
+
+
+sub ObjectDraw
+	TempValue0=Object.Value1
+	TempValue0>>=20
+	DrawSprite(TempValue0)
+	TempValue0=-0x1C0000
+	TempValue0+=Object.Value1
+	TempValue0+=Object.YPos
+	DrawSpriteXY(3,Object.XPos,TempValue0)
+	DrawSpriteFX(4,FX_INK,Object.XPos,TempValue0)
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone04")
+	if CheckResult==1
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-11,-12,22,40,147,50)
+		SpriteFrame(-11,4,22,24,147,66)
+		SpriteFrame(-11,20,22,8,147,82)
+		SpriteFrame(-11,0,22,16,147,34)
+		SpriteFrame(-11,0,22,16,170,34)
+		SpriteFrame(-11,-28,22,56,147,34)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-11,-12,22,40,189,354)
+		SpriteFrame(-11,4,22,24,189,370)
+		SpriteFrame(-11,20,22,8,189,386)
+		SpriteFrame(-11,0,22,16,189,338)
+		SpriteFrame(-11,0,22,16,166,338)
+		SpriteFrame(-11,-28,22,56,189,338)
+	endif
+	foreach TypeName[VPlunger],ArrayPos0
+		Object[ArrayPos0].InkEffect=INK_ALPHA
+	floop
+	SetArrayValue(46,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(114,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(115,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

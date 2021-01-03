@@ -1,0 +1,290 @@
+//--------------------Sonic 1 / Sonic 2 Shellcracker Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 43: TYPE_SHELLCRACKER
+
+// Function declarations
+#function Shellcracker_Function103
+#function Shellcracker_Function104
+#function Shellcracker_Function105
+#function Shellcracker_Function106
+#function Shellcracker_Function107
+
+
+
+function Shellcracker_Function103
+	if Object[ArrayPos0].PropertyValue==0
+		Object[ArrayPos0].Direction=FLIP_NONE
+		Object[ArrayPos0].XVelocity=0x4000
+	else
+		Object[ArrayPos0].Direction=FLIP_X
+		Object[ArrayPos0].XVelocity=-0x4000
+	endif
+	Object[ArrayPos0].Frame=0
+	Object[ArrayPos0].Value0=320
+	Object[ArrayPos0].Value3=0x140000
+	Object[ArrayPos0].Value4=0
+	Object[ArrayPos0].State=0
+	Object[ArrayPos0].Priority=PRIORITY_ACTIVE_BOUNDS
+endfunction
+
+
+function Shellcracker_Function104
+	DrawSpriteFX(0,FX_FLIP,Object.XPos,Object.YPos)
+endfunction
+
+
+function Shellcracker_Function105
+	CreateTempObject(TypeName[Shellcracker],Object.Direction,Object.XPos,Object.YPos)
+	ArrayPos0=Object[TempObjectPos].EntityNo
+	Object[ArrayPos0].Value1=Object.XPos
+	Object[ArrayPos0].Value2=Object.YPos
+	CallFunction(Shellcracker_Function103)
+endfunction
+
+
+function Shellcracker_Function106
+	foreach TypeGroup[256],PlayerObjectPos
+		if Object.Direction==FLIP_NONE
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,0,-256,96,256,PlayerObjectPos,-1,-1,1,1)
+		else
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-96,-256,0,256,PlayerObjectPos,-1,-1,1,1)
+		endif
+		if CheckResult==1
+			Object.Value0=0
+			Object.Frame=3
+			Object.State=2
+		endif
+	floop
+endfunction
+
+
+function Shellcracker_Function107
+	if Object.OutOfBounds==1
+		TempValue0=Object.XPos
+		TempValue1=Object.YPos
+		Object.XPos=Object.Value1
+		Object.YPos=Object.Value2
+		Object.YPos+=Object.Value31
+		if Object.OutOfBounds==1
+			ArrayPos0=Object.EntityNo
+			CallFunction(Shellcracker_Function103)
+		else
+			Object.XPos=TempValue0
+			Object.YPos=TempValue1
+		endif
+	endif
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		Object.Priority=PRIORITY_ACTIVE
+		Object.XPos+=Object.XVelocity
+		Object.Value0--
+		if Object.Value0==0
+			Object.Frame=0
+			Object.AnimationTimer=0
+			Object.Value0=40
+			Object.State=1
+		endif
+		ObjectTileGrip(CMODE_FLOOR,0,12,0)
+		if CheckResult==0
+			Object.Frame=0
+			Object.AnimationTimer=0
+			FlipSign(Object.XVelocity)
+			Object.Value0=60
+			Object.State=1
+		endif
+		Object.Frame=Object.AnimationTimer
+		Object.Frame>>=4
+		Object.AnimationTimer++
+		if Object.AnimationTimer>=48
+			Object.AnimationTimer=0
+		endif
+		CallFunction(Shellcracker_Function106)
+		if Object.State==2
+			Object.Value0=10
+			Object.Value4=1
+			Object.Frame=0
+			Object.State=1
+		endif
+		CallFunction(Shellcracker_Function107)
+		break
+	case 1
+		Object.Value0--
+		if Object.Value0==0
+			Object.Value0=320
+			Object.State=0
+			if Object.Value4==1
+				Object.Value4=0
+				Object.Value0=0
+				Object.Frame=3
+				Object.State=2
+			else
+				CallFunction(Shellcracker_Function106)
+			endif
+		endif
+		CallFunction(Shellcracker_Function107)
+		break
+	case 2
+		if Object.Value3<0x480000
+			Object.Value3+=0x40000
+		else
+			Object.Value0=8
+			Object.State=3
+		endif
+		CallFunction(Shellcracker_Function107)
+		break
+	case 3
+		Object.Value0--
+		if Object.Value0==0
+			Object.State=4
+		endif
+		CallFunction(Shellcracker_Function107)
+		break
+	case 4
+		if Object.Value3>0x140000
+			Object.Value3-=0x40000
+		else
+			Object.Frame=0
+			Object.Value0=40
+			Object.State=1
+		endif
+		CallFunction(Shellcracker_Function107)
+		break
+	case 5
+		ArrayPos0=Object.Value0
+		if Object[ArrayPos0].Type==TypeName[Shellcracker]
+			Object.Type=TypeName[BlankObject]
+		endif
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x3800
+		TempValue1=Object.YPos
+		TempValue1>>=16
+		TempValue1-=Screen.CameraYPos
+		Absolute(TempValue1)
+		TempValue1-=32
+		if TempValue1>=Screen.CenterY
+			Object.Type=TypeName[BlankObject]
+		endif
+		break
+
+	endswitch
+	TempValue6=Object.XPos
+	TempValue7=Object.YPos
+	foreach TypeGroup[256],PlayerObjectPos
+		if Object.State<5
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-16,-8,16,8,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+			if CheckResult==1
+				CreateTempObject(TypeName[Shellcracker],0,Object.XPos,Object.YPos)
+				Object[TempObjectPos].Value3=Object.Value3
+				Object[TempObjectPos].Direction=Object.Direction
+				Object[TempObjectPos].State=5
+				Object[TempObjectPos].Value0=Object.EntityNo
+				if Object.Direction==FLIP_NONE
+					Object[TempObjectPos].XVelocity=0x40000
+				else
+					Object[TempObjectPos].XVelocity=-0x40000
+				endif
+				CallFunction(PlayerObject_Function44)
+			endif
+			if Object.Type==TypeName[Shellcracker]
+				if Object.Direction==FLIP_NONE
+					Object.XPos+=Object.Value3
+				else
+					Object.XPos-=Object.Value3
+				endif
+				Object.YPos-=0x80000
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-10,-7,10,7,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					CallFunction(PlayerObject_Function45)
+				endif
+				Object.XPos=TempValue6
+				Object.YPos=TempValue7
+			endif
+		endif
+	floop
+endsub
+
+
+sub ObjectDraw
+	if Object.State<5
+		DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+	endif
+	if Object.State>=2
+		TempValue1=Object.YPos
+		TempValue1-=0x20000
+		TempValue2=Object.Value3
+		TempValue7=0
+		while TempValue7<7
+			TempValue0=Object.XPos
+			if Object.Direction==FLIP_NONE
+				TempValue0-=0xA0000
+			else
+				TempValue0+=0xA0000
+			endif
+			if TempValue2<0x180000
+				TempValue2=0x180000
+			endif
+			if Object.Direction==FLIP_NONE
+				TempValue0+=TempValue2
+			else
+				TempValue0-=TempValue2
+			endif
+			DrawSpriteFX(4,FX_FLIP,TempValue0,TempValue1)
+			TempValue2-=0x80000
+			TempValue7++
+		loop
+		TempValue0=Object.XPos
+		if Object.Direction==FLIP_NONE
+			TempValue0+=Object.Value3
+		else
+			TempValue0-=Object.Value3
+		endif
+		TempValue1=Object.YPos
+		TempValue1-=0x80000
+		DrawSpriteFX(5,FX_FLIP,TempValue0,TempValue1)
+	endif
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone09")
+	if CheckResult==1
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-24,-19,56,31,199,30)
+		SpriteFrame(-24,-19,56,31,199,62)
+		SpriteFrame(-24,-19,56,31,199,94)
+		SpriteFrame(-24,-12,47,24,208,126)
+		SpriteFrame(-4,-4,8,8,190,53)
+		SpriteFrame(-12,-11,24,22,174,30)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24,-19,56,31,199,30)
+		SpriteFrame(-24,-19,56,31,199,62)
+		SpriteFrame(-24,-19,56,31,199,94)
+		SpriteFrame(-24,-12,47,24,208,126)
+		SpriteFrame(-4,-4,8,8,190,53)
+		SpriteFrame(-12,-11,24,22,174,30)
+	endif
+	foreach TypeName[Shellcracker],ArrayPos0
+		Object[ArrayPos0].Value1=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Value2=Object[ArrayPos0].YPos
+		Object[ArrayPos0].PropertyValue^=1
+		CallFunction(Shellcracker_Function103)
+	floop
+	SetArrayValue(43,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(104,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(105,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

@@ -1,0 +1,180 @@
+//--------------------Sonic 1 / Sonic 2 C Floor Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 63: TYPE_CFLOOR
+
+// Function declarations
+#function CFloor_Function145
+#function CFloor_Function146
+
+
+
+//Unknown Variables
+#constant 8:constant0x131A8
+#constant 30:constant0x131A9
+#constant 22:constant0x131AA
+#constant 14:constant0x131AB
+#constant 6:constant0x131AC
+#constant 26:constant0x131AD
+#constant 18:constant0x131AE
+#constant 10:constant0x131AF
+#constant 2:constant0x131B0
+#constant 8:constant0x131B1
+#constant 22:constant0x131B2
+#constant 30:constant0x131B3
+#constant 26:constant0x131B4
+#constant 18:constant0x131B5
+#constant 6:constant0x131B6
+#constant 14:constant0x131B7
+#constant 10:constant0x131B8
+#constant 2:constant0x131B9
+
+function CFloor_Function145
+	DrawSprite(0)
+endfunction
+
+
+function CFloor_Function146
+	CreateTempObject(TypeName[CFloor],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value2=0x131A8
+	GetBit(TempValue0,Object.Direction,0)
+	if TempValue0==0
+		Object[TempObjectPos].Direction=FLIP_NONE
+	else
+		Object[TempObjectPos].Direction=FLIP_X
+	endif
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 1
+		if Object.Value0<10
+			Object.Value0++
+		else
+			TempValue5=0
+			TempValue0=0
+			TempValue3=Object.YPos
+			TempValue3-=0x80000
+			TempValue4=10
+			while TempValue0<2
+				TempValue1=0
+				TempValue2=Object.XPos
+				if Object.Direction==FLIP_X
+					TempValue2-=0x180000
+				else
+					TempValue2+=0x180000
+				endif
+				while TempValue1<4
+					CreateTempObject(TypeName[CFloor],1,TempValue2,TempValue3)
+					Object[TempObjectPos].State=4
+					GetArrayValue(Object[TempObjectPos].Value1,TempValue5,Object.Value2)
+					TempValue5++
+					TempValue1++
+					if Object.Direction==FLIP_X
+						TempValue2+=0x100000
+					else
+						TempValue2-=0x100000
+					endif
+					TempValue4+=4
+				loop
+				TempValue4-=26
+				Object.Frame+=2
+				TempValue0++
+				TempValue3+=0x100000
+			loop
+			PlaySfx(SFXName[LedgeBreakL],0)
+			SetSfxAttributes(SFXName[LedgeBreakL],-1,-100)
+			PlaySfx(SFXName[LedgeBreakR],0)
+			SetSfxAttributes(SFXName[LedgeBreakR],-1,100)
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 2
+		if Object.Value0<20
+			Object.Value0++
+		else
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 4
+		if Object.Value0<Object.Value1
+			Object.Value0++
+		else
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 5
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x4000
+		if Object.OutOfBounds==1
+			Object.Type=TypeName[BlankObject]
+		endif
+		break
+
+	endswitch
+	if Object.State<4
+		if Object.OutOfBounds==1
+			Object.State=0
+			Object.Value0=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+		endif
+	endif
+	if Object.State<3
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object[PlayerObjectPos].YVelocity>=0
+				PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-32,-16,32,0,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					if Object.State==0
+						Object.State=1
+						Object.Priority=PRIORITY_ACTIVE
+					endif
+				endif
+			endif
+		floop
+	endif
+endsub
+
+
+sub ObjectDraw
+	switch Object.State
+	case 0
+	case 1
+		DrawSprite(0)
+		break
+	case 4
+	case 5
+		DrawSprite(Object.PropertyValue)
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-32,-16,64,32,317,363)
+	SpriteFrame(-8,-8,16,16,317,363)
+	foreach TypeName[CFloor],ArrayPos0
+		GetBit(TempValue5,Object[ArrayPos0].PropertyValue,0)
+		if TempValue5==0
+			Object[ArrayPos0].Value2=0x131A8
+		else
+			Object[ArrayPos0].Value2=0x131B1
+		endif
+	floop
+	SetArrayValue(63,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(145,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(146,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

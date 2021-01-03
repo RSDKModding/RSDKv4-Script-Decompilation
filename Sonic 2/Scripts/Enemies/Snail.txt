@@ -1,0 +1,166 @@
+//--------------------Sonic 1 / Sonic 2 Snail Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 58: TYPE_SNAIL
+
+// Function declarations
+#function Snail_Function127
+#function Snail_Function128
+
+
+
+function Snail_Function127
+	DrawSpriteFX(0,FX_FLIP,Object.XPos,Object.YPos)
+	DrawSpriteFX(2,FX_FLIP,Object.XPos,Object.YPos)
+endfunction
+
+
+function Snail_Function128
+	CreateTempObject(TypeName[Snail],0,Object.XPos,Object.YPos)
+	GetBit(TempValue0,Object.Direction,0)
+	if TempValue0==0
+		Object[TempObjectPos].Direction=FLIP_NONE
+		Object[TempObjectPos].XVelocity=-0x8000
+	else
+		Object[TempObjectPos].Direction=FLIP_X
+		Object[TempObjectPos].XVelocity=0x8000
+	endif
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		Object.Priority=PRIORITY_ACTIVE
+		Object.XPos+=Object.XVelocity
+		ObjectTileGrip(CMODE_FLOOR,0,15,0)
+		if CheckResult==0
+			Object.XPos-=Object.XVelocity
+			if Object.Direction==FLIP_X
+				Object.XVelocity=-0x8000
+			else
+				Object.XVelocity=0x8000
+			endif
+			Object.State=1
+		endif
+		TempValue0=Object.XVelocity
+		Absolute(TempValue0)
+		if TempValue0==0x8000
+			TempValue0=6
+		else
+			TempValue0=3
+		endif
+		Object.AnimationTimer++
+		if Object.AnimationTimer>=TempValue0
+			Object.AnimationTimer=0
+			Object.Frame^=1
+		endif
+		break
+	case 1
+		if Object.Value0<59
+			Object.Value0++
+		else
+			Object.Value0=0
+			Object.State=0
+			Object.Direction^=FLIP_X
+		endif
+		break
+
+	endswitch
+	if Object.OutOfBounds==1
+		TempValue0=Object.XPos
+		TempValue1=Object.YPos
+		Object.XPos=Object.Value1
+		Object.YPos=Object.Value2
+		if Object.OutOfBounds==1
+			if Object.PropertyValue==0
+				Object.Direction=FLIP_NONE
+				Object.XVelocity=-0x8000
+			else
+				Object.Direction=FLIP_X
+				Object.XVelocity=0x8000
+			endif
+			Object.AnimationTimer=0
+			Object.Frame=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+			Object.State=0
+		else
+			Object.XPos=TempValue0
+			Object.YPos=TempValue1
+		endif
+	endif
+	foreach TypeGroup[256],PlayerObjectPos
+		if Object.Direction==FLIP_NONE
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-96,-96,0,96,PlayerObjectPos,0,0,0,0)
+		else
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,0,-96,96,96,PlayerObjectPos,0,0,0,0)
+		endif
+		if CheckResult==1
+			if Object.Direction==FLIP_NONE
+				Object.XVelocity=-0x20000
+			else
+				Object.XVelocity=0x20000
+			endif
+		endif
+		PlayerObjectCollision(C_TOUCH,Object.EntityNo,-12,-16,12,16,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+		if CheckResult==1
+			CallFunction(PlayerObject_Function44)
+		endif
+	floop
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+	DrawSpriteFX(2,FX_FLIP,Object.XPos,Object.YPos)
+	TempValue0=Object.XVelocity
+	Absolute(TempValue0)
+	if TempValue0!=0x8000
+		TempValue0=Object.Frame
+		TempValue0+=3
+		DrawSpriteFX(TempValue0,FX_FLIP,Object.XPos,Object.YPos)
+	endif
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone01")
+	if CheckResult==1
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-16,-16,32,33,44,27)
+		SpriteFrame(-16,-16,32,33,77,27)
+		SpriteFrame(-23,-6,16,16,110,44)
+		SpriteFrame(16,0,6,5,19,50)
+		SpriteFrame(16,0,7,5,19,56)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16,-16,32,33,44,27)
+		SpriteFrame(-16,-16,32,33,77,27)
+		SpriteFrame(-23,-6,16,16,110,44)
+		SpriteFrame(16,0,6,5,19,50)
+		SpriteFrame(16,0,7,5,19,56)
+	endif
+	foreach TypeName[Snail],ArrayPos0
+		Object[ArrayPos0].Value1=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Value2=Object[ArrayPos0].YPos
+		GetBit(TempValue0,Object[ArrayPos0].PropertyValue,0)
+		if TempValue0==0
+			Object[ArrayPos0].Direction=FLIP_NONE
+			Object[ArrayPos0].XVelocity=-0x8000
+		else
+			Object[ArrayPos0].Direction=FLIP_X
+			Object[ArrayPos0].XVelocity=0x8000
+		endif
+	floop
+	SetArrayValue(58,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(127,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(128,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

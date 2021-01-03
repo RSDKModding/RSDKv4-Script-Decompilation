@@ -1,0 +1,160 @@
+//--------------------Sonic 1 / Sonic 2 Glass Pillar Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 42: TYPE_GLASSPILLAR
+
+// Function declarations
+#function GlassPillar_Function98
+#function GlassPillar_Function99
+
+#constant 0:GlassPillar_constant30
+
+
+function GlassPillar_Function98
+	TempValue0=Object[0].Value17
+	TempValue0-=GlassPillar_constant30
+	DrawSprite(TempValue0)
+endfunction
+
+
+function GlassPillar_Function99
+	CreateTempObject(TypeName[GlassPillar],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Frame=Object[0].Value17
+	Object[TempObjectPos].Frame-=GlassPillar_constant30
+	if Object[TempObjectPos].Frame==0
+		if Object.Direction==FLIP_X
+			Object[TempObjectPos].State=2
+			Object[TempObjectPos].Value5=-0x1000
+			Object[TempObjectPos].Value4=0x800
+			Object[TempObjectPos].YPos-=0x200000
+		else
+			Object[TempObjectPos].State=1
+			Object[TempObjectPos].Value5=0x1000
+			Object[TempObjectPos].Value4=-0x800
+			Object[TempObjectPos].YPos-=0x200000
+		endif
+	else
+		Object[TempObjectPos].Value4=0x1000
+	endif
+	Object[TempObjectPos].DrawOrder=5
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		Object.Angle=oscillation
+		Object.Angle<<=1
+		Object.Value1=Object.YPos
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX2,Object.EntityNo,-32,-56,32,56,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==4
+				if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+					CallFunction(PlayerObject_Function51)
+					Object[PlayerObjectPos].Value18=6
+				endif
+			endif
+		floop
+		Object.Angle=oscillation
+		Object.Angle<<=1
+		Sin(Object.Value3,Object.Angle)
+		Object.Value3*=Object.Value4
+		Object.Value3+=Object.YPos
+		Object.Value3&=-0x10000
+		break
+	case 1
+	case 2
+		Object.Angle=oscillation
+		Object.Angle<<=1
+		Sin(Object.Value2,Object.Angle)
+		Object.Value2*=Object.Value5
+		Object.Value2+=Object.YPos
+		Object.Value2&=-0x10000
+		Object.Value2-=Object.Value1
+		TempValue0=Object.YPos
+		Object.YPos=Object.Value1
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX2,Object.EntityNo,-32,-72,32,68,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			switch CheckResult
+			case 1
+				if CheckResult==1
+					Object[PlayerObjectPos].YPos+=Object.Value2
+				endif
+				break
+			case 4
+				if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+					if Object.Value2>0
+						CallFunction(PlayerObject_Function51)
+						Object[PlayerObjectPos].Value18=6
+					endif
+				endif
+				endswitch
+			floop
+			Object.YPos=TempValue0
+			Sin(Object.Value1,Object.Angle)
+			Object.Value1*=Object.Value5
+			Object.Value1+=Object.YPos
+			Object.Value1&=-0x10000
+			Sin(Object.Value3,Object.Angle)
+			Object.Value3*=Object.Value4
+			Object.Value3+=Object.YPos
+			Object.Value3&=-0x10000
+			break
+
+		endswitch
+endsub
+
+
+
+sub ObjectDraw
+	DrawSpriteXY(Object.Frame,Object.XPos,Object.Value1)
+	DrawSpriteXY(2,Object.XPos,Object.Value3)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-32,-72,64,144,191,1)
+	SpriteFrame(-32,-56,64,112,126,1)
+	SpriteFrame(-16,-16,31,32,159,114)
+	foreach TypeName[GlassPillar],ArrayPos0
+		Object[ArrayPos0].Frame=Object[ArrayPos0].PropertyValue
+		Object[ArrayPos0].Frame>>=4
+		Object[ArrayPos0].Frame%=3
+		Object[ArrayPos0].State=Object[ArrayPos0].PropertyValue
+		Object[ArrayPos0].State&=7
+		if Object[ArrayPos0].State>5
+			Object[ArrayPos0].State=0
+		endif
+		switch Object[ArrayPos0].State
+		case 1
+			Object[ArrayPos0].Value5=0x1000
+			Object[ArrayPos0].Value4=-0x800
+			Object[ArrayPos0].YPos-=0x200000
+			break
+		case 2
+			Object[ArrayPos0].Value5=-0x1000
+			Object[ArrayPos0].Value4=0x800
+			Object[ArrayPos0].YPos-=0x200000
+			break
+
+		endswitch
+		Object[ArrayPos0].DrawOrder=5
+	floop
+	TempValue0=0
+	GlassPillar_constant30=DebugMode_constant23
+	while TempValue0<2
+		SetArrayValue(42,DebugMode_constant23,DebugMode_array12)
+		SetArrayValue(98,DebugMode_constant23,DebugMode_array13)
+		SetArrayValue(99,DebugMode_constant23,DebugMode_array11)
+		DebugMode_constant23++
+		TempValue0++
+	loop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

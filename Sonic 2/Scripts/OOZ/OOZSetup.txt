@@ -1,0 +1,540 @@
+//--------------------Sonic 1 / Sonic 2 OOZ Setup Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 40: TYPE_OOZSETUP
+
+// Function declarations
+#function OOZSetup_Function97
+#function OOZSetup_Function98
+#function OOZSetup_Function99
+#function OOZSetup_Function100
+#function OOZSetup_Function101
+#function OOZSetup_Function102
+
+
+#array OOZSetup_array41:(1,2,1,3,1,2,2,1,2,3,1,2,1,2,0,0,2,0,3,2,2,3,2,2,1,3,0,0,1,0,1,3,1,2,1,3,1,2,2,1,2,3,1,2,1,2,0,0,2,0,3,2,2,3,2,2,1,3,0,0,1,0,1,3)
+#array OOZSetup_array38:(816,12,817,6,818,10,819,4)
+#array OOZSetup_array39:(820,7,821,7,822,7,823,7)
+#array OOZSetup_array40:(824,7,826,7,828,7,830,7)
+
+//Unknown Variables
+#constant 4:constant0xF884
+#constant 0xC00000:constant0xF885
+#constant 0xE06000:constant0xF886
+#constant 0xE0C000:constant0xF887
+#constant 0xE0E080:constant0xF888
+
+function OOZSetup_Function97
+	Object.AnimationSpeed=Object.Speed
+	if Object.AnimationSpeed<0
+		FlipSign(Object.AnimationSpeed)
+	endif
+	Object.AnimationSpeed*=120
+	Object.AnimationSpeed/=0x60000
+	Object.AnimationSpeed+=20
+endfunction
+
+
+function OOZSetup_Function98
+	if Object.Animation!=ANI_SKIDDING
+		TempValue7=1
+	else
+		TempValue7=0
+	endif
+	CallFunction(PlayerObject_Function2)
+	if Object.Gravity==GRAVITY_AIR
+		Object.State=12
+		CallFunction(PlayerObject_Function4)
+	else
+		CallFunction(PlayerObject_Function5)
+		if Object.Speed==0
+			if Object.CollisionMode==CMODE_FLOOR
+				if Object.Value1<240
+					Object.Animation=ANI_STOPPED
+					Object.Value1++
+				else
+					Object.Animation=ANI_WAITING
+					if Stage.PlayerListPos==2
+						Object.Value1++
+						if Object.Value1==834
+							Object.Value1=0
+							Object.Animation=ANI_STOPPED
+						endif
+					endif
+				endif
+			endif
+		else
+			Object.Value1=0
+			if Object.Speed>0
+				if Object.Speed<0x5F5C2
+					Object.Animation=ANI_WALKING
+					CallFunction(PlayerObject_Function52)
+				else
+					if Object.Speed>0x9FFFF
+						Object.Animation=ANI_PEELOUT
+					else
+						Object.Animation=ANI_RUNNING
+					endif
+					CallFunction(PlayerObject_Function53)
+				endif
+			else
+				if Object.Speed>-0x5F5C2
+					Object.Animation=ANI_WALKING
+					CallFunction(PlayerObject_Function52)
+				else
+					if Object.Speed<-0x9FFFF
+						Object.Animation=ANI_PEELOUT
+					else
+						Object.Animation=ANI_RUNNING
+					endif
+					CallFunction(PlayerObject_Function53)
+				endif
+			endif
+		endif
+		if Object.Value14>0
+			if TempValue7==1
+				PlaySfx(SFXName[Skidding],0)
+			endif
+			Object.Animation=ANI_SKIDDING
+			Object.AnimationSpeed=0
+			Object.Value14--
+			if ringTimer==0
+				CreateTempObject(TypeName[DustPuff],0,Object.XPos,Object.YPos)
+				Object[TempObjectPos].iYPos+=Object.CollisionBottom
+				Object[TempObjectPos].DrawOrder=Object.Value18
+			endif
+			if Object.Speed>0
+				Object.Direction=FLIP_NONE
+			else
+				Object.Direction=FLIP_X
+			endif
+		endif
+		if Object.CollisionMode==CMODE_FLOOR
+			if Object.Pushing==2
+				Object.Animation=ANI_PUSHING
+				Object.AnimationSpeed=0
+			endif
+		endif
+		if Object.JumpPress==1
+			CallFunction(PlayerObject_Function6)
+		endif
+	endif
+endfunction
+
+
+function OOZSetup_Function99
+	if Object.ControlLock>0
+		Object.ControlLock--
+		Sin256(TempValue0,Object.Angle)
+		TempValue0*=0x2000
+		TempValue0>>=8
+		Object.Speed+=TempValue0
+	else
+		if Object.Left==1
+			TempValue0=Object.Value20
+			FlipSign(TempValue0)
+			if Object.Speed>TempValue0
+				Object.Speed-=0x400
+			endif
+			if Object.Speed<=0
+				Object.Direction=FLIP_X
+			endif
+		endif
+		if Object.Right==1
+			if Object.Speed<Object.Value20
+				Object.Speed+=0x400
+			endif
+			if Object.Speed>=0
+				Object.Direction=FLIP_NONE
+			endif
+		endif
+		TempValue0=Object.Left
+		TempValue0|=Object.Right
+		if TempValue0==0
+			if Object.Speed>0
+				Object.Speed-=4
+				if Object.Speed<0
+					Object.Speed=0
+				endif
+			else
+				Object.Speed+=4
+				if Object.Speed>0
+					Object.Speed=0
+				endif
+			endif
+			if Object.Speed>0x2000
+				Sin256(TempValue0,Object.Angle)
+				TempValue0*=0x2000
+				TempValue0>>=8
+				Object.Speed+=TempValue0
+			endif
+			if Object.Speed<-0x2000
+				Sin256(TempValue0,Object.Angle)
+				TempValue0*=0x2000
+				TempValue0>>=8
+				Object.Speed+=TempValue0
+			endif
+			if Object.Angle>192
+				if Object.Angle<228
+					if Object.Speed>-0x10000
+						if Object.Speed<0x10000
+							Object.ControlLock=30
+						endif
+					endif
+				endif
+			endif
+			if Object.Angle>28
+				if Object.Angle<64
+					if Object.Speed>-0x10000
+						if Object.Speed<0x10000
+							Object.ControlLock=30
+						endif
+					endif
+				endif
+			endif
+		else
+			Sin256(TempValue0,Object.Angle)
+			TempValue0*=0x2000
+			TempValue0>>=8
+			Object.Speed+=TempValue0
+			if Object.Right==1
+				if Object.Left==0
+					if Object.Angle>192
+						if Object.Angle<228
+							if Object.Speed<0x28000
+								if Object.Speed>-0x20000
+									Object.ControlLock=30
+								endif
+							endif
+						endif
+					endif
+				endif
+			else
+				if Object.Left==1
+					if Object.Angle>28
+						if Object.Angle<64
+							if Object.Speed>-0x28000
+								if Object.Speed<0x20000
+									Object.ControlLock=30
+								endif
+							endif
+						endif
+					endif
+				endif
+			endif
+		endif
+	endif
+endfunction
+
+
+function OOZSetup_Function100
+	CallFunction(OOZSetup_Function99)
+	if Object.Gravity==GRAVITY_AIR
+		Object.State=12
+		CallFunction(PlayerObject_Function4)
+	else
+		CallFunction(PlayerObject_Function5)
+		if Object.Speed==0
+			if Object.CollisionMode==CMODE_FLOOR
+				if Object.Value1<240
+					Object.Animation=ANI_STOPPED
+					Object.Value1++
+				else
+					Object.Animation=ANI_WAITING
+					if Stage.PlayerListPos==2
+						Object.Value1++
+						if Object.Value1==834
+							Object.Value1=0
+							Object.Animation=ANI_STOPPED
+						endif
+					endif
+				endif
+			endif
+		else
+			Object.Value1=0
+			if Object.Animation!=ANI_WATERSLIDE
+				if Object.Speed>0
+					if Object.Speed<0x30000
+						Object.Animation=ANI_WALKING
+						CallFunction(OOZSetup_Function97)
+					else
+						Object.Animation=ANI_RUNNING
+						Object.AnimationSpeed=240
+					endif
+				else
+					if Object.Speed>-0x30000
+						Object.Animation=ANI_WALKING
+						CallFunction(OOZSetup_Function97)
+					else
+						Object.Animation=ANI_RUNNING
+						Object.AnimationSpeed=240
+					endif
+				endif
+			endif
+		endif
+		Object.Value14=0
+		if Object.CollisionMode==CMODE_FLOOR
+			if Object.Pushing==2
+				Object.Animation=ANI_PUSHING
+				Object.AnimationSpeed=0
+			endif
+		endif
+		if Object.JumpPress==1
+			CallFunction(PlayerObject_Function6)
+		endif
+	endif
+endfunction
+
+
+function OOZSetup_Function101
+	CheckEqual(Object[25].Type,TypeName[MusicEvent])
+	TempValue0=CheckResult
+	CheckEqual(Object[25].PropertyValue,2)
+	TempValue0&=CheckResult
+	CheckEqual(stage.musicFlag,0)
+	TempValue0&=CheckResult
+	if TempValue0==0
+		switch Music.CurrentTrack
+		case 0
+			SetMusicTrack("Invincibility_F.ogg",2,0x78B1)
+			SwapMusicTrack("OilOcean_F.ogg",0,0x396E4,0x1F40)
+			break
+		case 2
+			SetMusicTrack("OilOcean_F.ogg",0,0x396E4)
+			SwapMusicTrack("Invincibility_F.ogg",2,0x78B1,0x1F40)
+			break
+		case 4
+		case 6
+		case 7
+			SetMusicTrack("OilOcean_F.ogg",0,0x396E4)
+			SetMusicTrack("Invincibility_F.ogg",2,0x78B1)
+			break
+
+		endswitch
+	else
+		stage.musicFlag=1
+	endif
+endfunction
+
+
+function OOZSetup_Function102
+	CheckEqual(Object[25].Type,TypeName[MusicEvent])
+	TempValue0=CheckResult
+	CheckEqual(Object[25].PropertyValue,2)
+	TempValue0&=CheckResult
+	CheckEqual(stage.musicFlag,0)
+	TempValue0&=CheckResult
+	if TempValue0==0
+		switch Music.CurrentTrack
+		case 0
+			SetMusicTrack("Invincibility.ogg",2,0x9717)
+			SwapMusicTrack("OilOcean.ogg",0,0x47AC4,0x30D4)
+			break
+		case 2
+			SetMusicTrack("OilOcean.ogg",0,0x47AC4)
+			SwapMusicTrack("Invincibility.ogg",2,0x9717,0x30D4)
+			break
+		case 4
+		case 6
+		case 7
+			SetMusicTrack("OilOcean.ogg",0,0x47AC4)
+			SetMusicTrack("Invincibility.ogg",2,0x9717)
+			break
+
+		endswitch
+	else
+		stage.musicFlag=2
+	endif
+endfunction
+
+
+sub ObjectMain
+	if options.vsMode==0
+		if Stage.ActNo==2
+			if Object.Value7==0
+				if Screen.CameraYPos<256
+					if Screen.CameraXPos>0x2140
+						TempValue0=Screen.YOffset
+						TempValue0*=44
+						TempValue0<<=8
+						TempValue1=Screen.YOffset
+						TempValue1>>=2
+						TempValue1+=128
+						TileLayer[1].ScrollPos=Screen.YOffset
+						TileLayer[1].ScrollPos*=TempValue1
+						TileLayer[1].ScrollPos<<=8
+						TileLayer[1].ScrollPos-=TempValue0
+						FlipSign(TileLayer[1].ScrollPos)
+						TileLayer[1].ParallaxFactor=TempValue1
+						Object.Value7=1
+					endif
+				endif
+			endif
+		endif
+	endif
+	Object.Value0++
+	if Object.Value0>7
+		Object.Value0=0
+		TileLayer[1].DeformationOffset++
+		RotatePalette(0,170,173,0)
+	endif
+	if Object.Value1<2
+		GetArrayValue(TempValue0,Object.Value2,OOZSetup_array38)
+		Copy16x16Tile(756,TempValue0)
+		Object.Value2++
+		GetArrayValue(Object.Value1,Object.Value2,OOZSetup_array38)
+		Object.Value2++
+		Object.Value2&=7
+	else
+		Object.Value1--
+	endif
+	if Object.Value3<2
+		GetArrayValue(TempValue0,Object.Value4,OOZSetup_array39)
+		Copy16x16Tile(757,TempValue0)
+		GetArrayValue(TempValue0,Object.Value4,OOZSetup_array40)
+		Copy16x16Tile(758,TempValue0)
+		TempValue0++
+		Copy16x16Tile(759,TempValue0)
+		Object.Value4++
+		GetArrayValue(Object.Value3,Object.Value4,OOZSetup_array39)
+		Object.Value4++
+		Object.Value4&=7
+	else
+		Object.Value3--
+	endif
+	if Object.Value5<2
+		TempValue0=Object.Value6
+		TempValue0+=768
+		Copy16x16Tile(760,TempValue0)
+		TempValue0++
+		Copy16x16Tile(761,TempValue0)
+		TempValue0++
+		Copy16x16Tile(762,TempValue0)
+		TempValue0++
+		Copy16x16Tile(763,TempValue0)
+		TempValue0+=21
+		Copy16x16Tile(764,TempValue0)
+		TempValue0++
+		Copy16x16Tile(765,TempValue0)
+		TempValue0++
+		Copy16x16Tile(766,TempValue0)
+		TempValue0++
+		Copy16x16Tile(767,TempValue0)
+		Object.Value5=18
+		Object.Value6+=4
+		Object.Value6%=24
+	else
+		Object.Value5--
+	endif
+	foreach TypeGroup[256],PlayerObjectPos
+		if Object[PlayerObjectPos].State==1
+			if Object[PlayerObjectPos].YPos<-0x800000
+				Object[PlayerObjectPos].State=12
+				Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+				Object[PlayerObjectPos].Value35=0
+				Object[PlayerObjectPos].TileCollisions=1
+			endif
+		endif
+		if Object[PlayerObjectPos].Animation==ANI_TWIRL
+			Object[PlayerObjectPos].Frame%=24
+		endif
+		TempValue1=Object[PlayerObjectPos].XPos
+		TempValue1>>=16
+		TempValue2=Object[PlayerObjectPos].YPos
+		TempValue2>>=16
+		TempValue2+=6
+		Get16x16TileInfo(TempValue0,TempValue1,TempValue2,TILEINFO_ANGLEB)
+		switch TempValue0
+		case 1
+			if Object[PlayerObjectPos].YVelocity>-1
+				Object[PlayerObjectPos].State=98
+				if Object[PlayerObjectPos].Animation==ANI_JUMPING
+					Object[PlayerObjectPos].Animation=ANI_WALKING
+				endif
+				Object[PlayerObjectPos].Gravity=GRAVITY_GROUND
+				Object[PlayerObjectPos].YVelocity=0
+				Object[PlayerObjectPos].YPos+=0x10000
+			endif
+			break
+		case 3
+			if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+				Object[PlayerObjectPos].State=100
+			endif
+			break
+		case 5
+			if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+				Object[PlayerObjectPos].State=100
+				Object[PlayerObjectPos].Animation=ANI_WATERSLIDE
+				Get16x16TileInfo(TempValue0,TempValue1,TempValue2,TILEINFO_DIRECTION)
+				switch TempValue0
+				case 0
+				case 2
+					if Object[PlayerObjectPos].Speed>-0x80000
+						Object[PlayerObjectPos].Speed-=0x4000
+					endif
+					break
+				case 1
+				case 3
+					if Object[PlayerObjectPos].Speed<0x80000
+						Object[PlayerObjectPos].Speed+=0x4000
+					endif
+					endswitch
+					if Object[PlayerObjectPos].Speed<0
+						Object[PlayerObjectPos].Direction=FLIP_X
+					else
+						Object[PlayerObjectPos].Direction=FLIP_NONE
+					endif
+					if PlayerObjectPos==0
+						if Object.Value8==0
+							PlaySfx(SFXName[OilSlide],0)
+						endif
+						Object.Value8++
+						Object.Value8&=15
+					endif
+				endif
+				break
+
+			endswitch
+		floop
+endsub
+
+
+
+sub ObjectStartup
+	SetMusicTrack("OilOcean.ogg",0,0x47AC4)
+	SpeedUpMusic=101
+	SlowDownMusic=102
+	animalType1=41
+	animalType2=42
+	SetPaletteEntry(0,192,0)
+	Object[10].Type=TypeName[OOZSetup]
+	Object[10].Priority=PRIORITY_ACTIVE
+	Stage.NewYBoundary2=0x768
+	stage.deathBoundary=Stage.NewYBoundary2
+	stage.deathBoundary-=8
+	stage.deathBoundary<<=16
+	ArrayPos0=0
+	while ArrayPos0<576
+		TempValue0=ArrayPos0
+		TempValue0&=63
+		GetArrayValue(Stage[ArrayPos0].DeformationData2,TempValue0,OOZSetup_array41)
+		ArrayPos0++
+	loop
+	if Stage.ActNo==2
+		TileLayer[1].ScrollPos=0
+		TileLayer[1].ParallaxFactor=44
+		if Screen.CameraYPos<640
+			if Screen.CameraXPos>0x20FC
+				TileLayer[1].ParallaxFactor=128
+				Object[10].Value7=1
+			endif
+		endif
+	endif
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

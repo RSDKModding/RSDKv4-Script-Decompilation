@@ -1,0 +1,99 @@
+//--------------------Sonic 1 / Sonic 2 Tilt Platform L Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 75: TYPE_TILTPLATFORML
+
+// Function declarations
+#function TiltPlatformL_Function141
+#function TiltPlatformL_Function142
+
+
+
+function TiltPlatformL_Function141
+	DrawSprite(0)
+endfunction
+
+
+function TiltPlatformL_Function142
+	CreateTempObject(TypeName[TiltPlatformL],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Direction=Object.Direction
+	Object[TempObjectPos].InkEffect=INK_ALPHA
+	Object[TempObjectPos].Alpha=192
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		TempValue0=oscillation
+		TempValue0&=240
+		if TempValue0==Object.PropertyValue
+			Object.Priority=PRIORITY_ACTIVE
+			Object.AnimationTimer=0
+			Object.Frame=0
+			PlaySfx(SFXName[Thruster],0)
+			Object.State=1
+		endif
+		break
+	case 1
+		Object.AnimationTimer++
+		Object.Frame=Object.AnimationTimer
+		Object.Frame>>=1
+		Object.Frame&=3
+		if Object.AnimationTimer>=32
+			Object.State=0
+		endif
+		break
+
+	endswitch
+	if Object.State==0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-24,-2,24,6,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		floop
+	else
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-24,-112,24,112,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				CallFunction(PlayerObject_Function45)
+			endif
+		floop
+	endif
+	if Object.OutOfBounds==1
+		Object.Frame=0
+		Object.State=0
+		Object.Priority=PRIORITY_ACTIVE_BOUNDS
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+	if Object.State==1
+		DrawSpriteFX(4,FX_INK,Object.XPos,Object.YPos)
+	endif
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-24,-4,48,8,320,99)
+	SpriteFrame(-16,-16,32,32,320,108)
+	SpriteFrame(-4,-24,8,48,311,99)
+	SpriteFrame(-16,-16,32,32,353,108)
+	SpriteFrame(-24,-112,48,256,464,0)
+	foreach TypeName[TiltPlatformL],ArrayPos0
+		Object[ArrayPos0].InkEffect=INK_ALPHA
+		Object[ArrayPos0].Alpha=192
+	floop
+	SetArrayValue(75,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(141,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(142,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

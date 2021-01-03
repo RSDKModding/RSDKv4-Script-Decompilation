@@ -1,0 +1,127 @@
+//--------------------Sonic 1 / Sonic 2 Spiked Ledge Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 47: TYPE_SPIKEDLEDGE
+
+// Function declarations
+#function SpikedLedge_Function116
+#function SpikedLedge_Function117
+
+
+
+function SpikedLedge_Function116
+	DrawSpriteFX(0,FX_FLIP,Object.XPos,Object.YPos)
+endfunction
+
+
+function SpikedLedge_Function117
+	CreateTempObject(TypeName[SpikedLedge],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Direction=Object.Direction
+	if Object.Direction==FLIP_NONE
+		Object[TempObjectPos].XVelocity=-0x10000
+	else
+		Object[TempObjectPos].XVelocity=0x10000
+	endif
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object[PlayerObjectPos].Value42==0
+				if Object.Direction==FLIP_NONE
+					PlayerObjectCollision(C_TOUCH,Object.EntityNo,-192,-16,-64,-14,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				else
+					PlayerObjectCollision(C_TOUCH,Object.EntityNo,64,-16,192,-14,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				endif
+			else
+				CheckResult=0
+			endif
+			if CheckResult==1
+				if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+					Object.Priority=PRIORITY_ACTIVE
+				endif
+				Object.State=1
+				Object.Value2=Object.XVelocity
+			endif
+		floop
+		break
+	case 1
+		Object.XPos+=Object.XVelocity
+		Object.Value0++
+		if Object.Value0==128
+			Object.Value0=0
+			Object.Value2=0
+			Object.State++
+		endif
+		break
+	case 2
+		break
+
+	endswitch
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_BOX2,Object.EntityNo,-64,-16,64,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		switch CheckResult
+		case 1
+			Object[PlayerObjectPos].XPos+=Object.Value2
+			break
+		case 2
+			if Object.Direction==FLIP_NONE
+				CallFunction(PlayerObject_Function45)
+			endif
+			break
+		case 3
+			if Object.Direction==FLIP_X
+				CallFunction(PlayerObject_Function45)
+			endif
+			break
+
+		endswitch
+	floop
+	if Object.OutOfBounds==1
+		TempValue0=Object.XPos
+		Object.XPos=Object.Value1
+		if Object.OutOfBounds==1
+			if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+				Object.Priority=PRIORITY_ACTIVE_BOUNDS
+			endif
+			Object.Value2=0
+			Object.State=0
+		else
+			Object.XPos=TempValue0
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(0,FX_FLIP,Object.XPos,Object.YPos)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-64,-16,128,32,1,99)
+	foreach TypeName[SpikedLedge],ArrayPos0
+		Object[ArrayPos0].Value1=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Direction=Object[ArrayPos0].PropertyValue
+		Object[ArrayPos0].Direction&=FLIP_X
+		if Object[ArrayPos0].Direction==FLIP_NONE
+			Object[ArrayPos0].XVelocity=-0x10000
+		else
+			Object[ArrayPos0].XVelocity=0x10000
+		endif
+	floop
+	SetArrayValue(47,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(116,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(117,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

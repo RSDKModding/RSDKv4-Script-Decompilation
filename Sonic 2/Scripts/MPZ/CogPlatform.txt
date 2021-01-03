@@ -1,0 +1,124 @@
+//--------------------Sonic 1 / Sonic 2 Cog Platform Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 58: TYPE_COGPLATFORM
+
+// Function declarations
+#function CogPlatform_Function130
+#function CogPlatform_Function131
+
+#constant 0:CogPlatform_constant39
+
+
+function CogPlatform_Function130
+	DrawSprite(0)
+endfunction
+
+
+function CogPlatform_Function131
+	TempValue0=Object[0].Value17
+	TempValue0-=CogPlatform_constant39
+	CreateTempObject(TypeName[CogPlatform],TempValue0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Direction=Object.Direction
+endfunction
+
+
+sub ObjectMain
+	TempValue0=Object.XPos
+	TempValue0&=-0x10000
+	Object.XPos+=Object.XVelocity
+	if Object.Direction==FLIP_NONE
+		ObjectTileCollision(CMODE_LWALL,64,0,0)
+	else
+		ObjectTileCollision(CMODE_RWALL,-64,0,0)
+	endif
+	if CheckResult==1
+		if Object.PropertyValue==0
+			Object.XVelocity=0
+			MPZSetup_constant34=0
+			MPZSetup_constant33=0
+		else
+			Object.Direction^=FLIP_X
+			FlipSign(Object.XVelocity)
+			FlipSign(MPZSetup_constant34)
+		endif
+	endif
+	TempValue4=Object.XPos
+	TempValue2=Object.XPos
+	TempValue2&=-0x10000
+	TempValue2-=TempValue0
+	Object.XPos=TempValue0
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_BOX,Object.EntityNo,-64,-12,64,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		switch CheckResult
+		case 1
+			if Object.XVelocity==0
+				Object.Priority=PRIORITY_ACTIVE
+				if Object.Direction==FLIP_NONE
+					Object.XVelocity=0x20000
+					MPZSetup_constant34=-1
+				else
+					Object.XVelocity=-0x20000
+					MPZSetup_constant34=1
+				endif
+			endif
+			Object[PlayerObjectPos].XPos+=TempValue2
+			break
+		case 2
+		case 3
+			if Object[PlayerObjectPos].State==24
+				Object[PlayerObjectPos].Value1=0
+				Object[PlayerObjectPos].Animation=ANI_GLIDING_DROP
+				Object[PlayerObjectPos].State=22
+			endif
+			break
+
+		endswitch
+	floop
+	Object.XPos=TempValue4
+	if Object.OutOfBounds==1
+		if Object.Value0==0
+			Object.Type=TypeName[BlankObject]
+		else
+			Object.XPos=Object.Value0
+			if Object.OutOfBounds==0
+				Object.XPos=TempValue4
+			else
+				Object.Priority=PRIORITY_ACTIVE_BOUNDS
+				Object.XVelocity=0
+				MPZSetup_constant34=0
+				MPZSetup_constant33=0
+			endif
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-64,-12,128,24,350,182)
+	TempValue0=0
+	CogPlatform_constant39=DebugMode_constant25
+	while TempValue0<2
+		SetArrayValue(58,DebugMode_constant25,DebugMode_array12)
+		SetArrayValue(130,DebugMode_constant25,DebugMode_array13)
+		SetArrayValue(131,DebugMode_constant25,DebugMode_array11)
+		DebugMode_constant25++
+		TempValue0++
+	loop
+	foreach TypeName[CogPlatform],ArrayPos0
+		Object[ArrayPos0].Value0=Object[ArrayPos0].XPos
+	floop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

@@ -1,0 +1,255 @@
+//--------------------Sonic 1 / Sonic 2 Roller Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 44: TYPE_ROLLER
+
+
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		Object.Priority=PRIORITY_ACTIVE
+		TempValue0=1
+		TempValue1=0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-212,-120,212,120,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				TempValue0=0
+			endif
+			TempValue2=Object[PlayerObjectPos].XPos
+			TempValue2-=Object.XPos
+			if TempValue2>=0x1000000
+				if TempValue2<0x2400000
+					TempValue2=Object[PlayerObjectPos].YPos
+					TempValue2-=Object.YPos
+					if TempValue2>=-0xF00000
+						if TempValue2<0xF00000
+							TempValue1=1
+						endif
+					endif
+				endif
+			endif
+		floop
+		TempValue0&=TempValue1
+		if TempValue0!=0
+			Object.Animation=1
+			Object.XVelocity=0x70000
+			Object.State=1
+		endif
+		break
+	case 1
+		Object.XPos+=Object.XVelocity
+		TempValue0=0
+		ObjectTileGrip(CMODE_FLOOR,0,15,0)
+		ObjectTileGrip(CMODE_FLOOR,0,14,0)
+		if Object.Value1==0
+			if CheckResult==0
+				TempValue0=1
+			else
+				TempValue2=Object.XPos
+				TempValue3=Object.YPos
+				if Object.XVelocity<0
+					ObjectTileCollision(CMODE_RWALL,-32,0,0)
+					if CheckResult==1
+						TempValue2>>=16
+						TempValue3>>=16
+						TempValue2-=32
+						TempValue3+=0
+						Get16x16TileInfo(TempValue5,TempValue2,TempValue3,TILEINFO_ANGLEA)
+						TempValue5&=255
+						if TempValue5==0
+							TempValue0=1
+						else
+							TempValue2+=32
+							Object.XPos=TempValue2
+							Object.XPos<<=16
+							Object.YPos=TempValue3
+							Object.YPos<<=16
+						endif
+					endif
+				else
+					ObjectTileCollision(CMODE_LWALL,32,0,0)
+					if CheckResult==1
+						TempValue2>>=16
+						TempValue3>>=16
+						TempValue2+=32
+						TempValue3+=0
+						Get16x16TileInfo(TempValue5,TempValue2,TempValue3,TILEINFO_ANGLEA)
+						TempValue5&=255
+						if TempValue5==0
+							TempValue0=1
+						else
+							TempValue2-=32
+							Object.XPos=TempValue2
+							Object.XPos<<=16
+							Object.YPos=TempValue3
+							Object.YPos<<=16
+						endif
+					endif
+				endif
+			endif
+		endif
+		if TempValue0==1
+			Object.YVelocity=-0x60000
+			Object.Value1=1
+			Object.State=2
+		else
+			if Object.Value2==0
+				foreach TypeGroup[256],PlayerObjectPos
+					TempValue0=Object[PlayerObjectPos].XPos
+					TempValue0-=Object.XPos
+					if TempValue0<0x300000
+						if TempValue0>=0
+							TempValue0=Object[PlayerObjectPos].YPos
+							TempValue0-=Object.YPos
+							if TempValue0>=-0x600000
+								if TempValue0<0x600000
+									TempValue1=1
+								endif
+							endif
+						endif
+					endif
+				floop
+				if TempValue1==1
+					Object.Value2=1
+					Object.AnimationTimer=0
+					Object.Animation=2
+					Object.Frame=2
+					Object.Value0=120
+					Object.State=3
+				endif
+			endif
+		endif
+		break
+	case 2
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x3800
+		if Object.YVelocity>0
+			ObjectTileCollision(CMODE_FLOOR,0,14,0)
+			if CheckResult==1
+				Object.State=1
+			endif
+		endif
+		break
+	case 3
+		Object.Value0--
+		if Object.Value0==0
+			Object.Animation=4
+			Object.AnimationTimer=0
+		endif
+		break
+
+	endswitch
+	if Object.OutOfBounds==1
+		TempValue0=Object.XPos
+		TempValue1=Object.YPos
+		Object.XPos=Object.Value3
+		Object.YPos=Object.Value4
+		if Object.OutOfBounds==1
+			Object.Animation=0
+			Object.Value1=0
+			Object.Value2=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+			Object.State=0
+		else
+			Object.XPos=TempValue0
+			Object.YPos=TempValue1
+		endif
+	endif
+	if Object.Animation!=0
+		if Object.Frame<2
+			foreach TypeGroup[256],PlayerObjectPos
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-15,-15,15,15,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+				if CheckResult==1
+					CallFunction(PlayerObject_Function45)
+				endif
+			floop
+		else
+			foreach TypeGroup[256],PlayerObjectPos
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-15,-15,15,15,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					CallFunction(PlayerObject_Function46)
+				endif
+			floop
+		endif
+	endif
+	switch Object.Animation
+	case 0
+		break
+	case 1
+		Object.Frame=Object.AnimationTimer
+		Object.Frame>>=2
+		Object.Frame+=2
+		Object.AnimationTimer++
+		if Object.AnimationTimer>=12
+			Object.AnimationTimer=0
+		endif
+		break
+	case 2
+		Object.AnimationTimer++
+		if Object.AnimationTimer>=16
+			Object.Frame--
+			if Object.Frame==0
+				Object.Animation=3
+			endif
+			Object.AnimationTimer=0
+		endif
+		break
+	case 3
+		break
+	case 4
+		Object.AnimationTimer++
+		if Object.AnimationTimer>=16
+			Object.Frame++
+			if Object.Frame==3
+				Object.Animation=1
+				Object.State=1
+			endif
+			Object.AnimationTimer=0
+		endif
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectDraw
+	if Object.Animation!=0
+		DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+	endif
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone03")
+	if CheckResult==1
+		LoadSpriteSheet("SYZ/Objects.gif")
+		SpriteFrame(-16,-33,29,47,1,179)
+		SpriteFrame(-16,-25,29,39,31,187)
+		SpriteFrame(-14,-14,28,28,1,227)
+		SpriteFrame(-14,-14,28,28,31,227)
+		SpriteFrame(-14,-14,28,28,60,227)
+	endif
+	CheckStageFolder("Zone07")
+	if CheckResult==1
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16,-33,29,47,105,30)
+		SpriteFrame(-16,-25,29,39,75,59)
+		SpriteFrame(-14,-14,28,28,74,1)
+		SpriteFrame(-14,-14,28,28,104,1)
+		SpriteFrame(-14,-14,28,28,76,30)
+	endif
+	foreach TypeName[Roller],ArrayPos0
+		Object[ArrayPos0].Value3=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Value4=Object[ArrayPos0].YPos
+	floop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

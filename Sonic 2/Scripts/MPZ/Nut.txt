@@ -1,0 +1,209 @@
+//--------------------Sonic 1 / Sonic 2 Nut Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 54: TYPE_NUT
+
+// Function declarations
+#function Nut_Function121
+#function Nut_Function122
+
+
+
+function Nut_Function121
+	DrawSprite(0)
+endfunction
+
+
+function Nut_Function122
+	CreateTempObject(TypeName[Nut],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value1=Object.YPos
+	Object[TempObjectPos].Value0=0x7FFF0000
+endfunction
+
+
+sub ObjectMain
+	TempValue0=Object.YPos
+	TempValue0&=-0x10000
+	Object.YPos+=Object.YVelocity
+	if Object.YVelocity>=0
+		ObjectTileCollision(CMODE_FLOOR,0,12,0)
+		if CheckResult==1
+			Object.Value5=1
+			Object.Value7=0
+			Object.YVelocity=0
+		endif
+	else
+		Object.Value5=0
+	endif
+	TempValue1=Object.YPos
+	TempValue1&=-0x10000
+	TempValue1-=TempValue0
+	if Object.State==0
+		GetBit(TempValue6,Object.PropertyValue,7)
+		if TempValue6==1
+			if Object.YPos>Object.Value0
+				Object.State=1
+				Object.Value7=Object.YVelocity
+			endif
+		endif
+		Object.Value6+=Object.YVelocity
+		TempValue0=Object.Value6
+		TempValue0>>=17
+		TempValue0&=3
+		Object.Frame=3
+		Object.Frame-=TempValue0
+		Object.YVelocity=0
+		TempValue7=0
+		foreach TypeGroup[256],PlayerObjectPos
+			TempValue5=Object.Value5
+			GetBit(TempValue6,Object.Value2,TempValue7)
+			if TempValue6==1
+				Object[PlayerObjectPos].YPos+=TempValue1
+			else
+				SetBit(Object.Value4,TempValue7,0)
+			endif
+			if Object.Value5==1
+				if Object[PlayerObjectPos].XVelocity<0
+					SetBit(Object.Value4,TempValue7,0)
+				else
+					TempValue5=0
+				endif
+			endif
+			SetBit(Object.Value2,TempValue7,0)
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-32,-12,32,12,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			switch CheckResult
+			case 1
+				SetBit(Object.Value2,TempValue7,1)
+				if TempValue6==0
+					GetBit(TempValue6,Object.Value4,TempValue7)
+					TempValue6|=TempValue5
+					if TempValue6==0
+						TempValue2=Object[PlayerObjectPos].XPos
+						TempValue2&=-0x10000
+						TempValue3=Object.XPos
+						TempValue3&=-0x10000
+						if TempValue2==TempValue3
+							SetBit(Object.Value4,TempValue7,1)
+							Object.Priority=PRIORITY_ACTIVE
+						else
+							if Object[PlayerObjectPos].XPos>Object.XPos
+								SetBit(Object.Value3,TempValue7,0)
+							else
+								SetBit(Object.Value3,TempValue7,1)
+							endif
+						endif
+					endif
+				else
+					GetBit(TempValue6,Object.Value4,TempValue7)
+					if TempValue6==0
+						if TempValue5==1
+							if Object[PlayerObjectPos].XVelocity>0
+								SetBit(Object.Value3,TempValue7,0)
+							else
+								SetBit(Object.Value3,TempValue7,1)
+							endif
+						else
+							GetBit(TempValue6,Object.Value3,TempValue7)
+							if TempValue6==0
+								if Object[PlayerObjectPos].XPos<Object.XPos
+									SetBit(Object.Value4,TempValue7,1)
+									Object[PlayerObjectPos].XPos=Object.XPos
+									Object.Priority=PRIORITY_ACTIVE
+								endif
+							else
+								if Object[PlayerObjectPos].XPos>Object.XPos
+									SetBit(Object.Value4,TempValue7,1)
+									Object[PlayerObjectPos].XPos=Object.XPos
+									Object.Priority=PRIORITY_ACTIVE
+								endif
+							endif
+						endif
+					else
+						Object[PlayerObjectPos].XPos=Object.XPos
+						Object.YVelocity+=Object[PlayerObjectPos].XVelocity
+					endif
+				endif
+				break
+			case 4
+				if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+					CallFunction(PlayerObject_Function50)
+				endif
+				break
+
+			endswitch
+			TempValue7++
+		floop
+		FlipSign(Object.YVelocity)
+		Object.YVelocity>>=3
+	else
+		Object.YVelocity+=0x3800
+		Object.Value6+=Object.Value7
+		TempValue0=Object.Value6
+		TempValue0>>=17
+		TempValue0&=3
+		Object.Frame=3
+		Object.Frame-=TempValue0
+		TempValue7=0
+		foreach TypeGroup[256],PlayerObjectPos
+			GetBit(TempValue6,Object.Value2,TempValue7)
+			if TempValue6==1
+				Object[PlayerObjectPos].YPos+=TempValue1
+			endif
+			SetBit(Object.Value2,TempValue7,0)
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-32,-12,32,12,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				SetBit(Object.Value2,TempValue7,1)
+			endif
+			TempValue7++
+		floop
+	endif
+	if Object.OutOfBounds==1
+		TempValue1=Object.YPos
+		Object.YPos=Object.Value1
+		Object.YPos+=Object.Value31
+		if Object.OutOfBounds==1
+			Object.Value2=0
+			Object.Value3=0
+			Object.Value4=0
+			Object.Value5=0
+			Object.Value6=0
+			Object.Value7=0
+			Object.State=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+		else
+			Object.YPos=TempValue1
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32,-12,64,24,130,156)
+	SpriteFrame(-32,-12,64,24,130,181)
+	SpriteFrame(-32,-12,64,24,130,206)
+	SpriteFrame(-32,-12,64,24,130,231)
+	foreach TypeName[Nut],ArrayPos0
+		Object[ArrayPos0].Value1=Object[ArrayPos0].YPos
+		Object[ArrayPos0].Value0=Object[ArrayPos0].PropertyValue
+		Object[ArrayPos0].Value0&=127
+		Object[ArrayPos0].Value0<<=19
+		Object[ArrayPos0].Value0+=Object[ArrayPos0].YPos
+	floop
+	SetArrayValue(54,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(121,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(122,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

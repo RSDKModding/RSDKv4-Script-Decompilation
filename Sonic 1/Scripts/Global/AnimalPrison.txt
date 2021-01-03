@@ -1,0 +1,212 @@
+//--------------------Sonic 1 / Sonic 2 Animal Prison Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 21: TYPE_ANIMALPRISON
+
+// Function declarations
+#function AnimalPrison_Function89
+#function AnimalPrison_Function90
+
+
+
+function AnimalPrison_Function89
+	DrawSprite(2)
+	DrawSprite(0)
+endfunction
+
+
+function AnimalPrison_Function90
+	CreateTempObject(TypeName[AnimalPrison],0,Object.XPos,Object.YPos)
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		TempValue0=Object.iXPos
+		TempValue0-=Screen.CenterX
+		Stage.NewXBoundary1=TempValue0
+		TempValue0=Object.iXPos
+		TempValue0+=Screen.CenterX
+		Stage.NewXBoundary2=TempValue0
+		Object.Frame=Object.AnimationTimer
+		Object.Frame/=3
+		Object.Frame+=2
+		Object.AnimationTimer++
+		Object.AnimationTimer%=6
+		break
+	case 1
+		if Object[0].ControlMode==-1
+			Object[0].Left=0
+			Object[0].Right=1
+			Object[0].Up=0
+			Object[0].Down=0
+			Object[0].JumpHold=0
+		endif
+		Object.Value0++
+		TempValue0=Object.Value0
+		TempValue0&=7
+		if TempValue0==4
+			Rand(TempValue0,48)
+			TempValue0-=24
+			TempValue0<<=16
+			TempValue0+=Object.XPos
+			Rand(TempValue1,48)
+			TempValue1-=24
+			TempValue1<<=16
+			TempValue1+=Object.YPos
+			CreateTempObject(TypeName[Explosion],0,TempValue0,TempValue1)
+			Object[TempObjectPos].DrawOrder=4
+			PlaySfx(SFXName[Explosion],0)
+		endif
+		if Object.Value0==60
+			TempValue1=Object.YPos
+			TempValue1+=0x40000
+			TempValue2=0
+			TempValue3=30
+			while TempValue2<32
+				Rand(TempValue0,48)
+				TempValue0>>=2
+				TempValue0<<=18
+				TempValue0-=0x180000
+				TempValue0+=Object.XPos
+				TempValue4=TempValue2
+				TempValue4&=1
+				if TempValue4==0
+					CreateTempObject(animalType1,TempValue3,TempValue0,TempValue1)
+				else
+					CreateTempObject(animalType2,TempValue3,TempValue0,TempValue1)
+				endif
+				Object[TempObjectPos].Value1=1
+				TempValue0+=0x40000
+				TempValue2++
+				TempValue3+=5
+			loop
+			Object.DrawOrder=4
+			Object.Value0=4
+			Object.State++
+		endif
+		Object.Frame=Object.AnimationTimer
+		Object.Frame/=3
+		Object.Frame+=4
+		Object.AnimationTimer++
+		Object.AnimationTimer%=6
+		break
+	case 2
+		Object.Value0++
+		TempValue0=Object.Value0
+		TempValue0&=7
+		if TempValue0==4
+			Rand(TempValue0,48)
+			TempValue0-=24
+			TempValue0<<=16
+			TempValue0+=Object.XPos
+			Rand(TempValue1,48)
+			TempValue1-=24
+			TempValue1<<=16
+			TempValue1+=Object.YPos
+			CreateTempObject(TypeName[Explosion],0,TempValue0,TempValue1)
+			Object[TempObjectPos].DrawOrder=4
+			PlaySfx(SFXName[Explosion],0)
+		endif
+		if Object.Value0==34
+			Object.Value0=0
+			Object.State++
+		endif
+		Object.Frame=Object.AnimationTimer
+		Object.Frame/=3
+		Object.Frame+=4
+		Object.AnimationTimer++
+		Object.AnimationTimer%=6
+		break
+	case 3
+		if Object.Value0<300
+			Object.Value0++
+		else
+			PlayMusic(1)
+			Object[30].Type=TypeName[ActFinish]
+			Object[30].DrawOrder=6
+			Object[30].Priority=PRIORITY_ACTIVE
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+
+	endswitch
+	foreach TypeGroup[256],PlayerObjectPos
+		switch Object.State
+		case 0
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-32,-24,32,32,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-11,-48,11,-24,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				Object.State=1
+				Stage.TimeEnabled=0
+				if Object[PlayerObjectPos].Animation==ANI_JUMPING
+					Object[PlayerObjectPos].Animation=ANI_WALKING
+				endif
+				if PlayerObject_constant3==1
+					PlayerObject_constant3=2
+				endif
+				Object[0].ControlMode=-1
+			endif
+			break
+		case 1
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-32,-24,32,32,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-11,-40,11,-24,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			break
+
+		endswitch
+		TempValue0=Screen.CenterX
+		TempValue0+=40
+		TempValue0<<=16
+		TempValue1=Object.XPos
+		TempValue1+=TempValue0
+		if Object[PlayerObjectPos].XPos>TempValue1
+			Object[PlayerObjectPos].XPos=TempValue1
+			Object[PlayerObjectPos].Speed=0
+			Object[PlayerObjectPos].XVelocity=0
+			if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+				Object[PlayerObjectPos].YVelocity=0
+			endif
+		endif
+	floop
+endsub
+
+
+sub ObjectDraw
+	switch Object.State
+	case 0
+	case 1
+		DrawSprite(Object.Frame)
+		DrawSprite(0)
+		break
+	case 2
+	case 3
+	case 4
+		DrawSprite(1)
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-32,-32,64,62,109,166)
+	SpriteFrame(-32,-2,64,32,35,202)
+	SpriteFrame(-11,-48,22,16,84,166)
+	SpriteFrame(-11,-48,22,16,35,236)
+	SpriteFrame(-11,-40,22,16,84,166)
+	SpriteFrame(-11,-40,22,16,35,236)
+	SetArrayValue(21,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(89,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(90,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

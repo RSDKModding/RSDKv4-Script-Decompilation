@@ -1,0 +1,409 @@
+//--------------------Sonic 1 / Sonic 2 Tornado Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 43: TYPE_TORNADO
+
+// Function declarations
+#function Tornado_Function102
+
+
+#array Tornado_array42:(5,32,6,8,7,8,8,8,7,8,6,16,9,32,6,16)
+#array Tornado_array41:(10,9,11,9,10,9,11,9,10,9,11,9,10,9,11,9)
+#array Tornado_array39:(520,640,712,744,808,968,0x418,0x488,0x4C8,0x5A8,0xFFFF)
+#array Tornado_array40:(-0x10000,-0x10000,0x10000,0,0,0x10000,0x10000,-0x10000,0x10000,0x10000,0x10000,-0x10000,-0x10000,0x10000,-0x10000,-0x10000,-0x10000,0x10000,-0x20000,0,0,0)
+
+function Tornado_Function102
+	if Object.Value1==0
+		Object.Value1=15
+		TempValue0=Object.XPos
+		Rand(TempValue1,8)
+		TempValue1<<=18
+		TempValue0-=TempValue1
+		TempValue1=Object.YPos
+		TempValue1+=0x100000
+		CreateTempObject(TypeName[TExplosion],0,TempValue0,TempValue1)
+	else
+		Object.Value1--
+	endif
+endfunction
+
+
+sub ObjectMain
+	Object.Value3=Object.YPos
+	Object.DrawOrder=4
+	switch Object.State
+	case 0
+		TempValue0=Object[0].XPos
+		TempValue0-=0x100000
+		if Object.XPos<TempValue0
+			Object.Type=TypeName[BlankObject]
+		else
+			if Stage.PlayerListPos==1
+				Object[0].YPos+=0x40000
+			endif
+			Object.State++
+		endif
+		break
+	case 1
+		Object.XPos+=Object.XVelocity
+		Object.Value0--
+		if Object.Value0==0
+			Object.YVelocity=0x10000
+			Object.Value0=96
+			Object.State=2
+		else
+			TempValue0=Object.XPos
+			TempValue0-=0x100000
+			if Object[0].XPos<TempValue0
+				Object[0].XPos=TempValue0
+			endif
+			TempValue0+=0x200000
+			if Object[0].XPos>TempValue0
+				Object[0].XPos=TempValue0
+			endif
+		endif
+		break
+	case 2
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		TempValue0=oscillation
+		TempValue0&=31
+		if TempValue0==0
+			PlaySfx(SFXName[LaserSkim],0)
+		endif
+		Object.Value0--
+		if Object.Value0==0
+			Object.XVelocity=0x20000
+			Object.YVelocity=0x20000
+			Object.Value0=96
+			Object.State=3
+		endif
+		CallFunction(Tornado_Function102)
+		break
+	case 3
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		if Object.OutOfBounds==1
+			Object.Type=TypeName[BlankObject]
+		endif
+		CallFunction(Tornado_Function102)
+		break
+	case 4
+		PlayerObjectCollision(C_TOUCH,Object.EntityNo,-640,-192,0,0,0,0x10000,0x10000,0x10000,0x10000)
+		if CheckResult==1
+			if Object[0].Gravity==GRAVITY_GROUND
+				Object[0].ControlMode=-1
+				Object[0].JumpPress=0
+				Object[0].JumpHold=0
+				Object[0].Up=0
+				Object[0].Down=0
+				Object[0].Left=0
+				Object[0].Right=0
+				PlayerObject_constant3=2
+				Object.State=5
+			endif
+		endif
+		break
+	case 5
+		if Object[0].State==10
+			Object[0].Value1=0
+		endif
+		Object.Value0++
+		if Object.Value0>=120
+			Object.Value0=0
+			Object.State=6
+		endif
+		break
+	case 6
+		Object[0].Right=1
+		TempValue0=Object.XPos
+		TempValue0-=0x100000
+		if Object[0].XPos>=TempValue0
+			Object[0].XPos=TempValue0
+			Object[0].XVelocity=0
+			Object[0].Speed=0
+			Object[0].Right=0
+			Object.XVelocity=0x10000
+			Object.YVelocity=-0x10000
+			Object.State=7
+		endif
+		break
+	case 7
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		Object.Value0++
+		if Object.Value0==72
+			Object[0].JumpPress=1
+			Object[0].JumpHold=1
+			Object[0].Right=1
+			Object.Value10=Object[0].Value32
+			Object[0].Value32=1
+			Object[0].Value25=0x3800
+			Object[0].Value20=0x60000
+			Object[0].Value21=0xC00
+			Object[0].Value22=0xC00
+			Object[0].Value23=0x1800
+			Object[0].Value24=0x600
+			Object[0].Value9=0x8000
+			Object[0].Value29=0x600
+			Object[0].Value27=0x68000
+			Object[0].Value28=-0x40000
+			Object.State=8
+		endif
+		break
+	case 8
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		Object.Value0++
+		PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-20,-8,20,8,0,0x10000,0x10000,0x10000,0x10000)
+		if CheckResult==1
+			Object[0].JumpPress=0
+			Object[0].JumpHold=0
+			Object[0].XVelocity=0
+			Object[0].Speed=0
+			Object[0].Right=0
+			Object[0].Value32=Object.Value10
+			GetArrayValue(Object.Value1,Object.Value8,Tornado_array39)
+			Object.Value8++
+			Object.State=9
+		endif
+		break
+	case 9
+		if Object.Value0<0x488
+			TileLayer[1].ScrollSpeed-=256
+			if TileLayer[1].ScrollSpeed<-0x60000
+				TileLayer[1].ScrollSpeed=-0x60000
+			endif
+		else
+			if Object.Value0>0x800
+				TileLayer[1].ScrollSpeed+=0x600
+				if TileLayer[1].ScrollSpeed>0
+					TileLayer[1].ScrollSpeed=0
+				endif
+				TileLayer[3].ScrollSpeed+=0x4E0
+				if TileLayer[3].ScrollSpeed>0
+					TileLayer[3].ScrollSpeed=0
+					if Stage[1].ActiveLayer!=2
+						Stage[1].ActiveLayer=2
+						Stage[3].ActiveLayer=2
+						TileLayer[2].ScrollPos=0
+						TileLayer[2].ScrollSpeed=0
+						HParallax[4].ScrollPos=0
+						HParallax[4].ScrollSpeed=0x20000
+					endif
+				endif
+			endif
+		endif
+		Object[0].Value1=0
+		Object.Value0++
+		if Object.Value0>=Object.Value1
+			TempValue0=Object.Value8
+			TempValue0<<=1
+			GetArrayValue(Object.XVelocity,TempValue0,Tornado_array40)
+			TempValue0++
+			GetArrayValue(Object.YVelocity,TempValue0,Tornado_array40)
+			GetArrayValue(Object.Value1,Object.Value8,Tornado_array39)
+			Object.Value8++
+		endif
+		switch Object.Value0
+		case 296
+			Object.Value9=1
+			HParallax[0].ScrollSpeed<<=1
+			HParallax[1].ScrollSpeed<<=1
+			HParallax[2].ScrollSpeed<<=1
+			HParallax[3].ScrollSpeed<<=1
+			break
+		case 1148
+			Object[0].JumpPress=1
+			Object[0].JumpHold=1
+			break
+		case 1149
+			Object[0].JumpPress=0
+			break
+		case 1160
+			Object[+4].Value0=1
+			Object[+5].Value0=1
+			Object[+6].Value0=1
+			HParallax[0].ScrollSpeed<<=2
+			HParallax[1].ScrollSpeed<<=2
+			HParallax[2].ScrollSpeed<<=2
+			HParallax[3].ScrollSpeed<<=2
+			Object[0].Gravity=GRAVITY_GROUND
+			Object[0].TrackScroll=0
+			TileLayer[1].ScrollSpeed=-0x80000
+			TileLayer[3].ScrollSpeed=-0x80000
+			break
+		case 2200
+			Stage[0].ActiveLayer=3
+			TileLayer[3].ScrollPos=0x2490000
+			TileLayer[3].ScrollSpeed=TileLayer[1].ScrollSpeed
+			break
+		case 2624
+			Object.Value0=0
+			Object.State=10
+			break
+
+		endswitch
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		break
+	case 10
+		Music.Volume-=2
+		Object.Value0+=4
+		SetScreenFade(0,0,0,Object.Value0)
+		if Object.Value0==384
+			StopMusic()
+			fadeColor=0
+			Object.Value0=0
+			starPostID=0
+			Object.Direction=FLIP_NONE
+			Stage.ListPos++
+			if Stage.ListPos>20
+				Stage.ListPos=12
+			endif
+			if options.gameMode==1
+				ArrayPos1=options.saveSlot
+				ArrayPos1<<=3
+				if stage.player2Enabled==1
+					SaveRAM[ArrayPos1]=3
+				else
+					SaveRAM[ArrayPos1]=Stage.PlayerListPos
+				endif
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=player.lives
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=player.score
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=player.scoreBonus
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=Stage.ListPos
+				SaveRAM[ArrayPos1]++
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=specialStage.emeralds
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=specialStage.listPos
+				WriteSaveRAM()
+			endif
+			if options.gameMode==2
+				timeAttack.result=Stage.Seconds
+				timeAttack.result*=100
+				TempValue0=Stage.Minutes
+				TempValue0*=0x1770
+				timeAttack.result+=TempValue0
+				timeAttack.result+=Stage.MilliSeconds
+				Stage.ListPos--
+				EngineCallback(SetLeaderboard,Stage.ListPos,timeAttack.result)
+				Engine.State=8
+			else
+				TempValue0=Engine.TrialMode
+				if Stage.ListPos>=Stage.ListSize
+					TempValue0=1
+				endif
+				if TempValue0==0
+					LoadStage()
+				else
+					Stage.ActiveList=PRESENTATION_STAGE
+					Stage.ListPos=0
+					LoadStage()
+				endif
+			endif
+		endif
+		break
+
+	endswitch
+	TempValue0=Object.YPos
+	Object.Value3&=-0x10000
+	Object.Value4=Object.YPos
+	Object.Value4&=-0x10000
+	Object.Value4-=Object.Value3
+	Object.YPos=Object.Value3
+	Object.Value2=0
+	foreach TypeGroup[256],PlayerObjectPos
+		TempValue2=Object[PlayerObjectPos].YVelocity
+		PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-20,-8,20,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		if CheckResult==1
+			Object[PlayerObjectPos].XPos+=Object.XVelocity
+			Object[PlayerObjectPos].YPos+=Object.YVelocity
+			Object.Value2|=1
+		endif
+	floop
+	Object.YPos=TempValue0
+	Object.Frame++
+	Object.Frame&=3
+	if Object.Value6<2
+		if Stage.PlayerListPos==1
+			GetArrayValue(Object.Value5,Object.Value7,Tornado_array41)
+			Object.Value7++
+			GetArrayValue(Object.Value6,Object.Value7,Tornado_array41)
+			Object.Value7++
+		else
+			GetArrayValue(Object.Value5,Object.Value7,Tornado_array42)
+			Object.Value7++
+			GetArrayValue(Object.Value6,Object.Value7,Tornado_array42)
+			Object.Value7++
+		endif
+		Object.Value7&=15
+	else
+		Object.Value6--
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+	DrawSprite(4)
+	DrawSprite(Object.Value5)
+	if Object.State>=7
+		DrawSprite(12)
+		if Object.Value9==1
+			TempValue0=oscillation
+			TempValue0&=1
+			TempValue0+=13
+			DrawSprite(TempValue0)
+		endif
+	endif
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(21,8,4,24,378,215)
+	SpriteFrame(21,11,4,18,383,218)
+	SpriteFrame(21,16,4,8,388,223)
+	SpriteFrame(21,11,4,18,393,218)
+	SpriteFrame(-95,-16,116,64,261,191)
+	SpriteFrame(-45,-8,21,16,261,174)
+	SpriteFrame(-45,-8,21,16,283,174)
+	SpriteFrame(-45,-8,21,16,305,174)
+	SpriteFrame(-45,-8,21,16,327,174)
+	SpriteFrame(-47,-8,23,16,349,174)
+	SpriteFrame(-50,-8,24,16,294,157)
+	SpriteFrame(-50,-8,24,16,319,157)
+	SpriteFrame(-39,32,56,16,375,90)
+	SpriteFrame(-55,32,16,16,386,107)
+	SpriteFrame(-71,32,32,16,386,124)
+	if PlayerObjectCount>1
+		Object[1].Type=TypeName[BlankObject]
+		PlayerObjectCount=1
+	endif
+	foreach TypeName[Tornado],ArrayPos0
+		Object[ArrayPos0].Priority=PRIORITY_ACTIVE
+		if Object[ArrayPos0].PropertyValue==0
+			Object[ArrayPos0].XVelocity=0x10000
+			Object[ArrayPos0].Value0=192
+		else
+			if options.gameMode==2
+				ResetObjectEntity(ArrayPos0,TypeName[BlankObject],0,0,0)
+			else
+				Object[ArrayPos0].State=4
+			endif
+		endif
+	floop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

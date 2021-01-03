@@ -1,0 +1,172 @@
+//--------------------Sonic 1 / Sonic 2 V Push Spring Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 50: TYPE_VPUSHSPRING
+
+// Function declarations
+#function VPushSpring_Function122
+#function VPushSpring_Function123
+
+
+
+//Unknown Variables
+#constant 0:constant0x11D1B
+
+function VPushSpring_Function122
+	TempValue0=Object[0].Value17
+	TempValue0-=VPushSpring_constant35
+	DrawSprite(0)
+	if TempValue0==1
+		TempValue0=Object.YPos
+		TempValue0-=0x240000
+		DrawSpriteXY(5,Object.XPos,TempValue0)
+	endif
+endfunction
+
+
+function VPushSpring_Function123
+	TempValue0=Object[0].Value17
+	TempValue0-=VPushSpring_constant35
+	CreateTempObject(TypeName[VPushSpring],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].XPos&=-0x10000
+	Object[TempObjectPos].YPos&=-0x10000
+	if TempValue0==1
+		Object[TempObjectPos].State=3
+		Object[TempObjectPos].Value1=0x120000
+	endif
+endfunction
+
+
+sub ObjectMain
+	TempValue0=Object.Value1
+	TempValue0>>=16
+	TempValue0-=20
+	switch Object.State
+	case 0
+		Object.Value2=0
+		if Object.Value3==1
+			Object.State=1
+		endif
+		break
+	case 1
+		if Object.Value1<0x120000
+			Object.Value1+=0x20000
+			Object.Value2=0x20000
+		else
+			Object.State=2
+			Object.Value2=0
+		endif
+		break
+	case 2
+		if Object.Value1>0
+			Object.Value1-=0x20000
+			Object.Value2=-0x20000
+		else
+			Object.State=0
+			Object.Value2=0
+		endif
+		break
+	case 3
+		if Object[+1].Value0==1
+			if Object.PropertyValue==0
+				Object.State=2
+			endif
+			PlaySfx(SFXName[Spring],0)
+			TempValue1=Object.Value1
+			TempValue1+=Object.YPos
+			TempValue1-=0x240000
+			CreateTempObject(TypeName[CheckeredBall],0,Object.XPos,TempValue1)
+			Object[TempObjectPos].YVelocity=-0x60000
+			Object[TempObjectPos].Gravity=GRAVITY_AIR
+		endif
+		break
+
+	endswitch
+	Object.Value3=0
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_BOX,Object.EntityNo,-16,TempValue0,16,20,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		if CheckResult==1
+			Object.Value3|=1
+			Object[PlayerObjectPos].YPos+=Object.Value2
+			if Object.State==2
+				if Object.Value1==0x120000
+					Object[PlayerObjectPos].State=12
+					Object[PlayerObjectPos].Animation=ANI_BOUNCING
+					Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+					Object[PlayerObjectPos].YVelocity=-0xA0000
+					Object[PlayerObjectPos].YVelocity-=Object[PlayerObjectPos].Value25
+					Object[PlayerObjectPos].Value1=0
+					PlaySfx(SFXName[Spring],0)
+				endif
+			endif
+		endif
+	floop
+endsub
+
+
+sub ObjectDraw
+	if Object.Value1==0
+		DrawSprite(0)
+		TempValue0=Object.YPos
+		TempValue0-=0x240000
+		if Object.State==3
+			TempValue0-=16
+			DrawSpriteXY(5,Object.XPos,TempValue0)
+		endif
+	else
+		TempValue0=Object.Value1
+		TempValue0+=Object.YPos
+		DrawSpriteXY(1,Object.XPos,TempValue0)
+		if Object.State==3
+			TempValue0-=0x240000
+			DrawSpriteXY(5,Object.XPos,TempValue0)
+			Object.InkEffect=INK_ADD
+			Object.Alpha=160
+			DrawSpriteFX(6,FX_INK,Object.XPos,TempValue0)
+		endif
+		TempValue0=Object.Value1
+		TempValue0*=2
+		TempValue0/=3
+		TempValue0+=Object.YPos
+		DrawSpriteXY(2,Object.XPos,TempValue0)
+		TempValue0=Object.Value1
+		TempValue0/=3
+		TempValue0+=Object.YPos
+		DrawSpriteXY(3,Object.XPos,TempValue0)
+		DrawSprite(4)
+	endif
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-16,-20,32,40,239,140)
+	SpriteFrame(-16,-20,32,16,239,140)
+	SpriteFrame(-16,-4,32,8,239,156)
+	SpriteFrame(-16,4,32,8,239,164)
+	SpriteFrame(-16,12,32,8,239,172)
+	SpriteFrame(-16,-16,32,32,429,190)
+	SpriteFrame(-16,-16,32,32,396,190)
+	TempValue0=0
+	VPushSpring_constant35=DebugMode_constant25
+	while TempValue0<2
+		SetArrayValue(50,DebugMode_constant25,DebugMode_array12)
+		SetArrayValue(122,DebugMode_constant25,DebugMode_array13)
+		SetArrayValue(123,DebugMode_constant25,DebugMode_array11)
+		DebugMode_constant25++
+		TempValue0++
+	loop
+	foreach TypeName[VPushSpring],ArrayPos0
+		if Object[ArrayPos0].PropertyValue==1
+			Object[ArrayPos0].State=3
+			Object[ArrayPos0].Value1=0x120000
+		endif
+	floop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

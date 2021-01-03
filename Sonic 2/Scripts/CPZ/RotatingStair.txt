@@ -1,0 +1,207 @@
+//--------------------Sonic 1 / Sonic 2 Rotating Stair Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 49: TYPE_ROTATINGSTAIR
+
+// Function declarations
+#function RotatingStair_Function118
+#function RotatingStair_Function119
+#function RotatingStair_Function120
+
+#constant 0:RotatingStair_constant41
+
+
+function RotatingStair_Function118
+	TempValue0=Object.XPos
+	TempValue0-=0x300000
+	TempValue1=Object.YPos
+	TempValue1-=0x300000
+	TempValue3=Object[0].Value17
+	TempValue3-=RotatingStair_constant41
+	if TempValue3<2
+		TempValue2=0
+		while TempValue2<4
+			DrawSpriteXY(0,TempValue0,TempValue1)
+			TempValue0+=0x200000
+			TempValue1+=0x200000
+			TempValue2++
+		loop
+	else
+		DrawSpriteXY(0,TempValue0,TempValue1)
+		TempValue0+=0x600000
+		TempValue1+=0x600000
+		DrawSpriteXY(0,TempValue0,TempValue1)
+	endif
+endfunction
+
+
+function RotatingStair_Function119
+	CreateTempObject(TypeName[RotatingStair],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value16=Object.XPos
+	Object[TempObjectPos].Value17=Object.YPos
+	Object[TempObjectPos].PropertyValue=Object[0].Value17
+	Object[TempObjectPos].PropertyValue-=RotatingStair_constant41
+endfunction
+
+
+function RotatingStair_Function120
+	TempValue1=TempValue5
+	GetArrayValue(TempValue0,TempValue3,StageSetup_array9)
+	TempValue0<<=8
+	if TempValue3==20
+		TempValue0>>=1
+	endif
+	switch TempValue4
+	case 0
+		TempValue0-=TempValue1
+		TempValue0+=Object.Value16
+		TempValue6=TempValue0
+		FlipSign(TempValue1)
+		TempValue1+=Object.Value17
+		TempValue7=TempValue1
+		break
+	case 1
+		TempValue0-=TempValue1
+		FlipSign(TempValue0)
+		TempValue0+=Object.Value17
+		TempValue7=TempValue0
+		TempValue1+=Object.Value16
+		TempValue6=TempValue1
+		break
+	case 2
+		TempValue0-=TempValue1
+		FlipSign(TempValue0)
+		TempValue0+=Object.Value16
+		TempValue6=TempValue0
+		TempValue1+=Object.Value17
+		TempValue7=TempValue1
+		break
+	case 3
+		TempValue0-=TempValue1
+		TempValue0+=Object.Value17
+		TempValue7=TempValue0
+		FlipSign(TempValue1)
+		TempValue1+=Object.Value16
+		TempValue6=TempValue1
+		break
+
+	endswitch
+	TempValue6&=-0x10000
+	TempValue7&=-0x10000
+	TempValue0=TempValue6
+	TempValue0-=Object.XPos
+	TempValue1=TempValue7
+	TempValue1-=Object.YPos
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_BOX,Object.EntityNo,-16,-16,16,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		switch CheckResult
+		case 1
+			Object[PlayerObjectPos].XPos+=TempValue0
+			Object[PlayerObjectPos].YPos+=TempValue1
+			break
+		case 2
+		case 3
+			if Object[PlayerObjectPos].State==24
+				Object[PlayerObjectPos].Value1=0
+				Object[PlayerObjectPos].Animation=ANI_GLIDING_DROP
+				Object[PlayerObjectPos].State=22
+			endif
+			break
+		case 4
+			if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+				if TempValue1>=0
+					CallFunction(PlayerObject_Function50)
+				endif
+			endif
+			break
+
+		endswitch
+	floop
+endfunction
+
+
+sub ObjectMain
+	TempValue4=CPZSetup_constant33
+	GetBit(TempValue0,Object.PropertyValue,0)
+	if TempValue0==1
+		TempValue4^=1
+	endif
+	GetBit(TempValue0,Object.PropertyValue,1)
+	if TempValue0==0
+		TempValue5=0x100000
+		TempValue3=20
+		Object.XPos=Object.Value0
+		Object.YPos=Object.Value1
+		CallFunction(RotatingStair_Function120)
+		Object.Value0=TempValue6
+		Object.Value1=TempValue7
+		TempValue4^=2
+		Object.XPos=Object.Value2
+		Object.YPos=Object.Value3
+		CallFunction(RotatingStair_Function120)
+		Object.Value2=TempValue6
+		Object.Value3=TempValue7
+		TempValue4^=2
+	endif
+	TempValue5=0x300000
+	TempValue3=22
+	Object.XPos=Object.Value4
+	Object.YPos=Object.Value5
+	CallFunction(RotatingStair_Function120)
+	Object.Value4=TempValue6
+	Object.Value5=TempValue7
+	TempValue4^=2
+	Object.XPos=Object.Value6
+	Object.YPos=Object.Value7
+	CallFunction(RotatingStair_Function120)
+	Object.Value6=TempValue6
+	Object.Value7=TempValue7
+	TempValue4^=2
+	TempValue5=0x500000
+	TempValue3=24
+	Object.XPos=Object.Value16
+	Object.YPos=Object.Value17
+endsub
+
+
+sub ObjectDraw
+	GetBit(TempValue0,Object.PropertyValue,1)
+	if TempValue0==0
+		DrawSpriteXY(0,Object.Value0,Object.Value1)
+		DrawSpriteXY(0,Object.Value2,Object.Value3)
+	endif
+	DrawSpriteXY(0,Object.Value4,Object.Value5)
+	DrawSpriteXY(0,Object.Value6,Object.Value7)
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone02")
+	if CheckResult==1
+		LoadSpriteSheet("CPZ/Objects3.gif")
+		SpriteFrame(-16,-16,32,32,1,62)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16,-16,32,32,130,829)
+	endif
+	foreach TypeName[RotatingStair],ArrayPos0
+		Object[ArrayPos0].Value16=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Value17=Object[ArrayPos0].YPos
+	floop
+	TempValue0=0
+	RotatingStair_constant41=DebugMode_constant25
+	while TempValue0<4
+		SetArrayValue(49,DebugMode_constant25,DebugMode_array12)
+		SetArrayValue(118,DebugMode_constant25,DebugMode_array13)
+		SetArrayValue(119,DebugMode_constant25,DebugMode_array11)
+		DebugMode_constant25++
+		TempValue0++
+	loop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

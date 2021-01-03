@@ -1,0 +1,124 @@
+//--------------------Sonic 1 / Sonic 2 Breakoff Pillar Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 48: TYPE_BREAKOFFPILLAR
+
+// Function declarations
+#function BreakoffPillar_Function116
+#function BreakoffPillar_Function117
+
+
+#array BreakoffPillar_array41:(0,0x10000,-0x10000,0x10000,0,-0x10000,0,0x10000)
+
+function BreakoffPillar_Function116
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+endfunction
+
+
+function BreakoffPillar_Function117
+	CreateTempObject(TypeName[BreakoffPillar],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Frame=2
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-128,-256,128,256,PlayerObjectPos,-1,-1,1,1)
+			if CheckResult==1
+				Object.Priority=PRIORITY_ACTIVE
+				Object.Value2=8
+				Object.State=1
+			endif
+		floop
+		break
+	case 1
+		Object.Value2--
+		if Object.Value2>=0
+			GetArrayValue(Object.Value1,Object.Value2,BreakoffPillar_array41)
+		else
+			Object.State=2
+		endif
+		break
+	case 2
+		Object.Value0+=Object.YVelocity
+		Object.YVelocity+=0x3800
+		TempValue0=Object.YPos
+		Object.YPos+=Object.Value0
+		TempValue1=Object.YPos
+		ObjectTileCollision(CMODE_FLOOR,0,65,0)
+		if CheckResult==1
+			Object.State=3
+			Object.Frame++
+		endif
+		TempValue1-=Object.YPos
+		Object.YPos=TempValue0
+		Object.Value0-=TempValue1
+		break
+	case 3
+		break
+
+	endswitch
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_BOX,Object.EntityNo,-16,-32,16,32,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		TempValue0=Object.YPos
+		Object.YPos+=Object.Value0
+		PlayerObjectCollision(C_BOX,Object.EntityNo,-16,32,16,65,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		if CheckResult==4
+			if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+				CallFunction(PlayerObject_Function50)
+			endif
+		endif
+		Object.YPos=TempValue0
+	floop
+	TempValue0=Object.iXPos
+	TempValue0-=Screen.CameraXPos
+	Absolute(TempValue0)
+	TempValue0-=184
+	if TempValue0>=Screen.CenterX
+		Object.Value0=0
+		Object.Value1=0
+		Object.YVelocity=0
+		Object.Value2=0
+		Object.Frame=2
+		Object.State=0
+		Object.Priority=PRIORITY_ACTIVE_BOUNDS
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	TempValue0=Object.XPos
+	TempValue0+=Object.Value1
+	TempValue1=Object.YPos
+	TempValue1+=Object.Value0
+	DrawSpriteXY(Object.Frame,TempValue0,TempValue1)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("ARZ/Objects.gif")
+	SpriteFrame(-28,-32,56,56,59,42)
+	SpriteFrame(-16,24,32,8,140,80)
+	SpriteFrame(-16,32,32,37,173,38)
+	SpriteFrame(-16,32,32,41,140,38)
+	SetArrayValue(48,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(116,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(117,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+	foreach TypeName[BreakoffPillar],ArrayPos0
+		Object[ArrayPos0].Frame=2
+	floop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

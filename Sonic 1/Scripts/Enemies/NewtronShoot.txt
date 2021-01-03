@@ -1,0 +1,148 @@
+//--------------------Sonic 1 / Sonic 2 Newtron Shoot Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 63: TYPE_NEWTRONSHOOT
+
+// Function declarations
+#function NewtronShoot_Function127
+#function NewtronShoot_Function128
+
+
+
+function NewtronShoot_Function127
+	DrawSprite(Object.Direction)
+endfunction
+
+
+function NewtronShoot_Function128
+	CreateTempObject(TypeName[NewtronShoot],Object.Direction,Object.XPos,Object.YPos)
+	Object[TempObjectPos].InkEffect=INK_ALPHA
+	Object[TempObjectPos].Alpha=0
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-128,-64,128,64,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				Object.State=1
+				if Object[PlayerObjectPos].XPos<Object.XPos
+					Object.PropertyValue=1
+				else
+					Object.PropertyValue=0
+				endif
+			endif
+		floop
+		break
+	case 1
+		if Object.Alpha<248
+			Object.Alpha+=4
+		else
+			Object.Alpha=255
+			Object.State++
+		endif
+		break
+	case 2
+		if Object.Value0<29
+			Object.Value0++
+		else
+			Object.Value0=0
+			CreateTempObject(TypeName[NewtronShot],0,Object.XPos,Object.YPos)
+			if Object.PropertyValue==1
+				Object[TempObjectPos].XPos-=0x140000
+				Object[TempObjectPos].XVelocity=-0x20000
+			else
+				Object[TempObjectPos].XPos+=0x140000
+				Object[TempObjectPos].XVelocity=0x20000
+			endif
+			Object[TempObjectPos].YPos-=0x80000
+			Object.Animation=1
+			Object.State++
+		endif
+		break
+	case 3
+		if Object.Value0<59
+			if Object.Value0==15
+				Object.Animation=0
+			endif
+			Object.Value0++
+		else
+			Object.Value0=0
+			Object.Alpha=248
+			Object.State++
+		endif
+		break
+	case 4
+		if Object.Alpha>0
+			Object.Alpha-=4
+		else
+			Object.Type=TypeName[BlankObject]
+		endif
+		break
+
+	endswitch
+	foreach TypeGroup[256],PlayerObjectPos
+		switch Object.State
+		case 2
+		case 3
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-12,-14,12,14,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+			if CheckResult==1
+				CallFunction(PlayerObject_Function45)
+			endif
+			break
+
+		endswitch
+	floop
+endsub
+
+
+sub ObjectDraw
+	switch Object.Animation
+	case 0
+		DrawSpriteFX(Object.PropertyValue,FX_INK,Object.XPos,Object.YPos)
+		break
+	case 1
+		TempValue0=Object.PropertyValue
+		TempValue0+=2
+		DrawSprite(TempValue0)
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone01")
+	if CheckResult==1
+		LoadSpriteSheet("GHZ/Objects2.gif")
+		SpriteFrame(-20,-20,39,39,1,1)
+		SpriteFrame(-19,-20,39,39,81,1)
+		SpriteFrame(-20,-20,39,39,41,1)
+		SpriteFrame(-19,-20,39,39,121,1)
+	endif
+	CheckStageFolder("Zone07")
+	if CheckResult==1
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-20,-20,39,39,1,164)
+		SpriteFrame(-19,-20,39,39,81,164)
+		SpriteFrame(-20,-20,39,39,41,164)
+		SpriteFrame(-19,-20,39,39,121,164)
+	endif
+	foreach TypeName[NewtronShoot],ArrayPos0
+		Object[ArrayPos0].InkEffect=INK_ALPHA
+		Object[ArrayPos0].Alpha=0
+	floop
+	SetArrayValue(63,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(127,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(128,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

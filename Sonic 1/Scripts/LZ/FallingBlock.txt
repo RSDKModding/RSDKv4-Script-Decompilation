@@ -1,0 +1,127 @@
+//--------------------Sonic 1 / Sonic 2 Falling Block Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 70: TYPE_FALLINGBLOCK
+
+// Function declarations
+#function FallingBlock_Function161
+#function FallingBlock_Function162
+
+
+
+function FallingBlock_Function161
+	DrawSprite(0)
+endfunction
+
+
+function FallingBlock_Function162
+	CreateTempObject(TypeName[FallingBlock],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value3=Object.YPos
+endfunction
+
+
+sub ObjectMain
+	if Object.Value0==1
+		if Object.Value2==0
+			Object.Value2=30
+		endif
+		if Object.Value4<64
+			Object.Value4+=4
+		endif
+	else
+		if Object.Value4>0
+			Object.Value4-=4
+		endif
+	endif
+	TempValue0=Object.YPos
+	TempValue0&=-0x10000
+	switch Object.State
+	case 0
+		TempValue1=Object.Value4
+		TempValue1<<=1
+		Sin(TempValue2,TempValue1)
+		TempValue2<<=9
+		Object.YPos=Object.Value3
+		Object.YPos+=TempValue2
+		if Object.Value2!=0
+			Object.Value2--
+			if Object.Value2==0
+				Object.State++
+				Object.Priority=PRIORITY_ACTIVE
+			endif
+		endif
+		break
+	case 1
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x800
+		ObjectTileCollision(CMODE_FLOOR,0,16,0)
+		if CheckResult==1
+			Object.State++
+		endif
+		if Object.OutOfBounds==1
+			Object.YPos=Object.Value3
+			Object.YVelocity=0
+			Object.Value2=0
+			Object.State=3
+		endif
+		break
+	case 2
+		if Object.OutOfBounds==1
+			Object.YPos=Object.Value3
+			Object.YVelocity=0
+			Object.Value2=0
+			Object.State++
+		endif
+		break
+	case 3
+		if Object.OutOfBounds==1
+			Object.State=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+		endif
+		break
+
+	endswitch
+	Object.Value1=Object.YPos
+	Object.Value1&=-0x10000
+	Object.Value1-=TempValue0
+	Object.Value0=0
+	if Object.State<3
+		TempValue1=Object.YPos
+		Object.YPos=TempValue0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-16,-16,16,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				Object.Value0=1
+				Object[PlayerObjectPos].YPos+=Object.Value1
+			endif
+		floop
+		Object.YPos=TempValue1
+	endif
+endsub
+
+
+sub ObjectDraw
+	if Object.State<3
+		DrawSprite(0)
+	endif
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16,-16,32,32,84,223)
+	foreach TypeName[FallingBlock],ArrayPos0
+		Object[ArrayPos0].Value3=Object[ArrayPos0].YPos
+	floop
+	SetArrayValue(70,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(161,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(162,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

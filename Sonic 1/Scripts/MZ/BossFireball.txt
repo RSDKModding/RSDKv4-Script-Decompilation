@@ -1,0 +1,200 @@
+//--------------------Sonic 1 / Sonic 2 BossFireball Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 67: TYPE_BOSSFIREBALL
+
+// Function declarations
+#function BossFireball_Function153
+
+
+
+function BossFireball_Function153
+	Object.Frame=Object.AnimationTimer
+	Object.Frame/=12
+	Object.Direction=Object.AnimationTimer
+	Object.Direction/=6
+	Object.Direction&=FLIP_X
+	Object.Direction+=Object.Value1
+	Object.AnimationTimer++
+	Object.AnimationTimer%=24
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		Object.Value1=2
+		Object.Value0++
+		if Object.Value0==30
+			Object.Value0=0
+			Object.Value1=0
+			Object.State++
+			PlaySfx(SFXName[SmallFireball],0)
+		endif
+		CallFunction(BossFireball_Function153)
+		break
+	case 1
+		Object.YVelocity+=0x1800
+		Object.YPos+=Object.YVelocity
+		if Object.YVelocity>0x30000
+			Object.DrawOrder=5
+		endif
+		ObjectTileCollision(CMODE_FLOOR,0,4,0)
+		if CheckResult==1
+			CreateTempObject(TypeName[BossFireball],0,Object.XPos,Object.YPos)
+			Object[TempObjectPos].Value3=Object.XPos
+			Object[TempObjectPos].Value3-=0x100000
+			Object[TempObjectPos].XVelocity=-0xA000
+			Object[TempObjectPos].State=3
+			Object[TempObjectPos].DrawOrder=5
+			CreateTempObject(TypeName[BossFireball],0,Object.XPos,Object.YPos)
+			Object[TempObjectPos].Value3=Object.XPos
+			Object[TempObjectPos].Value3+=0x100000
+			Object[TempObjectPos].XVelocity=0xA000
+			Object[TempObjectPos].State=3
+			Object[TempObjectPos].DrawOrder=5
+			Object.State++
+		endif
+		CallFunction(BossFireball_Function153)
+		break
+	case 2
+		Object.Value0++
+		if Object.Value0==120
+			Object.Value0=0
+			Object.State=7
+			Object.Frame=2
+			Object.Direction=FLIP_NONE
+		else
+			CallFunction(BossFireball_Function153)
+		endif
+		break
+	case 3
+		Object.XPos+=Object.XVelocity
+		if Object.XVelocity>0
+			if Object.XPos>=Object.Value3
+				Object.XVelocity=0
+				Object.XPos=Object.Value3
+				Object.State=2
+				CreateTempObject(TypeName[BossFireball],0,Object.XPos,Object.YPos)
+				Object[TempObjectPos].Value3=Object.XPos
+				Object[TempObjectPos].Value3+=0x100000
+				Object[TempObjectPos].XVelocity=0xA000
+				Object[TempObjectPos].State=4
+				Object[TempObjectPos].DrawOrder=5
+			endif
+		else
+			if Object.XPos<=Object.Value3
+				Object.XVelocity=0
+				Object.XPos=Object.Value3
+				Object.State=2
+				CreateTempObject(TypeName[BossFireball],0,Object.XPos,Object.YPos)
+				Object[TempObjectPos].Value3=Object.XPos
+				Object[TempObjectPos].Value3-=0x100000
+				Object[TempObjectPos].XVelocity=-0xA000
+				Object[TempObjectPos].State=4
+				Object[TempObjectPos].DrawOrder=5
+			endif
+		endif
+		CallFunction(BossFireball_Function153)
+		break
+	case 4
+		Object.XPos+=Object.XVelocity
+		if Object.XVelocity>0
+			if Object.XPos>=Object.Value3
+				Object.XPos=Object.Value3
+				Object.State=5
+				CreateTempObject(TypeName[BossFireball],0,Object.XPos,Object.YPos)
+				Object[TempObjectPos].XVelocity=0xA000
+				Object[TempObjectPos].State=6
+				Object[TempObjectPos].DrawOrder=5
+			endif
+		else
+			if Object.XPos<=Object.Value3
+				Object.XPos=Object.Value3
+				Object.State=5
+				CreateTempObject(TypeName[BossFireball],0,Object.XPos,Object.YPos)
+				Object[TempObjectPos].XVelocity=-0xA000
+				Object[TempObjectPos].State=6
+				Object[TempObjectPos].DrawOrder=5
+			endif
+		endif
+		CallFunction(BossFireball_Function153)
+		break
+	case 5
+		Object.Value0++
+		TempValue0=Object.Value0
+		TempValue0%=48
+		if TempValue0==0
+			CreateTempObject(TypeName[BossFireball],0,Object.XPos,Object.YPos)
+			Object[TempObjectPos].XVelocity=Object.XVelocity
+			Object[TempObjectPos].State=6
+			Object[TempObjectPos].DrawOrder=5
+		endif
+		if Object.Value0==120
+			Object.Value0=0
+			Object.State=7
+			Object.Frame=2
+			Object.Direction=FLIP_NONE
+		else
+			CallFunction(BossFireball_Function153)
+		endif
+		break
+	case 6
+		Object.XPos+=Object.XVelocity
+		if Object.Gravity==GRAVITY_GROUND
+			ObjectTileGrip(CMODE_FLOOR,0,4,0)
+			Object.Gravity=CheckResult
+			Object.Gravity^=GRAVITY_AIR
+		else
+			Object.DrawOrder=4
+			Object.YVelocity+=0x1800
+			Object.YPos+=Object.YVelocity
+		endif
+		if Object.OutOfBounds==1
+			Object.Type=TypeName[BlankObject]
+		endif
+		Object.Value0++
+		if Object.Value0==90
+			Object.Type=TypeName[BlankObject]
+		endif
+		CallFunction(BossFireball_Function153)
+		break
+	case 7
+		Object.Value0++
+		if Object.Value0==8
+			Object.Type=TypeName[BlankObject]
+		endif
+		break
+
+	endswitch
+	if Object.State>0
+		if Object.Frame<2
+			foreach TypeGroup[256],PlayerObjectPos
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-6,-6,6,6,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					CallFunction(PlayerObject_Function47)
+				endif
+			floop
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-7,-23,15,31,52,114)
+	SpriteFrame(-8,-24,16,32,68,114)
+	SpriteFrame(-8,-19,16,23,85,114)
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

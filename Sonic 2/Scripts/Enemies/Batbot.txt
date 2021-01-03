@@ -1,0 +1,244 @@
+//--------------------Sonic 1 / Sonic 2 Batbot Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 55: TYPE_BATBOT
+
+// Function declarations
+#function Batbot_Function125
+#function Batbot_Function126
+
+
+#array Batbot_array48:(0,0,0,0,0,0,0,0,0,1,1,1)
+
+function Batbot_Function125
+	DrawSpriteFX(5,FX_FLIP,Object.XPos,Object.YPos)
+	DrawSprite(0)
+endfunction
+
+
+function Batbot_Function126
+	CreateTempObject(TypeName[Batbot],0,Object.XPos,Object.YPos)
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+			Object.Priority=PRIORITY_ACTIVE
+		endif
+		Object.Value8=1
+		Object.Value1=Object.YPos
+		Object.PrevAnimation=-1
+		Object.Animation=0
+		Object.State=1
+		break
+	case 1
+		Object.Angle+=8
+		Object.Angle&=511
+		Sin(Object.YPos,Object.Angle)
+		Object.YPos<<=9
+		Object.YPos+=Object.Value1
+		Object.Animation=0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-96,-64,96,128,PlayerObjectPos,0,0,0,0)
+			if CheckResult==1
+				Object.Animation=1
+			endif
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-80,-64,80,96,PlayerObjectPos,0,0,0,0)
+			if CheckResult==1
+				Object.Value7=PlayerObjectPos
+				Object.State=2
+			endif
+		floop
+		break
+	case 2
+		if Object.Angle!=0
+			Object.Angle+=8
+			Object.Angle&=511
+			Sin(Object.YPos,Object.Angle)
+			Object.YPos<<=9
+			Object.YPos+=Object.Value1
+		endif
+		Object.Value0++
+		if Object.Value0==20
+			Object.Value0=0
+			Object.Value2=Object.XPos
+			Object.Value3=Object.YPos
+			PlayerObjectPos=Object.Value7
+			if Object[PlayerObjectPos].XPos>Object.XPos
+				Object.Value6=256
+				Object.Value2+=0x500000
+				Object.Value11=1
+				Object.State=4
+			else
+				Object.Value6=0
+				Object.Value2-=0x500000
+				Object.Value11=0
+				Object.State=3
+			endif
+			Object.Value8=0
+			Object.Animation=2
+		endif
+		break
+	case 3
+		Object.Value6+=4
+		Cos(Object.XPos,Object.Value6)
+		Object.XPos*=0x2800
+		Object.XPos+=Object.Value2
+		Sin(Object.YPos,Object.Value6)
+		Object.YPos*=0x2800
+		Object.YPos+=Object.Value3
+		if Object.Value6==256
+			Object.Value8=1
+			Object.Animation=0
+			Object.State=1
+		endif
+		break
+	case 4
+		Object.Value6-=4
+		Cos(Object.XPos,Object.Value6)
+		Object.XPos*=0x2800
+		Object.XPos+=Object.Value2
+		Sin(Object.YPos,Object.Value6)
+		Object.YPos*=0x2800
+		Object.YPos+=Object.Value3
+		if Object.Value6==0
+			Object.Value8=1
+			Object.Animation=0
+			Object.State=1
+		endif
+		break
+
+	endswitch
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_TOUCH,Object.EntityNo,-16,-12,16,12,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+		if CheckResult==1
+			CallFunction(PlayerObject_Function44)
+		endif
+	floop
+	switch Object.Animation
+	case 0
+		if Object.Animation!=Object.PrevAnimation
+			Object.PrevAnimation=Object.Animation
+			Object.AnimationTimer=0
+			Object.Frame=2
+		else
+			Object.AnimationTimer++
+			if Object.AnimationTimer==8
+				Object.AnimationTimer=0
+				Object.Frame++
+				if Object.Frame>5
+					Object.Frame=5
+				endif
+			endif
+		endif
+		break
+	case 1
+		if Object.Animation!=Object.PrevAnimation
+			Object.PrevAnimation=Object.Animation
+			Object.AnimationTimer=0
+			Object.Frame=6
+		else
+			Object.AnimationTimer++
+			if Object.AnimationTimer==4
+				Object.AnimationTimer=0
+				Object.Frame++
+				if Object.Frame>10
+					Object.Frame=6
+				endif
+			endif
+		endif
+		GetArrayValue(Object.Direction,Object.Frame,Batbot_array48)
+		Object.Direction^=Object.Value11
+		break
+	case 2
+		if Object.Animation!=Object.PrevAnimation
+			Object.PrevAnimation=Object.Animation
+			Object.AnimationTimer=0
+			Object.Frame=11
+		else
+			Object.AnimationTimer++
+			if Object.AnimationTimer==4
+				Object.AnimationTimer=0
+				Object.Frame++
+				if Object.Frame>15
+					Object.Frame=11
+				endif
+			endif
+		endif
+		Object.Direction=Object.Value11
+		break
+
+	endswitch
+	if Object.Value8==1
+		Object.Value9=Object.Value10
+		Object.Value9>>=1
+		Object.Value10++
+		Object.Value10&=3
+	endif
+	if Object.OutOfBounds==1
+		TempValue0=Object.XPos
+		TempValue1=Object.YPos
+		Object.XPos=Object.Value4
+		Object.YPos=Object.Value5
+		if Object.OutOfBounds==1
+			Object.PrevAnimation=-1
+			Object.Animation=0
+			Object.Value8=1
+			Object.Value0=0
+			Object.Value10=0
+			if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+				Object.Priority=PRIORITY_ACTIVE_BOUNDS
+			endif
+			Object.State=1
+		else
+			Object.XPos=TempValue0
+			Object.YPos=TempValue1
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+	if Object.Value8==1
+		DrawSprite(Object.Value9)
+	endif
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-3,10,6,5,206,1)
+	SpriteFrame(-3,10,6,3,213,1)
+	SpriteFrame(-37,-16,74,27,60,1)
+	SpriteFrame(-35,-16,70,27,135,1)
+	SpriteFrame(-37,-16,74,27,60,1)
+	SpriteFrame(-29,-16,58,27,1,1)
+	SpriteFrame(-35,-16,70,27,135,1)
+	SpriteFrame(-19,-16,38,27,1,29)
+	SpriteFrame(-8,-16,16,26,40,29)
+	SpriteFrame(-8,-16,16,26,40,29)
+	SpriteFrame(-19,-16,38,27,1,29)
+	SpriteFrame(-35,-16,70,27,57,29)
+	SpriteFrame(-19,-16,38,27,128,29)
+	SpriteFrame(-7,-16,14,27,168,29)
+	SpriteFrame(-7,-16,14,27,183,29)
+	SpriteFrame(-19,-16,38,27,1,57)
+	foreach TypeName[Batbot],ArrayPos0
+		Object[ArrayPos0].Value4=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Value5=Object[ArrayPos0].YPos
+	floop
+	SetArrayValue(55,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(125,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(126,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

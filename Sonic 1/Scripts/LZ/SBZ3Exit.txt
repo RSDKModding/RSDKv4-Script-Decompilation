@@ -1,0 +1,91 @@
+//--------------------Sonic 1 / Sonic 2 SBZ3 Exit Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 77: TYPE_SBZ3EXIT
+
+
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		PlayerObjectCollision(C_TOUCH,Object.EntityNo,-128,-16,128,16,0,0x10000,0x10000,0x10000,0x10000)
+		if CheckResult==1
+			Object[0].Type=TypeName[Ring]
+			Object[0].TypeGroup=TypeName[BlankObject]
+			Object[0].ControlMode=-1
+			if options.gameMode==2
+				Object.State=2
+				Stage.TimeEnabled=0
+			else
+				Object.State++
+			endif
+			recAnimation=0
+			TempValue0=0
+			foreach TypeGroup[256],PlayerObjectPos
+				TempValue1=Object[PlayerObjectPos].Animation
+				TempValue1<<=8
+				TempValue1|=Object[PlayerObjectPos].Direction
+				TempValue1<<=TempValue0
+				recAnimation|=TempValue1
+				TempValue0+=16
+			floop
+		endif
+		break
+	case 1
+		if Object.Value0<512
+			Object.Value0+=8
+			Music.Volume-=2
+		else
+			Object.Direction=FLIP_NONE
+			lampPostID=0
+			Stage.ListPos++
+			if options.gameMode==1
+				ArrayPos1=options.saveSlot
+				ArrayPos1<<=3
+				if stage.player2Enabled==1
+					SaveRAM[ArrayPos1]=3
+				else
+					SaveRAM[ArrayPos1]=Stage.PlayerListPos
+				endif
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=player.lives
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=player.score
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=player.scoreBonus
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=Stage.ListPos
+				SaveRAM[ArrayPos1]++
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=specialStage.emeralds
+				ArrayPos1++
+				SaveRAM[ArrayPos1]=specialStage.listPos
+				WriteSaveRAM()
+			endif
+			LoadStage()
+		endif
+		SetScreenFade(0,0,0,Object.Value0)
+		break
+	case 2
+		if Object.Value0<60
+			Object.Value0++
+			Music.Volume-=2
+		else
+			Object.Type=TypeName[BlankObject]
+			Object[30].Type=TypeName[ActFinish]
+			Object[30].DrawOrder=6
+			Object[30].Priority=PRIORITY_ACTIVE
+			PlayMusic(1)
+		endif
+		break
+
+	endswitch
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

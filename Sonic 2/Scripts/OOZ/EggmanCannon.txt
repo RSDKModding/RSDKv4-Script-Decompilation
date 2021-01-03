@@ -1,0 +1,173 @@
+//--------------------Sonic 1 / Sonic 2 EggmanCannon Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 62: TYPE_EGGMANCANNON
+
+
+
+#array EggmanCannon_array46:(-0x780000,-0x800000,-0x700000,-0x510000)
+
+sub ObjectMain
+	Object.Angle+=4
+	Object.Angle&=511
+	if Object[0].XPos<Object.XPos
+		Object.Direction=FLIP_NONE
+	else
+		Object.Direction=FLIP_X
+	endif
+	switch Object.State
+	case 0
+		Object.Value1=Object.XPos
+		Object.Value2=Object.YPos
+		Object.Value4=Object.YPos
+		Object.Value4-=0x700000
+		Object.Value3=Object.YPos
+		Object.YVelocity=-0x8000
+		Object.State=1
+		break
+	case 1
+		Object.Value2+=Object.YVelocity
+		if Object.Value2<=Object.Value4
+			Object.Value2=Object.Value4
+			Object.Value5=3
+			Object.Value0=128
+			Object.Value6=0
+			Object.State++
+		endif
+		break
+	case 2
+		if Object.AnimationTimer>0
+			Object.AnimationTimer--
+		else
+			Object.Frame=0
+		endif
+		Object.Value0--
+		if Object.Value0==0
+			if Object.Value5>0
+				Rand(TempValue0,4)
+				while TempValue0==Object.Value6
+					if Stage.MilliSeconds>50
+						TempValue0++
+					else
+						TempValue0--
+					endif
+					TempValue0&=3
+				loop
+				Object.Value6=TempValue0
+				GetArrayValue(Object.Value4,TempValue0,EggmanCannon_array46)
+				Object.Value4+=Object.Value3
+				if Object.Value4<Object.Value2
+					Object.YVelocity=-0x8000
+				else
+					Object.YVelocity=0x8000
+				endif
+				Object.State=3
+			else
+				Object.YVelocity=0x8000
+				Object.State=4
+			endif
+		endif
+		break
+	case 3
+		Object.Value2+=Object.YVelocity
+		CheckResult=0
+		if Object.YVelocity<0
+			if Object.Value2<=Object.Value4
+				Object.Value2=Object.Value4
+				CheckResult=1
+			endif
+		else
+			if Object.Value2>=Object.Value4
+				Object.Value2=Object.Value4
+				CheckResult=1
+			endif
+		endif
+		if CheckResult==1
+			Object.AnimationTimer=7
+			Object.Frame=1
+			Object.Value5--
+			Object.Value0=40
+			Object.State=2
+			Cos(Object.XPos,Object.Angle)
+			Object.XPos<<=11
+			Object.XPos+=Object.Value1
+			Sin(Object.YPos,Object.Angle)
+			Object.YPos<<=9
+			Object.YPos+=Object.Value2
+			CreateTempObject(TypeName[EggmanLaser],0,Object.XPos,Object.YPos)
+			Object[TempObjectPos].DrawOrder=2
+			Object[TempObjectPos].Direction=Object.Direction
+			if Object.Direction==FLIP_NONE
+				Object[TempObjectPos].XVelocity=-0x40000
+			else
+				Object[TempObjectPos].XVelocity=0x40000
+			endif
+			PlaySfx(SFXName[SmallLaser],0)
+		endif
+		break
+	case 4
+		Object.Value2+=Object.YVelocity
+		if Object.Value2>Object.Value3
+			Object.Type=TypeName[BlankObject]
+		endif
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectDraw
+	TempValue1=Object.Angle
+	TempValue1-=288
+	TempValue1&=511
+	TempValue0=0
+	TempValue2=Object.Value2
+	TempValue2+=0x780000
+	while TempValue0<8
+		Cos(Object.XPos,TempValue1)
+		Object.XPos<<=11
+		Object.XPos+=Object.Value1
+		Sin(Object.YPos,TempValue1)
+		Object.YPos<<=9
+		Object.YPos+=TempValue2
+		DrawSprite(2)
+		TempValue0++
+		TempValue1+=32
+		TempValue1&=511
+		TempValue2-=0xF0000
+	loop
+	Cos(Object.XPos,TempValue1)
+	Object.XPos<<=11
+	Object.XPos+=Object.Value1
+	Sin(Object.YPos,TempValue1)
+	Object.YPos<<=9
+	Object.YPos+=TempValue2
+	DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+	PlayerObjectCollision(C_TOUCH,Object.EntityNo,-8,-8,8,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+	if CheckResult==1
+		CallFunction(PlayerObject_Function45)
+	endif
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone07")
+	if CheckResult==1
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-32,-8,40,16,141,207)
+		SpriteFrame(-32,-8,40,16,141,224)
+		SpriteFrame(-8,-8,16,16,379,196)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32,-8,40,16,512,180)
+		SpriteFrame(-32,-8,40,16,553,180)
+		SpriteFrame(-8,-8,16,16,355,214)
+	endif
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

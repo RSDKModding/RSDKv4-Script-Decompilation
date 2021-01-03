@@ -1,0 +1,278 @@
+//--------------------Sonic 1 / Sonic 2 SSSingleResult Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 15: TYPE_SSSINGLERESULT
+
+
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		SetupMenu(MENU_1,0,3,0)
+		LoadSpriteSheet("LevelSelect/Icons.gif")
+		Object.Value1=Object.SpriteSheet
+		LoadSpriteSheet("LevelSelect/Text.gif")
+		Object.Value2=Object.SpriteSheet
+		Menu1.Selection=-1
+		if vs.tieBreaker==0
+			Object.Value15=vs.listPos
+			Object.Value15-=4
+		else
+			if vs.activeList==3
+				Object.Value15=2
+			else
+				Object.Value15=3
+			endif
+		endif
+		Object.Value6=vs.checkpoint1P
+		Object.Value6&=255
+		Object.Value7=vs.checkpoint1P
+		Object.Value7>>=8
+		Object.Value7&=255
+		Object.Value8=vs.checkpoint1P
+		Object.Value8>>=16
+		Object.Value9=vs.checkpoint2P
+		Object.Value9&=255
+		Object.Value10=vs.checkpoint2P
+		Object.Value10>>=8
+		Object.Value10&=255
+		Object.Value11=vs.checkpoint2P
+		Object.Value11>>=16
+		switch Object.Value15
+		case 0
+			AddMenuEntry(MENU_1,"@@@@@@@SPECIAL STAGE@@@* 1 *",1)
+			break
+		case 1
+			AddMenuEntry(MENU_1,"@@@@@@@SPECIAL STAGE@@@* 2 *",1)
+			break
+		case 2
+			AddMenuEntry(MENU_1,"@@@@@@@SPECIAL STAGE@@@* 3 *",1)
+			break
+		case 3
+			AddMenuEntry(MENU_1,"@@@@@@@SPECIAL STAGE",1)
+			break
+
+		endswitch
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"@@@@@@@@@@@@@@1P@@@@@@2P@@@@WINS",1)
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"CHECKPOINT",1)
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"@@@* 1 *",1)
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"@@@* 2 *",1)
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"@@@* 3 *",1)
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"@",1)
+		AddMenuEntry(MENU_1,"@* TOTAL *@@@@@@@@@:",1)
+		Object.Value12=0
+		Object.Value13=0
+		if Object.Value6==Object.Value9
+			Object.Value3=3
+		else
+			if Object.Value6>Object.Value9
+				Object.Value3=1
+				Object.Value12++
+			else
+				Object.Value3=2
+				Object.Value13++
+			endif
+		endif
+		if Object.Value7==Object.Value10
+			Object.Value4=3
+		else
+			if Object.Value7>Object.Value10
+				Object.Value4=1
+				Object.Value12++
+			else
+				Object.Value4=2
+				Object.Value13++
+			endif
+		endif
+		if Object.Value8==Object.Value11
+			Object.Value5=3
+		else
+			if Object.Value8>Object.Value11
+				Object.Value5=1
+				Object.Value12++
+			else
+				Object.Value5=2
+				Object.Value13++
+			endif
+		endif
+		if Object.Value12==Object.Value13
+			Object.Value14=18
+		else
+			if Object.Value12>Object.Value13
+				Object.Value14=14
+			else
+				Object.Value14=16
+			endif
+		endif
+		ArrayPos0=vs.match
+		ArrayPos0<<=2
+		if vs.tieBreaker==0
+			ArrayPos0+=Object.Value15
+		else
+			ArrayPos0+=2
+		endif
+		ArrayPos0+=0x400
+		SaveRAM[ArrayPos0]=Object.Value13
+		SaveRAM[ArrayPos0]<<=4
+		SaveRAM[ArrayPos0]+=Object.Value12
+		if Object.Value15==1
+			ArrayPos0++
+			SaveRAM[ArrayPos0]=0
+			ArrayPos0++
+			SaveRAM[ArrayPos0]=7
+		endif
+		Object.State++
+		break
+	case 1
+		EngineCallback(ReceiveEntity,0x400,1)
+		ResetObjectEntity(0x400,TypeName[BlankObject],0,0,0)
+		Object.State++
+		break
+	case 2
+		if Object.Value0<60
+			Object.Value0++
+		else
+			CheckTouchRect(0,0,Screen.XSize,Screen.YSize)
+			if KeyPress.Start==1
+				CheckResult=0
+			endif
+			if KeyPress.ButtonA==1
+				CheckResult=0
+			endif
+			if KeyPress.ButtonB==1
+				CheckResult=0
+			endif
+			if KeyPress.ButtonC==1
+				CheckResult=0
+			endif
+			if CheckResult>-1
+				Object.Value0=0
+				if vs.tieBreaker==1
+					Object.State=4
+				else
+					if Object.Value15==0
+						vs.listPos++
+						Stage.ActiveList=vs.activeList
+						Stage.ListPos=vs.listPos
+						Object.State=3
+						Object[0].State=4
+						PlaySfx(SFXName[Warp],0)
+					else
+						CallFunction(ActResults_Function9)
+						if CheckResult==1
+							Stage.ActiveList=SPECIAL_STAGE
+							Stage.ListPos=6
+							Object.State=3
+							Object[0].State=4
+							PlaySfx(SFXName[Warp],0)
+							vs.tieBreaker=1
+						else
+							Object.State=4
+						endif
+					endif
+				endif
+			endif
+		endif
+		break
+	case 3
+		break
+	case 4
+		if Object.Value0<256
+			Object.Value0+=16
+			SetScreenFade(0,0,0,Object.Value0)
+		else
+			if vs.activeList==3
+				ResetObjectEntity(1,TypeName[SSResults],0,0,0)
+			else
+				ResetObjectEntity(1,TypeName[ZoneResults],0,0,0)
+			endif
+			Object[1].Priority=PRIORITY_ACTIVE
+			Object[0].State=1
+			Object[0].Value0=384
+			SetScreenFade(0,0,0,255)
+		endif
+		break
+
+	endswitch
+	Object.AnimationTimer++
+	Object.AnimationTimer&=15
+endsub
+
+
+sub ObjectDraw
+	Object.SpriteSheet=Object.Value1
+	DrawSpriteScreenXY(0,Screen.CenterX,17)
+	TempValue0=Screen.CenterX
+	TempValue0+=8
+	DrawNumbers(4,TempValue0,129,Object.Value6,3,8,0)
+	DrawNumbers(4,TempValue0,145,Object.Value7,3,8,0)
+	DrawNumbers(4,TempValue0,161,Object.Value8,3,8,0)
+	TempValue0=Screen.CenterX
+	TempValue0+=72
+	DrawNumbers(4,TempValue0,129,Object.Value9,3,8,0)
+	DrawNumbers(4,TempValue0,145,Object.Value10,3,8,0)
+	DrawNumbers(4,TempValue0,161,Object.Value11,3,8,0)
+	TempValue0=Screen.CenterX
+	TempValue0+=8
+	DrawNumbers(4,TempValue0,185,Object.Value12,1,8,1)
+	TempValue0+=32
+	DrawNumbers(4,TempValue0,185,Object.Value13,1,8,1)
+	TempValue0=Screen.CenterX
+	TempValue0+=112
+	DrawSpriteScreenXY(Object.Value3,TempValue0,129)
+	DrawSpriteScreenXY(Object.Value4,TempValue0,145)
+	DrawSpriteScreenXY(Object.Value5,TempValue0,161)
+	TempValue0=Object.AnimationTimer
+	TempValue0>>=3
+	TempValue0+=Object.Value14
+	DrawSpriteScreenXY(TempValue0,Screen.CenterX,210)
+	Object.SpriteSheet=Object.Value2
+	TempValue0=Screen.CenterX
+	TempValue0-=128
+	DrawMenu(MENU_1,TempValue0,64)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	LoadSpriteSheet("LevelSelect/Text.gif")
+	SpriteFrame(-48,0,96,14,1,136)
+	SpriteFrame(-8,0,16,7,98,136)
+	SpriteFrame(-8,0,16,7,115,136)
+	SpriteFrame(-16,0,32,7,132,136)
+	SpriteFrame(0,0,8,7,175,140)
+	SpriteFrame(0,0,8,7,183,140)
+	SpriteFrame(0,0,8,7,191,140)
+	SpriteFrame(0,0,8,7,199,140)
+	SpriteFrame(0,0,8,7,207,140)
+	SpriteFrame(0,0,8,7,215,140)
+	SpriteFrame(0,0,8,7,223,140)
+	SpriteFrame(0,0,8,7,231,140)
+	SpriteFrame(0,0,8,7,239,140)
+	SpriteFrame(0,0,8,7,247,140)
+	SpriteFrame(-47,0,91,12,1,110)
+	SpriteFrame(-47,0,91,12,1,123)
+	SpriteFrame(-47,0,91,12,93,110)
+	SpriteFrame(-47,0,91,12,93,123)
+	SpriteFrame(-22,0,44,12,1,385)
+	SpriteFrame(-22,0,44,12,1,398)
+	foreach TypeName[SSSingleResult],ArrayPos0
+		Object[ArrayPos0].Priority=PRIORITY_ACTIVE
+	floop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

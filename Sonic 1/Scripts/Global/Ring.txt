@@ -1,0 +1,165 @@
+//--------------------Sonic 1 / Sonic 2 Ring Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 10: TYPE_RING
+
+// Function declarations
+#function Ring_Function76
+#function Ring_Function77
+
+
+
+function Ring_Function76
+	DrawSprite(0)
+endfunction
+
+
+function Ring_Function77
+	CreateTempObject(TypeName[Ring],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].DrawOrder=4
+endfunction
+
+
+sub ObjectMain
+	foreach TypeGroup[256],PlayerObjectPos
+		CheckEqual(Object[0].State,26)
+		TempValue0=CheckResult
+		CheckEqual(Object[PlayerObjectPos].State,26)
+		TempValue0=CheckResult
+		CheckEqual(Object[PlayerObjectPos].State,25)
+		TempValue0|=CheckResult
+		if TempValue0==0
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-8,-8,8,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				Object.Type=TypeName[RingSparkle]
+				Object[0].Value0++
+				if Object[0].Value0>999
+					Object[0].Value0=999
+				endif
+				if Object[0].Value0>=ringExtraLife
+					if options.gameMode!=2
+						player.lives++
+						PlaySfx(SFXName[Life],0)
+						PauseMusic()
+						ResetObjectEntity(25,TypeName[MusicEvent],2,0,0)
+						Object[25].Priority=PRIORITY_ACTIVE
+					endif
+					if Stage.DebugMode==0
+						if Object[0].Value0>=200
+							EngineCallback(SetAchievement,4,100)
+						endif
+					endif
+					ringExtraLife+=100
+					if ringExtraLife>300
+						ringExtraLife=1000
+					endif
+				endif
+				if Object.PropertyValue==1
+					if Stage.DebugMode==0
+						if options.attractMode==0
+							if PlayerObjectPos==0
+								if Object[0].Animation==ANI_JUMPING
+									achieveRingCount++
+									if achieveRingCount==30
+										EngineCallback(SetAchievement,0,100)
+										achieveRingCount=0
+									endif
+								endif
+							endif
+						endif
+					endif
+				endif
+				if ringPan==0
+					PlaySfx(SFXName[RingL],0)
+					SetSfxAttributes(SFXName[RingL],-1,-100)
+					ringPan=1
+				else
+					PlaySfx(SFXName[RingR],0)
+					SetSfxAttributes(SFXName[RingR],-1,100)
+					ringPan=0
+				endif
+			else
+				if Object.State==0
+					if Object[PlayerObjectPos].Value37==4
+						PlayerObjectCollision(C_TOUCH,Object.EntityNo,-64,-64,64,64,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+						if CheckResult==1
+							Object.State=1
+							Object.Value1=PlayerObjectPos
+						endif
+					endif
+				endif
+			endif
+		endif
+	floop
+	if Object.State==1
+		ArrayPos0=Object.Value1
+		if Object[ArrayPos0].Value37!=4
+			Object.Type=TypeName[LoseRing]
+			Object.AnimationSpeed=128
+			Object.Alpha=256
+		else
+			ArrayPos0=Object.Value1
+			if Object.XPos>Object[ArrayPos0].XPos
+				if Object.XVelocity>0
+					Object.XVelocity-=0xC000
+				else
+					Object.XVelocity-=0x3000
+				endif
+			else
+				if Object.XVelocity<0
+					Object.XVelocity+=0xC000
+				else
+					Object.XVelocity+=0x3000
+				endif
+			endif
+			if Object.YPos>Object[ArrayPos0].YPos
+				if Object.YVelocity>0
+					Object.YVelocity-=0xC000
+				else
+					Object.YVelocity-=0x3000
+				endif
+			else
+				if Object.YVelocity<0
+					Object.YVelocity+=0xC000
+				else
+					Object.YVelocity+=0x3000
+				endif
+			endif
+			Object.XPos+=Object.XVelocity
+			Object.YPos+=Object.YVelocity
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(ringFrame)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	foreach TypeName[Ring],ArrayPos0
+		Object[ArrayPos0].DrawOrder=4
+	floop
+	achieveRingCount=0
+	SpriteFrame(-8,-8,16,16,1,1)
+	SpriteFrame(-8,-8,16,16,1,18)
+	SpriteFrame(-8,-8,16,16,1,35)
+	SpriteFrame(-8,-8,16,16,1,52)
+	SpriteFrame(-8,-8,16,16,1,69)
+	SpriteFrame(-8,-8,16,16,1,86)
+	SpriteFrame(-8,-8,16,16,1,103)
+	SpriteFrame(-8,-8,16,16,1,120)
+	SetArrayValue(10,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(76,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(77,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

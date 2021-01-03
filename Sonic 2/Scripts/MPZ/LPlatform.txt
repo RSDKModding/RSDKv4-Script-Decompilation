@@ -1,0 +1,112 @@
+//--------------------Sonic 1 / Sonic 2 L Platform Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 74: TYPE_LPLATFORM
+
+// Function declarations
+#function LPlatform_Function159
+#function LPlatform_Function160
+
+
+
+function LPlatform_Function159
+	DrawSprite(0)
+endfunction
+
+
+function LPlatform_Function160
+	CreateTempObject(TypeName[LPlatform],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value1=Object[TempObjectPos].YPos
+endfunction
+
+
+sub ObjectMain
+	TempValue0=Object.YPos
+	TempValue0&=-0x10000
+	switch Object.State
+	case 0
+		GetArrayValue(TempValue6,0,StageSetup_array9)
+		TempValue6<<=7
+		Object.YPos=Object.Value1
+		Object.YPos-=TempValue6
+		break
+	case 1
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x800
+		if Object.OutOfBounds==1
+			Object.YPos=Object.Value1
+			Object.YPos+=Object.Value31
+			Object.YVelocity=0
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 2
+		if Object.OutOfBounds==1
+			Object.State=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+		endif
+		break
+
+	endswitch
+	TempValue7=Object.YPos
+	TempValue7&=-0x10000
+	TempValue7-=TempValue0
+	if Object.State<2
+		TempValue2=0
+		foreach TypeGroup[256],PlayerObjectPos
+			GetBit(TempValue0,Object.Value2,TempValue2)
+			if TempValue0==1
+				Object[PlayerObjectPos].YPos+=TempValue7
+			endif
+			SetBit(Object.Value2,TempValue2,0)
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-32,-12,32,12,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			switch CheckResult
+			case 1
+				SetBit(Object.Value2,TempValue2,1)
+				if Object.Value0==0
+					if Object.State==0
+						Object.Priority=PRIORITY_ACTIVE
+						Object.State++
+					endif
+				endif
+				break
+			case 4
+				if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+					CallFunction(PlayerObject_Function50)
+				endif
+				break
+
+			endswitch
+			TempValue2++
+		floop
+	endif
+endsub
+
+
+sub ObjectDraw
+	if Object.State<2
+		DrawSprite(0)
+	endif
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32,-12,64,24,383,207)
+	foreach TypeName[LPlatform],ArrayPos0
+		Object[ArrayPos0].YPos+=0x100000
+		Object[ArrayPos0].Value1=Object[ArrayPos0].YPos
+	floop
+	SetArrayValue(74,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(159,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(160,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

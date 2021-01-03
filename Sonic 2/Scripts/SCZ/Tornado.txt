@@ -1,0 +1,229 @@
+//--------------------Sonic 1 / Sonic 2 Tornado Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 43: TYPE_TORNADO
+
+
+
+#array Tornado_array40:(5,32,6,8,7,8,8,8,7,8,6,16,9,32,6,16)
+#array Tornado_array39:(10,9,11,9,10,9,11,9,10,9,11,9,10,9,11,9)
+
+sub ObjectMain
+	Object.Value4=Object.YPos
+	Object.DrawOrder=4
+	if options.touchControls==1
+		CheckTouchRect(0,96,Screen.CenterX,Screen.YSize)
+		if CheckResult>-1
+			ArrayPos0=CheckResult
+			TempValue0=TouchScreen[ArrayPos0].XPos
+			TempValue0-=SaveRAM[39]
+			TempValue1=TouchScreen[ArrayPos0].YPos
+			TempValue1-=SaveRAM[40]
+			ATan2(TempValue2,TempValue0,TempValue1)
+			TempValue2+=16
+			TempValue2&=255
+			TempValue2>>=5
+			switch TempValue2
+			case 0
+				KeyDown.Right=1
+				break
+			case 1
+				KeyDown.Right=1
+				KeyDown.Down=1
+				break
+			case 2
+				KeyDown.Down=1
+				break
+			case 3
+				KeyDown.Down=1
+				KeyDown.Left=1
+				break
+			case 4
+				KeyDown.Left=1
+				break
+			case 5
+				KeyDown.Left=1
+				KeyDown.Up=1
+				break
+			case 6
+				KeyDown.Up=1
+				break
+			case 7
+				KeyDown.Up=1
+				KeyDown.Right=1
+				break
+
+			endswitch
+		endif
+	endif
+	switch Object.State
+	case 0
+		if Object[0].YVelocity<0
+			if Object[0].JumpPress==1
+				Object.Value2=0x20000
+				Object.Value3=Object.YPos
+				Object.State++
+			endif
+		endif
+		break
+	case 1
+		Object.Value2-=0x2000
+		Object.YPos+=Object.Value2
+		if Object.Value2<0
+			Object.State++
+		endif
+		break
+	case 2
+		Object.Value2-=0x1000
+		Object.YPos+=Object.Value2
+		if Object.YPos<=Object.Value3
+			Object.YPos=Object.Value3
+			Object.Value2=0
+			Object.State=0
+		endif
+		break
+	case 3
+		Object.Value2-=0x2000
+		Object.YPos+=Object.Value2
+		Object.Value0++
+		if Object.Value0==24
+			Object.Value2=0
+			Object.State=0
+		endif
+		break
+
+	endswitch
+	if Object.Value1==1
+		Object.XPos+=SCZSetup_constant34
+		Object.YPos+=SCZSetup_constant35
+		if KeyDown.Up==1
+			Object.YVelocity=-0x10000
+		else
+			Object.YVelocity=0
+		endif
+		if KeyDown.Down==1
+			Object.YVelocity=0x10000
+		endif
+	else
+		Object.YVelocity=0
+	endif
+	Object.YPos+=Object.YVelocity
+	TempValue0=Screen.CameraYPos
+	TempValue0-=52
+	TempValue0<<=16
+	if Object.YPos<TempValue0
+		Object.YPos=TempValue0
+	endif
+	TempValue0=Screen.CameraYPos
+	TempValue0+=76
+	TempValue0<<=16
+	if Object.YPos>TempValue0
+		Object.YPos=TempValue0
+	endif
+	TempValue0=Object.YPos
+	Object.Value4&=-0x10000
+	Object.Value5=Object.YPos
+	Object.Value5&=-0x10000
+	Object.Value5-=Object.Value4
+	Object.YPos=Object.Value4
+	Object.Value1=0
+	foreach TypeGroup[256],PlayerObjectPos
+		TempValue2=Object[PlayerObjectPos].YVelocity
+		PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-20,-8,20,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		if CheckResult==1
+			Object[PlayerObjectPos].XPos+=SCZSetup_constant34
+			Object[PlayerObjectPos].YPos+=Object.Value5
+			if TempValue2>0x10000
+				Object.Value0=0
+				Object.Value2=0x20000
+				Object.State=3
+			endif
+			Object.Value1|=1
+		endif
+	floop
+	Object.YPos=TempValue0
+	TempValue0=Object[0].XPos
+	TempValue0-=Object.XPos
+	Absolute(TempValue0)
+	if TempValue0>0x100000
+		if Object[0].XPos>Object.XPos
+			TempValue0=Object[0].XPos
+			TempValue0-=Object.XPos
+			TempValue0-=0x100000
+			if TempValue0>0x80000
+				TempValue0=0x80000
+			endif
+			Object.XPos+=TempValue0
+		else
+			TempValue0=Object[0].XPos
+			TempValue0-=Object.XPos
+			TempValue0+=0x100000
+			if TempValue0<-0x80000
+				TempValue0=-0x80000
+			endif
+			Object.XPos+=TempValue0
+		endif
+	endif
+	TempValue0=-0x100000
+	TempValue0+=Object.XPos
+	TempValue1=Stage.XBoundary1
+	TempValue1<<=16
+	if TempValue0<TempValue1
+		Object.XPos=TempValue1
+		Object.XPos+=0x100000
+	endif
+	Object.Frame++
+	Object.Frame&=3
+	if Object.Value7<2
+		if Stage.PlayerListPos==1
+			GetArrayValue(Object.Value6,Object.Value8,Tornado_array39)
+			Object.Value8++
+			GetArrayValue(Object.Value7,Object.Value8,Tornado_array39)
+			Object.Value8++
+		else
+			GetArrayValue(Object.Value6,Object.Value8,Tornado_array40)
+			Object.Value8++
+			GetArrayValue(Object.Value7,Object.Value8,Tornado_array40)
+			Object.Value8++
+		endif
+		Object.Value8&=15
+	else
+		Object.Value7--
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+	DrawSprite(4)
+	DrawSprite(Object.Value6)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(21,8,4,24,378,215)
+	SpriteFrame(21,11,4,18,383,218)
+	SpriteFrame(21,16,4,8,388,223)
+	SpriteFrame(21,11,4,18,393,218)
+	SpriteFrame(-95,-16,116,64,261,191)
+	SpriteFrame(-45,-8,21,16,261,174)
+	SpriteFrame(-45,-8,21,16,283,174)
+	SpriteFrame(-45,-8,21,16,305,174)
+	SpriteFrame(-45,-8,21,16,327,174)
+	SpriteFrame(-47,-8,23,16,349,174)
+	SpriteFrame(-50,-8,24,16,294,157)
+	SpriteFrame(-50,-8,24,16,319,157)
+	Object[1].Type=TypeName[BlankObject]
+	PlayerObjectCount=1
+	if Stage.PlayerListPos==1
+		Object[0].YPos+=0x40000
+	endif
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

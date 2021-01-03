@@ -1,0 +1,350 @@
+//--------------------Sonic 1 / Sonic 2 Grabber Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 64: TYPE_GRABBER
+
+// Function declarations
+#function Grabber_Function150
+#function Grabber_Function151
+#function Grabber_Function152
+
+
+
+function Grabber_Function150
+	Object[ArrayPos0].XPos=Object[ArrayPos0].Value0
+	Object[ArrayPos0].YPos=Object[ArrayPos0].Value1
+	Object[ArrayPos0].Value2=256
+	Object[ArrayPos0].Value3=0
+	Object[ArrayPos0].Value4=0
+	Object[ArrayPos0].Value8=-1
+	Object[ArrayPos0].Value9=0
+	Object[ArrayPos0].Value10=0
+	Object[ArrayPos0].Value11=0
+	Object[ArrayPos0].Animation=0
+	Object[ArrayPos0].State=0
+	if Object[ArrayPos0].PropertyValue==0
+		Object[ArrayPos0].Direction=FLIP_NONE
+		Object[ArrayPos0].XVelocity=-0x4000
+	else
+		Object[ArrayPos0].Direction=FLIP_X
+		Object[ArrayPos0].XVelocity=0x4000
+	endif
+	Object[ArrayPos0].Priority=PRIORITY_ACTIVE_BOUNDS
+endfunction
+
+
+function Grabber_Function151
+	TempValue0=Object.YPos
+	TempValue0-=0xC0000
+	DrawSpriteFX(3,FX_FLIP,Object.XPos,TempValue0)
+	DrawSpriteFX(0,FX_FLIP,Object.XPos,Object.YPos)
+	DrawSpriteFX(5,FX_FLIP,Object.XPos,Object.YPos)
+endfunction
+
+
+function Grabber_Function152
+	CreateTempObject(TypeName[Grabber],TempValue0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value0=Object.XPos
+	Object[TempObjectPos].Value1=Object.YPos
+	ArrayPos0=Object[TempObjectPos].EntityNo
+	Object[TempObjectPos].PropertyValue=Object.Direction
+	CallFunction(Grabber_Function150)
+endfunction
+
+
+sub ObjectMain
+	Object.Priority=PRIORITY_ACTIVE
+	switch Object.State
+	case 0
+		Object.Value2--
+		if Object.Value2<=0
+			Object.Value2=256
+			FlipSign(Object.XVelocity)
+			Object.Direction^=FLIP_X
+		endif
+		Object.XPos+=Object.XVelocity
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-64,0,64,128,PlayerObjectPos,1,1,1,1)
+			if CheckResult==1
+				Object.State=2
+				Object.Value3=16
+			endif
+		floop
+		break
+	case 2
+		Object.Value3--
+		if Object.Value3<0
+			Object.Value3=32
+			Object.State=1
+			Object.Animation=1
+		endif
+		break
+	case 1
+		Object.Value3--
+		if Object.Value3<0
+			Object.State=3
+		endif
+		Object.YPos+=0x20000
+		break
+	case 3
+		Object.Value3++
+		if Object.Value3>=32
+			Object.Value3=0
+			Object.State=0
+			Object.Animation=0
+		endif
+		Object.YPos-=0x20000
+		break
+	case 4
+		Object.Value3++
+		if Object.Value3>=32
+			Object.Value2=1
+			Object.Value3=16
+			Object.Animation=2
+			Object.State++
+		endif
+		Object.YPos-=0x20000
+		PlayerObjectPos=Object.Value8
+		Object[PlayerObjectPos].XPos=Object.XPos
+		Object[PlayerObjectPos].YPos=Object.YPos
+		Object[PlayerObjectPos].YPos+=0x100000
+		break
+	case 5
+		if Object.Value8!=-1
+			PlayerObjectPos=Object.Value8
+			if Object.Value11!=0
+				Object.Value9--
+				if Object.Value9==0
+					Object.Value10=0
+					Object.Value11=0
+				endif
+				TempValue0=0
+				if Object[PlayerObjectPos].Left!=0
+					TempValue0|=1
+				endif
+				if Object[PlayerObjectPos].Right!=0
+					TempValue0|=2
+				endif
+				if TempValue0!=0
+					if TempValue0!=3
+						if TempValue0!=Object.Value11
+							Object.Value11=TempValue0
+							Object.Value10++
+							if Object.Value10>=4
+								Object[PlayerObjectPos].State=12
+								Object.Value8=-1
+								Object.Value12=16
+								Object.State=6
+							else
+								Object.Value9=32
+							endif
+						endif
+					endif
+				endif
+			else
+				if Object[PlayerObjectPos].Left!=0
+					Object.Value11|=1
+					Object.Value9=32
+				endif
+				if Object[PlayerObjectPos].Right!=0
+					Object.Value11|=2
+					Object.Value9=32
+				endif
+			endif
+			Object[PlayerObjectPos].XPos=Object.XPos
+			Object[PlayerObjectPos].YPos=Object.YPos
+			Object[PlayerObjectPos].YPos+=0x100000
+		endif
+		break
+	case 6
+		break
+
+	endswitch
+	if Object.OutOfBounds==1
+		TempValue0=Object.XPos
+		TempValue1=Object.YPos
+		Object.XPos=Object.Value0
+		Object.YPos=Object.Value1
+		if Object.OutOfBounds==1
+			ArrayPos0=Object.EntityNo
+			CallFunction(Grabber_Function150)
+		else
+			Object.XPos=TempValue0
+			Object.YPos=TempValue1
+		endif
+	endif
+	if Object.Value12>0
+		Object.Value12--
+	endif
+	TempValue7=Object.Value8
+	foreach TypeGroup[256],PlayerObjectPos
+		if PlayerObjectPos!=TempValue7
+			if Object.Value8==-1
+				if Object[PlayerObjectPos].State!=1
+					if Object.Animation==1
+						PlayerObjectCollision(C_TOUCH,Object.EntityNo,-8,0,8,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+						if CheckResult==1
+							Object.State=4
+							Object.Animation=0
+							Object.Value8=PlayerObjectPos
+							Object[PlayerObjectPos].XVelocity=0
+							Object[PlayerObjectPos].YVelocity=0
+							Object[PlayerObjectPos].Speed=0
+							Object[PlayerObjectPos].Value1=0
+							Object[PlayerObjectPos].State=1
+							Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+							Object[PlayerObjectPos].Animation=ANI_GRABBED
+							Object[PlayerObjectPos].Direction=Object.Direction
+							Object[PlayerObjectPos].Direction^=FLIP_X
+							CheckResult=1
+						endif
+					else
+						CheckResult=0
+					endif
+				endif
+			endif
+			if Object[PlayerObjectPos].State!=1
+				if Object.Value12==0
+					if CheckResult==0
+						PlayerObjectCollision(C_TOUCH,Object.EntityNo,-8,-8,8,8,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+						if CheckResult==1
+							CallFunction(PlayerObject_Function44)
+						endif
+					endif
+				endif
+			endif
+		endif
+	floop
+	switch Object.Animation
+	case 0
+		Object.Frame=0
+		Object.Value6=5
+		GetBit(Object.Value7,Object.Value2,2)
+		Object.Value7+=3
+		break
+	case 1
+		Object.AnimationTimer++
+		Object.AnimationTimer&=15
+		Object.Frame=Object.AnimationTimer
+		Object.Frame>>=3
+		Object.Value6=Object.Frame
+		Object.Value6+=5
+		break
+	case 2
+		Object.Value2--
+		if Object.Value2==0
+			if Object.Frame==0
+				Object.Frame=2
+			else
+				Object.Frame=0
+			endif
+			Object.Value2=Object.Value3
+			Object.Value3--
+			if Object.Value3==0
+				if Object.Value8!=-1
+					PlayerObjectPos=Object.Value8
+					if Object[PlayerObjectPos].State==1
+						CallFunction(PlayerObject_Function45)
+						if Object[PlayerObjectPos].State!=26
+							Object[PlayerObjectPos].State=12
+						endif
+						Object.Value8=-1
+						TempValue7=-1
+					endif
+				endif
+				ResetObjectEntity(Object.EntityNo,TypeName[SmokePuff],0,Object.XPos,Object.YPos)
+				Object.DrawOrder=4
+				PlaySfx(SFXName[Destroy],0)
+			endif
+		endif
+		break
+
+	endswitch
+	if Object.Type!=TypeName[Grabber]
+		if TempValue7!=-1
+			PlayerObjectPos=TempValue7
+			Object[PlayerObjectPos].State=12
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	if Object.Value4==0
+		TempValue0=Object.Value1
+		TempValue0-=0x80000
+		TempValue1=Object.YPos
+		TempValue1-=Object.Value1
+		TempValue1>>=20
+		TempValue1+=7
+		DrawSpriteFX(TempValue1,FX_FLIP,Object.XPos,TempValue0)
+		TempValue0-=0x40000
+		DrawSpriteFX(Object.Value7,FX_FLIP,Object.XPos,TempValue0)
+		DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+		AddDrawListEntityRef(5,Object.EntityNo)
+	else
+		DrawSpriteFX(Object.Value6,FX_FLIP,Object.XPos,Object.YPos)
+	endif
+	Object.Value4^=1
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("CPZ/Objects.gif")
+	CheckStageFolder("Zone02")
+	if CheckResult==1
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-27,-8,40,32,5,74)
+		SpriteFrame(-27,-8,43,31,5,107)
+		SpriteFrame(-27,-8,40,32,73,41)
+		SpriteFrame(-4,-4,8,8,46,74)
+		SpriteFrame(-4,-4,8,8,114,42)
+		SpriteFrame(-6,8,23,16,5,140)
+		SpriteFrame(-6,8,30,15,29,140)
+		SpriteFrame(-1,0,1,16,2,74)
+		SpriteFrame(-1,0,1,32,2,74)
+		SpriteFrame(-1,0,1,48,2,74)
+		SpriteFrame(-1,0,1,64,2,74)
+		SpriteFrame(-1,0,1,80,2,74)
+		SpriteFrame(-1,0,1,96,2,74)
+		SpriteFrame(-1,0,1,112,2,74)
+		SpriteFrame(-1,0,1,128,2,74)
+		SpriteFrame(-1,0,1,128,2,74)
+		SpriteFrame(0,0,1,1,1,74)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-27,-8,40,32,131,280)
+		SpriteFrame(-27,-8,43,31,172,280)
+		SpriteFrame(-27,-8,40,32,217,280)
+		SpriteFrame(-4,-4,8,8,102,302)
+		SpriteFrame(-4,-4,8,8,145,334)
+		SpriteFrame(-6,8,23,16,154,313)
+		SpriteFrame(-6,8,30,15,178,313)
+		SpriteFrame(-1,0,1,16,124,501)
+		SpriteFrame(-1,0,1,32,124,501)
+		SpriteFrame(-1,0,1,48,124,501)
+		SpriteFrame(-1,0,1,64,124,501)
+		SpriteFrame(-1,0,1,80,124,501)
+		SpriteFrame(-1,0,1,112,124,501)
+		SpriteFrame(-1,0,1,96,124,501)
+		SpriteFrame(-1,0,1,128,124,501)
+		SpriteFrame(-1,0,1,128,124,501)
+		SpriteFrame(0,0,1,1,123,501)
+	endif
+	foreach TypeName[Grabber],ArrayPos0
+		Object[ArrayPos0].Value0=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Value1=Object[ArrayPos0].YPos
+		CallFunction(Grabber_Function150)
+	floop
+	SetArrayValue(64,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(151,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(152,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

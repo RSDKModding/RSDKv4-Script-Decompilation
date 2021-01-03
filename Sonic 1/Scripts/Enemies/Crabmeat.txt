@@ -1,0 +1,209 @@
+//--------------------Sonic 1 / Sonic 2 Crabmeat Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 42: TYPE_CRABMEAT
+
+// Function declarations
+#function Crabmeat_Function97
+#function Crabmeat_Function98
+
+
+
+function Crabmeat_Function97
+	DrawSprite(0)
+endfunction
+
+
+function Crabmeat_Function98
+	CreateTempObject(TypeName[Crabmeat],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value1=Object.XPos
+	Object[TempObjectPos].Value2=Object.YPos
+	GetBit(TempValue0,Object.Direction,0)
+	if TempValue0==0
+		Object[TempObjectPos].Direction=FLIP_X
+		Object[TempObjectPos].XVelocity=0x8000
+	else
+		Object[TempObjectPos].Direction=FLIP_X
+		Object[TempObjectPos].XVelocity=-0x8000
+	endif
+	Object[TempObjectPos].Value3=0
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		Object.Priority=PRIORITY_ACTIVE
+		if Object.Value0<127
+			Object.Value0++
+			Object.XPos+=Object.XVelocity
+			if Object.XVelocity>0
+				ObjectTileGrip(CMODE_FLOOR,14,15,0)
+			else
+				ObjectTileGrip(CMODE_FLOOR,-14,15,0)
+			endif
+			if CheckResult==0
+				if Object.Value3==1
+					Object.State=2
+				else
+					Object.State=1
+					Object.Value3=1
+				endif
+				Object.Value0=0
+				Object.Animation=1
+			endif
+			ObjectTileGrip(CMODE_FLOOR,0,15,0)
+		else
+			if Object.Value3==1
+				Object.State=2
+			else
+				Object.State=1
+				Object.Value3=1
+			endif
+			Object.Value0=0
+			Object.Animation=1
+		endif
+		break
+	case 1
+		if Object.Value0<59
+			Object.Value0++
+		else
+			Object.Value0=0
+			Object.State=0
+			Object.Animation=0
+			Object.AnimationTimer=0
+			FlipSign(Object.XVelocity)
+		endif
+		break
+	case 2
+		if Object.Value0<59
+			Object.Value0++
+		else
+			CreateTempObject(TypeName[CrabmeatShot],0,Object.XPos,Object.YPos)
+			Object[TempObjectPos].XPos-=0x100000
+			Object[TempObjectPos].XVelocity=-0x10000
+			Object[TempObjectPos].YVelocity=-0x40000
+			CreateTempObject(TypeName[CrabmeatShot],0,Object.XPos,Object.YPos)
+			Object[TempObjectPos].XPos+=0x100000
+			Object[TempObjectPos].XVelocity=0x10000
+			Object[TempObjectPos].YVelocity=-0x40000
+			Object.Value0=0
+			Object.State++
+			Object.Animation=2
+		endif
+		break
+	case 3
+		if Object.Value0<59
+			Object.Value0++
+		else
+			Object.Value0=0
+			Object.State=0
+			Object.Animation=0
+			Object.AnimationTimer=0
+			FlipSign(Object.XVelocity)
+		endif
+		break
+
+	endswitch
+	if Object.OutOfBounds==1
+		TempValue0=Object.XPos
+		TempValue1=Object.YPos
+		Object.XPos=Object.Value1
+		Object.YPos=Object.Value2
+		if Object.OutOfBounds==1
+			if Object.PropertyValue==1
+				Object.Direction=FLIP_X
+				Object.XVelocity=0x8000
+			else
+				Object.Direction=FLIP_X
+				Object.XVelocity=-0x8000
+			endif
+			Object.Value3=0
+			Object.State=0
+			Object.Value0=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+			Object.Animation=0
+			Object.AnimationTimer=0
+		else
+			Object.XPos=TempValue0
+			Object.YPos=TempValue1
+		endif
+	endif
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_TOUCH,Object.EntityNo,-14,-14,14,14,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+		if CheckResult==1
+			CallFunction(PlayerObject_Function45)
+		endif
+	floop
+	switch Object.Animation
+	case 0
+		Object.Frame=Object.AnimationTimer
+		Object.Frame>>=4
+		Object.AnimationTimer++
+		Object.AnimationTimer%=48
+		break
+	case 1
+		Object.Frame=0
+		break
+	case 2
+		Object.Frame=3
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone01")
+	if CheckResult==1
+		LoadSpriteSheet("GHZ/Objects.gif")
+		SpriteFrame(-21,-16,42,31,138,157)
+		SpriteFrame(-22,-16,44,31,98,189)
+		SpriteFrame(-22,-16,44,31,98,221)
+		SpriteFrame(-24,-15,48,30,143,189)
+	endif
+	CheckStageFolder("Zone03")
+	if CheckResult==1
+		LoadSpriteSheet("SYZ/Objects.gif")
+		SpriteFrame(-21,-16,42,31,184,1)
+		SpriteFrame(-22,-16,44,31,184,34)
+		SpriteFrame(-22,-16,44,31,184,66)
+		SpriteFrame(-24,-15,48,30,184,173)
+	endif
+	CheckStageFolder("Zone07")
+	if CheckResult==1
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-21,-16,42,31,168,81)
+		SpriteFrame(-22,-16,44,31,211,81)
+		SpriteFrame(-22,-16,44,31,211,113)
+		SpriteFrame(-24,-15,48,30,162,114)
+	endif
+	foreach TypeName[Crabmeat],ArrayPos0
+		Object[ArrayPos0].Value1=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Value2=Object[ArrayPos0].YPos
+		if Object[ArrayPos0].PropertyValue==1
+			Object[ArrayPos0].Direction=FLIP_X
+			Object[ArrayPos0].XVelocity=0x8000
+		else
+			Object[ArrayPos0].Direction=FLIP_X
+			Object[ArrayPos0].XVelocity=-0x8000
+		endif
+		Object[ArrayPos0].Value3=0
+	floop
+	SetArrayValue(42,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(97,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(98,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

@@ -1,0 +1,94 @@
+//--------------------Sonic 1 / Sonic 2 One Way Door Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 47: TYPE_ONEWAYDOOR
+
+// Function declarations
+#function OneWayDoor_Function111
+#function OneWayDoor_Function112
+
+
+
+function OneWayDoor_Function111
+	DrawSpriteFX(0,FX_FLIP,Object.XPos,Object.YPos)
+endfunction
+
+
+function OneWayDoor_Function112
+	CreateTempObject(TypeName[OneWayDoor],Object.Direction,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Direction=Object.Direction
+endfunction
+
+
+sub ObjectMain
+	if Object.State==0
+		if Object.Value0>0
+			Object.Value0-=0x80000
+		endif
+	else
+		if Object.Value0<0x400000
+			Object.Value0+=0x80000
+		endif
+	endif
+	Object.YPos-=Object.Value0
+	if Object.Value0==0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-8,-32,8,32,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		floop
+	else
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-8,-32,8,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		floop
+	endif
+	Object.YPos+=Object.Value0
+	Object.State=0
+	if Object.PropertyValue==0
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object[PlayerObjectPos].XVelocity<0x60000
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-64,-32,8,32,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			else
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-88,-32,8,32,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			endif
+			Object.State|=CheckResult
+		floop
+	else
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object[PlayerObjectPos].XVelocity>-0x60000
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-8,-32,64,32,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			else
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-8,-32,88,32,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			endif
+			Object.State|=CheckResult
+		floop
+	endif
+endsub
+
+
+sub ObjectDraw
+	TempValue0=Object.Value0
+	FlipSign(TempValue0)
+	TempValue0+=Object.YPos
+	DrawSpriteFX(0,FX_FLIP,Object.XPos,TempValue0)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("HTZ/Objects.gif")
+	SpriteFrame(-8,-32,16,64,91,157)
+	foreach TypeName[OneWayDoor],ArrayPos0
+		if Object[ArrayPos0].PropertyValue==1
+			Object[ArrayPos0].Direction=FLIP_X
+		endif
+	floop
+	SetArrayValue(47,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(111,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(112,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

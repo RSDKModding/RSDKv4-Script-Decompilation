@@ -1,0 +1,180 @@
+//--------------------Sonic 1 / Sonic 2 Push Button Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 48: TYPE_PUSHBUTTON
+
+// Function declarations
+#function PushButton_Function116
+#function PushButton_Function117
+
+
+
+function PushButton_Function116
+	DrawSprite(0)
+endfunction
+
+
+function PushButton_Function117
+	CreateTempObject(TypeName[PushButton],0,Object.XPos,Object.YPos)
+endfunction
+
+
+sub ObjectMain
+	Object.Value0=0
+	foreach TypeGroup[256],PlayerObjectPos
+		if Object.Frame==0
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-14,-4,14,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				Object.Value0=1
+				Object[PlayerObjectPos].YPos+=0x60000
+				PlaySfx(SFXName[ButtonPress],0)
+			endif
+		else
+			if Object[PlayerObjectPos].YVelocity>=0
+				PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-14,-4,14,12,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					Object.Value0=1
+					Object[PlayerObjectPos].YPos+=0x20000
+				else
+					PlayerObjectCollision(C_TOUCH,Object.EntityNo,-20,-12,20,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+					if CheckResult==1
+						Object[PlayerObjectPos].YPos=Object[PlayerObjectPos].CollisionBottom
+						FlipSign(Object[PlayerObjectPos].YPos)
+						Object[PlayerObjectPos].YPos<<=16
+						Object[PlayerObjectPos].YPos+=Object.YPos
+						Object[PlayerObjectPos].YPos-=0x20000
+						Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+					endif
+				endif
+			endif
+		endif
+	floop
+	if Object.PropertyValue==1
+		ArrayPos0=Object.EntityNo
+		ArrayPos0++
+		if Object.Frame==0
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-14,-4,14,8,ArrayPos0,-22,-24,16,32)
+			if CheckResult==1
+				Object.Value0=1
+				Object[ArrayPos0].YPos+=0x60000
+				Object[ArrayPos0].XVelocity=0
+				Object[ArrayPos0].YVelocity=0
+				Object[ArrayPos0].State++
+				PlaySfx(SFXName[ButtonPress],0)
+			endif
+		else
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-14,-4,14,8,ArrayPos0,-22,-24,16,32)
+			if CheckResult==1
+				Object.Value0=1
+			endif
+		endif
+		if Object.Value0==1
+			ArrayPos0++
+			if Object[ArrayPos0].State==0
+				Object.Value1=stage.deathBoundary
+				Object.Value1+=0x100000
+				stage.deathBoundary=0x7FFF0000
+				ArrayPos1=ArrayPos0
+				ArrayPos1+=7
+				TempValue0=0
+				while ArrayPos1>=ArrayPos0
+					Object[ArrayPos1].State=1
+					Object[ArrayPos1].Value0=TempValue0
+					TempValue0+=20
+					ArrayPos1--
+				loop
+			endif
+		endif
+		if Object.State==1
+			options.touchControls=0
+			Object.Value2+=4
+			Music.Volume-=2
+			SetScreenFade(0,0,0,Object.Value2)
+			if Object.Value2==384
+				fadeColor=0
+				Object.Value2=0
+				lampPostID=0
+				Object.Direction=FLIP_NONE
+				Stage.ListPos++
+				if options.gameMode==1
+					ArrayPos1=options.saveSlot
+					ArrayPos1<<=3
+					if stage.player2Enabled==1
+						SaveRAM[ArrayPos1]=3
+					else
+						SaveRAM[ArrayPos1]=Stage.PlayerListPos
+					endif
+					ArrayPos1++
+					SaveRAM[ArrayPos1]=player.lives
+					ArrayPos1++
+					SaveRAM[ArrayPos1]=player.score
+					ArrayPos1++
+					SaveRAM[ArrayPos1]=player.scoreBonus
+					ArrayPos1++
+					SaveRAM[ArrayPos1]=Stage.ListPos
+					SaveRAM[ArrayPos1]++
+					ArrayPos1++
+					SaveRAM[ArrayPos1]=specialStage.emeralds
+					ArrayPos1++
+					SaveRAM[ArrayPos1]=specialStage.listPos
+					WriteSaveRAM()
+				endif
+				TempValue0=Engine.TrialMode
+				if Stage.ListPos>=Stage.ListSize
+					TempValue0=1
+				endif
+				if TempValue0==0
+					LoadStage()
+				else
+					Stage.ActiveList=PRESENTATION_STAGE
+					Stage.ListPos=0
+					LoadStage()
+				endif
+			endif
+		else
+			if Object[0].YPos>Object.Value1
+				Object.State=1
+				recAnimation=0
+				TempValue0=0
+				foreach TypeGroup[256],PlayerObjectPos
+					TempValue1=Object[PlayerObjectPos].Animation
+					TempValue1<<=8
+					TempValue1|=Object[PlayerObjectPos].Direction
+					TempValue1<<=TempValue0
+					recAnimation|=TempValue1
+					TempValue0+=16
+				floop
+				Object[0].Type=TypeName[BlankObject]
+			endif
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	Object.Frame=Object.Value0
+	DrawSprite(Object.Frame)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-16,-8,32,16,92,1)
+	SpriteFrame(-16,-2,32,10,92,18)
+	foreach TypeName[PushButton],ArrayPos0
+		if Object[ArrayPos0].PropertyValue==1
+			Object[ArrayPos0].Value1=0x7FFF0000
+		endif
+	floop
+	SetArrayValue(48,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(116,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(117,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

@@ -1,0 +1,109 @@
+//--------------------Sonic 1 / Sonic 2 SlotPrize Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 63: TYPE_SLOTPRIZE
+
+
+#constant 0:SlotPrize_constant41
+
+
+sub ObjectMain
+	TempValue0=Object.XPos
+	TempValue0-=Object.Value0
+	TempValue0>>=4
+	Object.XPos-=TempValue0
+	TempValue0=Object.YPos
+	TempValue0-=Object.Value1
+	TempValue0>>=4
+	Object.YPos-=TempValue0
+	if Object.Alpha<256
+		Object.Alpha+=32
+	endif
+	if Object.State==0
+		Object.Frame++
+		Object.Frame&=7
+	endif
+	Object.Value2--
+	if Object.Value2==0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-16,-16,16,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if Object[PlayerObjectPos].Value16==1
+				if Object.Type!=TypeName[SlotPrize]
+					CheckResult=0
+				endif
+			endif
+			if CheckResult==1
+				if Object.State==0
+					Object[PlayerObjectPos].Value0++
+					if Object[PlayerObjectPos].Value0>999
+						Object[PlayerObjectPos].Value0=999
+					endif
+					if Object[0].Value0>=ringExtraLife
+						if options.gameMode!=2
+							player.lives++
+							PlaySfx(SFXName[Life],0)
+							PauseMusic()
+							ResetObjectEntity(25,TypeName[MusicEvent],2,0,0)
+							Object[25].Priority=PRIORITY_ACTIVE
+						endif
+						ringExtraLife+=100
+						if ringExtraLife>300
+							ringExtraLife=1000
+						endif
+					endif
+					if ringPan==0
+						PlaySfx(SFXName[RingL],0)
+						SetSfxAttributes(SFXName[RingL],-1,-100)
+						ringPan=1
+					else
+						PlaySfx(SFXName[RingR],0)
+						SetSfxAttributes(SFXName[RingR],-1,100)
+						ringPan=0
+					endif
+					ResetObjectEntity(Object.EntityNo,TypeName[RingSparkle],0,Object.XPos,Object.YPos)
+				else
+					if Object[PlayerObjectPos].Value0>0
+						Object[PlayerObjectPos].Value0--
+					endif
+					if SlotPrize_constant41==0
+						PlaySfx(SFXName[Spike],0)
+					endif
+					SlotPrize_constant41++
+					SlotPrize_constant41%=3
+					Object.Type=TypeName[BlankObject]
+				endif
+			else
+				if Object.Type==TypeName[SlotPrize]
+					Object.Type=TypeName[BlankObject]
+				endif
+			endif
+		floop
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame,FX_INK,Object.XPos,Object.YPos)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-8,-8,16,16,110,256)
+	SpriteFrame(-8,-8,16,16,110,273)
+	SpriteFrame(-8,-8,16,16,110,290)
+	SpriteFrame(-8,-8,16,16,110,307)
+	SpriteFrame(-8,-8,16,16,110,324)
+	SpriteFrame(-8,-8,16,16,110,341)
+	SpriteFrame(-8,-8,16,16,110,358)
+	SpriteFrame(-8,-8,16,16,110,375)
+	SpriteFrame(-8,-8,15,15,226,34)
+	SlotPrize_constant41=0
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

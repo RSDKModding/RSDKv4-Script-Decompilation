@@ -1,0 +1,226 @@
+//--------------------Sonic 1 / Sonic 2 EggmanBalloon Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 80: TYPE_EGGMANBALLOON
+
+
+
+#array EggmanBalloon_array54:(0,0,0,0,0,0,0,0,3,4,3,4,3,4,5,6,7,8)
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		Object.Angle+=4
+		Object.Angle&=255
+		Object.Value1+=4
+		Object.Value1&=255
+		if Object.Angle==128
+			Object.DrawOrder=3
+		else
+			if Object.Angle==0
+				Object.DrawOrder=2
+			endif
+		endif
+		Object.Frame=Object.Angle
+		Object.Frame-=32
+		Object.Frame&=255
+		Object.Frame>>=6
+		if Object.Frame==3
+			Object.Frame=1
+		endif
+		ArrayPos0=Object.Value0
+		TempValue0=Object.Angle
+		Cos256(Object.XPos,TempValue0)
+		Object.XPos*=Object[ArrayPos0].Value17
+		Object.XPos<<=8
+		Object.XPos+=Object[ArrayPos0].XPos
+		TempValue0+=Object.Value1
+		TempValue0&=255
+		Sin256(Object.YPos,TempValue0)
+		Object.YPos*=Object[ArrayPos0].Value18
+		Object.YPos<<=8
+		Object.YPos+=Object[ArrayPos0].YPos
+		Object.YPos+=Object[ArrayPos0].Value19
+		break
+	case 1
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x1800
+		if Object.YVelocity>=0x18000
+			Object.YVelocity=0x18000
+		endif
+		if Object.YVelocity>0
+			ObjectTileCollision(CMODE_FLOOR,0,20,0)
+			if CheckResult==1
+				if Object[0].XPos<Object.XPos
+					Object.XVelocity=-0x8000
+					Object.Direction=FLIP_NONE
+				else
+					Object.XVelocity=0x8000
+					Object.Direction=FLIP_X
+				endif
+				FlipSign(Object.YVelocity)
+				Object.State=2
+			endif
+		endif
+		TempValue0=Object.AnimationTimer
+		TempValue0>>=2
+		GetArrayValue(Object.Frame,TempValue0,EggmanBalloon_array54)
+		if Object.Frame!=8
+			Object.AnimationTimer++
+		endif
+		break
+	case 2
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x480
+		if Object.YVelocity>=0x18000
+			Object.YVelocity=0x18000
+		endif
+		if Object.YVelocity>0
+			ObjectTileCollision(CMODE_FLOOR,0,20,0)
+			if CheckResult==1
+				if Object[0].XPos<Object.XPos
+					Object.XVelocity=-0x8000
+					Object.Direction=FLIP_NONE
+				else
+					Object.XVelocity=0x8000
+					Object.Direction=FLIP_X
+				endif
+				FlipSign(Object.YVelocity)
+			endif
+		endif
+		break
+	case 3
+		Object.AnimationTimer--
+		if Object.AnimationTimer==0
+			Object.Type=TypeName[BlankObject]
+		endif
+		break
+
+	endswitch
+	if Object.State<3
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object.Frame<6
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-6,-6,6,6,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					CallFunction(PlayerObject_Function45)
+				endif
+			else
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-12,-12,12,12,PlayerObjectPos,Object[PlayerObjectPos].Value40,Object[PlayerObjectPos].Value38,Object[PlayerObjectPos].Value41,Object[PlayerObjectPos].Value39)
+				if CheckResult==1
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_JUMPING)
+					TempValue0=CheckResult
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_SPINDASH)
+					TempValue0|=CheckResult
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_GLIDING)
+					TempValue0|=CheckResult
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_GLIDING_STOP)
+					TempValue0|=CheckResult
+					CheckNotEqual(Object[PlayerObjectPos].Value7,0)
+					TempValue0|=CheckResult
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_FLYING)
+					TempValue1=CheckResult
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_FLYINGTIRED)
+					TempValue1|=CheckResult
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_FLY_LIFT_UP)
+					TempValue1|=CheckResult
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_FLY_LIFT_DOWN)
+					TempValue1|=CheckResult
+					CheckEqual(Object[PlayerObjectPos].Animation,ANI_FLY_LIFT_TIRED)
+					TempValue1|=CheckResult
+					if TempValue1==1
+						CheckGreater(Object[PlayerObjectPos].YPos,Object.YPos)
+						TempValue0|=CheckResult
+					endif
+					if TempValue0==1
+						PlaySfx(SFXName[Explosion],0)
+						Object.State=3
+						Object.Frame=9
+						Object.AnimationTimer=3
+						ArrayPos0=Object.Value0
+						Object[ArrayPos0].Value20--
+						if Object[ArrayPos0].Value20<0
+							Object[ArrayPos0].Value20=0
+						endif
+						if Object[PlayerObjectPos].Gravity==GRAVITY_AIR
+							FlipSign(Object[PlayerObjectPos].XVelocity)
+							Object[PlayerObjectPos].Speed=Object[PlayerObjectPos].XVelocity
+							Object[PlayerObjectPos].YVelocity+=Object[PlayerObjectPos].Value25
+							Object[PlayerObjectPos].YVelocity+=Object[PlayerObjectPos].Value25
+							FlipSign(Object[PlayerObjectPos].YVelocity)
+						endif
+						if Object[PlayerObjectPos].Animation==ANI_GLIDING
+							Object[PlayerObjectPos].Animation=ANI_GLIDING_DROP
+							Object[PlayerObjectPos].State=22
+						endif
+					else
+						if Object[PlayerObjectPos].State!=28
+							if Object[PlayerObjectPos].Value8==0
+								if Object[PlayerObjectPos].Value7==0
+									Object[PlayerObjectPos].State=26
+									if Object[PlayerObjectPos].XPos>Object.XPos
+										Object[PlayerObjectPos].Speed=0x20000
+									else
+										Object[PlayerObjectPos].Speed=-0x20000
+									endif
+								endif
+								PlaySfx(SFXName[Explosion],0)
+								Object.State=3
+								Object.Frame=9
+								Object.AnimationTimer=3
+								ArrayPos0=Object.Value0
+								Object[ArrayPos0].Value20--
+								if Object[ArrayPos0].Value20<0
+									Object[ArrayPos0].Value20=0
+								endif
+							endif
+						endif
+					endif
+				endif
+			endif
+		floop
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame,FX_FLIP,Object.XPos,Object.YPos)
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone09")
+	if CheckResult==1
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-8,-8,16,16,302,138)
+		SpriteFrame(-10,-10,20,20,281,134)
+		SpriteFrame(-12,-12,24,24,256,130)
+		SpriteFrame(-6,-12,12,23,319,133)
+		SpriteFrame(-11,-5,22,10,332,133)
+		SpriteFrame(-8,-8,16,18,355,133)
+		SpriteFrame(-12,-12,24,23,372,133)
+		SpriteFrame(-16,-16,32,32,397,133)
+		SpriteFrame(-24,-24,48,47,430,133)
+		SpriteFrame(-21,-24,42,48,277,207)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8,-8,16,16,371,239)
+		SpriteFrame(-10,-10,20,20,350,235)
+		SpriteFrame(-12,-12,24,24,325,231)
+		SpriteFrame(-6,-12,12,23,375,214)
+		SpriteFrame(-11,-5,22,10,388,245)
+		SpriteFrame(-8,-8,16,18,411,237)
+		SpriteFrame(-12,-12,24,23,428,232)
+		SpriteFrame(-16,-16,32,32,453,223)
+		SpriteFrame(-24,-24,48,47,486,208)
+		SpriteFrame(-21,-24,42,48,312,182)
+	endif
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

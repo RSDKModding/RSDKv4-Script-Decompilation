@@ -1,0 +1,188 @@
+//--------------------Sonic 1 / Sonic 2 Gas Break Block Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 53: TYPE_GASBREAKBLOCK
+
+// Function declarations
+#function GasBreakBlock_Function128
+#function GasBreakBlock_Function129
+
+
+#array GasBreakBlock_array44:(-0xC0000,-0xC0000,-0x40000,-0xC0000,0x40000,-0xC0000,0xC0000,-0xC0000,-0xC0000,-0x40000,-0x40000,-0x40000,0x40000,-0x40000,0xC0000,-0x40000,-0xC0000,0x40000,-0x40000,0x40000,0x40000,0x40000,0xC0000,0x40000,-0xC0000,0xC0000,-0x40000,0xC0000,0x40000,0xC0000,0xC0000,0xC0000)
+#array GasBreakBlock_array45:(-0x40000,-0x40000,-0x20000,-0x40000,0x20000,-0x40000,0x40000,-0x40000,-0x3C000,-0x20000,-0x1C000,-0x20000,0x1C000,-0x20000,0x3C000,-0x20000,-0x38000,0x20000,-0x18000,0x20000,0x18000,0x20000,0x38000,0x20000,-0x34000,0x40000,-0x14000,0x40000,0x14000,0x40000,0x34000,0x40000)
+#array GasBreakBlock_array43:(2,3,4,5,2,3,4,5,2,3,4,5,2,3,4,5)
+
+//Unknown Variables
+#constant 16:constant0x12CE5
+#constant 6:constant0x12CE6
+#constant 6:constant0x12CE7
+#constant 6:constant0x12CE8
+#constant 6:constant0x12CE9
+#constant 7:constant0x12CEA
+#constant 7:constant0x12CEB
+#constant 7:constant0x12CEC
+#constant 7:constant0x12CED
+#constant 8:constant0x12CEE
+#constant 8:constant0x12CEF
+#constant 8:constant0x12CF0
+#constant 8:constant0x12CF1
+#constant 9:constant0x12CF2
+#constant 9:constant0x12CF3
+#constant 9:constant0x12CF4
+#constant 9:constant0x12CF5
+#constant 0:constant0x12CF6
+
+function GasBreakBlock_Function128
+	TempValue0=Object[0].Value17
+	TempValue0-=GasBreakBlock_constant37
+	DrawSprite(TempValue0)
+endfunction
+
+
+function GasBreakBlock_Function129
+	TempValue0=Object[0].Value17
+	TempValue0-=GasBreakBlock_constant37
+	CreateTempObject(TypeName[GasBreakBlock],TempValue0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Frame=TempValue0
+	Object[TempObjectPos].DrawOrder=4
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object[PlayerObjectPos].Animation==ANI_JUMPING
+				if Object.State==0
+					TempValue0=Object[PlayerObjectPos].YVelocity
+					PlayerObjectCollision(C_BOX,Object.EntityNo,-16,-16,16,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+					Object[PlayerObjectPos].YVelocity=TempValue0
+					if CheckResult==1
+						Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+						TempValue0=0
+						TempValue1=0
+						while TempValue0<16
+							CreateTempObject(TypeName[GasBreakBlock],0,Object.XPos,Object.YPos)
+							GetArrayValue(Object[TempObjectPos].Frame,TempValue0,GasBreakBlock_array43)
+							GetArrayValue(TempValue2,TempValue1,GasBreakBlock_array44)
+							GetArrayValue(Object[TempObjectPos].XVelocity,TempValue1,GasBreakBlock_array45)
+							TempValue1++
+							GetArrayValue(TempValue3,TempValue1,GasBreakBlock_array44)
+							GetArrayValue(Object[TempObjectPos].YVelocity,TempValue1,GasBreakBlock_array45)
+							TempValue1++
+							Object[TempObjectPos].XPos+=TempValue2
+							Object[TempObjectPos].YPos+=TempValue3
+							Object[TempObjectPos].State=2
+							Object[TempObjectPos].DrawOrder=5
+							TempValue0++
+						loop
+						Object.State++
+						if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+							Object.Priority=PRIORITY_ACTIVE
+						endif
+						PlaySfx(SFXName[BlockBreak],0)
+					endif
+				endif
+			else
+				PlayerObjectCollision(C_BOX,Object.EntityNo,-16,-16,16,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			endif
+		floop
+		break
+	case 1
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object[PlayerObjectPos].State!=1
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-8,-4,8,4,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					Object[PlayerObjectPos].State=1
+					Object[PlayerObjectPos].Animation=ANI_JUMPING
+					Object[PlayerObjectPos].AnimationSpeed=240
+					Object[PlayerObjectPos].Value5=240
+					Object[PlayerObjectPos].XPos=Object.XPos
+					Object[PlayerObjectPos].YPos=Object.YPos
+					if Object.PropertyValue==0
+						Object[PlayerObjectPos].XVelocity=0
+						Object[PlayerObjectPos].YVelocity=-0x80000
+					else
+						Object[PlayerObjectPos].XVelocity=0x80000
+						Object[PlayerObjectPos].YVelocity=0
+					endif
+					PlaySfx(SFXName[Rolling],0)
+				endif
+			endif
+		floop
+		if Object.OutOfBounds==1
+			if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+				Object.Priority=PRIORITY_ACTIVE_BOUNDS
+				Object.State=0
+			endif
+		endif
+		break
+	case 2
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x1800
+		if Object.OutOfBounds==1
+			Object.Type=TypeName[BlankObject]
+		endif
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectDraw
+	if Object.State!=1
+		DrawSprite(Object.Frame)
+	endif
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone07")
+	if CheckResult==1
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-16,-16,32,32,69,141)
+		SpriteFrame(-16,-16,32,32,69,174)
+		SpriteFrame(-4,-4,8,8,69,141)
+		SpriteFrame(-4,-4,8,8,77,141)
+		SpriteFrame(-4,-4,8,8,85,141)
+		SpriteFrame(-4,-4,8,8,93,141)
+		SpriteFrame(-4,-4,8,8,69,141)
+		SpriteFrame(-4,-4,8,8,69,141)
+		SpriteFrame(-4,-4,8,8,69,141)
+		SpriteFrame(-4,-4,8,8,69,141)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16,-16,32,32,991,843)
+		SpriteFrame(-16,-16,32,32,991,876)
+		SpriteFrame(-4,-4,8,8,991,843)
+		SpriteFrame(-4,-4,8,8,999,843)
+		SpriteFrame(-4,-4,8,8,1007,843)
+		SpriteFrame(-4,-4,8,8,1015,843)
+		SpriteFrame(-4,-4,8,8,991,843)
+		SpriteFrame(-4,-4,8,8,991,843)
+		SpriteFrame(-4,-4,8,8,991,843)
+		SpriteFrame(-4,-4,8,8,991,843)
+	endif
+	foreach TypeName[GasBreakBlock],ArrayPos0
+		Object[ArrayPos0].PropertyValue&=1
+		Object[ArrayPos0].Frame=Object[ArrayPos0].PropertyValue
+		Object[ArrayPos0].DrawOrder=4
+	floop
+	TempValue0=0
+	GasBreakBlock_constant37=DebugMode_constant25
+	while TempValue0<2
+		SetArrayValue(53,DebugMode_constant25,DebugMode_array12)
+		SetArrayValue(128,DebugMode_constant25,DebugMode_array13)
+		SetArrayValue(129,DebugMode_constant25,DebugMode_array11)
+		DebugMode_constant25++
+		TempValue0++
+	loop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

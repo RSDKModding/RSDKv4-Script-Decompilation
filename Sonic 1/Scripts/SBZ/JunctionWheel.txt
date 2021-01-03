@@ -1,0 +1,160 @@
+//--------------------Sonic 1 / Sonic 2 Junction Wheel Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 51: TYPE_JUNCTIONWHEEL
+
+// Function declarations
+#function JunctionWheel_Function122
+#function JunctionWheel_Function123
+#function JunctionWheel_Function124
+
+
+
+function JunctionWheel_Function122
+	DrawSprite(0)
+endfunction
+
+
+function JunctionWheel_Function123
+	CreateTempObject(TypeName[JunctionWheel],0,Object.XPos,Object.YPos)
+endfunction
+
+
+function JunctionWheel_Function124
+	Cos(Object[PlayerObjectPos].XPos,Object.Rotation)
+	Object[PlayerObjectPos].XPos*=Object[PlayerObjectPos].Speed
+	Object[PlayerObjectPos].XPos+=Object.XPos
+	Sin(Object[PlayerObjectPos].YPos,Object.Rotation)
+	Object[PlayerObjectPos].YPos*=Object[PlayerObjectPos].Speed
+	Object[PlayerObjectPos].YPos+=Object.YPos
+	if Object[PlayerObjectPos].Speed<-0x1000
+		Object[PlayerObjectPos].Speed+=512
+	endif
+endfunction
+
+
+sub ObjectMain
+	if Object[1].Value0==1
+		if Object.Value2==0
+			Object.Value2=1
+			Object.Value1^=1
+		endif
+	else
+		Object.Value2=0
+	endif
+	if Object.Value1==0
+		Object.Rotation-=4
+	else
+		Object.Rotation+=4
+	endif
+	Object.Rotation&=511
+	TempValue0=Object.Rotation
+	TempValue0+=48
+	TempValue0&=511
+	TempValue0>>=6
+	foreach TypeGroup[256],PlayerObjectPos
+		if Object[PlayerObjectPos].State!=1
+			switch TempValue0
+			case 1
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-40,-40,-16,-8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					PlaySfx(SFXName[Rolling],0)
+					Object[PlayerObjectPos].State=1
+					Object[PlayerObjectPos].Animation=ANI_JUMPING
+					Object[PlayerObjectPos].AnimationSpeed=240
+					Object[PlayerObjectPos].TileCollisions=0
+					Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+					Object[PlayerObjectPos].Speed=-0x1C00
+				endif
+				PlayerObjectCollision(C_BOX,Object.EntityNo,16,-56,40,56,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if Object[PlayerObjectPos].YVelocity<0
+					PlayerObjectCollision(C_BOX,Object.EntityNo,-40,32,40,56,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				endif
+				break
+			case 0
+			case 2
+			case 3
+			case 4
+			case 6
+			case 7
+				PlayerObjectCollision(C_BOX,Object.EntityNo,-40,-56,-16,56,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				PlayerObjectCollision(C_BOX,Object.EntityNo,16,-56,40,56,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if Object[PlayerObjectPos].YVelocity<0
+					PlayerObjectCollision(C_BOX,Object.EntityNo,-40,32,40,56,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				endif
+				break
+			case 5
+				if Object[PlayerObjectPos].XVelocity<0
+					PlayerObjectCollision(C_TOUCH,Object.EntityNo,16,8,38,40,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+					if CheckResult==1
+						PlaySfx(SFXName[Rolling],0)
+						Object[PlayerObjectPos].State=1
+						Object[PlayerObjectPos].Animation=ANI_JUMPING
+						Object[PlayerObjectPos].AnimationSpeed=240
+						Object[PlayerObjectPos].TileCollisions=0
+						Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+						Object[PlayerObjectPos].Speed=-0x1800
+					endif
+				endif
+				PlayerObjectCollision(C_BOX,Object.EntityNo,-40,-56,-16,56,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if Object[PlayerObjectPos].YVelocity<0
+					PlayerObjectCollision(C_BOX,Object.EntityNo,-40,32,40,56,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				endif
+				break
+
+			endswitch
+		else
+			if Object[PlayerObjectPos].Type!=TypeName[DebugMode]
+				CallFunction(JunctionWheel_Function124)
+				if Object[PlayerObjectPos].Speed==-0x1000
+					if Object.Rotation==384
+						Object[PlayerObjectPos].State=11
+						Object[PlayerObjectPos].Animation=ANI_JUMPING
+						Object[PlayerObjectPos].TileCollisions=1
+						Object[PlayerObjectPos].Speed=0
+						Object[PlayerObjectPos].XVelocity=0
+						Object[PlayerObjectPos].YVelocity=0x80000
+						Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+						PlaySfx(SFXName[Release],0)
+					endif
+					if Object.Value1==1
+						if Object.Rotation==284
+							Object[PlayerObjectPos].State=11
+							Object[PlayerObjectPos].Animation=ANI_JUMPING
+							Object[PlayerObjectPos].TileCollisions=1
+							Object[PlayerObjectPos].Speed=0x80000
+							Object[PlayerObjectPos].XVelocity=0x80000
+							Object[PlayerObjectPos].YVelocity=0x40000
+							Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+							PlaySfx(SFXName[Release],0)
+						endif
+					endif
+				endif
+			endif
+		endif
+	floop
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(0,FX_ROTATE,Object.XPos,Object.YPos)
+	DrawSprite(1)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-56,-24,48,48,1,261)
+	SpriteFrame(-56,-56,112,112,399,284)
+	SetArrayValue(51,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(122,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(123,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

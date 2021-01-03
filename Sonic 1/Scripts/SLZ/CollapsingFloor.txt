@@ -1,0 +1,190 @@
+//--------------------Sonic 1 / Sonic 2 C Floor Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 50: TYPE_CFLOOR
+
+// Function declarations
+#function CFloor_Function110
+#function CFloor_Function111
+
+
+
+//Unknown Variables
+#constant 8:constant0xEF56
+#constant 30:constant0xEF57
+#constant 22:constant0xEF58
+#constant 14:constant0xEF59
+#constant 6:constant0xEF5A
+#constant 26:constant0xEF5B
+#constant 18:constant0xEF5C
+#constant 10:constant0xEF5D
+#constant 2:constant0xEF5E
+#constant 8:constant0xEF5F
+#constant 22:constant0xEF60
+#constant 30:constant0xEF61
+#constant 26:constant0xEF62
+#constant 18:constant0xEF63
+#constant 6:constant0xEF64
+#constant 14:constant0xEF65
+#constant 10:constant0xEF66
+#constant 2:constant0xEF67
+
+function CFloor_Function110
+	DrawSprite(0)
+endfunction
+
+
+function CFloor_Function111
+	CreateTempObject(TypeName[CFloor],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value2=0xEF56
+	GetBit(TempValue0,Object.Direction,0)
+	if TempValue0==0
+		Object[TempObjectPos].Direction=FLIP_NONE
+	else
+		Object[TempObjectPos].Direction=FLIP_X
+	endif
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 1
+		if Object.Value0<10
+			Object.Value0++
+		else
+			TempValue5=0
+			if Object.Direction==FLIP_X
+				Object.Frame=1
+			else
+				Object.Frame=2
+			endif
+			TempValue0=0
+			TempValue3=Object.YPos
+			TempValue4=10
+			while TempValue0<2
+				TempValue1=0
+				TempValue2=Object.XPos
+				if Object.Direction==FLIP_X
+					TempValue2-=0x180000
+				else
+					TempValue2+=0x180000
+				endif
+				while TempValue1<4
+					CreateTempObject(TypeName[CFloor],Object.Frame,TempValue2,TempValue3)
+					Object[TempObjectPos].State=4
+					GetArrayValue(Object[TempObjectPos].Value1,TempValue5,Object.Value2)
+					TempValue5++
+					Object.Frame-=1
+					Object.Frame^=1
+					Object.Frame+=1
+					TempValue1++
+					if Object.Direction==FLIP_X
+						TempValue2+=0x100000
+					else
+						TempValue2-=0x100000
+					endif
+					TempValue4+=4
+				loop
+				TempValue4-=26
+				Object.Frame+=2
+				TempValue0++
+				TempValue3+=0x100000
+			loop
+			PlaySfx(SFXName[LedgeBreakL],0)
+			SetSfxAttributes(SFXName[LedgeBreakL],-1,-100)
+			PlaySfx(SFXName[LedgeBreakR],0)
+			SetSfxAttributes(SFXName[LedgeBreakR],-1,100)
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 2
+		if Object.Value0<20
+			Object.Value0++
+		else
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 4
+		if Object.Value0<Object.Value1
+			Object.Value0++
+		else
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 5
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x4000
+		if Object.OutOfBounds==1
+			Object.Type=TypeName[BlankObject]
+		endif
+		break
+
+	endswitch
+	if Object.State<4
+		if Object.OutOfBounds==1
+			Object.State=0
+			Object.Value0=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+		endif
+	endif
+	if Object.State<3
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object[PlayerObjectPos].YVelocity>=0
+				PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-32,-8,32,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					if Object.State==0
+						Object.State=1
+						Object.Priority=PRIORITY_ACTIVE
+					endif
+				endif
+			endif
+		floop
+	endif
+endsub
+
+
+sub ObjectDraw
+	switch Object.State
+	case 0
+	case 1
+		DrawSprite(0)
+		break
+	case 4
+	case 5
+		DrawSprite(Object.PropertyValue)
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-32,-8,64,32,67,26)
+	SpriteFrame(-8,-8,16,16,67,26)
+	SpriteFrame(-8,-8,16,16,83,26)
+	SpriteFrame(-8,-8,16,16,67,42)
+	SpriteFrame(-8,-8,16,16,83,42)
+	foreach TypeName[CFloor],ArrayPos0
+		GetBit(TempValue5,Object[ArrayPos0].PropertyValue,0)
+		if TempValue5==0
+			Object[ArrayPos0].Value2=0xEF56
+		else
+			Object[ArrayPos0].Value2=0xEF5F
+		endif
+	floop
+	SetArrayValue(50,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(110,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(111,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

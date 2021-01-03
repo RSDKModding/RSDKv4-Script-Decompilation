@@ -1,0 +1,128 @@
+//--------------------Sonic 1 / Sonic 2 LoseRing Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 11: TYPE_LOSERING
+
+
+
+
+sub ObjectMain
+	Object.YVelocity+=0x1800
+	Object.XPos+=Object.XVelocity
+	Object.YPos+=Object.YVelocity
+	if Object.YVelocity>=0
+		ObjectTileCollision(CMODE_FLOOR,0,8,0)
+		if CheckResult==1
+			TempValue0=Object.YVelocity
+			TempValue0>>=2
+			Object.YVelocity-=TempValue0
+			FlipSign(Object.YVelocity)
+			if Object.YVelocity>-0x10000
+				Object.YVelocity=-0x10000
+			endif
+		endif
+	endif
+	Object.Value0++
+	if Object.Value0==256
+		Object.Type=TypeName[BlankObject]
+		Object.XVelocity=0
+		Object.YVelocity=0
+		Object.Value0=0
+	else
+		Object.AnimationTimer+=Object.AnimationSpeed
+		if Object.AnimationTimer>255
+			Object.AnimationTimer-=256
+			Object.Frame++
+			if Object.Frame==8
+				Object.Frame=0
+				if Object.AnimationSpeed>16
+					Object.AnimationSpeed-=16
+				endif
+			endif
+		endif
+		if Object.Value0>=240
+			Object.Alpha-=16
+		endif
+	endif
+	if Object.Value0>63
+		foreach TypeGroup[256],PlayerObjectPos
+			CheckEqual(Object[PlayerObjectPos].State,27)
+			TempValue0=CheckResult
+			CheckEqual(Object[PlayerObjectPos].State,26)
+			TempValue0|=CheckResult
+			if TempValue0==0
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-8,-8,8,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					Object.Type=TypeName[RingSparkle]
+					if Object.PropertyValue==0
+						Object.DrawOrder=4
+					else
+						Object.DrawOrder=2
+					endif
+					Object.Value0=0
+					Object.Value1=0
+					Object.Value0=0
+					Object.Frame=0
+					if Object[PlayerObjectPos].Value16==1
+						Object[0].Value0++
+						if Object[0].Value0>999
+							Object[0].Value0=999
+						endif
+					else
+						Object[PlayerObjectPos].Value0++
+						if Object[PlayerObjectPos].Value0>999
+							Object[PlayerObjectPos].Value0=999
+						endif
+					endif
+					if Object[0].Value0>=ringExtraLife
+						if options.gameMode!=2
+							player.lives++
+							PlaySfx(SFXName[Life],0)
+							PauseMusic()
+							ResetObjectEntity(25,TypeName[MusicEvent],2,0,0)
+							Object[25].Priority=PRIORITY_ACTIVE
+							ringExtraLife+=100
+							if ringExtraLife>300
+								ringExtraLife=1000
+							endif
+						endif
+					endif
+					if ringPan==0
+						PlaySfx(SFXName[RingL],0)
+						SetSfxAttributes(SFXName[RingL],-1,-100)
+						ringPan=1
+					else
+						PlaySfx(SFXName[RingR],0)
+						SetSfxAttributes(SFXName[RingR],-1,100)
+						ringPan=0
+					endif
+				endif
+			endif
+		floop
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSpriteFX(Object.Frame,FX_INK,Object.XPos,Object.YPos)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8,-8,16,16,1,1)
+	SpriteFrame(-8,-8,16,16,1,18)
+	SpriteFrame(-8,-8,16,16,1,35)
+	SpriteFrame(-8,-8,16,16,1,52)
+	SpriteFrame(-8,-8,16,16,1,69)
+	SpriteFrame(-8,-8,16,16,1,86)
+	SpriteFrame(-8,-8,16,16,1,103)
+	SpriteFrame(-8,-8,16,16,1,120)
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

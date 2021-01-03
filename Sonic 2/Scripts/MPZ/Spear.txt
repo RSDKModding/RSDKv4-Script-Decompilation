@@ -1,0 +1,117 @@
+//--------------------Sonic 1 / Sonic 2 Spear Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 61: TYPE_SPEAR
+
+// Function declarations
+#function Spear_Function134
+#function Spear_Function135
+#function Spear_Function136
+
+#constant 0:Spear_constant40
+
+
+function Spear_Function134
+	Object[ArrayPos0].YPos=Object[ArrayPos0].Value1
+	Object[ArrayPos0].YPos+=Object[ArrayPos0].Value31
+	Object[ArrayPos0].DrawOrder=2
+	Object[ArrayPos0].Value0=0
+	Object[ArrayPos0].State=0
+	Object[ArrayPos0].Priority=PRIORITY_ACTIVE_BOUNDS
+endfunction
+
+
+function Spear_Function135
+	DrawSprite(0)
+endfunction
+
+
+function Spear_Function136
+	TempValue0=Object[0].Value17
+	TempValue0-=Spear_constant40
+	TempValue0<<=2
+	CreateTempObject(TypeName[Spear],TempValue0,Object.XPos,Object.YPos)
+	ArrayPos0=Object[TempObjectPos].EntityNo
+	Object[ArrayPos0].Value1=Object.YPos
+	CallFunction(Spear_Function134)
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		TempValue0=oscillation
+		TempValue0-=Object.PropertyValue
+		TempValue0&=127
+		if TempValue0==0
+			Object.Priority=PRIORITY_ACTIVE
+			Object.Value0=8
+			Object.State=1
+		endif
+		break
+	case 1
+		Object.YPos-=0x40000
+		Object.Value0--
+		if Object.Value0==0
+			Object.Value0=3
+			Object.State=2
+		endif
+		break
+	case 2
+		Object.Value0--
+		if Object.Value0==0
+			Object.Value0=8
+			Object.State=3
+		endif
+		break
+	case 3
+		Object.YPos+=0x40000
+		Object.Value0--
+		if Object.Value0==0
+			Object.State=0
+		endif
+		break
+
+	endswitch
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_TOUCH,Object.EntityNo,-4,-16,4,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		if CheckResult==1
+			CallFunction(PlayerObject_Function45)
+		endif
+	floop
+	if Object.OutOfBounds==1
+		ArrayPos0=Object.EntityNo
+		CallFunction(Spear_Function134)
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(0)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-4,-16,8,32,34,102)
+	foreach TypeName[Spear],ArrayPos0
+		Object[ArrayPos0].Value1=Object[ArrayPos0].YPos
+		CallFunction(Spear_Function134)
+	floop
+	TempValue0=0
+	Spear_constant40=DebugMode_constant25
+	while TempValue0<16
+		SetArrayValue(61,DebugMode_constant25,DebugMode_array12)
+		SetArrayValue(135,DebugMode_constant25,DebugMode_array13)
+		SetArrayValue(136,DebugMode_constant25,DebugMode_array11)
+		DebugMode_constant25++
+		TempValue0++
+	loop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

@@ -1,0 +1,170 @@
+//--------------------Sonic 1 / Sonic 2 Ball Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 75: TYPE_BALL
+
+// Function declarations
+#function Ball_Function167
+#function Ball_Function168
+
+
+
+function Ball_Function167
+	DrawSprite(0)
+endfunction
+
+
+function Ball_Function168
+	CreateTempObject(TypeName[Ball],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value2=-1
+endfunction
+
+
+sub ObjectMain
+	Object.Priority=PRIORITY_ACTIVE
+	switch Object.State
+	case 0
+		if Object.Direction==FLIP_X
+			Object.YVelocity+=0x800
+			if Object.YVelocity>=0xC000
+				Object.Direction=FLIP_NONE
+			endif
+		else
+			Object.YVelocity-=0x800
+			if Object.YVelocity<=-0xC000
+				Object.Direction=FLIP_X
+			endif
+		endif
+		Object.YPos+=Object.YVelocity
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object.State==0
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-256,-192,256,192,PlayerObjectPos,0,0,0,0)
+				if CheckResult==1
+					Object.Value2=PlayerObjectPos
+					Object.State=1
+				endif
+			endif
+		floop
+		break
+	case 1
+		PlayerObjectPos=Object.Value2
+		if Object.XPos>Object[PlayerObjectPos].XPos
+			Object.XVelocity-=0x1000
+			if Object.XVelocity<-0x20000
+				Object.XVelocity=-0x20000
+			endif
+		else
+			Object.XVelocity+=0x1000
+			if Object.XVelocity>0x20000
+				Object.XVelocity=0x20000
+			endif
+		endif
+		TempValue0=Object[PlayerObjectPos].YPos
+		TempValue0-=0x400000
+		if Object.YPos>TempValue0
+			Object.YVelocity-=0x1000
+			if Object.YVelocity<-0x20000
+				Object.YVelocity=-0x20000
+			endif
+		else
+			Object.YVelocity+=0x1000
+			if Object.YVelocity>0x20000
+				Object.YVelocity=0x20000
+			endif
+		endif
+		Object.XPos+=Object.XVelocity
+		Object.YPos+=Object.YVelocity
+		TempValue0=Object.XPos
+		TempValue0-=Object[PlayerObjectPos].XPos
+		Absolute(TempValue0)
+		if TempValue0<=0x100000
+			TempValue0=Object[PlayerObjectPos].YPos
+			TempValue0-=Object.YPos
+			if TempValue0>=0x400000
+				if TempValue0<=0x600000
+					if Object.OutOfBounds==0
+						CreateTempObject(TypeName[SmokePuff],0,Object.XPos,Object.YPos)
+						Object[TempObjectPos].DrawOrder=4
+						CreateTempObject(TypeName[ChemicalDrop],0,Object.XPos,Object.YPos)
+						Object[TempObjectPos].DrawOrder=2
+						Object.Type=TypeName[BlankObject]
+						PlaySfx(SFXName[Destroy],0)
+					endif
+				endif
+			endif
+		endif
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-10,-10,10,10,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				CallFunction(PlayerObject_Function45)
+				CreateTempObject(TypeName[SmokePuff],0,Object.XPos,Object.YPos)
+				Object[TempObjectPos].DrawOrder=4
+				CreateTempObject(TypeName[ChemicalDrop],0,Object.XPos,Object.YPos)
+				Object[TempObjectPos].DrawOrder=2
+				Object.Type=TypeName[BlankObject]
+				PlaySfx(SFXName[Destroy],0)
+			endif
+		floop
+		break
+
+	endswitch
+	if Object.OutOfBounds==1
+		TempValue0=Object.XPos
+		TempValue1=Object.YPos
+		Object.XPos=Object.Value1
+		Object.YPos=Object.Value2
+		if Object.OutOfBounds==1
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+			Object.State=0
+			Object.Value2=-1
+		else
+			Object.XPos=TempValue0
+			Object.YPos=TempValue1
+		endif
+	endif
+	Object.AnimationTimer++
+	if Object.AnimationTimer>=3
+		Object.AnimationTimer=0
+		Object.Frame++
+		if Object.Frame>=3
+			Object.Frame=0
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+endsub
+
+
+sub ObjectStartup
+	CheckStageFolder("Zone02")
+	if CheckResult==1
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-12,-12,24,24,166,1)
+		SpriteFrame(-12,-12,24,24,166,26)
+		SpriteFrame(-12,-12,24,24,166,51)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-12,-12,24,24,166,1)
+		SpriteFrame(-12,-12,24,24,166,26)
+		SpriteFrame(-12,-12,24,24,166,51)
+	endif
+	foreach TypeName[Ball],ArrayPos0
+		Object[ArrayPos0].Value1=Object[ArrayPos0].XPos
+		Object[ArrayPos0].Value2=Object[ArrayPos0].YPos
+		Object[ArrayPos0].Value2=-1
+	floop
+	SetArrayValue(75,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(167,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(168,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

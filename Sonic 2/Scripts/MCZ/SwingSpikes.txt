@@ -1,0 +1,211 @@
+//--------------------Sonic 1 / Sonic 2 Swing Spikes Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 55: TYPE_SWINGSPIKES
+
+// Function declarations
+#function SwingSpikes_Function132
+#function SwingSpikes_Function133
+
+
+
+function SwingSpikes_Function132
+	DrawSprite(0)
+endfunction
+
+
+function SwingSpikes_Function133
+	CreateTempObject(TypeName[SwingSpikes],8,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value5=Object.Direction
+	if Object[TempObjectPos].Value5==0
+		Object[TempObjectPos].Value6=0x8000
+	else
+		Object[TempObjectPos].Value6=0
+	endif
+endfunction
+
+
+sub ObjectMain
+	switch Object.State
+	case 0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-30,0,30,128,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				Object.State=1
+				if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+					Object.Priority=PRIORITY_ACTIVE
+				endif
+			endif
+		floop
+		break
+	case 1
+		Object.Value0++
+		if Object.Value0==60
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 2
+		Object.Speed+=8
+		if Object.Value5==0
+			Object.Value6-=Object.Speed
+			if Object.Value6<=0x4000
+				Object.Speed=0
+				Object.Value6=0x4000
+				Object.State++
+			endif
+		else
+			Object.Value6+=Object.Speed
+			if Object.Value6>=0x4000
+				Object.Speed=0
+				Object.Value6=0x4000
+				Object.State++
+			endif
+		endif
+		break
+	case 3
+		Object.Value0++
+		if Object.Value0==60
+			Object.Value0=0
+			Object.State++
+		endif
+		break
+	case 4
+		Object.Speed+=8
+		if Object.Value5==0
+			Object.Value6+=Object.Speed
+			if Object.Value6>=0x8000
+				Object.Speed=0
+				Object.Value6=0x8000
+				Object.State=1
+			endif
+		else
+			Object.Value6-=Object.Speed
+			if Object.Value6<=0
+				Object.Speed=0
+				Object.Value6=0
+				Object.State=1
+			endif
+		endif
+		break
+
+	endswitch
+	TempValue2=Object.XPos
+	TempValue3=Object.YPos
+	Object.Angle=Object.Value6
+	Object.Angle>>=7
+	TempValue1=Object.PropertyValue
+	TempValue1++
+	TempValue1<<=4
+	TempValue1-=8
+	Object.XPos=Object.Value1
+	Object.YPos=Object.Value2
+	Cos(Object.Value3,Object.Angle)
+	Object.Value3*=TempValue1
+	Object.Value3<<=7
+	Object.Value3+=TempValue2
+	Object.Value3&=-0x10000
+	Object.Value1=Object.Value3
+	Object.Value3-=Object.XPos
+	Sin(Object.Value4,Object.Angle)
+	Object.Value4*=TempValue1
+	Object.Value4<<=7
+	Object.Value4+=TempValue3
+	Object.Value4&=-0x10000
+	Object.Value2=Object.Value4
+	Object.Value4-=Object.YPos
+	foreach TypeGroup[256],PlayerObjectPos
+		PlayerObjectCollision(C_BOX2,Object.EntityNo,-30,-8,30,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		switch CheckResult
+		case 1
+			Object[PlayerObjectPos].XPos+=Object.Value3
+			Object[PlayerObjectPos].YPos+=Object.Value4
+			break
+		case 2
+			CallFunction(PlayerObject_Function45)
+			break
+		case 3
+			CallFunction(PlayerObject_Function45)
+			break
+
+		endswitch
+	floop
+	Object.XPos=TempValue2
+	Object.YPos=TempValue3
+	if Object.OutOfBounds==1
+		if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+			if Object.Value5==0
+				Object.Value6=0x8000
+			else
+				Object.Value6=0
+			endif
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	TempValue0=0
+	TempValue1=16
+	while TempValue0<Object.PropertyValue
+		Cos(TempValue2,Object.Angle)
+		TempValue2*=TempValue1
+		TempValue2<<=7
+		TempValue2+=Object.XPos
+		Sin(TempValue3,Object.Angle)
+		TempValue3*=TempValue1
+		TempValue3<<=7
+		TempValue3+=Object.YPos
+		DrawSpriteXY(1,TempValue2,TempValue3)
+		TempValue0++
+		TempValue1+=16
+	loop
+	TempValue1-=8
+	Cos(Object.Value1,Object.Angle)
+	Object.Value1*=TempValue1
+	Object.Value1<<=7
+	Object.Value1+=Object.XPos
+	Object.Value1&=-0x10000
+	Sin(Object.Value2,Object.Angle)
+	Object.Value2*=TempValue1
+	Object.Value2<<=7
+	Object.Value2+=Object.YPos
+	Object.Value2&=-0x10000
+	DrawSprite(0)
+	DrawSpriteXY(2,Object.Value1,Object.Value2)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-12,-12,23,33,152,131)
+	SpriteFrame(-8,-8,16,16,135,148)
+	SpriteFrame(-31,-8,62,16,30,32)
+	foreach TypeName[SwingSpikes],ArrayPos0
+		if Object[ArrayPos0].PropertyValue>0
+			Object[ArrayPos0].PropertyValue--
+		endif
+		Object[ArrayPos0].Value5=Object[ArrayPos0].PropertyValue
+		Object[ArrayPos0].Value5>>=3
+		Object[ArrayPos0].Value5&=1
+		if Object[ArrayPos0].Value5==0
+			Object[ArrayPos0].Value6=0x8000
+		else
+			Object[ArrayPos0].Value6=0
+		endif
+		Object[ArrayPos0].PropertyValue&=7
+		Object[ArrayPos0].PropertyValue++
+	floop
+	SetArrayValue(55,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(132,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(133,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

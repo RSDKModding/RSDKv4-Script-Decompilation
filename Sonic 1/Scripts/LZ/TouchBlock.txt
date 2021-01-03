@@ -1,0 +1,115 @@
+//--------------------Sonic 1 / Sonic 2 Touch Block Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 69: TYPE_TOUCHBLOCK
+
+// Function declarations
+#function TouchBlock_Function159
+#function TouchBlock_Function160
+
+
+
+function TouchBlock_Function159
+	DrawSprite(0)
+endfunction
+
+
+function TouchBlock_Function160
+	CreateTempObject(TypeName[TouchBlock],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value3=Object.YPos
+endfunction
+
+
+sub ObjectMain
+	TempValue0=Object.YPos
+	TempValue0&=-0x10000
+	switch Object.State
+	case 0
+		break
+	case 1
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x800
+		ObjectTileCollision(CMODE_FLOOR,0,16,0)
+		if CheckResult==1
+			Object.State++
+		endif
+		if Object.OutOfBounds==1
+			Object.YPos=Object.Value3
+			Object.YVelocity=0
+			Object.Value2=0
+			Object.State=3
+		endif
+		break
+	case 2
+		if Object.OutOfBounds==1
+			Object.YPos=Object.Value3
+			Object.YVelocity=0
+			Object.Value2=0
+			Object.State++
+		endif
+		break
+	case 3
+		if Object.OutOfBounds==1
+			Object.State=0
+			Object.Priority=PRIORITY_ACTIVE_BOUNDS
+		endif
+		break
+
+	endswitch
+	Object.Value1=Object.YPos
+	Object.Value1&=-0x10000
+	Object.Value1-=TempValue0
+	Object.Value0=0
+	if Object.State<3
+		TempValue1=Object.YPos
+		Object.YPos=TempValue0
+		foreach TypeGroup[256],PlayerObjectPos
+			PlayerObjectCollision(C_BOX,Object.EntityNo,-16,-16,16,16,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			switch CheckResult
+			case 1
+				Object[PlayerObjectPos].YPos+=Object.Value1
+				break
+			case 2
+			case 3
+				if Object.State==0
+					Object.State=1
+				endif
+				break
+			case 4
+				if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+					CallFunction(PlayerObject_Function51)
+				endif
+				break
+
+			endswitch
+		floop
+		Object.YPos=TempValue1
+	endif
+endsub
+
+
+sub ObjectDraw
+	if Object.State<3
+		DrawSprite(0)
+	endif
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16,-16,32,32,84,223)
+	foreach TypeName[TouchBlock],ArrayPos0
+		Object[ArrayPos0].Value3=Object[ArrayPos0].YPos
+	floop
+	SetArrayValue(69,DebugMode_constant23,DebugMode_array12)
+	SetArrayValue(159,DebugMode_constant23,DebugMode_array13)
+	SetArrayValue(160,DebugMode_constant23,DebugMode_array11)
+	DebugMode_constant23++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

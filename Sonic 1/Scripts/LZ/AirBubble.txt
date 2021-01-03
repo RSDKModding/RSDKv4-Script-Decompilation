@@ -1,0 +1,153 @@
+//--------------------Sonic 1 / Sonic 2 AirBubble Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 43: TYPE_AIRBUBBLE
+
+
+
+
+sub ObjectMain
+	PlayerObjectPos=Object.Value2
+	if Object.State==0
+		Object.Value0++
+		if Object.Value0>15
+			Object.Value0=0
+			if Object.Frame==8
+				Object.Type=TypeName[BlankObject]
+			endif
+			if Object.Frame<Object.PropertyValue
+				Object.Frame++
+			endif
+		endif
+		Object.YPos+=Object.YVelocity
+		if PlayerObjectPos!=0xFFFF
+			if Object[PlayerObjectPos].State==33
+				if Object.PropertyValue<3
+					Object.Value1+=0x40000
+				endif
+			endif
+		endif
+		if Object.Frame<7
+			Sin(Object.XPos,Object.Angle)
+			Object.XPos<<=9
+			Object.XPos+=Object.Value1
+			Object.Angle+=4
+			Object.Angle&=511
+		endif
+		if Object.iYPos<Stage.WaterLevel
+			if Object.PropertyValue==6
+				Object.Frame=7
+				Object.PropertyValue=8
+				Object.Value0=0
+				Object.YVelocity=0
+			else
+				if Object.PropertyValue<6
+					Object.Type=TypeName[BlankObject]
+				endif
+			endif
+		endif
+	else
+		CheckEqual(Object[PlayerObjectPos].Animation,ANI_HURT)
+		TempValue0=CheckResult
+		CheckEqual(Object[PlayerObjectPos].Animation,ANI_DYING)
+		TempValue0|=CheckResult
+		if TempValue0!=0
+			Object.Value3=0
+		endif
+		if Object.Value0<20
+			Object.Value0++
+			if Object.Value3!=0
+				Object[PlayerObjectPos].Animation=ANI_BREATHING
+			endif
+			if Object.Value0>9
+				Object.Frame=8
+			endif
+		else
+			Object.Type=TypeName[BlankObject]
+			if Object.Value3!=0
+				Object[PlayerObjectPos].Animation=ANI_WALKING
+				Object[PlayerObjectPos].AnimationSpeed=20
+			endif
+		endif
+	endif
+	if Object.OutOfBounds==1
+		Object.Type=TypeName[BlankObject]
+	endif
+	if Object.Frame==6
+		foreach TypeGroup[256],PlayerObjectPos
+			if Object[PlayerObjectPos].Animation!=ANI_DYING
+				if Object[PlayerObjectPos].Value37!=2
+					PlayerObjectCollision(C_TOUCH,Object.EntityNo,-2,-2,2,2,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+					if CheckResult==1
+						Object.Frame=7
+						Object.State=1
+						Object.Value0=0
+						Object.YVelocity=0
+						Object.Value2=PlayerObjectPos
+						Object[PlayerObjectPos].YVelocity=0
+						Object[PlayerObjectPos].XVelocity=0
+						Object[PlayerObjectPos].Speed=0
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_FLYING)
+						TempValue0=CheckResult
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_FLYINGTIRED)
+						TempValue0|=CheckResult
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_SWIM_LIFT)
+						TempValue0|=CheckResult
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_GLIDING)
+						TempValue0|=CheckResult
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_GLIDING_STOP)
+						TempValue0|=CheckResult
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_CLIMBING)
+						TempValue0|=CheckResult
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_LEDGEPULLUP)
+						TempValue0|=CheckResult
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_CLINGING)
+						TempValue0|=CheckResult
+						CheckEqual(Object[PlayerObjectPos].Animation,ANI_FANROTATE)
+						TempValue0|=CheckResult
+						if TempValue0==0
+							Object[PlayerObjectPos].Animation=ANI_BREATHING
+							Object.Value3=1
+						endif
+						Object[PlayerObjectPos].Value3=0
+						Object[PlayerObjectPos].Value4=0
+						if Object[PlayerObjectPos].State==14
+							Object[PlayerObjectPos].State=11
+						endif
+						if Object[PlayerObjectPos].State==35
+							Object[PlayerObjectPos].State=11
+							Object[1].Value36=30
+						endif
+						PlaySfx(SFXName[Breathing],0)
+					endif
+				endif
+			endif
+		floop
+	endif
+endsub
+
+
+sub ObjectDraw
+	DrawSprite(Object.Frame)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-2,-2,4,4,61,1)
+	SpriteFrame(-3,-3,6,6,61,6)
+	SpriteFrame(-4,-4,8,8,68,4)
+	SpriteFrame(-6,-6,12,12,77,0)
+	SpriteFrame(-8,-8,16,16,90,1)
+	SpriteFrame(-12,-12,24,24,61,13)
+	SpriteFrame(-16,-16,32,32,86,18)
+	SpriteFrame(-16,-16,32,32,123,1)
+	SpriteFrame(-15,-15,30,30,156,3)
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

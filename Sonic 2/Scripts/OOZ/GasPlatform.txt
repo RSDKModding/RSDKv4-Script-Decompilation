@@ -1,0 +1,226 @@
+//--------------------Sonic 1 / Sonic 2 Gas Platform Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 44: TYPE_GASPLATFORM
+
+// Function declarations
+#function GasPlatform_Function109
+#function GasPlatform_Function110
+
+
+
+function GasPlatform_Function109
+	DrawSprite(7)
+endfunction
+
+
+function GasPlatform_Function110
+	CreateTempObject(TypeName[GasPlatform],0,Object.XPos,Object.YPos)
+	Object[TempObjectPos].Value1=Object.YPos
+endfunction
+
+
+sub ObjectMain
+	TempValue6=Object.YPos
+	switch Object.State
+	case 0
+		Object.Value0++
+		if Object.Value0==120
+			Object.Value0=0
+			Object.YVelocity=-0x96800
+			PlaySfx(SFXName[GasPop],0)
+			if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+				Object.Priority=PRIORITY_ACTIVE
+			endif
+			Object.State++
+		endif
+		break
+	case 1
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x3800
+		if Object.YPos>=Object.Value1
+			Object.YPos=Object.Value1
+			if Object.YVelocity<0x10000
+				Object.State=0
+				Object.YVelocity=0
+			else
+				Object.YVelocity>>=2
+				FlipSign(Object.YVelocity)
+			endif
+		endif
+		break
+	case 2
+		if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+			Object.Priority=PRIORITY_ACTIVE
+		endif
+		break
+	case 3
+		Object.YPos+=Object.YVelocity
+		Object.YVelocity+=0x3800
+		if Object.YPos<=Object.Value3
+			Object.YPos=Object.Value3
+			Object.State++
+			PlaySfx(SFXName[Spring],0)
+			foreach TypeGroup[256],PlayerObjectPos
+				PlayerObjectCollision(C_TOUCH,Object.EntityNo,-24,-10,24,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				if CheckResult==1
+					Object[PlayerObjectPos].XPos=Object.XPos
+					Object[PlayerObjectPos].State=1
+					Object[PlayerObjectPos].Gravity=GRAVITY_AIR
+					Object[PlayerObjectPos].Value1=0
+					Object[PlayerObjectPos].Speed=0
+					Object[PlayerObjectPos].XVelocity=0
+					Object[PlayerObjectPos].YVelocity=-0x100000
+					Object[PlayerObjectPos].Animation=ANI_JUMPING
+					Object[PlayerObjectPos].AnimationSpeed=240
+					Object[PlayerObjectPos].Value5=240
+				endif
+			floop
+		endif
+		break
+
+	endswitch
+	TempValue0=Object.Value1
+	TempValue0-=Object.YPos
+	if TempValue0>0x180000
+		Object.Value4=1
+	else
+		Object.Value4=0
+	endif
+	TempValue0=Object.YPos
+	TempValue6&=-0x10000
+	Object.Value2=Object.YPos
+	Object.Value2&=-0x10000
+	Object.Value2-=TempValue6
+	foreach TypeGroup[256],PlayerObjectPos
+		Object.YPos=Object.Value1
+		PlayerObjectCollision(C_BOX,Object.EntityNo,-32,8,32,48,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		PlayerObjectCollision(C_BOX,Object.EntityNo,-16,0,16,24,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+		if Object.Value4==1
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-16,-16,16,0,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				CallFunction(PlayerObject_Function46)
+			endif
+		endif
+		if Object.YVelocity<-0x60000
+			TempValue7=Object[PlayerObjectPos].YVelocity
+			TempValue7-=0x20000
+		else
+			TempValue7=-0x80000
+		endif
+		if Object.YVelocity<TempValue7
+			Object.YPos=TempValue0
+			TempValue7=Object[PlayerObjectPos].YVelocity
+			PlayerObjectCollision(C_TOUCH,Object.EntityNo,-24,-10,24,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			if CheckResult==1
+				Object[PlayerObjectPos].YVelocity=0x10000
+			endif
+			PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-24,-8,24,12,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			switch CheckResult
+			case 4
+				if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+					if Object.YVelocity>0
+						CallFunction(PlayerObject_Function50)
+					endif
+				endif
+				break
+
+			endswitch
+			Object[PlayerObjectPos].YVelocity=TempValue7
+		else
+			Object.YPos=TempValue6
+			PlayerObjectCollision(C_BOX2,Object.EntityNo,-24,-8,24,12,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+			switch CheckResult
+			case 0
+				PlayerObjectCollision(C_PLATFORM,Object.EntityNo,-24,-8,24,8,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+				break
+			case 1
+				Object[PlayerObjectPos].YPos+=Object.Value2
+				if Object.State==2
+					Object[PlayerObjectPos].Speed=0
+					Object[PlayerObjectPos].XVelocity=0
+					Object.YVelocity=-0x96800
+					PlaySfx(SFXName[GasPop],0)
+					Object.State++
+				endif
+				break
+			case 4
+				if Object[PlayerObjectPos].Gravity==GRAVITY_GROUND
+					if Object.YVelocity>0
+						CallFunction(PlayerObject_Function50)
+					endif
+				endif
+				break
+
+			endswitch
+		endif
+		Object.YPos=Object.Value1
+		PlayerObjectCollision(C_BOX,Object.EntityNo,-16,0,16,24,PlayerObjectPos,0x10000,0x10000,0x10000,0x10000)
+	floop
+	Object.YPos=TempValue0
+	Object.Frame=Object.AnimationTimer
+	Object.Frame/=3
+	Object.AnimationTimer++
+	Object.AnimationTimer%=21
+	if Object.OutOfBounds==1
+		TempValue0=Object.YPos
+		Object.YPos=Object.Value1
+		if Object.OutOfBounds==1
+			if Object.Priority!=PRIORITY_XBOUNDS_DESTROY
+				Object.Priority=PRIORITY_ACTIVE_BOUNDS
+				Object.Value0=0
+				Object.AnimationTimer=0
+				Object.Value4=0
+				Object.XVelocity=0
+				Object.YVelocity=0
+				if Object.PropertyValue==1
+					Object.State=2
+				else
+					Object.State=0
+				endif
+			endif
+		else
+			Object.YPos=TempValue0
+		endif
+	endif
+endsub
+
+
+sub ObjectDraw
+	if Object.Value4==1
+		DrawSpriteXY(Object.Frame,Object.XPos,Object.Value1)
+	endif
+	DrawSprite(7)
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-14,-15,28,15,104,191)
+	SpriteFrame(-15,-24,30,24,102,133)
+	SpriteFrame(-14,-15,28,15,104,191)
+	SpriteFrame(-15,-24,30,24,102,133)
+	SpriteFrame(-14,-15,28,15,104,191)
+	SpriteFrame(-15,-24,30,24,102,133)
+	SpriteFrame(-15,-32,30,32,102,158)
+	SpriteFrame(-24,-8,48,12,84,108)
+	foreach TypeName[GasPlatform],ArrayPos0
+		Object[ArrayPos0].Value1=Object[ArrayPos0].YPos
+		if Object[ArrayPos0].PropertyValue==1
+			Object[ArrayPos0].State=2
+			Object[ArrayPos0].Value3=Object[ArrayPos0].YPos
+			Object[ArrayPos0].Value3-=0x780000
+		endif
+	floop
+	SetArrayValue(44,DebugMode_constant25,DebugMode_array12)
+	SetArrayValue(109,DebugMode_constant25,DebugMode_array13)
+	SetArrayValue(110,DebugMode_constant25,DebugMode_array11)
+	DebugMode_constant25++
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub

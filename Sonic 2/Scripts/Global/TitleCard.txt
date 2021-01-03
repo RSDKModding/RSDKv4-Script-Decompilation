@@ -1,0 +1,373 @@
+//--------------------Sonic 1 / Sonic 2 TitleCard Script--------------------//
+//--------Scripted by Christian Whitehead 'The Taxman' & Simon Thomley 'Stealth'--------//
+//-----------------Unpacked By Rubberduckycooly's Script Unpacker-----------------------//
+
+//-------Aliases-------//
+#alias 6: TYPE_TITLECARD
+
+
+#constant 0:TitleCard_constant23
+
+
+sub ObjectMain
+	options.touchControls=0
+	switch Object.State
+	case 0
+		Object.Alpha=255
+		Object.Value1=720
+		Object.Value2-=720
+		Object.Value4=432
+		Object.Value5=-320
+		switch Object.PropertyValue
+		case 0
+			Object.Value6=Stage.ActNo
+			TitleCard_constant23=0
+			break
+		case 1
+			Object.Value6=1
+			TitleCard_constant23=0
+			break
+		case 2
+			Object.Value6=2
+			TitleCard_constant23=0
+			break
+		case 3
+			Object.Value6=3
+			TitleCard_constant23=0
+			break
+		default
+			TitleCard_constant23=1
+			endswitch
+			if options.vsMode==1
+				Object.Value7=0
+				Object.Value8=1
+			else
+				Object.Value7=1
+				Object.Value8=0
+			endif
+			if credits.screen>0
+				Object.State=7
+				Object.Value0=272
+				Stage.State=STAGE_RUNNING
+				SetScreenFade(0,0,0,255)
+			else
+				Object.State++
+			endif
+			break
+		case 1
+			if Object.Value0<30
+				Object.Value0++
+			else
+				if options.vsMode==1
+					EngineCallback(SendEntity,Object.EntityNo,0)
+					if ReceiveValue==-1
+						Object.Value7=1
+					else
+						EngineCallback(ReceiveEntity,0x400,1)
+						Object.Value7=Object[1024].Value8
+						ResetObjectEntity(0x400,TypeName[BlankObject],0,0,0)
+					endif
+				endif
+				if Object.Value7==1
+					Object.Value0=0
+					PlayMusic(0)
+					Object.State++
+				endif
+			endif
+			break
+		case 2
+			if options.vsMode==1
+				EngineCallback(SendEntity,Object.EntityNo,0)
+			endif
+			if Object.Value3<240
+				Object.Value3+=16
+			endif
+			if Object.Value4>0
+				Object.Value4-=16
+				Object.Value5+=16
+			endif
+			if Object.Value1>0
+				Object.Value1-=16
+				Object.Value2+=16
+			else
+				Object.State++
+			endif
+			break
+		case 3
+			if Object.Value0<60
+				if options.vsMode==1
+					EngineCallback(SendEntity,Object.EntityNo,0)
+					EngineCallback(ReceiveEntity,0x400,1)
+					ResetObjectEntity(0x400,TypeName[BlankObject],0,0,0)
+				endif
+				Object.Value0++
+			else
+				Object.Value0=0
+				Object.State++
+			endif
+			break
+		case 4
+			if Object.Value5>-48
+				Object.Value5-=32
+			else
+				if Object.Value4<424
+					Object.Value4+=32
+					if options.vsMode==1
+						EngineCallback(ReceiveEntity,0x400,1)
+						ResetObjectEntity(0x400,TypeName[BlankObject],0,0,0)
+					endif
+				else
+					if options.vsMode==1
+						Stage.State=4
+					else
+						Stage.State=STAGE_RUNNING
+					endif
+					PlayerObjectPos=0
+					while PlayerObjectPos<PlayerObjectCount
+						Object[PlayerObjectPos].ControlMode=-1
+						Object[PlayerObjectPos].Up=0
+						Object[PlayerObjectPos].Down=0
+						Object[PlayerObjectPos].Left=0
+						Object[PlayerObjectPos].Right=0
+						Object[PlayerObjectPos].JumpPress=0
+						Object[PlayerObjectPos].JumpHold=0
+						Object[PlayerObjectPos].Value1=0
+						PlayerObjectPos++
+					loop
+					Object.State++
+				endif
+			endif
+			break
+		case 5
+			if Object.Value3>0
+				Object.Value3-=32
+			else
+				PlayerObjectPos=0
+				while PlayerObjectPos<PlayerObjectCount
+					Object[PlayerObjectPos].ControlMode=0
+					PlayerObjectPos++
+				loop
+				Object.State++
+			endif
+			break
+		case 6
+			if Object.Value0<48
+				Object.Value0++
+			else
+				Object.Value0=0
+				Stage.TimeEnabled=1
+				Object.State=9
+			endif
+			break
+		case 7
+			if Object.Value0>0
+				Object.Value0-=16
+				SetScreenFade(0,0,0,Object.Value0)
+			else
+				PlayerObjectPos=0
+				while PlayerObjectPos<PlayerObjectCount
+					Object[PlayerObjectPos].ControlMode=0
+					PlayerObjectPos++
+				loop
+				ResetObjectEntity(Object.EntityNo,TypeName[BlankObject],0,0,0)
+			endif
+			break
+		case 8
+			if Object.Value0<300
+				Object.Value0+=5
+				if credits.screen==0
+					Music.Volume-=2
+				endif
+			else
+				Stage.ActiveList=PRESENTATION_STAGE
+				if credits.screen>0
+					Stage.ListPos=2
+				else
+					Stage.ListPos=0
+					StopMusic()
+				endif
+				LoadStage()
+			endif
+			SetScreenFade(0,0,0,Object.Value0)
+			break
+		case 9
+			Object.Value1+=32
+			Object.Value2-=32
+			if Object.Value0<20
+				Object.Value0++
+			else
+				Object.Value0=0
+				Object.Type=TypeName[BlankObject]
+			endif
+			break
+
+		endswitch
+endsub
+
+
+
+sub ObjectDraw
+	TempValue2=Screen.CenterX
+	TempValue2-=160
+	TempValue2>>=1
+	switch Object.State
+	case 0
+	case 1
+	case 2
+	case 3
+		SetActivePalette(0,0,Screen.YSize)
+		DrawRect(0,0,Screen.XSize,Object.Value3,32,64,192,255)
+		DrawRect(0,Object.Value3,Screen.XSize,Screen.YSize,0,0,0,255)
+		if options.vsMode==1
+			if Object.State==1
+				DrawSpriteScreenXY(32,Screen.XSize,Screen.YSize)
+			endif
+		endif
+		DrawRect(Object.Value4,168,Screen.XSize,72,224,224,0,255)
+		TempValue0=Object.Value4
+		TempValue0+=Screen.CenterX
+		DrawSpriteScreenXY(31,TempValue0,176)
+		DrawRect(0,0,Object.Value5,Screen.YSize,224,0,0,255)
+		DrawSpriteScreenXY(26,Object.Value5,0)
+		TempValue0=Screen.CenterX
+		TempValue0+=TempValue2
+		TempValue0+=128
+		TempValue0+=Object.Value1
+		DrawActName(0,TempValue0,64,0,0,16,0)
+		TempValue0=Screen.CenterX
+		TempValue0+=TempValue2
+		TempValue0+=41
+		TempValue0+=Object.Value2
+		DrawSpriteScreenXY(27,TempValue0,88)
+		if Object.Value6>0
+			TempValue1=27
+			TempValue1+=Object.Value6
+			if TempValue1>30
+				TempValue1=30
+			endif
+			DrawSpriteScreenXY(TempValue1,TempValue0,88)
+		endif
+		break
+	case 4
+	case 5
+		SetActivePalette(0,0,Screen.YSize)
+		DrawRect(0,0,Screen.XSize,Object.Value3,32,64,192,255)
+		DrawRect(Object.Value4,168,Screen.XSize,72,224,224,0,255)
+		TempValue0=Object.Value4
+		TempValue0+=Screen.CenterX
+		DrawSpriteScreenXY(31,TempValue0,176)
+		DrawRect(0,0,Object.Value5,Screen.YSize,224,0,0,255)
+		DrawSpriteScreenXY(26,Object.Value5,0)
+		TempValue0=Screen.CenterX
+		TempValue0+=TempValue2
+		TempValue0+=128
+		TempValue0+=Object.Value1
+		DrawActName(0,TempValue0,64,0,0,16,0)
+		TempValue0=Screen.CenterX
+		TempValue0+=TempValue2
+		TempValue0+=41
+		TempValue0+=Object.Value2
+		DrawSpriteScreenXY(27,TempValue0,88)
+		if Object.Value6>0
+			TempValue1=27
+			TempValue1+=Object.Value6
+			if TempValue1>30
+				TempValue1=30
+			endif
+			DrawSpriteScreenXY(TempValue1,TempValue0,88)
+		endif
+		break
+	case 6
+	case 9
+		SetActivePalette(0,0,Screen.YSize)
+		TempValue0=Screen.CenterX
+		TempValue0+=TempValue2
+		TempValue0+=128
+		TempValue0+=Object.Value1
+		DrawActName(0,TempValue0,64,0,0,16,0)
+		TempValue0=Screen.CenterX
+		TempValue0+=TempValue2
+		TempValue0+=41
+		TempValue0+=Object.Value2
+		DrawSpriteScreenXY(27,TempValue0,88)
+		if Object.Value6>0
+			TempValue1=27
+			TempValue1+=Object.Value6
+			if TempValue1>30
+				TempValue1=30
+			endif
+			DrawSpriteScreenXY(TempValue1,TempValue0,88)
+		endif
+		break
+
+	endswitch
+endsub
+
+
+sub ObjectStartup
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(0,0,15,16,37,79)
+	SpriteFrame(0,0,16,16,53,79)
+	SpriteFrame(0,0,16,16,70,79)
+	SpriteFrame(0,0,16,16,87,79)
+	SpriteFrame(0,0,15,16,104,79)
+	SpriteFrame(0,0,15,16,120,79)
+	SpriteFrame(0,0,16,16,136,79)
+	SpriteFrame(0,0,16,16,153,79)
+	SpriteFrame(0,0,8,16,170,79)
+	SpriteFrame(0,0,16,16,179,79)
+	SpriteFrame(0,0,16,16,196,79)
+	SpriteFrame(0,0,16,16,213,79)
+	SpriteFrame(0,0,23,16,43,96)
+	SpriteFrame(0,0,16,16,67,96)
+	SpriteFrame(0,0,16,16,84,96)
+	SpriteFrame(0,0,16,16,101,96)
+	SpriteFrame(0,0,16,16,118,96)
+	SpriteFrame(0,0,16,16,135,96)
+	SpriteFrame(0,0,16,16,152,96)
+	SpriteFrame(0,0,16,16,169,96)
+	SpriteFrame(0,0,16,16,186,96)
+	SpriteFrame(0,0,16,16,203,96)
+	SpriteFrame(0,0,22,16,220,96)
+	SpriteFrame(0,0,15,16,43,113)
+	SpriteFrame(0,0,16,16,59,113)
+	SpriteFrame(0,0,16,16,76,113)
+	SpriteFrame(0,0,8,256,248,0)
+	SpriteFrame(0,0,62,16,83,1)
+	SpriteFrame(63,0,16,29,42,1)
+	SpriteFrame(63,0,23,29,59,1)
+	SpriteFrame(63,0,23,32,42,31)
+	SpriteFrame(0,0,140,5,37,73)
+	if vs.playerID==0
+		SpriteFrame(-160,-16,136,7,110,172)
+	else
+		SpriteFrame(-160,-16,136,7,110,164)
+	endif
+	if options.vsMode==1
+		EngineCallback(ReceiveEntity,0x400,1)
+		ResetObjectEntity(0x400,TypeName[BlankObject],0,0,0)
+	endif
+	ArrayPos0=32
+	while ArrayPos0<0x420
+		if Object[ArrayPos0].Type==TypeName[TitleCard]
+			Object[ArrayPos0].Priority=PRIORITY_ACTIVE_PAUSED
+			Object[ArrayPos0].Alpha=255
+			Object[ArrayPos0].DrawOrder=6
+			Stage.State=STAGE_PAUSED
+			if Object[ArrayPos0].PropertyValue==5
+				CheckStageFolder("ZoneM")
+				if CheckResult==0
+					Stage.ActiveList=PRESENTATION_STAGE
+					Stage.ListPos=0
+					LoadStage()
+				endif
+			endif
+		endif
+		ArrayPos0++
+	loop
+endsub
+
+sub RSDK
+	LoadSpriteSheet("Global/Display.gif")
+	SetEditorIcon(Icon0,SingleIcon,-16,-16,32,32,1,143)
+endsub
