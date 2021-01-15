@@ -14,17 +14,10 @@
 #function Water_Function108
 #function Water_Function109
 
-#constant 0:Water_constant32
-#constant 0:Water_constant31
+#static 0:Water_staticVar32
+#static 0:Water_staticVar31
 
-
-//Unknown Variables
-#constant 5:constant0xDF00
-#constant 0:constant0xDF01
-#constant 0:constant0xDF02
-#constant 0:constant0xDF03
-#constant 0:constant0xDF04
-#constant 0:constant0xDF05
+#array Water_array26:(0,0,0,0,0)
 
 function Water_Function103
 	switch stage.waterState
@@ -159,7 +152,7 @@ function Water_Function105
 				stage.waterState=4
 				stage.newWaterLevel=0x6080000
 				Object[ArrayPos0].YPos=0x7C00000
-				Water_constant31=1
+				Water_staticVar31=1
 			endif
 		endif
 		break
@@ -241,7 +234,7 @@ endfunction
 
 function Water_Function109
 	if PlayerObjectPos==0
-		ArrayPos0=Water_constant32
+		ArrayPos0=Water_staticVar32
 		ArrayPos0+=PlayerObjectPos
 		if Object[PlayerObjectPos].Type!=TypeName[DeathEvent]
 			if Music.CurrentTrack==6
@@ -249,7 +242,7 @@ function Water_Function109
 					ArrayPos1=PlayerObjectPos
 					ArrayPos1+=PlayerObjectCount
 					if Object[ArrayPos1].Type!=TypeName[Invincibility]
-						if PlayerObject_constant3!=1
+						if PlayerObject_staticVar3!=1
 							Object[ArrayPos0].Value8=0
 						endif
 					endif
@@ -286,7 +279,7 @@ sub ObjectMain
 		if Object[PlayerObjectPos].Value25==0x3800
 			CheckNotEqual(Object[PlayerObjectPos].Type,TypeName[DebugMode])
 			TempValue0=CheckResult
-			CheckNotEqual(Object[PlayerObjectPos].State,27)
+			CheckNotEqual(Object[PlayerObjectPos].State,PlayerObject_Death)
 			TempValue0&=CheckResult
 			CheckGreater(Object[PlayerObjectPos].YPos,TempValue7)
 			TempValue0&=CheckResult
@@ -297,13 +290,13 @@ sub ObjectMain
 				if Object.YPos<stage.newWaterLevel
 					Object[PlayerObjectPos].YVelocity+=0x10000
 				endif
-				if Object[PlayerObjectPos].State==18
+				if Object[PlayerObjectPos].State==PlayerObject_HandleTailsFlight
 					StopSfx(SFXName[Flying])
 					StopSfx(SFXName[Jump])
 				endif
 				Object[PlayerObjectPos].XVelocity>>=1
 				Object[PlayerObjectPos].Speed>>=1
-				CallFunction(PlayerObject_Function42)
+				CallFunction(PlayerObject_SwapPhysics)
 				if Object[PlayerObjectPos].YVelocity!=0
 					CreateTempObject(TypeName[WaterSplash],0,Object[PlayerObjectPos].XPos,TempValue7)
 					Object[TempObjectPos].DrawOrder=4
@@ -334,14 +327,14 @@ sub ObjectMain
 				Object[PlayerObjectPos].Value37=0
 				ArrayPos0=PlayerObjectPos
 				ArrayPos0+=PlayerObjectCount
-				CallFunction(PlayerObject_Function38)
+				CallFunction(PlayerObject_RestorePowerup)
 			endif
 			if Object[PlayerObjectPos].Value37==4
 				Object[PlayerObjectPos].Value37=0
 				ArrayPos0=PlayerObjectPos
 				ArrayPos0+=PlayerObjectCount
-				CallFunction(PlayerObject_Function38)
-				LZSetup_constant30=4
+				CallFunction(PlayerObject_RestorePowerup)
+				LZSetup_staticVar30=4
 			endif
 			if Object[PlayerObjectPos].Value37!=2
 				if Object[PlayerObjectPos].Value3==0
@@ -441,12 +434,12 @@ sub ObjectMain
 					CallFunction(Water_Function107)
 					Object[PlayerObjectPos].Value3++
 					if Object[PlayerObjectPos].Value3==0x708
-						if Object[PlayerObjectPos].State!=27
+						if Object[PlayerObjectPos].State!=PlayerObject_Death
 							if PlayerObjectPos==0
 								Stage.TimeEnabled=0
 								Screen.CameraEnabled=0
 							endif
-							Object[PlayerObjectPos].State=28
+							Object[PlayerObjectPos].State=PlayerObject_Drown
 							Object[PlayerObjectPos].Animation=ANI_DROWNING
 							Object[PlayerObjectPos].Speed=0
 							Object[PlayerObjectPos].XVelocity=0
@@ -508,19 +501,19 @@ sub ObjectMain
 			CheckLower(Object[PlayerObjectPos].YPos,TempValue7)
 			TempValue0|=CheckResult
 			if TempValue0==1
-				if Object[PlayerObjectPos].State!=27
+				if Object[PlayerObjectPos].State!=PlayerObject_Death
 					Object[PlayerObjectPos].YVelocity<<=1
 					if Object[PlayerObjectPos].YVelocity<-0x100000
 						Object[PlayerObjectPos].YVelocity=-0x100000
 					endif
-					if Object[PlayerObjectPos].State==18
+					if Object[PlayerObjectPos].State==PlayerObject_HandleTailsFlight
 						if Object[PlayerObjectPos].Value1<480
 							PlaySfx(SFXName[Flying],1)
 						else
 							PlaySfx(SFXName[Jump],1)
 						endif
 					endif
-					CallFunction(PlayerObject_Function42)
+					CallFunction(PlayerObject_SwapPhysics)
 					if Object[PlayerObjectPos].YVelocity!=0
 						TempValue0=Object.YPos
 						TempValue0-=Object[PlayerObjectPos].YPos
@@ -561,10 +554,10 @@ endsub
 
 sub ObjectStartup
 	LoadSpriteSheet("LZ/Objects2.gif")
-	SetArrayValue(103,1,Water_array26)
-	SetArrayValue(104,2,Water_array26)
-	SetArrayValue(105,3,Water_array26)
-	SetArrayValue(106,4,Water_array26)
+	SetArrayValue(Water_Function103,1,Water_array26)
+	SetArrayValue(Water_Function104,2,Water_array26)
+	SetArrayValue(Water_Function105,3,Water_array26)
+	SetArrayValue(Water_Function106,4,Water_array26)
 	foreach TypeName[Water],ArrayPos0
 		Object[ArrayPos0].Priority=PRIORITY_ACTIVE
 		Object[ArrayPos0].DrawOrder=5
@@ -580,7 +573,7 @@ sub ObjectStartup
 			TempValue1=Object[0].YPos
 			TempValue1>>=16
 		endif
-		Water_constant32=ArrayPos0
+		Water_staticVar32=ArrayPos0
 		GetArrayValue(Object[ArrayPos0].Value3,Stage.ActNo,Water_array26)
 		CallFunction(Object[ArrayPos0].Value3)
 		Stage.WaterLevel=stage.newWaterLevel
@@ -592,14 +585,14 @@ sub ObjectStartup
 		Stage.WaterLevel=recWaterLevel
 		stage.newWaterLevel=recWaterLevel
 		stage.newWaterLevel<<=16
-		ArrayPos0=Water_constant32
+		ArrayPos0=Water_staticVar32
 		Object[ArrayPos0].YPos=stage.newWaterLevel
 	else
 		if credits.screen==0
 			stage.waterState=0
 		endif
 	endif
-	Water_constant31=0
+	Water_staticVar31=0
 	foreach TypeName[256],PlayerObjectPos
 		Object[PlayerObjectPos].Value3=0
 		if Object[PlayerObjectPos].YPos>stage.newWaterLevel
@@ -618,7 +611,7 @@ sub ObjectStartup
 				Object[PlayerObjectPos].Value27=0x38000
 			endif
 			Object[PlayerObjectPos].Value28=-0x20000
-			ArrayPos0=Water_constant32
+			ArrayPos0=Water_staticVar32
 			ArrayPos0+=PlayerObjectPos
 			Object[ArrayPos0].Value1=52
 		endif
@@ -626,7 +619,7 @@ sub ObjectStartup
 	SpriteFrame(0,-8,256,16,0,129)
 	SpriteFrame(0,-8,256,16,0,146)
 	SpriteFrame(0,-8,256,16,0,163)
-	BrokenMonitor_constant25=Water_Function109
+	BrokenMonitor_staticVar25=Water_Function109
 endsub
 
 sub RSDK
