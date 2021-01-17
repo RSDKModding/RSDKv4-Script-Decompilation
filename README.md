@@ -13,6 +13,6 @@ a full decompilation for the scripts in Sonic 1 & 2's mobile remakes
 * re-added static variables
 * re-added arrays & values
 
-- for anyone curious about how Sonic 1/2's scripting language works, check out the handbook (Handbook.pdf) I made to help get people into using RSDKv4 (S1/S2)'s scripting language
+- for anyone curious about how Sonic 1/2's scripting language works, check out the handbook (RetroScript Handbook.pdf) we made to help get people into using RSDKv4 (S1/S2)'s scripting language
 
 We recommend downloading the handbook to use it as it makes it easier to navigate.
