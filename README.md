@@ -1,5 +1,8 @@
 # Sonic 1/2 2013 Script Decompilation
 
+# NOTE: EVERYTHING IS BEING REWRITTEN
+**FOR THE TIME BEING, SCRIPTS WILL NOT BE DOWNLOADABLE**
+
 a full decompilation for the scripts in Sonic 1 & 2's mobile remakes
 
 ## NOTE: S2 scripts are currently incomplete, they'll be added later this week
