@@ -1,0 +1,238 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Stage Setup Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 4 : TYPE_STAGESETUP
+
+// Function declarations
+reserve function StageSetup_Function71
+
+// Static Values
+public value StageSetup_value22 = 0;
+public value StageSetup_value21 = 0;
+
+// Tables
+public table StageSetup_table8
+	128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0
+	128, 0, 0x3848, 238, 0x2080, 180, 0x3080, 270, 0x5080, 450, 0x7080, 630, 128, 0, 0x4000, 254
+end table
+
+public table StageSetup_table9
+	128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0
+	128, 0, 0x3848, 238, 0x2080, 180, 0x3080, 270, 0x5080, 450, 0x7080, 630, 128, 0, 0x4000, 254
+end table
+
+public table StageSetup_table10
+	2, 0x1000, 2, 0x1800, 2, 0x2000, 2, 0x3000, 4, 0x2000, 8, 0x800, 8, 0x4000, 4, 0x4000
+	2, 0x3800, 2, 0x3800, 2, 0x2000, 3, 0x3000, 5, 0x5000, 7, 0x7000, 2, 0x4000, 2, 0x4000
+end table
+
+
+function StageSetup_Function71
+	temp0 = 0
+	temp1 = 0
+	while temp0 < 16
+		GetTableValue(temp4, temp1, StageSetup_table10)
+		GetTableValue(temp6, temp1, StageSetup_table9)
+		temp1++
+		GetTableValue(temp5, temp1, StageSetup_table10)
+		GetTableValue(temp7, temp1, StageSetup_table9)
+		temp1--
+		GetBit(temp2, StageSetup_value21, temp0)
+		if temp2 == 0
+			temp7 += temp4
+			temp6 += temp7
+			if temp6 >= temp5
+				SetBit(StageSetup_value21, temp0, 1)
+			end if
+		else
+			temp7 -= temp4
+			temp6 += temp7
+			if temp6 < temp5
+				SetBit(StageSetup_value21, temp0, 0)
+			end if
+		end if
+		SetTableValue(temp6, temp1, StageSetup_table9)
+		temp1++
+		SetTableValue(temp7, temp1, StageSetup_table9)
+		temp1++
+		temp0++
+	loop
+end function
+
+
+event ObjectMain
+	switch stage.state
+	case 2
+	case 3
+		break
+	default
+		ringTimer++
+		if ringTimer == 4
+			ringTimer = 0
+			ringFrame++
+			ringFrame &= 7
+		end if
+		StageSetup_value22++
+		if StageSetup_value22 > 17
+			StageSetup_value22 = 0
+		end if
+		if options.gameMode != 2
+			if player.score >= player.scoreBonus
+				player.lives++
+				player.scoreBonus += 0xC350
+				PlaySfx(SfxName[Life], 0)
+				PauseMusic()
+				ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
+				object[25].priority = PRIORITY_ACTIVE
+			end if
+		end if
+		oscillation++
+		oscillation &= 511
+		CallFunction(StageSetup_Function71)
+		if stage.timeEnabled == 1
+			if stage.minutes == 10
+				CheckEqual(stage.debugMode, 1)
+				temp0 = checkResult
+				CheckEqual(options.gameMode, 2)
+				temp0 |= checkResult
+				if temp0 == 0
+					stage.timeOver = 1
+					currentPlayer = 0
+					object[0].type = TypeName[Player Object]
+					CallFunction(PlayerObject_Kill)
+				end if
+				stage.minutes = 9
+				stage.seconds = 59
+				stage.milliSeconds = 99
+				stage.timeEnabled = 0
+			end if
+		end if
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = object[currentPlayer].collisionLeft
+			temp0 <<= 16
+			temp0 += object[currentPlayer].xpos
+			temp1 = stage.curXBoundary1
+			temp1 <<= 16
+			if temp0 < temp1
+				if object[currentPlayer].right == 1
+					object[currentPlayer].xvel = 0x10000
+					object[currentPlayer].speed = 0x10000
+				else
+					object[currentPlayer].xvel = 0
+					object[currentPlayer].speed = 0
+				end if
+				object[currentPlayer].xpos = temp1
+				temp0 = object[currentPlayer].collisionLeft
+				temp0 <<= 16
+				object[currentPlayer].xpos -= temp0
+			end if
+			temp1 = stage.curYBoundary2
+			temp1 <<= 16
+			if temp1 < stage.deathBoundary
+				if object[currentPlayer].ypos > stage.deathBoundary
+					CallFunction(PlayerObject_Kill)
+				end if
+			else
+				if object[currentPlayer].ypos > temp1
+					CallFunction(PlayerObject_Kill)
+				end if
+			end if
+		next
+	end switch
+	if options.attractMode == 0
+		if object[0].controlMode > -1
+			options.touchControls = 1
+		else
+			options.touchControls = 0
+		end if
+	else
+		options.touchControls = 0
+	end if
+	currentPlayer = playerCount
+	currentPlayer--
+	while currentPlayer > -1
+		if object[currentPlayer].visible == 1
+			currentPlayer += playerCount
+			if object[currentPlayer].value18 == 0
+				currentPlayer -= playerCount
+				arrayPos0 = object[currentPlayer].value18
+				AddDrawListEntityRef(arrayPos0, currentPlayer)
+				currentPlayer += playerCount
+				AddDrawListEntityRef(arrayPos0, currentPlayer)
+				currentPlayer -= playerCount
+			else
+				currentPlayer -= playerCount
+				arrayPos0 = object[currentPlayer].value18
+				currentPlayer += playerCount
+				AddDrawListEntityRef(arrayPos0, currentPlayer)
+				currentPlayer -= playerCount
+				arrayPos0 = object[currentPlayer].value18
+				AddDrawListEntityRef(arrayPos0, currentPlayer)
+			end if
+		end if
+		currentPlayer--
+	loop
+end event
+
+
+event ObjectStartup
+	SetMusicTrack("ActComplete.ogg", 1, 0)
+	SetMusicTrack("Invincibility.ogg", 2, 0x9717)
+	SetMusicTrack("Continue.ogg", 3, 0)
+	SetMusicTrack("Boss.ogg", 4, 1)
+	SetMusicTrack("GameOver.ogg", 5, 0)
+	SetMusicTrack("Drowning.ogg", 6, 0)
+	SetMusicTrack("Super.ogg", 7, 1)
+	stage.timeOver = 0
+	if options.attractMode == 0
+	else
+		SetObjectRange(424)
+	end if
+	SpeedUpMusic = 0
+	SlowDownMusic = 0
+	stage.musicFlag = 0
+	stage.deathBoundary = stage.curYBoundary2
+	stage.deathBoundary <<= 16
+	foreach (TypeName[Stage Setup], arrayPos0, ALL_ENTITIES)
+		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+	next
+	object[8].type = TypeName[Stage Setup]
+	object[8].priority = PRIORITY_ACTIVE_PAUSED
+	foreach (TypeName[HUD], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].type = TypeName[Blank Object]
+		if credits.screen == 0
+			object[9].type = TypeName[HUD]
+			object[9].priority = PRIORITY_ACTIVE
+			object[9].drawOrder = 6
+			object[9].propertyValue = object[arrayPos0].propertyValue
+		end if
+	next
+	ringExtraLife = 100
+	oscillation = 0
+	StageSetup_value21 = 0xBE00
+	temp0 = 0
+	while temp0 < 32
+		GetTableValue(temp1, temp0, StageSetup_table8)
+		SetTableValue(temp1, temp0, StageSetup_table9)
+		temp0++
+	loop
+	if options.saveSlot > 0
+		options.shieldType = 0
+	end if
+	blueShieldType = 24
+	invincibilityType = 30
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

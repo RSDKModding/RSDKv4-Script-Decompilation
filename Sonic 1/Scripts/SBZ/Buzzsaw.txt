@@ -1,0 +1,242 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Buzzsaw Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 67 : TYPE_BUZZSAW
+
+// Function declarations
+reserve function Buzzsaw_DebugDraw
+reserve function Buzzsaw_DebugSpawn
+reserve function Buzzsaw_Function150
+reserve function Buzzsaw_Function151
+reserve function Buzzsaw_Function152
+
+// Static Values
+public value Buzzsaw_value38 = 0;
+
+// Tables
+
+function Buzzsaw_DebugDraw
+	temp0 = object[0].value17
+	temp0 -= Buzzsaw_value38
+	temp0--
+	DrawSprite(temp0)
+end function
+
+
+function Buzzsaw_DebugSpawn
+	CreateTempObject(TypeName[Buzzsaw], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value0 = object.xpos
+	object[tempObjectPos].value1 = object.ypos
+	object[tempObjectPos].inkEffect = INK_ALPHA
+	object[tempObjectPos].propertyValue = object[0].value17
+	object[tempObjectPos].propertyValue -= Buzzsaw_value38
+end function
+
+
+function Buzzsaw_Function150
+	object.animationTimer--
+	if object.animationTimer < 0
+		object.animationTimer = 2
+		object.frame ^= 1
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			CallFunction(PlayerObject_Hit)
+		end if
+	next
+end function
+
+
+function Buzzsaw_Function151
+	checkResult = 0
+	temp0 = screen.cameraX
+	temp0 -= object.ixpos
+	temp0 -= 8
+	Abs(temp0)
+	if temp0 <= screen.xcenter
+		temp0 = screen.cameraY
+		temp0 -= object.iypos
+		temp0 -= 32
+		Abs(temp0)
+		if temp0 <= screen.ycenter
+			checkResult = 1
+		end if
+	end if
+end function
+
+
+function Buzzsaw_Function152
+	if object.alpha < 256
+		object.alpha += 16
+	end if
+	object.xpos += object.xvel
+	CallFunction(Buzzsaw_Function150)
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		object.xpos = object.value0
+		if object.outOfBounds == 1
+			object.xpos = object.value0
+			object.xvel = 0
+			object.state = 0
+			object.alpha = 0
+			object.animationTimer = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		else
+			object.xpos = temp0
+		end if
+	end if
+end function
+
+
+event ObjectMain
+	switch object.propertyValue
+	case 0
+		break
+	case 1
+		GetTableValue(temp0, 6, StageSetup_table9)
+		GetBit(temp1, object.direction, 0)
+		if temp1 == 1
+			FlipSign(temp0)
+			temp0 += 0x6000
+		end if
+		temp0 <<= 8
+		object.xpos = object.value0
+		object.xpos -= temp0
+		CallFunction(Buzzsaw_Function150)
+		temp0 = oscillation
+		temp0 &= 15
+		if temp0 == 0
+			CallFunction(Buzzsaw_Function151)
+			if checkResult == 1
+				PlaySfx(SfxName[Buzzsaw], 0)
+			end if
+		end if
+		break
+	case 2
+		GetTableValue(temp0, 2, StageSetup_table9)
+		GetBit(temp1, object.direction, 0)
+		if temp1 == 1
+			FlipSign(temp0)
+			temp0 += 0x8000
+		end if
+		temp0 <<= 8
+		object.ypos = object.value1
+		object.ypos -= temp0
+		CallFunction(Buzzsaw_Function150)
+		GetTableValue(temp0, 2, StageSetup_table9)
+		temp0 >>= 8
+		if temp0 == 24
+			CallFunction(Buzzsaw_Function151)
+			if checkResult == 1
+				PlaySfx(SfxName[Buzzsaw], 0)
+			end if
+		end if
+		break
+	case 3
+		if object.state == 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if object.state == 0
+					temp0 = object[currentPlayer].xpos
+					temp0 -= 0xC00000
+					if temp0 >= 0
+						temp0 -= object.xpos
+						if temp0 >= 0
+							temp0 = object[currentPlayer].ypos
+							temp0 -= 0x800000
+							if temp0 < object.ypos
+								temp0 += 0x1000000
+								if temp0 >= object.ypos
+									object.state = 1
+									object.xvel = 0x60000
+									object.frame = 2
+									object.priority = PRIORITY_ACTIVE
+									PlaySfx(SfxName[Buzzsaw], 0)
+								end if
+							end if
+						end if
+					end if
+				end if
+			next
+		else
+			CallFunction(Buzzsaw_Function152)
+		end if
+		break
+	case 4
+		if object.state == 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				if object.state == 0
+					temp0 = object[currentPlayer].xpos
+					temp0 += 0xE00000
+					temp0 -= object.xpos
+					if temp0 < 0
+						temp0 = object[currentPlayer].ypos
+						temp0 -= 0x800000
+						if temp0 < object.ypos
+							temp0 += 0x1000000
+							if temp0 >= object.ypos
+								object.state = 1
+								object.xvel = -0x60000
+								object.frame = 2
+								object.priority = PRIORITY_ACTIVE
+								PlaySfx(SfxName[Buzzsaw], 0)
+							end if
+						end if
+					end if
+				end if
+			next
+		else
+			CallFunction(Buzzsaw_Function152)
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.propertyValue < 3
+		DrawSprite(object.frame)
+	else
+		if object.state != 0
+			DrawSpriteFX(object.frame, FX_INK, object.xpos, object.ypos)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-32, -60, 64, 92, 189, 1)
+	SpriteFrame(-32, -60, 64, 92, 254, 1)
+	SpriteFrame(-32, -32, 64, 64, 319, 50)
+	SpriteFrame(-32, -32, 64, 64, 384, 50)
+	foreach (TypeName[Buzzsaw], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value0 = object[arrayPos0].xpos
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+		object[arrayPos0].inkEffect = INK_ALPHA
+	next
+	temp0 = 0
+	Buzzsaw_value38 = DebugMode_ObjCount
+	Buzzsaw_value38--
+	while temp0 < 3
+		SetTableValue(TypeName[Buzzsaw], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Buzzsaw_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Buzzsaw_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

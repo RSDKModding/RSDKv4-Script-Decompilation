@@ -1,0 +1,148 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Vanish Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 63 : TYPE_VANISHPLATFORM
+
+// Function declarations
+reserve function VanishPlatform_DebugDraw
+reserve function VanishPlatform_DebugSpawn
+
+// Static Values
+public value VanishPlatform_value35 = 0;
+
+// Tables
+
+function VanishPlatform_DebugDraw
+	DrawSprite(3)
+end function
+
+
+function VanishPlatform_DebugSpawn
+	CreateTempObject(TypeName[Vanish Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS
+	object[tempObjectPos].value1 = 127
+	object[tempObjectPos].value0 = 127
+	temp1 = object[0].value17
+	temp1 -= VanishPlatform_value35
+	temp1 <<= 4
+	temp0 += 128
+	temp1 *= temp0
+	temp1 >>= 8
+	object[tempObjectPos].value2 = temp1
+	temp0--
+	object[tempObjectPos].value3 = temp0
+end function
+
+
+event ObjectMain
+	if object.state == 0
+		temp0 = SBZSetup_value31
+		temp0 -= object.value2
+		temp0 &= object.value3
+		if temp0 == 0
+			object.state = 1
+			object.priority = PRIORITY_ACTIVE
+		end if
+	end if
+	if object.state != 0
+		object.value0--
+		if object.value0 < 0
+			if object.animation == 0
+				object.value0 = object.value1
+			else
+				object.value0 = 127
+			end if
+			object.animation ^= 1
+		end if
+		if object.animation == 0
+			if object.frame < 3
+				object.animationTimer++
+				if object.animationTimer == 8
+					object.animationTimer = 0
+					object.frame++
+				end if
+			end if
+		else
+			if object.frame > 0
+				object.animationTimer++
+				if object.animationTimer == 8
+					object.animationTimer = 0
+					object.frame--
+				end if
+			end if
+		end if
+		GetBit(temp0, object.frame, 1)
+		if temp0 != 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -8, 16, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			next
+		end if
+	end if
+	temp0 = screen.cameraX
+	temp0 -= object.ixpos
+	Abs(temp0)
+	temp0 -= 128
+	if temp0 > screen.xcenter
+		object.state = 0
+		object.value0 = 127
+		object.priority = PRIORITY_XBOUNDS
+		object.animation = 0
+		object.frame = 0
+		object.animationTimer = 0
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(0, 0, 1, 1, 449, 198)
+	SpriteFrame(-2, -8, 4, 32, 507, 231)
+	SpriteFrame(-8, -8, 16, 32, 490, 231)
+	SpriteFrame(-16, -8, 32, 32, 457, 231)
+	foreach (TypeName[Vanish Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_XBOUNDS
+		temp0 = object[arrayPos0].propertyValue
+		temp0 &= 15
+		temp0++
+		temp0 <<= 7
+		object[arrayPos0].value1 = temp0
+		object[arrayPos0].value1--
+		object[arrayPos0].value0 = 127
+		temp1 = object[arrayPos0].propertyValue
+		temp1 &= 240
+		temp0 += 128
+		temp1 *= temp0
+		temp1 >>= 8
+		object[arrayPos0].value2 = temp1
+		temp0--
+		object[arrayPos0].value3 = temp0
+	next
+	temp0 = 0
+	VanishPlatform_value35 = DebugMode_ObjCount
+	while temp0 < 16
+		SetTableValue(TypeName[Vanish Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(VanishPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(VanishPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

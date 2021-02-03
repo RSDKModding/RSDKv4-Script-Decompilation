@@ -1,0 +1,486 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Eggman Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 58 : TYPE_EGGMAN
+
+// Function declarations
+reserve function Eggman_Function132
+reserve function Eggman_Function133
+reserve function Eggman_Function134
+
+// Static Values
+
+// Tables
+public table Eggman_table32
+	2, 3, 1
+end table
+
+public table Eggman_table31
+	0, 0, 0, 0, 0, 0
+end table
+
+
+function Eggman_Function132
+	object.value7--
+	if object.value7 == 0
+		player.score += 1000
+		object.value5 = 0
+		object.animation = 4
+		object.animationTimer = 0
+		object.state = 4
+		if stage.debugMode == 0
+			if object.value13 == 0
+				CallNativeFunction2(SetAchievement, 7, 100)
+			end if
+		end if
+	else
+		object.animation = 3
+		object.animationTimer = 0
+		object.value8 = 32
+		PlaySfx(SfxName[Boss Hit], 0)
+	end if
+end function
+
+
+function Eggman_Function133
+	arrayPos0 = object.entityPos
+	temp1 = object.value9
+	temp1 >>= 1
+	GetTableValue(temp2, temp1, Eggman_table32)
+	arrayPos0 -= temp2
+	if object[arrayPos0].state == 3
+		if object[arrayPos0].value12 == 0
+			object.xpos = temp0
+			object[arrayPos0].state = 2
+			object[arrayPos0].xvel = 0
+			object[arrayPos0].yvel = 0
+			object[arrayPos0].value8 = object.xpos
+			object[arrayPos0].value9 = object.ypos
+			object[arrayPos0].value9 += 0x200000
+			object[arrayPos0].value0 = 240
+			object[arrayPos0].value10 = 2
+			object[arrayPos0].animationTimer = 44
+			object.value4 = 40
+			object.value5 = 0
+			object.state++
+		end if
+	end if
+end function
+
+
+function Eggman_Function134
+	Sin256(temp0, object.value2)
+	temp0 <<= 10
+	object.ypos += temp0
+	object.value2 += 2
+	object.value2 &= 255
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		if object[0].xpos >= object[-3].xpos
+			temp0 = object[-3].ixpos
+			temp0 -= screen.xcenter
+			stage.newXBoundary1 = temp0
+			temp0 = object[-3].ixpos
+			temp0 += screen.xcenter
+			stage.newXBoundary2 = temp0
+			if screen.yoffset == object.value12
+				object.state++
+				object.priority = PRIORITY_ACTIVE
+				ResetObjectEntity(26, TypeName[Music Event], 0, 0, 0)
+				object[26].priority = PRIORITY_ACTIVE
+			else
+				object.value12 = screen.yoffset
+			end if
+		end if
+		break
+	case 1
+		object.xpos += object.xvel
+		temp0 = object[-3].xpos
+		temp0 += 0x800000
+		if object.xpos < temp0
+			object.state++
+			temp1 = screen.xcenter
+			temp1 -= 4
+			temp1 <<= 8
+			temp1 /= 160
+			temp1 *= -512
+			object.xvel = temp1
+		end if
+		object.ypos = object.value1
+		CallFunction(Eggman_Function134)
+		break
+	case 2
+		object.xpos += object.xvel
+		if object.direction == FLIP_NONE
+			if object.xpos <= object.value10
+				object.xpos = object.value10
+				FlipSign(object.xvel)
+				object.direction ^= FLIP_X
+			else
+				GetTableValue(temp0, object.value9, Eggman_table31)
+				if object.xpos <= temp0
+					CallFunction(Eggman_Function133)
+					object.value9--
+					if object.value9 < 0
+						object.value9 = 1
+					end if
+				end if
+				object.value9 &= 14
+			end if
+		else
+			if object.xpos >= object.value11
+				object.xpos = object.value11
+				FlipSign(object.xvel)
+				object.direction ^= FLIP_X
+			else
+				GetTableValue(temp0, object.value9, Eggman_table31)
+				if object.xpos >= temp0
+					CallFunction(Eggman_Function133)
+					object.value9++
+					if object.value9 > 5
+						object.value9 = 4
+					end if
+				end if
+				object.value9 |= 1
+			end if
+		end if
+		object.ypos = object.value1
+		CallFunction(Eggman_Function134)
+		break
+	case 3
+		object.value4--
+		if object.value4 <= 0
+			object.value5 = 1
+			object.state--
+		end if
+		break
+	case 4
+		object.value4++
+		temp0 = object.value4
+		temp0 &= 7
+		if temp0 == 4
+			Rand(temp0, 96)
+			temp0 -= 48
+			temp0 <<= 16
+			temp0 += object.xpos
+			Rand(temp1, 48)
+			temp1 -= 24
+			temp1 <<= 16
+			temp1 += object.ypos
+			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+			PlaySfx(SfxName[Explosion], 0)
+		end if
+		if object.value4 == 180
+			object.animation = 5
+			object.animationTimer = 0
+			object.value4 = 0
+			object.direction = FLIP_X
+			ResetObjectEntity(26, TypeName[Music Event], 1, 0, 0)
+			object[26].priority = PRIORITY_ACTIVE
+			object.state++
+		end if
+		break
+	case 5
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		object.value4++
+		if object.value4 == 38
+			object.yvel = 0
+			object.value4 = 0
+			object.animationTimer = 0
+			object.state++
+		end if
+		break
+	case 6
+		if object.value4 < 48
+			object.ypos += object.yvel
+			object.yvel -= 0x800
+			object.value4++
+		else
+			object.value4 = 0
+			object.yvel = 0
+			object.value1 = object.ypos
+			object.state++
+		end if
+		break
+	case 7
+		object.ypos = object.value1
+		CallFunction(Eggman_Function134)
+		if object.value4 < 8
+			object.value4++
+		else
+			object.value4 = 0
+			object.animation = 6
+			object.animationTimer = 0
+			object.value5 = 2
+			object.value6 = 0
+			object.priority = PRIORITY_ACTIVE
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+			object.state++
+		end if
+		break
+	case 8
+		object.xpos += 0x40000
+		object.value1 -= 0x4000
+		object.ypos = object.value1
+		CallFunction(Eggman_Function134)
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		end if
+		break
+	end switch
+	if object.value7 != 0
+		if object.value8 > 0
+			object.value8--
+		end if
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object.value8 == 0
+				CheckEqual(object[currentPlayer].animation, ANI_HURT)
+				temp0 = checkResult
+				CheckEqual(object[currentPlayer].animation, ANI_DYING)
+				temp0 |= checkResult
+				CheckEqual(object[currentPlayer].animation, ANI_DROWNING)
+				temp0 |= checkResult
+				if temp0 != 0
+					if object.animation != 2
+						object.animation = 2
+						object.animationTimer = 0
+					end if
+				end if
+				BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_CheckHit)
+					if checkResult == 1
+						object.value13 = 1
+						CallFunction(Eggman_Function132)
+					end if
+				end if
+			end if
+		next
+		if object.value8 == 0
+			foreach (TypeName[SeeSaw], arrayPos0, ACTIVE_ENTITIES)
+				if object[arrayPos0].state != 3
+					temp0 = object[arrayPos0].xpos
+					temp1 = object[arrayPos0].ypos
+					object[arrayPos0].xpos = object[arrayPos0].value8
+					object[arrayPos0].ypos = object[arrayPos0].value9
+					BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, arrayPos0, -7, -7, 7, 7)
+					if checkResult == 1
+						CallFunction(Eggman_Function132)
+						CreateTempObject(TypeName[Smoke Puff], 0, object[arrayPos0].value8, object[arrayPos0].value9)
+						PlaySfx(SfxName[Explosion], 0)
+						object[arrayPos0].state = 3
+						object[arrayPos0].value0 = 0
+					end if
+					object[arrayPos0].xpos = temp0
+					object[arrayPos0].ypos = temp1
+				end if
+			next
+		end if
+	end if
+	if object.state < 8
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = object[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += object[currentPlayer].xpos
+			temp1 = stage.curXBoundary2
+			temp1 <<= 16
+			if temp0 > temp1
+				object[currentPlayer].xvel = 0
+				object[currentPlayer].speed = 0
+				object[currentPlayer].xpos = temp1
+				temp0 = object[currentPlayer].collisionRight
+				temp0 <<= 16
+				object[currentPlayer].xpos -= temp0
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.animation
+	case 1
+		temp0 = object.animationTimer
+		temp0 /= 6
+		object.animationTimer++
+		object.animationTimer %= 12
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(20, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 2
+		temp0 = object.animationTimer
+		temp0 %= 10
+		temp0 /= 5
+		temp0 += 9
+		object.animationTimer++
+		if object.animationTimer == 50
+			object.animationTimer = 0
+			if object[0].animation != ANI_DYING
+				object.animation = 1
+			end if
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(20, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 3
+		temp0 = object.animationTimer
+		temp0 &= 1
+		temp0 += 2
+		temp1 = temp0
+		temp1 += 17
+		object.animationTimer++
+		if object.animationTimer == 30
+			object.animationTimer = 0
+			object.animation = 1
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 4
+		temp0 = object.animationTimer
+		temp0 >>= 5
+		temp0 += 4
+		object.animationTimer++
+		object.animationTimer &= 63
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(20, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 5
+		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(20, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 6
+		temp0 = object.animationTimer
+		temp0 >>= 2
+		temp0 += 7
+		object.animationTimer++
+		object.animationTimer %= 7
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(20, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+	switch object.value5
+	case 1
+		temp0 = object.value6
+		temp0 >>= 2
+		temp0 += 11
+		object.value6++
+		object.value6 &= 7
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 2
+		temp0 = object.value6
+		temp0 /= 3
+		temp0 += 11
+		object.value6++
+		if object.value6 > 21
+			object.value6 = 18
+		end if
+		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Eggman.gif")
+	SpriteFrame(-28, -32, 64, 56, 1, 1)
+	SpriteFrame(-28, -32, 64, 56, 66, 1)
+	SpriteFrame(-28, -32, 64, 56, 131, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 58)
+	SpriteFrame(-28, -32, 64, 56, 1, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 58)
+	SpriteFrame(-28, -32, 64, 56, 66, 58)
+	SpriteFrame(-28, -32, 64, 56, 131, 58)
+	SpriteFrame(-28, -32, 64, 56, 66, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 115)
+	SpriteFrame(-28, -32, 64, 56, 66, 115)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(-12, 17, 24, 16, 213, 135)
+	SpriteFrame(-12, 17, 24, 16, 213, 43)
+	foreach (TypeName[Eggman], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].type == TypeName[Eggman]
+			object[arrayPos0].priority = PRIORITY_XBOUNDS
+			arrayPos1 = arrayPos0
+			arrayPos1 -= 3
+			object[arrayPos0].xpos = object[arrayPos1].xpos
+			object[arrayPos0].xpos += 0xE80000
+			object[arrayPos0].ypos = object[arrayPos1].ypos
+			object[arrayPos0].ypos -= 0xAC0000
+			temp1 = screen.xcenter
+			temp0 -= 4
+			temp1 <<= 8
+			temp1 /= 160
+			temp1 *= -256
+			object[arrayPos0].xvel = temp1
+			object[arrayPos0].value9 = 4
+			object[arrayPos0].value0 = object[arrayPos0].xpos
+			object[arrayPos0].value1 = object[arrayPos0].ypos
+			object[arrayPos0].animation = 1
+			object[arrayPos0].value7 = 8
+			temp0 = screen.xcenter
+			temp0 -= 160
+			temp0 -= 4
+			if temp0 < 0
+				temp0 = 0
+			end if
+			temp0 <<= 16
+			object[arrayPos0].xpos += temp0
+			temp0 += 0x980000
+			object[arrayPos0].value10 = object[arrayPos1].xpos
+			object[arrayPos0].value10 -= temp0
+			object[arrayPos0].value11 = object[arrayPos1].xpos
+			object[arrayPos0].value11 += temp0
+			temp0 -= 0x980000
+			temp1 = object[arrayPos1].xpos
+			temp1 -= 0x280000
+			SetTableValue(temp1, 2, Eggman_table31)
+			temp1 += 0x500000
+			SetTableValue(temp1, 3, Eggman_table31)
+			arrayPos1++
+			object[arrayPos1].xpos -= temp0
+			temp1 = object[arrayPos1].xpos
+			temp1 -= 0x280000
+			SetTableValue(temp1, 0, Eggman_table31)
+			temp1 += 0x500000
+			SetTableValue(temp1, 1, Eggman_table31)
+			arrayPos1++
+			object[arrayPos1].xpos += temp0
+			temp1 = object[arrayPos1].xpos
+			temp1 -= 0x280000
+			SetTableValue(temp1, 4, Eggman_table31)
+			temp1 += 0x500000
+			SetTableValue(temp1, 5, Eggman_table31)
+			object[arrayPos0].value5 = 1
+		end if
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

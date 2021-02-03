@@ -1,0 +1,118 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Falling Lava Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 61 : TYPE_FALLINGLAVA
+
+// Function declarations
+reserve function FallingLava_DebugDraw
+reserve function FallingLava_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function FallingLava_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function FallingLava_DebugSpawn
+	CreateTempObject(TypeName[Falling Lava], 0, object.xpos, object.ypos)
+end function
+
+
+event ObjectMain
+	if object.propertyValue == 0
+		BoxCollisionTest(C_TOUCH, object.entityPos, -256, -256, 256, 128, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object.value0--
+			if object.value0 <= 0
+				object.value0 = 240
+				CreateTempObject(TypeName[Falling Lava], 1, object.xpos, object.ypos)
+				object[tempObjectPos].drawOrder = 4
+				object[tempObjectPos].ypos -= 0x1600000
+				object[tempObjectPos].value3 = object.ypos
+				PlaySfx(SfxName[Fire Burn], 0)
+			end if
+		end if
+	else
+		switch object.state
+		case 0
+			object.yvel += 0x1800
+			object.ypos += object.yvel
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -32, -128, 32, 128, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_FireHit)
+				end if
+			next
+			if object.ypos >= object.value3
+				CreateTempObject(TypeName[Lava Splash], 0, object.xpos, object.ypos)
+				object[tempObjectPos].ypos += 0x800000
+				object[tempObjectPos].drawOrder = 5
+				object.state++
+			end if
+			break
+		case 1
+			object.yvel += 0x1800
+			object.ypos += object.yvel
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -32, -128, 32, 128, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_FireHit)
+				end if
+			next
+			object.value0++
+			if object.value0 == 60
+				object.type = TypeName[Blank Object]
+			end if
+			break
+		end switch
+		object.value2 = object.value1
+		object.value2 /= 3
+		object.value2 += 2
+		object.value1++
+		object.value1 %= 6
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+	end if
+end event
+
+
+event ObjectDraw
+	if object.propertyValue > 0
+		DrawSprite(object.frame)
+		DrawSprite(object.value2)
+		object.direction = FLIP_Y
+		DrawSpriteFX(object.value2, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-32, -128, 64, 256, 317, 1)
+	SpriteFrame(-32, -128, 64, 256, 382, 1)
+	SpriteFrame(-32, -144, 64, 32, 382, 363)
+	SpriteFrame(-32, -144, 64, 32, 447, 363)
+	SetTableValue(TypeName[Falling Lava], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(FallingLava_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(FallingLava_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

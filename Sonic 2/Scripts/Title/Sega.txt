@@ -1,0 +1,244 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Sega Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 1 : TYPE_SEGA
+public alias 256 : GROUP_PLAYERS
+public alias 65536 : HITBOX_AUTO
+public alias arrayPos6 : currentPlayer
+public alias arrayPos7 : playerCount
+
+// Function declarations
+reserve function Sega_CheckTouchCheat
+
+function Sega_CheckTouchCheat
+	CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+	if checkResult == -1
+		object.value4 = 0
+	end if
+	if object.value4 == 0
+		temp0 = screen.xcenter
+		switch object.value3
+		case 0
+			temp0 -= 93
+			temp1 = temp0
+			temp1 += 39
+			break
+		case 1
+			temp0 -= 50
+			temp1 = temp0
+			temp1 += 42
+			break
+		case 2
+			temp0 -= 6
+			temp1 = temp0
+			temp1 += 42
+			break
+		case 3
+			temp0 += 36
+			temp1 = temp0
+			temp1 += 58
+			break
+		end switch
+		CheckTouchRect(temp0, 90, temp1, 150)
+		if checkResult > -1
+			object.value4 = 1
+			object.value3++
+			if object.value3 == 4
+				if options.gameMode == 0
+					PlaySfx(SfxName[Ring L], 0)
+					options.stageSelectFlag = 1
+				end if
+			end if
+		end if
+		temp0 = screen.xcenter
+		switch object.value5
+		case 0
+			temp0 += 36
+			temp1 = temp0
+			temp1 += 58
+			break
+		case 1
+			temp0 -= 6
+			temp1 = temp0
+			temp1 += 42
+			break
+		case 2
+			temp0 -= 50
+			temp1 = temp0
+			temp1 += 42
+			break
+		case 3
+			temp0 -= 93
+			temp1 = temp0
+			temp1 += 39
+			break
+		end switch
+		CheckTouchRect(temp0, 90, temp1, 150)
+		if checkResult > -1
+			object.value4 = 1
+			object.value5++
+			if object.value5 == 4
+				PlaySfx(SfxName[Ring L], 0)
+				options.region ^= 1
+			end if
+		end if
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.alpha = 0
+		object.inkEffect = INK_ALPHA
+		object.value0 = 320
+		SetScreenFade(0, 0, 0, object.value0)
+		object.state++
+		break
+	case 1
+		if object.value0 > 0
+			object.value0 -= 8
+		else
+			object.direction = FLIP_X
+			object.alpha = 256
+			object.value2 = 256
+			object.state++
+		end if
+		SetScreenFade(0, 0, 0, object.value0)
+		break
+	case 2
+		object.frame++
+		object.frame &= 3
+		if object.value2 > -320
+			object.value2 -= 32
+		else
+			object.direction = FLIP_NONE
+			object.state++
+		end if
+		break
+	case 3
+		if object.alpha > -64
+			object.alpha -= 16
+		else
+			object.state++
+		end if
+		break
+	case 4
+		object.frame++
+		object.frame &= 3
+		if object.value2 < 320
+			object.value2 += 32
+		else
+			object.alpha = 256
+			object.state++
+		end if
+		break
+	case 5
+		if object.alpha > -64
+			object.alpha -= 16
+		else
+			object.state++
+		end if
+		break
+	case 6
+		object.value0++
+		if object.value0 == 160
+			object.value0 = 0
+			object.state = 7
+		end if
+		if object.value0 == 2
+			PlaySfx(SfxName[Sega Chant], 0)
+		end if
+		CallFunction(Sega_CheckTouchCheat)
+		break
+	case 7
+		if object.value0 < 256
+			object.value0 += 8
+			SetScreenFade(0, 0, 0, object.value0)
+		else
+			if stage.playerListPos == 2
+				ResetObjectEntity(object.entityPos, TypeName[K Logo], 0, object.xpos, object.ypos)
+			else
+				ResetObjectEntity(object.entityPos, TypeName[ST Screen], 0, object.xpos, object.ypos)
+			end if
+			SetScreenFade(0, 0, 0, 255)
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawRect(0, 0, screen.xsize, screen.ysize, 224, 224, 224, 255)
+	switch object.state
+	case 2
+		temp0 = object.value2
+		temp0 += screen.xcenter
+		DrawSpriteScreenFX(4, FX_FLIP, temp0, 121)
+		DrawSpriteScreenFX(5, FX_FLIP, temp0, 121)
+		DrawSpriteScreenFX(6, FX_FLIP, temp0, 121)
+		DrawSpriteScreenFX(object.frame, FX_FLIP, temp0, screen.ycenter)
+		break
+	case 3
+		DrawSpriteScreenFX(7, FX_INK, 0, 121)
+		DrawSpriteScreenFX(8, FX_INK, 0, 121)
+		DrawSpriteScreenFX(9, FX_INK, 0, 121)
+		temp0 = object.alpha
+		object.alpha = 256
+		object.alpha -= temp0
+		DrawSpriteScreenFX(10, FX_INK, screen.xcenter, screen.ycenter)
+		object.alpha = temp0
+		break
+	case 4
+		temp0 = object.value2
+		temp0 += screen.xcenter
+		DrawSpriteScreenFX(4, FX_FLIP, temp0, 120)
+		DrawSpriteScreenFX(5, FX_FLIP, temp0, 120)
+		DrawSpriteScreenFX(6, FX_FLIP, temp0, 120)
+		DrawSpriteScreenXY(10, screen.xcenter, screen.ycenter)
+		DrawSpriteScreenFX(object.frame, FX_FLIP, temp0, screen.ycenter)
+		break
+	case 5
+		DrawSpriteScreenFX(7, FX_INK, 0, 120)
+		DrawSpriteScreenFX(8, FX_INK, 0, 120)
+		DrawSpriteScreenFX(9, FX_INK, 0, 120)
+		DrawSpriteScreenXY(11, screen.xcenter, screen.ycenter)
+		break
+	case 6
+	case 7
+		DrawSpriteScreenXY(11, screen.xcenter, screen.ycenter)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Title/Title.gif")
+	SpriteFrame(-31, -36, 62, 72, 1, 226)
+	SpriteFrame(-31, -36, 62, 72, 64, 226)
+	SpriteFrame(-29, -36, 60, 72, 127, 226)
+	SpriteFrame(-31, -36, 62, 72, 188, 226)
+	SpriteFrame(-192, -35, 256, 70, 1, 299)
+	SpriteFrame(-384, -35, 192, 70, 1, 299)
+	SpriteFrame(-576, -35, 192, 70, 1, 299)
+	SpriteFrame(0, -35, 192, 70, 1, 299)
+	SpriteFrame(192, -35, 192, 70, 1, 299)
+	SpriteFrame(384, -35, 192, 70, 1, 299)
+	SpriteFrame(-93, -29, 188, 58, 323, 297)
+	SpriteFrame(-93, -29, 188, 58, 323, 238)
+	options.touchControls = 0
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

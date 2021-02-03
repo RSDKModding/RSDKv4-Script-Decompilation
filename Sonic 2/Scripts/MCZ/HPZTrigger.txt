@@ -1,0 +1,87 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: HPZ Trigger Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 61 : TYPE_HPZTRIGGER
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	BoxCollisionTest(C_TOUCH, object.entityPos, -68, 0, 68, 0x1400, 0, 0, 0, 0, 0)
+	if checkResult == 1
+		stage.curYBoundary2 = 0x1000
+		stage.deathBoundary = 0x1400
+		stage.deathBoundary <<= 16
+	else
+		stage.curYBoundary2 = 0x800
+		stage.deathBoundary = stage.curYBoundary2
+		stage.deathBoundary <<= 16
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -68, 512, 68, 0x1400, currentPlayer, 0, 0, 0, 0)
+		if checkResult == 1
+			object[currentPlayer].animation = ANI_WATERSLIDE
+			object[currentPlayer].state = PlayerObject_HandleAir
+			if object[currentPlayer].yvel >= 0x100000
+				object[currentPlayer].yvel = 0x100000
+				object[currentPlayer].yvel -= object[currentPlayer].value25
+			end if
+			if currentPlayer == 0
+				if object.state == 0
+					object.state = 1
+				end if
+			end if
+		end if
+	next
+	switch object.state
+	case 1
+		object.value0++
+		if object.value0 == 60
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 2
+		music.volume -= 2
+		object.value0 += 8
+		SetScreenFade(0, 0, 0, object.value0)
+		if object.value0 == 384
+			starPostID = 0
+			stage.listPos = 20
+			StopMusic()
+			LoadStage()
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[HPZ Trigger], arrayPos0, ALL_ENTITIES)
+		if options.gameMode == 2
+			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+		else
+			if options.vsMode == 0
+				object[arrayPos0].priority = PRIORITY_XBOUNDS
+			else
+				ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+			end if
+		end if
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,129 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Static Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 51 : TYPE_STATICPLATFORM
+
+// Function declarations
+reserve function StaticPlatform_DebugDraw
+reserve function StaticPlatform_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function StaticPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function StaticPlatform_DebugSpawn
+	CreateTempObject(TypeName[Static Platform], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value4 = object.ypos
+	object[tempObjectPos].state = 1
+end function
+
+
+event ObjectMain
+	if object.value0 == 1
+		if object.value1 < 16
+			object.value1++
+			temp0 = object.value1
+			temp0 &= 3
+			if temp0 == 3
+				object.value2 = 0x10000
+			else
+				object.value2 = 0
+			end if
+		else
+			object.value2 = 0
+		end if
+	else
+		if object.value1 > 0
+			object.value1--
+			temp0 = object.value1
+			temp0 &= 3
+			if temp0 == 3
+				object.value2 = -0x10000
+			else
+				object.value2 = 0
+			end if
+		else
+			object.value2 = 0
+		end if
+	end if
+	object.value0 = 0
+	switch object.state
+	case 1
+		if object[-1].propertyValue == 1
+			object.state++
+		end if
+		break
+	case 2
+		if object.value3 < 120
+			object.value3++
+		else
+			object.value3 = 0
+			object.state++
+		end if
+		break
+	case 3
+		if object.value3 < 256
+			object.value3++
+			object.ypos -= 0x20000
+			object.value4 -= 0x20000
+		else
+			object.value3 = 0
+			object.state = 0
+		end if
+		break
+	end switch
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.yvel < 0x80000
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object.value0 = 1
+				object[currentPlayer].ypos += object.value2
+			end if
+		end if
+	next
+	object.ypos += object.value2
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-32, -10, 64, 32, 119, 1)
+	arrayPos0 = 32
+	while arrayPos0 < 0x420
+		if object[arrayPos0].type == TypeName[Static Platform]
+			object[arrayPos0].value4 = object[arrayPos0].ypos
+			if object[arrayPos0].propertyValue == 1
+				object[arrayPos0].state = 1
+			end if
+		end if
+		arrayPos0++
+	loop
+	SetTableValue(TypeName[Static Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(StaticPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(StaticPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,158 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Swing Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 55 : TYPE_SWINGPLATFORM
+
+// Function declarations
+reserve function SwingPlatform_DebugDraw
+reserve function SwingPlatform_DebugSpawn
+
+// Static Values
+public value SwingPlatform_value33 = 0;
+
+// Tables
+
+function SwingPlatform_DebugDraw
+	temp7 = object[0].value17
+	temp7 -= SwingPlatform_value33
+	DrawSprite(0)
+	temp0 = 0
+	temp1 = 16
+	while temp0 < temp7
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+	Cos(temp2, 128)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+	Sin(temp3, 128)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+	DrawSpriteXY(2, temp2, temp3)
+end function
+
+
+function SwingPlatform_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= SwingPlatform_value33
+	CreateTempObject(TypeName[Swing Platform], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	temp2 = object.xpos
+	temp3 = object.ypos
+	GetTableValue(object.value0, 12, StageSetup_table9)
+	object.value0 >>= 8
+	if object.direction == FLIP_X
+		object.value0 ^= 255
+		object.value0 += 129
+	end if
+	object.value0 <<= 1
+	temp1 = object.propertyValue
+	temp1++
+	temp1 <<= 4
+	temp1 -= 8
+	object.xpos = object.value1
+	object.ypos = object.value2
+	Cos(object.value3, object.value0)
+	object.value3 *= temp1
+	object.value3 <<= 7
+	object.value3 += temp2
+	object.value3 &= -0x10000
+	object.value1 = object.value3
+	object.value3 -= object.xpos
+	Sin(object.value4, object.value0)
+	object.value4 *= temp1
+	object.value4 <<= 7
+	object.value4 += temp3
+	object.value4 &= -0x10000
+	object.value2 = object.value4
+	object.value4 -= object.ypos
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[currentPlayer].xpos += object.value3
+			object[currentPlayer].ypos += object.value4
+		else
+			BoxCollisionTest(C_TOUCH, object.entityPos, -32, 0, 32, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				CallFunction(PlayerObject_Hit)
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, 8, 16, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					CallFunction(PlayerObject_Hit)
+				end if
+			end if
+		end if
+	next
+	object.xpos = temp2
+	object.ypos = temp3
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.propertyValue
+		Cos(temp2, object.value0)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, object.value0)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+	temp1 -= 8
+	DrawSpriteXY(2, object.value1, object.value2)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 173, 141)
+	SpriteFrame(-8, -8, 16, 16, 173, 158)
+	SpriteFrame(-44, -16, 88, 46, 84, 141)
+	temp0 = 0
+	SwingPlatform_value33 = DebugMode_ObjCount
+	SwingPlatform_value33--
+	while temp0 < 8
+		SetTableValue(TypeName[Swing Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(SwingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(SwingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

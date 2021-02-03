@@ -1,0 +1,126 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Lamp Post Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 17 : TYPE_LAMPPOST
+
+// Function declarations
+reserve function LampPost_DebugDraw
+reserve function LampPost_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function LampPost_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function LampPost_DebugSpawn
+	CreateTempObject(TypeName[Lamp Post], 0, object.xpos, object.ypos)
+end function
+
+
+event ObjectMain
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.state == 0
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -44, 8, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				lampPostID = object.entityPos
+				recMilliSeconds = stage.milliSeconds
+				recSeconds = stage.seconds
+				recMinutes = stage.minutes
+				recWaterState = stage.waterState
+				recWaterLevel = stage.waterLevel
+				object.state = 1
+				object.value0 = 384
+				if object.priority != PRIORITY_XBOUNDS_DESTROY
+					object.priority = PRIORITY_ACTIVE
+				end if
+				PlaySfx(SfxName[Lamp Post], 0)
+			end if
+		end if
+	next
+	if object.state == 1
+		Cos(object.value1, object.value0)
+		object.value1 *= -0x500
+		Sin(object.value2, object.value0)
+		object.value2 *= 0x500
+		object.value1 += object.xpos
+		object.value2 += object.ypos
+		object.value2 -= 0x1A0000
+		object.value0 += 32
+		if object.value0 > 0x580
+			object.value0 = 0
+			object.state = 2
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 0
+		DrawSprite(0)
+		break
+	case 1
+		DrawSprite(1)
+		DrawSpriteXY(3, object.value1, object.value2)
+		break
+	case 2
+		DrawSprite(1)
+		object.value0++
+		if object.value0 == 8
+			object.value0 = 0
+		end if
+		temp0 = object.ypos
+		temp0 -= 0x240000
+		DrawSpriteXY(3, object.xpos, temp0)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -44, 16, 64, 1, 137)
+	SpriteFrame(-8, -28, 16, 48, 1, 153)
+	SpriteFrame(-8, -8, 16, 16, 1, 137)
+	SpriteFrame(-8, -8, 16, 16, 1, 236)
+	SetTableValue(TypeName[Lamp Post], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(LampPost_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(LampPost_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+	if lampPostID > 31
+		arrayPos0 = lampPostID
+		currentPlayer = 0
+		while currentPlayer < playerCount
+			object[currentPlayer].xpos = object[arrayPos0].xpos
+			object[currentPlayer].ypos = object[arrayPos0].ypos
+			currentPlayer++
+		loop
+		screen.cameraX = object[0].ixpos
+		screen.cameraY = object[0].iypos
+		object[arrayPos0].state = 2
+		stage.milliSeconds = recMilliSeconds
+		stage.seconds = recSeconds
+		stage.minutes = recMinutes
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -44, 16, 64, 1, 137)
+end event

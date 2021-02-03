@@ -1,0 +1,176 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Belt Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 65 : TYPE_BELTPLATFORM
+
+// Function declarations
+reserve function BeltPlatform_Function151
+
+// Static Values
+
+// Tables
+public table BeltPlatform_table35
+	10, 8, 6, 6, 8, 6
+end table
+
+public table BeltPlatform_table34
+	0, 0, 0, 0, 0, 0
+end table
+
+private table BeltPlatform_table0
+	0x1078, 538, 0x10BE, 608, 0x10BE, 915, 0x108C, 965, 0x1022, 912, 0x1022, 580
+end table
+
+private table BeltPlatform_table1
+	0x127E, 640, 0x12CE, 720, 0x12CE, 0x46E, 0x1232, 0x420, 0x1232, 716
+end table
+
+private table BeltPlatform_table2
+	0xD22, 0x482, 0xD22, 0x5DE, 0xDAE, 0x5DE, 0xDAE, 0x482
+end table
+
+private table BeltPlatform_table3
+	0xD62, 930, 0xDEE, 930, 0xDEE, 0x4DE, 0xD62, 0x4DE
+end table
+
+private table BeltPlatform_table4
+	0xCAC, 578, 0xDDE, 578, 0xDDE, 990, 0xC52, 990, 0xC52, 668
+end table
+
+private table BeltPlatform_table5
+	0x1252, 522, 0x13DE, 522, 0x13DE, 702, 0x1252, 702
+end table
+
+function BeltPlatform_Function151
+	temp0 = object[arrayPos0].value5
+	GetTableValue(object[arrayPos0].value0, temp0, object[arrayPos0].value4)
+	temp0++
+	GetTableValue(object[arrayPos0].value1, temp0, object[arrayPos0].value4)
+	temp0 = object[arrayPos0].ixpos
+	temp0 -= object[arrayPos0].value0
+	Abs(temp0)
+	temp1 = object[arrayPos0].iypos
+	temp1 -= object[arrayPos0].value1
+	Abs(temp1)
+	if temp1 < temp0
+		object[arrayPos0].xvel = 0x10000
+		temp1 <<= 16
+		object[arrayPos0].yvel = temp1
+		object[arrayPos0].yvel /= temp0
+	else
+		if temp1 != 0
+			temp0 <<= 16
+			object[arrayPos0].xvel = temp0
+			object[arrayPos0].xvel /= temp1
+		else
+			object[arrayPos0].xvel = 0
+		end if
+		object[arrayPos0].yvel = 0x10000
+	end if
+	if object[arrayPos0].value0 < object[arrayPos0].ixpos
+		FlipSign(object[arrayPos0].xvel)
+	end if
+	if object[arrayPos0].value1 < object[arrayPos0].iypos
+		FlipSign(object[arrayPos0].yvel)
+	end if
+end function
+
+
+event ObjectMain
+	temp2 = 0
+	if object.value7 != LZSetup_value30
+		object.direction ^= FLIP_X
+		object.value7 = LZSetup_value30
+		temp2 = 1
+	else
+		temp0 = object.xpos
+		temp1 = object.ypos
+		temp0 >>= 16
+		temp1 >>= 16
+		if temp0 == object.value0
+			if temp1 == object.value1
+				temp2 = 1
+			end if
+		end if
+	end if
+	if temp2 == 1
+		if object.direction == FLIP_NONE
+			object.value5 += 2
+			if object.value5 > object.value6
+				object.value5 = 0
+			end if
+		else
+			object.value5 -= 2
+			if object.value5 < 0
+				object.value5 = object.value6
+			end if
+		end if
+		arrayPos0 = object.entityPos
+		CallFunction(BeltPlatform_Function151)
+	end if
+	temp0 = object.xpos
+	temp0 &= -0x10000
+	temp1 = object.ypos
+	temp1 &= -0x10000
+	temp2 = object.xpos
+	temp2 += object.xvel
+	temp3 = object.ypos
+	temp3 += object.yvel
+	object.value2 = temp2
+	object.value2 &= -0x10000
+	object.value2 -= temp0
+	object.value3 = temp3
+	object.value3 &= -0x10000
+	object.value3 -= temp1
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -8, 16, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[currentPlayer].xpos += object.value2
+			object[currentPlayer].ypos += object.value3
+		end if
+	next
+	object.xpos = temp2
+	object.ypos = temp3
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 223, 154)
+	SetTableValue(BeltPlatform_table0, 0, BeltPlatform_table34)
+	SetTableValue(BeltPlatform_table1, 1, BeltPlatform_table34)
+	SetTableValue(BeltPlatform_table2, 2, BeltPlatform_table34)
+	SetTableValue(BeltPlatform_table3, 3, BeltPlatform_table34)
+	SetTableValue(BeltPlatform_table4, 4, BeltPlatform_table34)
+	SetTableValue(BeltPlatform_table5, 5, BeltPlatform_table34)
+	foreach (TypeName[Belt Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_INACTIVE
+		temp0 = object[arrayPos0].propertyValue
+		temp0 >>= 4
+		GetTableValue(object[arrayPos0].value4, temp0, BeltPlatform_table34)
+		GetTableValue(object[arrayPos0].value6, temp0, BeltPlatform_table35)
+		object[arrayPos0].value5 = object[arrayPos0].propertyValue
+		object[arrayPos0].value5 &= 15
+		object[arrayPos0].value5 <<= 1
+		CallFunction(BeltPlatform_Function151)
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

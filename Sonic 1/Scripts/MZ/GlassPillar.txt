@@ -1,0 +1,166 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Glass Pillar Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 42 : TYPE_GLASSPILLAR
+
+// Function declarations
+reserve function GlassPillar_DebugDraw
+reserve function GlassPillar_DebugSpawn
+
+// Static Values
+public value GlassPillar_value30 = 0;
+
+// Tables
+
+function GlassPillar_DebugDraw
+	temp0 = object[0].value17
+	temp0 -= GlassPillar_value30
+	DrawSprite(temp0)
+end function
+
+
+function GlassPillar_DebugSpawn
+	CreateTempObject(TypeName[Glass Pillar], 0, object.xpos, object.ypos)
+	object[tempObjectPos].frame = object[0].value17
+	object[tempObjectPos].frame -= GlassPillar_value30
+	if object[tempObjectPos].frame == 0
+		if object.direction == FLIP_X
+			object[tempObjectPos].state = 2
+			object[tempObjectPos].value5 = -0x1000
+			object[tempObjectPos].value4 = 0x800
+			object[tempObjectPos].ypos -= 0x200000
+		else
+			object[tempObjectPos].state = 1
+			object[tempObjectPos].value5 = 0x1000
+			object[tempObjectPos].value4 = -0x800
+			object[tempObjectPos].ypos -= 0x200000
+		end if
+	else
+		object[tempObjectPos].value4 = 0x1000
+	end if
+	object[tempObjectPos].drawOrder = 5
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.angle = oscillation
+		object.angle <<= 1
+		object.value1 = object.ypos
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX2, object.entityPos, -32, -56, 32, 56, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(PlayerObject_Kill)
+					object[currentPlayer].value18 = 6
+				end if
+			end if
+		next
+		object.angle = oscillation
+		object.angle <<= 1
+		Sin(object.value3, object.angle)
+		object.value3 *= object.value4
+		object.value3 += object.ypos
+		object.value3 &= -0x10000
+		break
+	case 1
+	case 2
+		object.angle = oscillation
+		object.angle <<= 1
+		Sin(object.value2, object.angle)
+		object.value2 *= object.value5
+		object.value2 += object.ypos
+		object.value2 &= -0x10000
+		object.value2 -= object.value1
+		temp0 = object.ypos
+		object.ypos = object.value1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX2, object.entityPos, -32, -72, 32, 68, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			switch checkResult
+			case 1
+				if checkResult == 1
+					object[currentPlayer].ypos += object.value2
+				end if
+				break
+			case 4
+				if object[currentPlayer].gravity == GRAVITY_GROUND
+					if object.value2 > 0
+						CallFunction(PlayerObject_Kill)
+						object[currentPlayer].value18 = 6
+					end if
+				end if
+			end switch
+		next
+		object.ypos = temp0
+		Sin(object.value1, object.angle)
+		object.value1 *= object.value5
+		object.value1 += object.ypos
+		object.value1 &= -0x10000
+		Sin(object.value3, object.angle)
+		object.value3 *= object.value4
+		object.value3 += object.ypos
+		object.value3 &= -0x10000
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSpriteXY(object.frame, object.xpos, object.value1)
+	DrawSpriteXY(2, object.xpos, object.value3)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-32, -72, 64, 144, 191, 1)
+	SpriteFrame(-32, -56, 64, 112, 126, 1)
+	SpriteFrame(-16, -16, 31, 32, 159, 114)
+	foreach (TypeName[Glass Pillar], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].frame = object[arrayPos0].propertyValue
+		object[arrayPos0].frame >>= 4
+		object[arrayPos0].frame %= 3
+		object[arrayPos0].state = object[arrayPos0].propertyValue
+		object[arrayPos0].state &= 7
+		if object[arrayPos0].state > 5
+			object[arrayPos0].state = 0
+		end if
+		switch object[arrayPos0].state
+		case 1
+			object[arrayPos0].value5 = 0x1000
+			object[arrayPos0].value4 = -0x800
+			object[arrayPos0].ypos -= 0x200000
+			break
+		case 2
+			object[arrayPos0].value5 = -0x1000
+			object[arrayPos0].value4 = 0x800
+			object[arrayPos0].ypos -= 0x200000
+			break
+		end switch
+		object[arrayPos0].drawOrder = 5
+	next
+	temp0 = 0
+	GlassPillar_value30 = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Glass Pillar], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(GlassPillar_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(GlassPillar_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

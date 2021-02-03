@@ -1,0 +1,104 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Door Horizontal Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 64 : TYPE_DOORHORIZONTAL
+
+// Function declarations
+reserve function DoorHorizontal_DebugDraw
+reserve function DoorHorizontal_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function DoorHorizontal_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function DoorHorizontal_DebugSpawn
+	CreateTempObject(TypeName[Door Horizontal], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+	object[tempObjectPos].priority = PRIORITY_ACTIVE
+	object[tempObjectPos].value0 = 64
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 3
+		if Water_value32 == 1
+			object.state = 1
+		end if
+	case 0
+		if object[+1].value0 == 1
+			object.state++
+		end if
+	case 2
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX, object.entityPos, -64, -16, 64, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		next
+		break
+	case 1
+		temp0 = object.xpos
+		temp0 &= -0x10000
+		if object.direction == FLIP_NONE
+			object.xpos -= 0x20000
+		else
+			object.xpos += 0x20000
+		end if
+		object.value0--
+		if object.value0 < 0
+			object.state++
+		end if
+		object.value1 = object.xpos
+		object.value1 &= -0x10000
+		object.value1 -= temp0
+		temp1 = object.xpos
+		object.xpos = temp0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX, object.entityPos, -64, -16, 64, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object[currentPlayer].xpos += object.value1
+			end if
+		next
+		object.xpos = temp1
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-64, -16, 128, 32, 84, 223)
+	foreach (TypeName[Door Horizontal], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		object[arrayPos0].value0 = 64
+		if object[arrayPos0].propertyValue == 1
+			object[arrayPos0].state = 3
+		end if
+	next
+	SetTableValue(TypeName[Door Horizontal], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(DoorHorizontal_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(DoorHorizontal_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

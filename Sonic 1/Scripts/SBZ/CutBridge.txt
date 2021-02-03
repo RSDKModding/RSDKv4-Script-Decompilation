@@ -1,0 +1,127 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Cutscene Bridge Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 74 : TYPE_CUTSCENEBRIDGE
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	stage.newXBoundary1 = 0x21D4
+	stage.newXBoundary1 -= screen.xcenter
+	temp0 = 0x21D4
+	temp0 += screen.xcenter
+	if stage.newXBoundary2 > temp0
+		stage.newXBoundary2 = temp0
+		temp0 -= screen.xcenter
+		temp0 -= screen.xcenter
+		stage.newXBoundary1 = temp0
+	end if
+	object.priority = PRIORITY_ACTIVE
+	switch object.state
+	case 1
+		if object.value0 > 0
+			object.value0--
+		else
+			temp0 = object.xpos
+			temp0 -= 0x80000
+			temp1 = object.ypos
+			CreateTempObject(TypeName[Cutscene Bridge], 1, temp0, temp1)
+			object[tempObjectPos].state = 4
+			object[tempObjectPos].value1 = 2
+			temp0 += 0x100000
+			CreateTempObject(TypeName[Cutscene Bridge], 2, temp0, temp1)
+			object[tempObjectPos].state = 4
+			object[tempObjectPos].value1 = 3
+			temp0 -= 0x100000
+			temp1 += 0x100000
+			CreateTempObject(TypeName[Cutscene Bridge], 3, temp0, temp1)
+			object[tempObjectPos].state = 4
+			object[tempObjectPos].value1 = 0
+			temp0 += 0x100000
+			CreateTempObject(TypeName[Cutscene Bridge], 4, temp0, temp1)
+			object[tempObjectPos].state = 4
+			object[tempObjectPos].value1 = 1
+			PlaySfx(SfxName[Block Break], 0)
+			object.state++
+		end if
+		break
+	case 2
+		if object.value0 < 4
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, -10, 16, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					if object[currentPlayer].gravity == GRAVITY_AIR
+						object[currentPlayer].animation = ANI_HURT
+						object[currentPlayer].state = PlayerObject_Knockback
+					end if
+				end if
+			next
+		end if
+		break
+	case 4
+		if object.value0 < object.value1
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 5
+		object.ypos += object.yvel
+		object.yvel += 0x4000
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+	if object.state < 3
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -8, 16, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 0
+	case 1
+		DrawSprite(0)
+		break
+	case 4
+	case 5
+		DrawSprite(object.propertyValue)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 32, 457, 231)
+	SpriteFrame(-8, -8, 16, 16, 457, 231)
+	SpriteFrame(-8, -8, 16, 16, 473, 231)
+	SpriteFrame(-8, -8, 16, 16, 457, 247)
+	SpriteFrame(-8, -8, 16, 16, 473, 247)
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

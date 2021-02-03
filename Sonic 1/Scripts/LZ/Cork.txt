@@ -1,0 +1,101 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Cork Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 63 : TYPE_CORK
+
+// Function declarations
+reserve function Cork_DebugDraw
+reserve function Cork_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Cork_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function Cork_DebugSpawn
+	CreateTempObject(TypeName[Cork], 0, object.xpos, object.ypos)
+	object[tempObjectPos].ypos &= -0x10000
+	GetBit(temp0, object.ypos, 16)
+	if temp0 == 1
+		object[tempObjectPos].ypos++
+	end if
+	object[tempObjectPos].drawOrder = 4
+end function
+
+
+event ObjectMain
+	temp4 = stage.waterLevel
+	temp4 <<= 16
+	temp3 = object.ypos
+	if temp3 != temp4
+		if temp3 < temp4
+			temp3 += 0x10000
+			if temp3 < temp4
+				temp3 += 0x10000
+			end if
+		else
+			temp3 -= 0x10000
+			if temp3 > temp4
+				temp3 -= 0x10000
+			end if
+		end if
+	end if
+	object.yvel = temp3
+	object.yvel -= object.ypos
+	if object.yvel > 0
+		ObjectTileCollision(CMODE_FLOOR, 0, 16, 0)
+	else
+		ObjectTileCollision(CMODE_ROOF, 0, -16, 0)
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[currentPlayer].ypos += object.yvel
+		end if
+		if checkResult == 4
+			if object[currentPlayer].gravity == GRAVITY_GROUND
+				CallFunction(PlayerObject_Kill)
+			end if
+		end if
+	next
+	object.ypos += object.yvel
+end event
+
+
+event ObjectDraw
+	if stage.state == 39
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+	end if
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 51)
+	foreach (TypeName[Cork], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+	next
+	SetTableValue(TypeName[Cork], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Cork_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Cork_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

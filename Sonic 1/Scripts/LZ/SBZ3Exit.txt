@@ -1,0 +1,99 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: SBZ3 Exit Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 77 : TYPE_SBZ3EXIT
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	switch object.state
+	case 0
+		BoxCollisionTest(C_TOUCH, object.entityPos, -128, -16, 128, 16, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[0].type = TypeName[Ring]
+			object[0].groupID = TypeName[Blank Object]
+			object[0].controlMode = -1
+			if options.gameMode == 2
+				object.state = 2
+				stage.timeEnabled = 0
+			else
+				object.state++
+			end if
+			recAnimation = 0
+			temp0 = 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				temp1 = object[currentPlayer].animation
+				temp1 <<= 8
+				temp1 |= object[currentPlayer].direction
+				temp1 <<= temp0
+				recAnimation |= temp1
+				temp0 += 16
+			next
+		end if
+		break
+	case 1
+		if object.value0 < 512
+			object.value0 += 8
+			music.volume -= 2
+		else
+			object.direction = FLIP_NONE
+			lampPostID = 0
+			stage.listPos++
+			if options.gameMode == 1
+				arrayPos1 = options.saveSlot
+				arrayPos1 <<= 3
+				if stage.player2Enabled == 1
+					saveRAM[arrayPos1] = 3
+				else
+					saveRAM[arrayPos1] = stage.playerListPos
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = player.lives
+				arrayPos1++
+				saveRAM[arrayPos1] = player.score
+				arrayPos1++
+				saveRAM[arrayPos1] = player.scoreBonus
+				arrayPos1++
+				saveRAM[arrayPos1] = stage.listPos
+				saveRAM[arrayPos1]++
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.emeralds
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.listPos
+				WriteSaveRAM()
+			end if
+			LoadStage()
+		end if
+		SetScreenFade(0, 0, 0, object.value0)
+		break
+	case 2
+		if object.value0 < 60
+			object.value0++
+			music.volume -= 2
+		else
+			object.type = TypeName[Blank Object]
+			object[30].type = TypeName[Act Finish]
+			object[30].drawOrder = 6
+			object[30].priority = PRIORITY_ACTIVE
+			PlayMusic(1)
+		end if
+		break
+	end switch
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

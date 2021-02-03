@@ -1,0 +1,123 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Trap Door Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 64 : TYPE_TRAPDOOR
+
+// Function declarations
+reserve function TrapDoor_DebugDraw
+reserve function TrapDoor_DebugSpawn
+
+// Static Values
+public value TrapDoor_value36 = 0;
+
+// Tables
+
+function TrapDoor_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	object.direction ^= FLIP_X
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	object.direction ^= FLIP_X
+end function
+
+
+function TrapDoor_DebugSpawn
+	CreateTempObject(TypeName[Trap Door], 0, object.xpos, object.ypos)
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS
+	object[tempObjectPos].value1 = object[0].value17
+	object[tempObjectPos].value1 -= TrapDoor_value36
+	object[tempObjectPos].value1++
+	object[tempObjectPos].value1 *= 60
+end function
+
+
+event ObjectMain
+	object.value0--
+	if object.value0 < 0
+		temp0 = 1
+		object.value0 = object.value1
+		object.animation ^= 1
+		temp0 = screen.cameraX
+		temp0 -= object.ixpos
+		Abs(temp0)
+		temp0 -= 64
+		if temp0 <= screen.xcenter
+			temp0 = screen.cameraY
+			temp0 -= object.iypos
+			Abs(temp0)
+			temp0 -= 12
+			if temp0 <= screen.ycenter
+				PlaySfx(SfxName[Flapping Door], 0)
+			end if
+		end if
+	end if
+	if object.animation == 0
+		if object.rotation > 0
+			object.rotation -= 16
+		end if
+	else
+		if object.rotation < 128
+			object.rotation += 16
+		end if
+	end if
+	if object.rotation == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	temp0 = object.xpos
+	temp0 -= 0x400000
+	DrawSpriteFX(object.frame, FX_ROTATE, temp0, object.ypos)
+	object.direction ^= FLIP_X
+	object.rotation ^= 511
+	object.rotation++
+	object.rotation &= 511
+	temp0 += 0x800000
+	temp1 = object.ypos
+	if object.rotation != 0
+		temp1--
+	end if
+	DrawSpriteFX(object.frame, FX_ROTATE, temp0, temp1)
+	object.direction ^= FLIP_X
+	object.rotation--
+	object.rotation ^= 511
+	object.rotation &= 511
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(0, -12, 64, 24, 318, 115)
+	foreach (TypeName[Trap Door], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_XBOUNDS
+		object[arrayPos0].value1 = object[arrayPos0].propertyValue
+		object[arrayPos0].value1 &= 15
+		object[arrayPos0].value1 *= 60
+	next
+	temp0 = 0
+	TrapDoor_value36 = DebugMode_ObjCount
+	while temp0 < 4
+		SetTableValue(TypeName[Trap Door], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(TrapDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(TrapDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

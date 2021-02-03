@@ -1,0 +1,111 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Rotate Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 56 : TYPE_ROTATEPLATFORM
+
+// Function declarations
+reserve function RotatePlatform_DebugDraw
+reserve function RotatePlatform_DebugSpawn
+
+// Static Values
+public value RotatePlatform_value34 = 0;
+
+// Tables
+
+function RotatePlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function RotatePlatform_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= RotatePlatform_value34
+	temp1 = object.direction
+	temp1 <<= 2
+	temp0 += temp1
+	CreateTempObject(TypeName[Rotate Platform], temp0, object.xpos, object.ypos)
+end function
+
+
+event ObjectMain
+	temp6 = object.xpos
+	temp7 = object.ypos
+	object.xpos = object.value1
+	object.ypos = object.value2
+	GetTableValue(temp0, 16, StageSetup_table9)
+	temp0 <<= 8
+	temp0 &= -0x10000
+	temp0 -= 0x500000
+	GetTableValue(temp1, 18, StageSetup_table9)
+	temp1 <<= 8
+	temp1 &= -0x10000
+	temp1 -= 0x500000
+	GetBit(temp2, object.propertyValue, 0)
+	if temp2 == 1
+		FlipSign(temp0)
+		FlipSign(temp1)
+	end if
+	GetBit(temp2, object.propertyValue, 2)
+	if temp2 == 1
+		FlipSign(temp0)
+	end if
+	GetBit(temp2, object.propertyValue, 1)
+	if temp2 == 0
+		object.value1 = temp0
+		object.value2 = temp1
+	else
+		FlipSign(temp0)
+		object.value1 = temp1
+		object.value2 = temp0
+	end if
+	object.value1 += temp6
+	object.value2 += temp7
+	temp2 = object.value1
+	temp2 -= object.xpos
+	temp3 = object.value2
+	temp3 -= object.ypos
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[currentPlayer].xpos += temp2
+			object[currentPlayer].ypos += temp3
+		end if
+	next
+	object.xpos = temp6
+	object.ypos = temp7
+end event
+
+
+event ObjectDraw
+	DrawSpriteXY(0, object.value1, object.value2)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-24, -8, 48, 16, 1, 196)
+	temp0 = 0
+	RotatePlatform_value34 = DebugMode_ObjCount
+	RotatePlatform_value34--
+	while temp0 < 4
+		SetTableValue(TypeName[Rotate Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RotatePlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RotatePlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

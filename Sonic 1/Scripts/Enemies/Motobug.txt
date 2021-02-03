@@ -1,0 +1,154 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Motobug Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 58 : TYPE_MOTOBUG
+
+// Function declarations
+reserve function Motobug_DebugDraw
+reserve function Motobug_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Motobug_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Motobug_DebugSpawn
+	CreateTempObject(TypeName[Motobug], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == 0
+		object[tempObjectPos].direction = FLIP_NONE
+		object[tempObjectPos].xvel = -0x10000
+	else
+		object[tempObjectPos].direction = FLIP_X
+		object[tempObjectPos].xvel = 0x10000
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.priority = PRIORITY_ACTIVE
+		object.xpos += object.xvel
+		ObjectTileGrip(CMODE_FLOOR, 0, 15, 0)
+		if checkResult == 0
+			object.state = 1
+			object.animation = 1
+		end if
+		if object.value3 < 20
+			object.value3++
+		else
+			object.value3 = 0
+			CreateTempObject(TypeName[Motobug Exhaust], 0, object.xpos, object.ypos)
+			if object.direction == FLIP_NONE
+				object[tempObjectPos].xpos += 0x160000
+			else
+				object[tempObjectPos].xpos -= 0x160000
+			end if
+			object[tempObjectPos].direction = object.direction
+		end if
+		break
+	case 1
+		if object.value0 < 59
+			object.value0++
+		else
+			object.value0 = 0
+			object.state = 0
+			object.animation = 0
+			object.direction ^= FLIP_X
+			FlipSign(object.xvel)
+		end if
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value1
+		object.ypos = object.value2
+		if object.outOfBounds == 1
+			if object.propertyValue == 0
+				object.direction = FLIP_NONE
+				object.xvel = -0x10000
+			else
+				object.direction = FLIP_X
+				object.xvel = 0x10000
+			end if
+			object.animation = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+			object.state = 0
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+	if object.animation == 0
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		object.animationTimer++
+		object.animationTimer &= 31
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == 1
+		LoadSpriteSheet("GHZ/Objects.gif")
+		SpriteFrame(-21, -13, 40, 28, 98, 127)
+		SpriteFrame(-20, -14, 39, 29, 139, 127)
+		SpriteFrame(-20, -13, 39, 28, 98, 156)
+		SpriteFrame(-20, -14, 39, 29, 139, 127)
+	end if
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == 1
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-21, -13, 40, 28, 170, 145)
+		SpriteFrame(-20, -14, 39, 29, 171, 174)
+		SpriteFrame(-20, -13, 39, 28, 171, 204)
+		SpriteFrame(-20, -14, 39, 29, 171, 174)
+	end if
+	foreach (TypeName[Motobug], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		if object[arrayPos0].propertyValue == 0
+			object[arrayPos0].direction = FLIP_NONE
+			object[arrayPos0].xvel = -0x10000
+		else
+			object[arrayPos0].direction = FLIP_X
+			object[arrayPos0].xvel = 0x10000
+		end if
+	next
+	SetTableValue(TypeName[Motobug], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Motobug_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Motobug_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,255 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Buzz Bomber Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 40 : TYPE_BUZZBOMBER
+
+// Function declarations
+reserve function BuzzBomber_DebugDraw
+reserve function BuzzBomber_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function BuzzBomber_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function BuzzBomber_DebugSpawn
+	CreateTempObject(TypeName[Buzz Bomber], 0, object.xpos, object.ypos)
+	GetBit(temp0, object.direction, 0)
+	if temp0 == 0
+		object[tempObjectPos].direction = FLIP_NONE
+		object[tempObjectPos].xvel = -0x40000
+	else
+		object[tempObjectPos].direction = FLIP_X
+		object[tempObjectPos].xvel = 0x40000
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.priority = PRIORITY_ACTIVE
+		if object.value0 < 127
+			object.value0++
+			object.xpos += object.xvel
+		else
+			object.value0 = 0
+			object.state = 1
+			object.animation = 1
+			object.direction ^= FLIP_X
+			FlipSign(object.xvel)
+		end if
+		break
+	case 1
+		if object.value0 < 59
+			object.value0++
+		else
+			object.value0 = 0
+			object.state = 0
+			object.animation = 0
+			object.value2 = 0
+		end if
+		break
+	case 2
+		if object.value0 < 29
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+			object.animation = 2
+		end if
+		break
+	case 3
+		if object.value0 < 59
+			object.value0++
+			if object.value0 == 15
+				CreateTempObject(TypeName[Buzz Bomber Shot], 0, object.xpos, object.ypos)
+				object[tempObjectPos].direction = object.direction
+				if object.direction == FLIP_NONE
+					object[tempObjectPos].xpos -= 0x180000
+					object[tempObjectPos].xvel = -0x20000
+				else
+					object[tempObjectPos].xpos += 0x180000
+					object[tempObjectPos].xvel = 0x20000
+				end if
+				object[tempObjectPos].ypos += 0x1C0000
+				object[tempObjectPos].yvel = 0x20000
+			end if
+		else
+			object.value0 = 0
+			object.state = 0
+			object.animation = 0
+			object.value2 = 1
+		end if
+		break
+	case 4
+		object.animation = 3
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		object.xpos = object.value1
+		if object.value3 == 1
+			object.state = 4
+		end if
+		if object.outOfBounds == 1
+			object.xpos = object.value1
+			GetBit(temp0, object.propertyValue, 0)
+			if temp0 == 0
+				object.direction = FLIP_NONE
+				object.xvel = -0x40000
+			else
+				object.direction = FLIP_X
+				object.xvel = 0x40000
+			end if
+			object.value0 = 0
+			object.animation = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+			object.state = 0
+		else
+			object.xpos = temp0
+		end if
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.state == 0
+			if object.value2 == 0
+				if object.propertyValue < 2
+					BoxCollisionTest(C_TOUCH, object.entityPos, -96, -256, 96, 256, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, -48, -256, 48, 256, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				end if
+				if checkResult == 1
+					object.state = 2
+					object.value0 = 0
+					object.animation = 1
+				end if
+			end if
+		end if
+		if object.state < 4
+			BoxCollisionTest(C_TOUCH, object.entityPos, -24, -12, 24, 12, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+			if checkResult == 1
+				CallFunction(PlayerObject_BadnikBreak)
+			end if
+		end if
+	next
+	object.frame = object.animationTimer
+	object.frame >>= 1
+	object.frame += 2
+	object.animationTimer++
+	object.animationTimer &= 3
+end event
+
+
+event ObjectDraw
+	if object.state < 4
+		if object.direction == FLIP_NONE
+			DrawSpriteFX(object.frame, FX_INK, object.xpos, object.ypos)
+		else
+			object.frame += 2
+			DrawSpriteFX(object.frame, FX_INK, object.xpos, object.ypos)
+			object.frame -= 2
+		end if
+	end if
+	switch object.animation
+	case 0
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		object.frame += 4
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		object.frame -= 4
+		break
+	case 1
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 2
+		DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == 1
+		LoadSpriteSheet("GHZ/Objects.gif")
+		SpriteFrame(-23, -9, 45, 19, 98, 74)
+		SpriteFrame(-23, -9, 36, 29, 149, 49)
+		SpriteFrame(-17, -15, 35, 8, 144, 79)
+		SpriteFrame(-18, -10, 37, 5, 144, 88)
+		SpriteFrame(-18, -15, 35, 8, 145, 220)
+		SpriteFrame(-19, -10, 37, 5, 143, 229)
+		SpriteFrame(13, 4, 6, 5, 98, 68)
+		SpriteFrame(13, 4, 10, 5, 104, 68)
+	end if
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == 1
+		LoadSpriteSheet("MZ/Objects.gif")
+		SpriteFrame(-23, -9, 45, 19, 1, 127)
+		SpriteFrame(-23, -9, 36, 29, 1, 147)
+		SpriteFrame(-17, -15, 35, 8, 38, 147)
+		SpriteFrame(-18, -10, 37, 5, 38, 156)
+		SpriteFrame(-18, -15, 35, 8, 38, 162)
+		SpriteFrame(-19, -10, 37, 5, 38, 171)
+		SpriteFrame(13, 4, 6, 5, 76, 153)
+		SpriteFrame(13, 4, 10, 5, 74, 147)
+	end if
+	CheckCurrentStageFolder("Zone03")
+	if checkResult == 1
+		LoadSpriteSheet("SYZ/Objects.gif")
+		SpriteFrame(-23, -9, 45, 19, 1, 81)
+		SpriteFrame(-23, -9, 36, 29, 1, 101)
+		SpriteFrame(-17, -15, 35, 8, 38, 101)
+		SpriteFrame(-18, -10, 37, 5, 38, 110)
+		SpriteFrame(-18, -15, 35, 8, 38, 116)
+		SpriteFrame(-19, -10, 37, 5, 38, 125)
+		SpriteFrame(13, 4, 6, 5, 76, 123)
+		SpriteFrame(13, 4, 10, 5, 83, 123)
+	end if
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == 1
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-23, -9, 45, 19, 1, 1)
+		SpriteFrame(-23, -9, 36, 29, 1, 21)
+		SpriteFrame(-17, -15, 35, 8, 38, 21)
+		SpriteFrame(-18, -10, 37, 5, 38, 30)
+		SpriteFrame(-18, -15, 35, 8, 38, 36)
+		SpriteFrame(-19, -10, 37, 5, 38, 45)
+		SpriteFrame(13, 4, 6, 5, 47, 15)
+		SpriteFrame(13, 4, 10, 5, 54, 15)
+	end if
+	foreach (TypeName[Buzz Bomber], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].inkEffect = INK_ALPHA
+		object[arrayPos0].alpha = 192
+		GetBit(temp0, object[arrayPos0].propertyValue, 0)
+		if temp0 == 0
+			object[arrayPos0].direction = FLIP_NONE
+			object[arrayPos0].xvel = -0x40000
+		else
+			object[arrayPos0].direction = FLIP_X
+			object[arrayPos0].xvel = 0x40000
+		end if
+	next
+	SetTableValue(TypeName[Buzz Bomber], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(BuzzBomber_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(BuzzBomber_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

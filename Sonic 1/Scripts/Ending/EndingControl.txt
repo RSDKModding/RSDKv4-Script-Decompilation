@@ -1,0 +1,139 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Ending Control Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 47 : TYPE_ENDINGCONTROL
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	switch object.state
+	case 0
+		PlayMusic(0)
+		object.state++
+	case 1
+		object[0].controlMode = -1
+		object[0].up = 0
+		object[0].down = 0
+		object[0].left = 1
+		object[0].right = 0
+		object[0].jumpHold = 0
+		object[0].jumpPress = 0
+		if options.superStates == 0
+			temp0 = 63
+		else
+			temp0 = 127
+		end if
+		if specialStage.emeralds >= temp0
+			object[0].xpos = object[+1].xpos
+			object[0].ypos = object[+1].ypos
+		end if
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if currentPlayer == 0
+				object[currentPlayer].speed = -0x60000
+			else
+				object[currentPlayer].speed = -0x60000
+				object[currentPlayer].xpos = object[0].xpos
+				object[currentPlayer].xpos += 0x400000
+				object[currentPlayer].ypos = object[0].ypos
+				StopSfx(SfxName[Skidding])
+			end if
+		next
+		if object.value0 > 0
+			object.value0 -= 16
+		else
+			temp0 = 424
+			temp0 += screen.xcenter
+			stage.newXBoundary2 = temp0
+			object.state++
+		end if
+		SetScreenFade(0, 0, 0, object.value0)
+		break
+	case 2
+		temp0 = object.xpos
+		temp0 -= 0x180000
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object[currentPlayer].speed < -0x60000
+				object[currentPlayer].speed = -0x60000
+			end if
+			if object[currentPlayer].xpos < temp0
+				object[currentPlayer].left = 0
+				object[currentPlayer].right = 1
+			end if
+			if object[currentPlayer].xpos > object.xpos
+				if object[currentPlayer].right == 1
+					object[currentPlayer].right = 0
+					object[currentPlayer].speed = 0
+					if currentPlayer == playerCount
+						object.state++
+					else
+						if currentPlayer == 0
+							ResetObjectEntity(currentPlayer, TypeName[Ending Pose], 0, object.xpos, object.ypos)
+							object[currentPlayer].controlMode = -1
+							object[currentPlayer].drawOrder = 6
+							if options.superStates == 0
+								temp0 = 63
+							else
+								temp0 = 127
+							end if
+							if specialStage.emeralds < temp0
+								switch stage.playerListPos
+								case 0
+								case 3
+									object[currentPlayer].frame = 0
+									break
+								case 1
+									object[currentPlayer].frame = 13
+									break
+								case 2
+									object[currentPlayer].frame = 24
+									break
+								end switch
+							else
+								switch stage.playerListPos
+								case 0
+								case 3
+									object[currentPlayer].frame = 4
+									break
+								case 1
+									object[currentPlayer].frame = 16
+									break
+								case 2
+									object[currentPlayer].frame = 27
+									break
+								end switch
+								object[currentPlayer].state = 5
+							end if
+							object[currentPlayer].value1 = 224
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[Ending Control], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		object[arrayPos0].value0 = 272
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

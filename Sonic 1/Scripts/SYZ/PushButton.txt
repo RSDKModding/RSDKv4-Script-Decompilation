@@ -1,0 +1,94 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Push Button Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 60 : TYPE_PUSHBUTTON
+
+// Function declarations
+reserve function PushButton_DebugDraw
+reserve function PushButton_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function PushButton_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function PushButton_DebugSpawn
+	CreateTempObject(TypeName[Push Button], 0, object.xpos, object.ypos)
+end function
+
+
+event ObjectMain
+	object.propertyValue = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.frame == 0
+			BoxCollisionTest(C_BOX, object.entityPos, -14, -4, 14, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object.propertyValue = 1
+				object[currentPlayer].ypos += 0x60000
+				PlaySfx(SfxName[Button Press], 0)
+			end if
+		else
+			if object[currentPlayer].yvel >= 0
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -14, -4, 14, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					object.propertyValue = 1
+					object[currentPlayer].ypos += 0x20000
+				else
+					BoxCollisionTest(C_TOUCH, object.entityPos, -20, -12, 20, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					if checkResult == 1
+						object[currentPlayer].ypos = object[currentPlayer].collisionBottom
+						FlipSign(object[currentPlayer].ypos)
+						object[currentPlayer].ypos <<= 16
+						object[currentPlayer].ypos += object.ypos
+						object[currentPlayer].ypos -= 0x20000
+						object[currentPlayer].gravity = GRAVITY_AIR
+					end if
+				end if
+			end if
+		end if
+	next
+	foreach (TypeName[Push Block], arrayPos0, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 8, arrayPos0, -16, -16, 16, 16)
+		if checkResult == 1
+			object.propertyValue = 1
+			if object.frame == 0
+				PlaySfx(SfxName[Button Press], 0)
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	object.frame = object.propertyValue
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 1, 161)
+	SpriteFrame(-16, -2, 32, 10, 34, 167)
+	SetTableValue(TypeName[Push Button], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(PushButton_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(PushButton_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

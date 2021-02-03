@@ -1,0 +1,153 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: FZ Piston Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 77 : TYPE_FZPISTON
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	switch object.state
+	case 0
+		break
+	case 1
+		object.value3 = 31
+		object.yvel = -0x8000
+		if object.direction != FLIP_NONE
+			FlipSign(object.yvel)
+		end if
+		object.state++
+		break
+	case 2
+		object.value3--
+		if object.value3 <= 0
+			object.state++
+		end if
+		break
+	case 3
+		object.value3 = 48
+		object.yvel = -0x30000
+		if object.direction != FLIP_NONE
+			FlipSign(object.yvel)
+		end if
+		object.state++
+		break
+	case 4
+		object.value3--
+		if object.value3 <= 0
+			object.value3 = 80
+			object.yvel = 0x20000
+			if object.direction != FLIP_NONE
+				FlipSign(object.yvel)
+			end if
+			object.state++
+		end if
+		break
+	case 5
+	case 6
+		object.value3--
+		if object.value3 <= 0
+			object.yvel = 0
+			object.propertyValue = 0
+			object.state = 0
+		end if
+		break
+	end switch
+	temp0 = object.ypos
+	temp0 += object.yvel
+	temp0 &= -0x10000
+	temp1 = object.ypos
+	temp1 &= -0x10000
+	temp0 -= temp1
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.direction == FLIP_NONE
+			BoxCollisionTest(C_BOX2, object.entityPos, -32, -96, 32, 160, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		else
+			BoxCollisionTest(C_BOX2, object.entityPos, -32, -160, 32, 96, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		end if
+		switch checkResult
+		case 1
+			object[currentPlayer].ypos += temp0
+			break
+		case 4
+			if object[currentPlayer].gravity == GRAVITY_GROUND
+				if object.yvel > 0
+					CallFunction(PlayerObject_Kill)
+				end if
+			end if
+			break
+		end switch
+	next
+	object.ypos += object.yvel
+	arrayPos0 = object.value0
+	if object.propertyValue == 1
+		object[arrayPos0].xpos = object.xpos
+		object[arrayPos0].ypos = object.ypos
+		if object.direction == FLIP_NONE
+			object[arrayPos0].ypos -= 0xA0000
+		else
+			object[arrayPos0].ypos += 0xE0000
+		end if
+	end if
+	if object.state > 4
+		if object[arrayPos0].value2 == 8
+			if object.state == 5
+				object.state++
+				object.value3 <<= 1
+				object.value3--
+				object.yvel >>= 1
+				object[arrayPos0].value0 = 160
+				arrayPos0 += 6
+				if object[arrayPos0].state == 0
+					object[arrayPos0].state++
+				end if
+			end if
+			object.value4++
+			temp0 = object.value4
+			temp0 &= 7
+			if temp0 == 4
+				Rand(temp0, 96)
+				temp0 -= 48
+				temp0 <<= 16
+				temp0 += object.xpos
+				Rand(temp1, 48)
+				temp1 -= 24
+				temp1 <<= 16
+				temp1 += object.ypos
+				CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+				object[tempObjectPos].drawOrder = 5
+				PlaySfx(SfxName[Explosion], 0)
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-32, -96, 64, 216, 124, 66)
+	foreach (TypeName[FZ Piston], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+	next
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

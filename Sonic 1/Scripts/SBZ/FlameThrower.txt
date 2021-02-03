@@ -1,0 +1,173 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Flame Thrower Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 65 : TYPE_FLAMETHROWER
+
+// Function declarations
+reserve function FlameThrower_DebugDraw
+reserve function FlameThrower_DebugSpawn
+
+// Static Values
+
+// Tables
+public table FlameThrower_table44
+	-8, 23, 7, 40, -8, 14, 7, 40, -11, 2, 11, 40, -11, -14, 11, 40
+	
+end table
+
+
+function FlameThrower_DebugDraw
+	temp0 = object.direction
+	temp0 *= 11
+	object.direction <<= FLIP_X
+	DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+	object.direction >>= FLIP_X
+end function
+
+
+function FlameThrower_DebugSpawn
+	CreateTempObject(TypeName[Flame Thrower], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 5
+	object[tempObjectPos].value1 = 128
+	object[tempObjectPos].value2 = 128
+	if object.direction == FLIP_NONE
+		object[tempObjectPos].value3 = 0
+		object[tempObjectPos].value4 = 11
+	else
+		object[tempObjectPos].value3 = 11
+		object[tempObjectPos].value4 = 22
+		object[tempObjectPos].frame = 11
+		object[tempObjectPos].direction = FLIP_Y
+	end if
+	object[tempObjectPos].value5 = object[tempObjectPos].value3
+	object[tempObjectPos].value5 += 3
+end function
+
+
+event ObjectMain
+	object.value0--
+	if object.value0 < 0
+		if object.animation == 0
+			object.value0 = object.value2
+		else
+			object.value0 = object.value1
+		end if
+		object.animation ^= 1
+		if object.animation == 0
+			PlaySfx(SfxName[Flame Thrower], 0)
+		end if
+	end if
+	if object.animation == 0
+		if object.frame < object.value4
+			object.animationTimer++
+			if object.animationTimer >= 4
+				object.animationTimer = 0
+				object.frame++
+				if object.frame == object.value4
+					object.frame -= 2
+				end if
+			end if
+		end if
+	else
+		if object.frame > object.value3
+			object.frame--
+		end if
+	end if
+	if object.frame >= object.value5
+		temp4 = object.frame
+		temp4 -= object.value5
+		temp4 <<= 1
+		temp4 &= 252
+		GetTableValue(temp0, temp4, FlameThrower_table44)
+		temp4++
+		GetTableValue(temp1, temp4, FlameThrower_table44)
+		temp4++
+		GetTableValue(temp2, temp4, FlameThrower_table44)
+		temp4++
+		GetTableValue(temp3, temp4, FlameThrower_table44)
+		GetBit(temp4, object.direction, 1)
+		if temp4 == 1
+			FlipSign(temp1)
+			FlipSign(temp3)
+			temp4 = temp1
+			temp1 = temp3
+			temp3 = temp4
+		end if
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, temp2, temp3, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				CallFunction(PlayerObject_FireHit)
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-5, 40, 16, 16, 77, 460)
+	SpriteFrame(-5, 32, 16, 24, 94, 452)
+	SpriteFrame(-5, 32, 16, 24, 111, 452)
+	SpriteFrame(-8, 17, 19, 39, 128, 437)
+	SpriteFrame(-7, 17, 18, 39, 148, 437)
+	SpriteFrame(-8, 9, 19, 47, 167, 429)
+	SpriteFrame(-7, 9, 18, 47, 187, 429)
+	SpriteFrame(-11, -6, 22, 62, 207, 414)
+	SpriteFrame(-11, -6, 22, 62, 230, 414)
+	SpriteFrame(-11, -22, 22, 78, 253, 398)
+	SpriteFrame(-11, -23, 22, 79, 276, 397)
+	SpriteFrame(-7, 40, 16, 16, 299, 460)
+	SpriteFrame(-7, 32, 16, 24, 316, 452)
+	SpriteFrame(-7, 32, 16, 24, 333, 452)
+	SpriteFrame(-8, 17, 17, 39, 350, 437)
+	SpriteFrame(-7, 17, 16, 39, 368, 437)
+	SpriteFrame(-8, 9, 17, 47, 385, 429)
+	SpriteFrame(-7, 9, 16, 47, 403, 429)
+	SpriteFrame(-11, -6, 22, 62, 420, 414)
+	SpriteFrame(-11, -6, 22, 62, 443, 414)
+	SpriteFrame(-11, -22, 22, 78, 466, 398)
+	SpriteFrame(-11, -23, 22, 79, 489, 397)
+	foreach (TypeName[Flame Thrower], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 5
+		object[arrayPos0].value1 = object[arrayPos0].propertyValue
+		object[arrayPos0].value1 &= 240
+		object[arrayPos0].value1 <<= 1
+		object[arrayPos0].value2 = object[arrayPos0].propertyValue
+		object[arrayPos0].value2 &= 15
+		object[arrayPos0].value2 <<= 5
+		GetBit(temp0, object[arrayPos0].direction, 1)
+		if temp0 == 0
+			object[arrayPos0].value3 = 0
+			object[arrayPos0].value4 = 11
+		else
+			object[arrayPos0].value3 = 11
+			object[arrayPos0].value4 = 22
+			object[arrayPos0].frame = 11
+		end if
+		object[arrayPos0].value5 = object[arrayPos0].value3
+		object[arrayPos0].value5 += 3
+	next
+	SetTableValue(TypeName[Flame Thrower], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(FlameThrower_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(FlameThrower_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

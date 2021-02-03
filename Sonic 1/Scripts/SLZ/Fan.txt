@@ -1,0 +1,146 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Fan Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 59 : TYPE_FAN
+
+// Function declarations
+reserve function Fan_DebugDraw
+reserve function Fan_DebugSpawn
+
+// Static Values
+public value Fan_value35 = 0;
+
+// Tables
+
+function Fan_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Fan_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= Fan_value35
+	CreateTempObject(TypeName[Fan], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+end function
+
+
+event ObjectMain
+	GetBit(temp0, object.propertyValue, 1)
+	if temp0 == 0
+		object.value0--
+		if object.value0 <= 0
+			if object.value1 == 0
+				object.value0 = 120
+			else
+				object.value0 = 180
+			end if
+			object.value1 ^= 1
+		end if
+	end if
+	if object.value1 == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			CheckEqual(object[currentPlayer].state, PlayerObject_KnuxWallClimb)
+			temp0 = checkResult
+			CheckEqual(object[currentPlayer].state, PlayerObject_KnuxLedgePullUp)
+			temp0 |= checkResult
+			if temp0 == 0
+				temp0 = object[currentPlayer].xpos
+				temp0 &= -0x10000
+				temp0 -= object.xpos
+				GetBit(temp2, object.direction, 0)
+				if temp2 == 0
+					FlipSign(temp0)
+				end if
+				temp0 += 0x500000
+				if temp0 >= 0
+					if temp0 < 0xF00000
+						temp1 = object[currentPlayer].ypos
+						temp1 &= -0x10000
+						temp1 -= object.ypos
+						GetBit(temp2, object.direction, 1)
+						if temp2 == 1
+							FlipSign(temp1)
+						end if
+						temp1 += 0x600000
+						GetBit(temp2, object.propertyValue, 2)
+						if temp2 == 1
+							temp3 = 0x900000
+						else
+							temp3 = 0x700000
+						end if
+						if temp1 >= 0
+							if temp1 < temp3
+								temp0 -= 0x500000
+								if temp0 < 0
+									temp0 ^= -0x10000
+									temp0 <<= 1
+								end if
+								temp0 += 0x600000
+								if object.direction == FLIP_NONE
+									FlipSign(temp0)
+								end if
+								temp0 ^= 0xFF0000
+								temp0 += 0x10000
+								temp0 >>= 4
+								GetBit(temp1, object.propertyValue, 0)
+								if temp1 != 0
+									FlipSign(temp0)
+								end if
+								object[currentPlayer].xpos += temp0
+							end if
+						end if
+					end if
+				end if
+			end if
+		next
+		object.animationTimer++
+		if object.animationTimer >= 3
+			object.animationTimer = 0
+		end if
+		object.frame = object.animationTimer
+		GetBit(temp0, object.propertyValue, 0)
+		if temp0 != 0
+			object.frame += 2
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-11, -16, 27, 32, 6, 223)
+	SpriteFrame(-12, -15, 28, 31, 38, 224)
+	SpriteFrame(-11, -14, 27, 30, 72, 225)
+	SpriteFrame(-12, -15, 28, 31, 38, 224)
+	SpriteFrame(-11, -16, 27, 32, 6, 223)
+	temp0 = 0
+	Fan_value35 = DebugMode_ObjCount
+	Fan_value35--
+	while temp0 < 4
+		SetTableValue(TypeName[Fan], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Fan_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Fan_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

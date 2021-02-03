@@ -1,0 +1,94 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: V Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 52 : TYPE_VPLATFORM
+
+// Function declarations
+reserve function VPlatform_DebugDraw
+reserve function VPlatform_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function VPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function VPlatform_DebugSpawn
+	CreateTempObject(TypeName[V Platform], object.direction, object.xpos, object.ypos)
+end function
+
+
+event ObjectMain
+	switch object.propertyValue
+	case 0
+		object.angle = SYZSetup_value29
+		object.angle *= 512
+		object.angle /= 356
+		break
+	case 1
+		object.angle = SYZSetup_value29
+		object.angle *= 512
+		object.angle /= 356
+		object.angle += 256
+		break
+	case 2
+		object.angle = oscillation
+		object.angle <<= 1
+		break
+	case 3
+		object.angle = oscillation
+		object.angle <<= 1
+		object.angle += 256
+		break
+	end switch
+	Sin(object.value2, object.angle)
+	object.value2 *= 0x1800
+	object.value2 += object.ypos
+	object.value2 &= -0x10000
+	object.value2 -= object.value1
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp0 = object.ypos
+		object.ypos = object.value1
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[currentPlayer].ypos += object.value2
+		end if
+		object.ypos = temp0
+	next
+end event
+
+
+event ObjectDraw
+	Sin(object.value1, object.angle)
+	object.value1 *= 0x1800
+	object.value1 += object.ypos
+	object.value1 &= -0x10000
+	DrawSpriteXY(0, object.xpos, object.value1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-32, -10, 64, 32, 119, 1)
+	SetTableValue(TypeName[V Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(VPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(VPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

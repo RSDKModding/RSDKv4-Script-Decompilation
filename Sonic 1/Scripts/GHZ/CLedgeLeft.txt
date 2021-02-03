@@ -1,0 +1,164 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: C Ledge Left Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 52 : TYPE_CLEDGELEFT
+
+// Function declarations
+reserve function CLedgeLeft_DebugDraw
+reserve function CLedgeLeft_DebugSpawn
+
+// Static Values
+
+// Tables
+public table CLedgeLeft_table25
+	32, 32, 32, 32, 32, 32, 32, 32, 33, 33, 34, 34, 35, 35, 36, 36, 37, 37, 38, 38, 39, 39, 40, 40, 41, 41, 42, 42, 43, 43, 44, 44, 45, 45, 46, 46, 47, 47, 48, 48, 48, 48, 48, 48, 48, 48, 48, 48
+end table
+
+function CLedgeLeft_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function CLedgeLeft_DebugSpawn
+	CreateTempObject(TypeName[C Ledge Left], 0, object.xpos, object.ypos)
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 1
+		if object.value0 < 10
+			object.value0++
+		else
+			object.frame = 1
+			temp0 = 0
+			temp3 = object.ypos
+			temp3 -= 0x380000
+			temp4 = 10
+			while temp0 < 6
+				temp1 = 0
+				temp2 = object.xpos
+				temp2 -= 0x280000
+				while temp1 < 6
+					CreateTempObject(TypeName[C Ledge Left], object.frame, temp2, temp3)
+					object[tempObjectPos].state = 4
+					object[tempObjectPos].value1 = temp4
+					object.frame++
+					temp1++
+					temp2 += 0x100000
+					temp4 += 4
+				loop
+				temp4 -= 26
+				temp0++
+				temp3 += 0x100000
+			loop
+			PlaySfx(SfxName[Ledge Break L], 0)
+			SetSfxAttributes(SfxName[Ledge Break L], -1, -100)
+			PlaySfx(SfxName[Ledge Break R], 0)
+			SetSfxAttributes(SfxName[Ledge Break R], -1, 100)
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 2
+		if object.value0 < 20
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, object.xpos, object.ypos)
+		end if
+		break
+	case 4
+		if object.value0 < object.value1
+			object.value0++
+		else
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 5
+		object.ypos += object.yvel
+		object.yvel += 0x4000
+		if object.outOfBounds == 1
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+	if object.state < 3
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object[currentPlayer].yvel >= 0
+				temp0 = object[currentPlayer].xpos
+				temp0 -= object.xpos
+				temp0 >>= 17
+				temp0 += 24
+				if temp0 < 0
+					temp0 = 0
+				end if
+				if temp0 > 47
+					temp0 = 47
+				end if
+				temp2 = 47
+				temp2 -= temp0
+				GetTableValue(temp1, temp2, CLedgeLeft_table25)
+				temp1 -= 84
+				temp0 = temp1
+				temp0 += 32
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -48, temp1, 48, temp0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					object[currentPlayer].ypos += 0x40000
+					if object.state == 0
+						object.state = 1
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case 0
+	case 1
+		DrawSprite(0)
+		break
+	case 4
+	case 5
+		DrawSprite(object.propertyValue)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("GHZ/Objects.gif")
+	SpriteFrame(-48, -64, 96, 96, 1, 51)
+	temp0 = 51
+	while temp0 < 147
+		temp1 = 1
+		while temp1 < 97
+			SpriteFrame(-8, -8, 16, 16, temp1, temp0)
+			temp1 += 16
+		loop
+		temp0 += 16
+	loop
+	SetTableValue(TypeName[C Ledge Left], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(CLedgeLeft_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(CLedgeLeft_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

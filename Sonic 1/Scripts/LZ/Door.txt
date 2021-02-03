@@ -1,0 +1,99 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Door Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 62 : TYPE_DOOR
+
+// Function declarations
+reserve function Door_DebugDraw
+reserve function Door_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Door_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function Door_DebugSpawn
+	CreateTempObject(TypeName[Door], 0, object.xpos, object.ypos)
+	object[tempObjectPos].priority = PRIORITY_ACTIVE
+	object[tempObjectPos].value0 = 32
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		if object.propertyValue == 2
+			if object[0].xpos < object.xpos
+				CurrentTunnel_value33 = 4
+			end if
+		end if
+		if object[+1].value0 == 1
+			object.state++
+		end if
+		break
+	case 1
+		object.ypos -= 0x20000
+		object.value0--
+		if object.value0 < 0
+			object.state++
+			if object.propertyValue == 1
+				object.state++
+			end if
+		end if
+		break
+	case 2
+		break
+	case 3
+		if object[0].xpos > 0x11200000
+			object.state++
+		end if
+		break
+	case 4
+		object.ypos += 0x20000
+		object.value0++
+		if object.value0 >= 32
+			object.state = 0
+		end if
+		break
+	end switch
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_BOX, object.entityPos, -8, -32, 8, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-8, -32, 16, 64, 206, 142)
+	foreach (TypeName[Door], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		object[arrayPos0].value0 = 32
+	next
+	SetTableValue(TypeName[Door], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Door_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Door_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,101 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Harpoon V Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 52 : TYPE_HARPOONV
+
+// Function declarations
+reserve function HarpoonV_DebugDraw
+reserve function HarpoonV_DebugSpawn
+
+// Static Values
+
+// Tables
+public table HarpoonV_table32
+	0, 1, 2, 1
+end table
+
+public table HarpoonV_table31
+	66, 4, 66, 4
+end table
+
+public table HarpoonV_table33
+	-8, -24, -40, -24
+end table
+
+
+function HarpoonV_DebugDraw
+	temp0 = object.direction
+	if object.direction == FLIP_X
+		object.direction = FLIP_Y
+	end if
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	object.direction = temp0
+end function
+
+
+function HarpoonV_DebugSpawn
+	CreateTempObject(TypeName[Harpoon V], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+	object[tempObjectPos].direction <<= FLIP_X
+end function
+
+
+event ObjectMain
+	if object.animationTimer == 0
+		object.value0++
+		if object.value0 >= 4
+			object.value0 = 0
+		end if
+		GetTableValue(object.animationTimer, object.value0, HarpoonV_table31)
+		GetTableValue(object.frame, object.value0, HarpoonV_table32)
+	else
+		object.animationTimer--
+	end if
+	GetTableValue(object.value1, object.value0, HarpoonV_table33)
+	object.value2 = 8
+	GetBit(temp2, object.direction, 1)
+	if temp2 == 1
+		FlipSign(object.value1)
+		FlipSign(object.value2)
+		temp0 = object.value2
+		object.value2 = object.value1
+		object.value1 = temp0
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -4, object.value1, 4, object.value2, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			CallFunction(PlayerObject_Hit)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-4, -8, 8, 16, 231, 239)
+	SpriteFrame(-4, -24, 8, 32, 222, 223)
+	SpriteFrame(-4, -40, 8, 48, 213, 207)
+	SetTableValue(TypeName[Harpoon V], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HarpoonV_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HarpoonV_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

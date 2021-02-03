@@ -1,0 +1,217 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Batbrain Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 49 : TYPE_BATBRAIN
+
+// Function declarations
+reserve function Batbrain_DebugDraw
+reserve function Batbrain_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Batbrain_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Batbrain_DebugSpawn
+	CreateTempObject(TypeName[Batbrain], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value0 = object.xpos
+	object[tempObjectPos].value1 = object.ypos
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.priority = PRIORITY_ACTIVE
+		object.value4 = 0x7FFFFFFF
+		object.value2 = 0
+		object.value3 = 0xFFFF
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = object[currentPlayer].xpos
+			temp0 -= object.xpos
+			Abs(temp0)
+			if temp0 < object.value4
+				object.value4 = temp0
+				object.value2 = currentPlayer
+			end if
+			if temp0 < 0x800000
+				if object[currentPlayer].ypos >= object.ypos
+					if object.value3 != 0xFFFF
+						arrayPos0 = object.value3
+						if object[currentPlayer].ypos < object[arrayPos0].ypos
+							object.value3 = currentPlayer
+						end if
+					else
+						object.value3 = currentPlayer
+					end if
+				end if
+			end if
+		next
+		if object.value3 != 0xFFFF
+			arrayPos0 = object.value3
+			temp0 = object[arrayPos0].ypos
+			temp0 -= object.ypos
+			if temp0 >= 0
+				if temp0 <= 0x800000
+					Rand(temp0, 8)
+					if temp0 == 0
+						object.state = 1
+						object.value5 = object[arrayPos0].ypos
+						object.animation = 1
+					end if
+				end if
+			end if
+		else
+			arrayPos0 = object.value2
+		end if
+		if object[arrayPos0].xpos < object.xpos
+			object.direction = FLIP_NONE
+		else
+			object.direction = FLIP_X
+		end if
+		break
+	case 1
+		object.ypos += object.yvel
+		object.yvel += 0x1800
+		arrayPos0 = object.value3
+		if object[arrayPos0].xpos < object.xpos
+			object.direction = FLIP_NONE
+		else
+			object.direction = FLIP_X
+		end if
+		temp0 = object.value5
+		temp0 -= object.ypos
+		if temp0 < 0x100000
+			if object.direction == FLIP_NONE
+				object.xvel = -0x10000
+			else
+				object.xvel = 0x10000
+			end if
+			object.yvel = 0
+			object.animation = 2
+			object.state = 2
+		end if
+		break
+	case 2
+		object.xpos += object.xvel
+		arrayPos0 = object.value3
+		temp0 = object[arrayPos0].xpos
+		temp0 -= object.xpos
+		Abs(temp0)
+		if temp0 >= 0x800000
+			Rand(temp0, 8)
+			if temp0 == 0
+				object.state = 3
+			end if
+		end if
+		break
+	case 3
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+		object.yvel -= 0x1800
+		ObjectTileCollision(CMODE_ROOF, 0, -12, 0)
+		if checkResult == 1
+			object.xvel = 0
+			object.yvel = 0
+			object.state = 0
+			object.animation = 0
+		end if
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value0
+		object.ypos = object.value1
+		if object.outOfBounds == 1
+			object.xvel = 0
+			object.yvel = 0
+			object.direction = FLIP_NONE
+			object.animation = 0
+			object.frame = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+			object.state = 0
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -18, 12, 18, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		if checkResult == 1
+			CallFunction(PlayerObject_BadnikBreak)
+		end if
+	next
+	switch object.animation
+	case 0
+		object.frame = 0
+		break
+	case 1
+		object.frame = 1
+		break
+	case 2
+		if object.animationTimer == 0
+			PlaySfx(SfxName[Batbrain Fly], 0)
+		end if
+		object.frame = object.animationTimer
+		object.frame >>= 2
+		object.frame++
+		object.animationTimer++
+		object.animationTimer &= 15
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == 1
+		LoadSpriteSheet("MZ/Objects.gif")
+		SpriteFrame(-7, -12, 14, 24, 37, 98)
+		SpriteFrame(-12, -14, 32, 30, 52, 81)
+		SpriteFrame(-15, -6, 35, 20, 1, 106)
+		SpriteFrame(-12, -8, 29, 28, 85, 81)
+		SpriteFrame(-15, -6, 35, 20, 1, 106)
+	end if
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == 1
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-7, -12, 14, 24, 52, 68)
+		SpriteFrame(-12, -14, 32, 30, 1, 93)
+		SpriteFrame(-15, -6, 35, 20, 64, 99)
+		SpriteFrame(-12, -8, 29, 28, 34, 93)
+		SpriteFrame(-15, -6, 35, 20, 64, 99)
+	end if
+	foreach (TypeName[Batbrain], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value0 = object[arrayPos0].xpos
+		object[arrayPos0].value1 = object[arrayPos0].ypos
+		object[arrayPos0].drawOrder = 5
+	next
+	SetTableValue(TypeName[Batbrain], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Batbrain_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Batbrain_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

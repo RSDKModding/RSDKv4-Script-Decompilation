@@ -1,0 +1,168 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Junction Wheel Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 51 : TYPE_JUNCTIONWHEEL
+
+// Function declarations
+reserve function JunctionWheel_DebugDraw
+reserve function JunctionWheel_DebugSpawn
+reserve function JunctionWheel_Function124
+
+// Static Values
+
+// Tables
+
+function JunctionWheel_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function JunctionWheel_DebugSpawn
+	CreateTempObject(TypeName[Junction Wheel], 0, object.xpos, object.ypos)
+end function
+
+
+function JunctionWheel_Function124
+	Cos(object[currentPlayer].xpos, object.rotation)
+	object[currentPlayer].xpos *= object[currentPlayer].speed
+	object[currentPlayer].xpos += object.xpos
+	Sin(object[currentPlayer].ypos, object.rotation)
+	object[currentPlayer].ypos *= object[currentPlayer].speed
+	object[currentPlayer].ypos += object.ypos
+	if object[currentPlayer].speed < -0x1000
+		object[currentPlayer].speed += 512
+	end if
+end function
+
+
+event ObjectMain
+	if object[-1].value0 == 1
+		if object.value2 == 0
+			object.value2 = 1
+			object.value1 ^= 1
+		end if
+	else
+		object.value2 = 0
+	end if
+	if object.value1 == 0
+		object.rotation -= 4
+	else
+		object.rotation += 4
+	end if
+	object.rotation &= 511
+	temp0 = object.rotation
+	temp0 += 48
+	temp0 &= 511
+	temp0 >>= 6
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object[currentPlayer].state != PlayerObject_Blank
+			switch temp0
+			case 1
+				BoxCollisionTest(C_TOUCH, object.entityPos, -40, -40, -16, -8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					PlaySfx(SfxName[Rolling], 0)
+					object[currentPlayer].state = PlayerObject_Blank
+					object[currentPlayer].animation = ANI_JUMPING
+					object[currentPlayer].animationSpeed = 240
+					object[currentPlayer].tileCollisions = 0
+					object[currentPlayer].gravity = GRAVITY_AIR
+					object[currentPlayer].speed = -0x1C00
+				end if
+				BoxCollisionTest(C_BOX, object.entityPos, 16, -56, 40, 56, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if object[currentPlayer].yvel < 0
+					BoxCollisionTest(C_BOX, object.entityPos, -40, 32, 40, 56, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				end if
+				break
+			case 0
+			case 2
+			case 3
+			case 4
+			case 6
+			case 7
+				BoxCollisionTest(C_BOX, object.entityPos, -40, -56, -16, 56, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				BoxCollisionTest(C_BOX, object.entityPos, 16, -56, 40, 56, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if object[currentPlayer].yvel < 0
+					BoxCollisionTest(C_BOX, object.entityPos, -40, 32, 40, 56, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				end if
+				break
+			case 5
+				if object[currentPlayer].xvel < 0
+					BoxCollisionTest(C_TOUCH, object.entityPos, 16, 8, 38, 40, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					if checkResult == 1
+						PlaySfx(SfxName[Rolling], 0)
+						object[currentPlayer].state = PlayerObject_Blank
+						object[currentPlayer].animation = ANI_JUMPING
+						object[currentPlayer].animationSpeed = 240
+						object[currentPlayer].tileCollisions = 0
+						object[currentPlayer].gravity = GRAVITY_AIR
+						object[currentPlayer].speed = -0x1800
+					end if
+				end if
+				BoxCollisionTest(C_BOX, object.entityPos, -40, -56, -16, 56, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if object[currentPlayer].yvel < 0
+					BoxCollisionTest(C_BOX, object.entityPos, -40, 32, 40, 56, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				end if
+				break
+			end switch
+		else
+			if object[currentPlayer].type != TypeName[Debug Mode]
+				CallFunction(JunctionWheel_Function124)
+				if object[currentPlayer].speed == -0x1000
+					if object.rotation == 384
+						object[currentPlayer].state = PlayerObject_HandleAir
+						object[currentPlayer].animation = ANI_JUMPING
+						object[currentPlayer].tileCollisions = 1
+						object[currentPlayer].speed = 0
+						object[currentPlayer].xvel = 0
+						object[currentPlayer].yvel = 0x80000
+						object[currentPlayer].gravity = GRAVITY_AIR
+						PlaySfx(SfxName[Release], 0)
+					end if
+					if object.value1 == 1
+						if object.rotation == 284
+							object[currentPlayer].state = PlayerObject_HandleAir
+							object[currentPlayer].animation = ANI_JUMPING
+							object[currentPlayer].tileCollisions = 1
+							object[currentPlayer].speed = 0x80000
+							object[currentPlayer].xvel = 0x80000
+							object[currentPlayer].yvel = 0x40000
+							object[currentPlayer].gravity = GRAVITY_AIR
+							PlaySfx(SfxName[Release], 0)
+						end if
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_ROTATE, object.xpos, object.ypos)
+	DrawSprite(1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-56, -24, 48, 48, 1, 261)
+	SpriteFrame(-56, -56, 112, 112, 399, 284)
+	SetTableValue(TypeName[Junction Wheel], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(JunctionWheel_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(JunctionWheel_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

@@ -1,0 +1,444 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Push Block Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 46 : TYPE_PUSHBLOCK
+
+// Function declarations
+reserve function PushBlock_DebugDraw
+reserve function PushBlock_DebugSpawn
+reserve function PushBlock_Function109
+reserve function PushBlock_Function110
+reserve function PushBlock_Function111
+
+// Static Values
+public value PushBlock_value32 = 0;
+
+// Tables
+
+function PushBlock_DebugDraw
+	temp0 = object[0].value17
+	temp0 -= PushBlock_value32
+	DrawSprite(temp0)
+end function
+
+
+function PushBlock_DebugSpawn
+	CreateTempObject(TypeName[Push Block], 0, object.xpos, object.ypos)
+	object[tempObjectPos].value6 = 0
+	object[tempObjectPos].frame = object[0].value17
+	object[tempObjectPos].frame -= PushBlock_value32
+	if object[tempObjectPos].frame == 0
+		object[tempObjectPos].value2 = -16
+		object[tempObjectPos].value3 = 16
+		object[tempObjectPos].value4 = -17
+		object[tempObjectPos].value5 = 17
+	else
+		object[tempObjectPos].value2 = -64
+		object[tempObjectPos].value3 = 64
+		object[tempObjectPos].value4 = -65
+		object[tempObjectPos].value5 = 65
+		object[tempObjectPos].drawOrder = 5
+	end if
+end function
+
+
+function PushBlock_Function109
+	if object.floorSensorC == 0
+		if object.floorSensorL == 0
+			object.xvel = -0x40000
+			object.value9 = object.xpos
+			object.value9 &= -0x100000
+			object.state++
+		else
+			if object.floorSensorR == 0
+				object.xvel = 0x40000
+				object.value9 = object.xpos
+				object.value9 &= -0x100000
+				object.value9 += 0x100000
+				object.state++
+			end if
+		end if
+	end if
+end function
+
+
+function PushBlock_Function110
+	object.value10 = 0
+	temp2 = 0
+	object.xvel = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		CheckEqual(options.attractMode, 1)
+		temp1 = checkResult
+		CheckEqual(currentPlayer, 1)
+		temp1 &= checkResult
+		if object[currentPlayer].gravity == GRAVITY_GROUND
+			if object[currentPlayer].xvel < 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, 0, -12, object.value5, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					if object[currentPlayer].left == 1
+						if temp1 == 0
+							SetBit(object.value10, temp2, 1)
+							object.xvel -= 0x6000
+							object.value6 = 1
+						end if
+					end if
+					object[currentPlayer].xpos = object[currentPlayer].collisionRight
+					object[currentPlayer].xpos += object.value3
+					object[currentPlayer].xpos <<= 16
+					object[currentPlayer].xpos += object.value1
+					object[currentPlayer].xvel = 0
+					object[currentPlayer].speed = 0
+					object[currentPlayer].pushing = 2
+				end if
+			else
+				if object[currentPlayer].xvel > 0
+					BoxCollisionTest(C_TOUCH, object.entityPos, object.value4, -12, 0, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					if checkResult == 1
+						if object[currentPlayer].right == 1
+							if temp1 == 0
+								SetBit(object.value10, temp2, 1)
+								object.xvel += 0x6000
+								object.value6 = 1
+							end if
+						end if
+						object[currentPlayer].xpos = object[currentPlayer].collisionLeft
+						object[currentPlayer].xpos += object.value2
+						object[currentPlayer].xpos <<= 16
+						object[currentPlayer].xpos += object.value1
+						object[currentPlayer].xvel = 0
+						object[currentPlayer].speed = 0
+						object[currentPlayer].pushing = 2
+					end if
+				else
+					BoxCollisionTest(C_BOX, object.entityPos, object.value2, -16, object.value3, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				end if
+			end if
+		else
+			BoxCollisionTest(C_BOX, object.entityPos, object.value2, -16, object.value3, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		end if
+		temp2++
+	next
+	if object.xvel != 0
+		object.xpos += object.xvel
+		if object.xvel < 0
+			ObjectTileCollision(CMODE_RWALL, object.value2, 0, 0)
+		else
+			ObjectTileCollision(CMODE_LWALL, object.value3, 0, 0)
+		end if
+		CallFunction(PushBlock_Function109)
+		temp0 = oscillation
+		temp0 &= 31
+		if temp0 < 3
+			PlaySfx(SfxName[Push Block], 0)
+		end if
+	end if
+	object.value1 = object.xpos
+	object.value1 &= -0x10000
+	temp2 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		GetBit(temp0, object.value10, temp2)
+		if temp0 == 1
+			if object[currentPlayer].xpos < object.xpos
+				object[currentPlayer].ixpos = object[currentPlayer].collisionRight
+				temp1 = object.value2
+			else
+				object[currentPlayer].ixpos = object[currentPlayer].collisionLeft
+				temp1 = object.value3
+			end if
+			FlipSign(object[currentPlayer].xpos)
+			temp1 <<= 16
+			object[currentPlayer].xpos += temp1
+			object[currentPlayer].xpos += object.xpos
+		else
+			BoxCollisionTest(C_BOX, object.entityPos, object.value2, -16, object.value3, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		end if
+		temp2++
+	next
+end function
+
+
+function PushBlock_Function111
+	if object.value6 == 1
+		if object.gravity == GRAVITY_AIR
+			object.yvel += 0x1800
+			object.ypos += object.yvel
+			temp0 = object.value2
+			temp0 += 2
+			ObjectTileCollision(CMODE_FLOOR, temp0, 16, 0)
+			object.floorSensorL = checkResult
+			object.gravity = checkResult
+			ObjectTileCollision(CMODE_FLOOR, 0, 16, 0)
+			object.floorSensorC = checkResult
+			object.gravity |= checkResult
+			temp0 = object.value3
+			temp0 -= 2
+			ObjectTileCollision(CMODE_FLOOR, temp0, 16, 0)
+			object.floorSensorR = checkResult
+			object.gravity |= checkResult
+		else
+			object.yvel = 0
+			temp0 = object.value2
+			temp0 += 2
+			ObjectTileGrip(CMODE_FLOOR, temp0, 16, 0)
+			object.floorSensorL = checkResult
+			object.gravity = checkResult
+			ObjectTileGrip(CMODE_FLOOR, 0, 16, 0)
+			object.floorSensorC = checkResult
+			object.gravity |= checkResult
+			temp0 = object.value3
+			temp0 -= 2
+			ObjectTileGrip(CMODE_FLOOR, temp0, 16, 0)
+			object.floorSensorR = checkResult
+			object.gravity |= checkResult
+		end if
+		object.gravity ^= GRAVITY_AIR
+	else
+		object.floorSensorL = 1
+		object.floorSensorC = 1
+		object.floorSensorR = 1
+	end if
+	foreach (TypeName[Chained Crusher], arrayPos0, ACTIVE_ENTITIES)
+		switch object[arrayPos0].value1
+		case 0
+			BoxCollisionTest(C_PLATFORM, arrayPos0, -56, -12, 56, 12, object.entityPos, object.value2, -16, object.value3, 16)
+			object.value6 |= checkResult
+			ObjectTileCollision(CMODE_ROOF, 0, -17, 0)
+			if checkResult == 1
+				object.ypos -= 0x10000
+				object[arrayPos0].ypos = object.ypos
+				object[arrayPos0].ypos += 0x1D0000
+				object[arrayPos0].value7 = 1
+			end if
+			break
+		case 1
+			BoxCollisionTest(C_PLATFORM, arrayPos0, -48, -12, 48, 12, object.entityPos, object.value2, -16, object.value3, 16)
+			object.value6 |= checkResult
+			ObjectTileCollision(CMODE_ROOF, 0, -17, 0)
+			if checkResult == 1
+				object.ypos -= 0x10000
+				object[arrayPos0].ypos = object.ypos
+				object[arrayPos0].ypos += 0x1D0000
+				object[arrayPos0].value7 = 1
+			end if
+			break
+		case 2
+			BoxCollisionTest(C_PLATFORM, arrayPos0, -16, -12, 16, 12, object.entityPos, object.value2, -16, object.value3, 16)
+			object.value6 |= checkResult
+			ObjectTileCollision(CMODE_ROOF, 0, -17, 0)
+			if checkResult == 1
+				object.ypos -= 0x10000
+				object[arrayPos0].ypos = object.ypos
+				object[arrayPos0].ypos += 0x1D0000
+				object[arrayPos0].value7 = 1
+			end if
+			break
+		end switch
+	next
+end function
+
+
+event ObjectMain
+	temp6 = object.xpos
+	temp7 = object.ypos
+	switch object.state
+	case 0
+		object.priority = object.value11
+		CallFunction(PushBlock_Function110)
+		CallFunction(PushBlock_Function111)
+		break
+	case 1
+		object.xpos += object.xvel
+		if object.xvel > 0
+			if object.xpos >= object.value9
+				object.xpos = object.value9
+				object.gravity = GRAVITY_AIR
+				object.state = 2
+			end if
+		else
+			if object.xpos <= object.value9
+				object.xpos = object.value9
+				object.gravity = GRAVITY_AIR
+				object.state = 2
+			end if
+		end if
+		break
+	case 2
+		CallFunction(PushBlock_Function111)
+		if object.gravity == GRAVITY_GROUND
+			temp1 = object.iypos
+			temp1 += 12
+			Get16x16TileInfo(temp0, object.ixpos, temp1, TILEINFO_ANGLEB)
+			if temp0 == 1
+				object.state = 3
+				if object.xvel > 0
+					object.xvel = 0x8000
+				else
+					object.xvel = -0x8000
+				end if
+			else
+				object.state = 0
+			end if
+		end if
+		break
+	case 3
+		temp0 = object.xpos
+		temp0 -= object.value1
+		temp0 += object.xvel
+		temp0 &= -0x10000
+		if object.gravity == GRAVITY_AIR
+			temp1 = object.ypos
+			temp1 &= -0x10000
+			object.yvel += 0x1800
+			object.ypos += object.yvel
+			ObjectTileCollision(CMODE_FLOOR, 0, 16, 0)
+			if checkResult == 1
+				object.yvel = 0
+				object.gravity = GRAVITY_GROUND
+			end if
+			temp2 = object.ypos
+			temp2 &= -0x10000
+			temp2 -= temp1
+			temp3 = object.ypos
+			object.ypos = temp1
+		else
+			temp2 = 0
+		end if
+		object.xpos += object.xvel
+		if temp2 != 0
+			object.ypos = temp3
+		end if
+		if object.xvel > 0
+			ObjectTileCollision(CMODE_LWALL, 16, 12, 0)
+			if checkResult == 1
+				object.xvel = 0
+				object.value0 = 0
+				object.state = 4
+			end if
+		else
+			ObjectTileCollision(CMODE_RWALL, -16, 12, 0)
+			if checkResult == 1
+				object.xvel = 0
+				object.value0 = 0
+				object.state = 4
+			end if
+		end if
+		break
+	case 4
+		if object.value0 < 320
+			object.value0++
+			temp0 = object.value0
+			temp0 &= 7
+			if temp0 == 0
+				object.ypos += 0x10000
+			end if
+		end if
+		break
+	end switch
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp4 = object.xpos
+	temp4 &= -0x10000
+	temp5 = object.ypos
+	temp5 &= -0x10000
+	object.xpos = temp6
+	object.ypos = temp7
+	temp6 &= -0x10000
+	temp7 &= -0x10000
+	temp4 -= temp6
+	temp5 -= temp7
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		CheckNotEqual(object[currentPlayer].pushing, 0)
+		temp2 = checkResult
+		CheckEqual(object.state, 0)
+		temp2 &= checkResult
+		if temp2 == 0
+			BoxCollisionTest(C_BOX, object.entityPos, object.value2, -16, object.value3, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object[currentPlayer].xpos += temp4
+				object[currentPlayer].ypos += temp5
+			end if
+		end if
+	next
+	object.xpos = temp0
+	object.ypos = temp1
+	object.value1 = object.xpos
+	object.value1 &= -0x10000
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value7
+		object.ypos = object.value8
+		if object.outOfBounds == 1
+			object.yvel = 0
+			object.value6 = 0
+			object.priority = object.value12
+			object.state = 0
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteXY(object.frame, object.value1, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 159, 322)
+	SpriteFrame(-64, -16, 128, 32, 159, 322)
+	foreach (TypeName[Push Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].frame = object[arrayPos0].propertyValue
+		object[arrayPos0].frame &= 1
+		if object[arrayPos0].frame == 0
+			object[arrayPos0].value11 = 7
+			object[arrayPos0].value12 = 6
+			object[arrayPos0].priority = PRIORITY_BOUNDS_SMALL
+		else
+			object[arrayPos0].value11 = 1
+			object[arrayPos0].value12 = 0
+			object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+		end if
+		object[arrayPos0].value7 = object[arrayPos0].xpos
+		object[arrayPos0].value8 = object[arrayPos0].ypos
+		object[arrayPos0].value6 = 0
+		if object[arrayPos0].frame == 0
+			object[arrayPos0].value2 = -16
+			object[arrayPos0].value3 = 16
+			object[arrayPos0].value4 = -17
+			object[arrayPos0].value5 = 17
+		else
+			object[arrayPos0].value2 = -64
+			object[arrayPos0].value3 = 64
+			object[arrayPos0].value4 = -65
+			object[arrayPos0].value5 = 65
+			object[arrayPos0].drawOrder = 5
+		end if
+	next
+	temp0 = 0
+	PushBlock_value32 = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Push Block], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(PushBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(PushBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

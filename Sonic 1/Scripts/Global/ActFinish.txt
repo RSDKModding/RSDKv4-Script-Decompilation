@@ -1,0 +1,472 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Act Finish Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 8 : TYPE_ACTFINISH
+
+
+// Static Values
+
+// Tables
+
+event ObjectMain
+	switch object.state
+	case 0
+		object.drawOrder = 6
+		object.priority = PRIORITY_ACTIVE
+		object.xpos = screen.xcenter
+		object.xpos += 128
+		object.ypos = screen.xcenter
+		object.value1 = screen.xcenter
+		FlipSign(object.value1)
+		object.value1 -= 160
+		object.value2 = screen.xcenter
+		FlipSign(object.value2)
+		object.value2 -= 160
+		object.value3 = screen.xcenter
+		object.value3 += 128
+		object.value4 = object.value3
+		object.value4 += 32
+		object.scale = object.value4
+		object.scale += 32
+		if PlayerObject_SuperState == 1
+			PlayerObject_SuperState = 2
+		end if
+		switch stage.minutes
+		case 0
+			if stage.seconds < 30
+				object.value5 = 0xC350
+			else
+				if stage.seconds < 45
+					object.value5 = 0x2710
+				else
+					object.value5 = 0x1388
+				end if
+			end if
+			break
+		case 1
+			if stage.seconds < 30
+				object.value5 = 0xFA0
+			else
+				object.value5 = 0xBB8
+			end if
+			break
+		case 2
+			object.value5 = 0x7D0
+			break
+		case 3
+			object.value5 = 1000
+			break
+		case 4
+			object.value5 = 500
+			break
+		case 5
+			object.value5 = 100
+			break
+		case 9
+			if stage.debugMode == 0
+				if options.gameMode < 2
+					if stage.seconds == 59
+						object.value5 = 0x186A0
+					end if
+				end if
+			end if
+			break
+		end switch
+		object.value6 = object[0].value0
+		object.value6 *= 100
+		object.state++
+		break
+	case 1
+		if object.xpos > 0
+			object.xpos -= 16
+			if object.xpos < 0
+				object.xpos = 0
+			end if
+		end if
+		if object.value1 < 0
+			object.value1 += 16
+			if object.value1 > 0
+				object.value1 = 0
+			end if
+		else
+			object.state++
+		end if
+		break
+	case 2
+		if object.value2 < 0
+			object.value2 += 16
+			if object.value2 > 0
+				object.value2 = 0
+			end if
+		else
+			object.state++
+		end if
+		break
+	case 3
+		if object.ypos > 0
+			object.ypos -= 16
+			if object.ypos < 0
+				object.ypos = 0
+			end if
+		else
+			object.state++
+		end if
+		break
+	case 4
+		if object.value3 > 0
+			object.value3 -= 16
+			if object.value3 < 0
+				object.value3 = 0
+			end if
+		end if
+		if object.value4 > 0
+			object.value4 -= 16
+			if object.value4 < 0
+				object.value4 = 0
+			end if
+		end if
+		if object.scale > 0
+			object.scale -= 16
+			if object.scale < 0
+				object.scale = 0
+			end if
+		else
+			object.state++
+		end if
+		break
+	case 5
+		object.value0++
+		if object.value0 > 299
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 6
+		if object.value6 > 0
+			object.value6 -= 100
+			player.score += 100
+		end if
+		if object.value5 > 0
+			object.value5 -= 100
+			player.score += 100
+		end if
+		CheckGreater(object.value6, 0)
+		temp0 = checkResult
+		CheckGreater(object.value5, 0)
+		temp0 |= checkResult
+		if temp0 == 1
+			object.value0++
+			if object.value0 == 2
+				PlaySfx(SfxName[Score Add], 0)
+				object.value0 = 0
+			end if
+		else
+			object.state++
+			object.value0 = 0
+			PlaySfx(SfxName[Score Total], 0)
+		end if
+		break
+	case 7
+		object.value0++
+		if object.value0 == 160
+			object.value0 = 0
+			if options.gameMode != 2
+				CheckCurrentStageFolder("Zone06")
+				temp0 = checkResult
+				CheckEqual(stage.actNum, 2)
+				temp0 &= checkResult
+				if temp0 == 1
+					object.state = 9
+				else
+					object.state++
+					if object[0].type == TypeName[Blank Object]
+						PlaySfx(SfxName[Warp], 0)
+					end if
+				end if
+			else
+				object.state++
+				if object[0].type == TypeName[Blank Object]
+					PlaySfx(SfxName[Warp], 0)
+				end if
+			end if
+		end if
+		break
+	case 8
+		if object[0].type == TypeName[Blank Object]
+			object.value0 += 8
+			SetScreenFade(208, 255, 224, object.value0)
+			if object.value0 == 0x400
+				fadeColor = 208
+				fadeColor <<= 16
+				temp0 = 255
+				temp0 <<= 8
+				fadeColor += temp0
+				fadeColor += 224
+				object.direction = FLIP_NONE
+				object.value0 = 0
+				lampPostID = 0
+				stage.listPos++
+				if options.gameMode == 1
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					if stage.player2Enabled == 1
+						saveRAM[arrayPos1] = 3
+					else
+						saveRAM[arrayPos1] = stage.playerListPos
+					end if
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+					arrayPos1++
+					saveRAM[arrayPos1] = player.score
+					arrayPos1++
+					saveRAM[arrayPos1] = player.scoreBonus
+					arrayPos1++
+					temp0 = stage.listPos
+					temp0++
+					if temp0 > saveRAM[arrayPos1]
+						saveRAM[arrayPos1] = temp0
+						saveRAM[arrayPos1] += 128
+					end if
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.emeralds
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.listPos
+					WriteSaveRAM()
+				end if
+				specialStage.nextZone = stage.listPos
+				stage.listPos = specialStage.listPos
+				stage.activeList = SPECIAL_STAGE
+				temp0 = engine.trialMode
+				if stage.listPos >= stage.listSize
+					temp0 = 1
+				end if
+				if temp0 == 0
+					LoadStage()
+				else
+					stage.activeList = PRESENTATION_STAGE
+					stage.listPos = 0
+					LoadStage()
+				end if
+			end if
+		else
+			object.value0 += 4
+			SetScreenFade(0, 0, 0, object.value0)
+			if object.value0 == 384
+				fadeColor = 0
+				object.value0 = 0
+				lampPostID = 0
+				object.direction = FLIP_NONE
+				stage.listPos++
+				if options.gameMode == 1
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					if stage.player2Enabled == 1
+						saveRAM[arrayPos1] = 3
+					else
+						saveRAM[arrayPos1] = stage.playerListPos
+					end if
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+					arrayPos1++
+					saveRAM[arrayPos1] = player.score
+					arrayPos1++
+					saveRAM[arrayPos1] = player.scoreBonus
+					arrayPos1++
+					temp0 = stage.listPos
+					temp0++
+					if temp0 > saveRAM[arrayPos1]
+						saveRAM[arrayPos1] = temp0
+					end if
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.emeralds
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.listPos
+					WriteSaveRAM()
+				end if
+				if options.gameMode == 2
+					timeAttack.result = stage.seconds
+					timeAttack.result *= 100
+					temp0 = stage.minutes
+					temp0 *= 0x1770
+					timeAttack.result += temp0
+					timeAttack.result += stage.milliSeconds
+					stage.listPos--
+					CallNativeFunction2(SetLeaderboard, stage.listPos, timeAttack.result)
+					engine.state = 8
+				else
+					temp0 = engine.trialMode
+					if stage.listPos >= stage.listSize
+						temp0 = 1
+					end if
+					if temp0 == 0
+						LoadStage()
+					else
+						stage.activeList = PRESENTATION_STAGE
+						stage.listPos = 0
+						LoadStage()
+					end if
+				end if
+			end if
+		end if
+		break
+	case 9
+		object.xpos += 32
+		object.ypos += 32
+		object.value1 -= 32
+		object.value0++
+		if object.value0 == 8
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 10
+		object.xpos += 32
+		object.ypos += 32
+		object.value1 -= 32
+		object.value2 -= 32
+		object.value0++
+		if object.value0 == 8
+			object.value0 = 0
+			object.state++
+		end if
+		break
+	case 11
+		object.xpos += 32
+		object.ypos += 32
+		object.value1 -= 32
+		object.value2 -= 32
+		object.value3 += 32
+		if object.value3 > 96
+			object.value4 += 32
+			if object.value4 > 96
+				object.scale += 32
+			end if
+		end if
+		object.value0++
+		if object.value0 == 35
+			object.value0 = 0
+			temp0 = tileLayer[0].xsize
+			temp0 <<= 7
+			stage.newXBoundary2 = temp0
+			foreach (TypeName[Sign Post], arrayPos0, ACTIVE_ENTITIES)
+				object[arrayPos0].state = 5
+			next
+			currentPlayer = 0
+			while currentPlayer < playerCount
+				object[currentPlayer].interaction = 1
+				object[currentPlayer].controlMode = 0
+				object[currentPlayer].right = 1
+				currentPlayer++
+			loop
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+			SetMusicTrack("Final.ogg", 0, 0x14AC8)
+			PlayMusic(0)
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	SetActivePalette(0, 0, screen.ysize)
+	temp0 = screen.xcenter
+	temp0 += 16
+	temp0 += object.xpos
+	DrawSpriteScreenXY(3, temp0, 56)
+	temp0 = screen.xcenter
+	temp0 += 3
+	temp0 += object.value1
+	DrawSpriteScreenXY(stage.playerListPos, temp0, 60)
+	DrawSpriteScreenXY(4, temp0, 60)
+	temp0 = screen.xcenter
+	temp0 -= 48
+	temp0 += object.value2
+	DrawSpriteScreenXY(5, temp0, 80)
+	temp0 = screen.xcenter
+	temp0 += 24
+	temp0 += object.ypos
+	temp1 = stage.actNum
+	temp1 += 5
+	if temp1 < 6
+		temp1 = 6
+	end if
+	if temp1 > 8
+		temp1 = 8
+	end if
+	DrawSpriteScreenXY(temp1, temp0, 82)
+	temp0 = screen.xcenter
+	temp0 -= 79
+	temp0 += object.value3
+	DrawSpriteScreenXY(9, temp0, 117)
+	temp0 += 151
+	DrawNumbers(13, temp0, 117, player.score, 6, 8, 0)
+	temp0 = screen.xcenter
+	temp0 -= 79
+	temp0 += object.value4
+	DrawSpriteScreenXY(10, temp0, 133)
+	DrawSpriteScreenXY(12, temp0, 133)
+	temp0 += 151
+	DrawNumbers(13, temp0, 133, object.value5, 6, 8, 0)
+	temp0 = screen.xcenter
+	temp0 -= 79
+	temp0 += object.scale
+	DrawSpriteScreenXY(11, temp0, 149)
+	DrawSpriteScreenXY(12, temp0, 149)
+	temp0 += 151
+	DrawNumbers(13, temp0, 149, object.value6, 5, 8, 0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-70, 0, 70, 16, 1, 222)
+	if options.region == 0
+		SpriteFrame(-69, 0, 69, 16, 72, 222)
+	else
+		SpriteFrame(-69, 0, 69, 16, 145, 205)
+	end if
+	SpriteFrame(-93, 0, 113, 16, 142, 222)
+	if stage.playerListPos != 2
+		SpriteFrame(0, 0, 56, 56, 41, 1)
+		SpriteFrame(17, 0, 47, 16, 1, 205)
+		SpriteFrame(0, 0, 95, 16, 49, 205)
+		SpriteFrame(0, 0, 39, 24, 98, 1)
+		SpriteFrame(0, 0, 43, 24, 138, 1)
+		SpriteFrame(0, 0, 43, 24, 182, 1)
+	else
+		SpriteFrame(20, 0, 56, 56, 41, 1)
+		SpriteFrame(37, 0, 47, 16, 1, 205)
+		SpriteFrame(20, 0, 95, 16, 49, 205)
+		SpriteFrame(20, 0, 39, 24, 98, 1)
+		SpriteFrame(20, 0, 43, 24, 138, 1)
+		SpriteFrame(20, 0, 43, 24, 182, 1)
+	end if
+	SpriteFrame(0, -2, 44, 16, 161, 26)
+	SpriteFrame(0, 0, 31, 11, 1, 17)
+	SpriteFrame(0, 0, 31, 11, 1, 33)
+	SpriteFrame(40, -2, 45, 16, 98, 43)
+	SpriteFrame(0, 0, 8, 11, 1, 50)
+	SpriteFrame(0, 0, 8, 11, 10, 50)
+	SpriteFrame(0, 0, 8, 11, 19, 50)
+	SpriteFrame(0, 0, 8, 11, 28, 50)
+	SpriteFrame(0, 0, 8, 11, 1, 62)
+	SpriteFrame(0, 0, 8, 11, 10, 62)
+	SpriteFrame(0, 0, 8, 11, 19, 62)
+	SpriteFrame(0, 0, 8, 11, 28, 62)
+	SpriteFrame(0, 0, 8, 11, 1, 74)
+	SpriteFrame(0, 0, 8, 11, 10, 74)
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

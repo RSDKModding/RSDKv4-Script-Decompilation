@@ -1,0 +1,299 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Star Post Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 18 : TYPE_STARPOST
+
+// Function declarations
+reserve function StarPost_DebugDraw
+reserve function StarPost_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function StarPost_DebugDraw
+	DrawSprite(2)
+end function
+
+
+function StarPost_DebugSpawn
+	CreateTempObject(TypeName[Star Post], 0, object.xpos, object.ypos)
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object[currentPlayer].value16 == 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -44, 8, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == 1
+					if options.vsMode == 1
+						if currentPlayer == 0
+							vs.restartX1 = object.xpos
+							vs.restartY1 = object.ypos
+							object.value10 = 1
+						else
+							vs.restartX2 = object.xpos
+							vs.restartY2 = object.ypos
+							object.value10 = 0
+						end if
+						object.state = 4
+					else
+						starPostID = object.entityPos
+						foreach (TypeName[Star Post], arrayPos0, ALL_ENTITIES)
+							if object[arrayPos0].propertyValue < object.propertyValue
+								object[arrayPos0].state = 1
+								object[arrayPos0].animation = 2
+								object[arrayPos0].value0 = 0
+							end if
+						next
+						if specialStage.emeralds < 127
+							if options.gameMode != 2
+								if object[0].value0 >= 50
+									object.state = 2
+									object.value4 = 4
+									object.value3 = 0
+									object.value6 = 0
+									object.value5 = 0
+									object.value7 = 0
+								else
+									object.state = 1
+								end if
+							else
+								object.state = 1
+							end if
+						else
+							object.state = 1
+						end if
+					end if
+					recMilliSeconds = stage.milliSeconds
+					recSeconds = stage.seconds
+					recMinutes = stage.minutes
+					recWaterState = stage.waterState
+					recWaterLevel = stage.waterLevel
+					object.value0 = 384
+					if object.priority != PRIORITY_XBOUNDS_DESTROY
+						object.priority = PRIORITY_ACTIVE
+					end if
+					object.animation = 1
+					PlaySfx(SfxName[Star Post], 0)
+				end if
+			end if
+		next
+		break
+	case 1
+		object.animationTimer++
+		object.animationTimer &= 7
+		object.frame = object.animationTimer
+		object.frame >>= 2
+		break
+	case 2
+		object.value5 += 18
+		object.value5 &= 511
+		object.value6 += 4
+		object.value6 &= 511
+		if object.value3 < 128
+			object.value7++
+		else
+			if object.value3 > 472
+				object.value7--
+			end if
+		end if
+		object.value3++
+		if object.value3 == 600
+			object.state = 1
+			object.value3 = 0
+			object.value4 = 0
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_ACTIVE_BOUNDS
+			end if
+		end if
+		object.animationTimer++
+		object.animationTimer &= 7
+		object.frame = object.animationTimer
+		object.frame >>= 2
+		temp0 = object.value7
+		temp0 >>= 2
+		FlipSign(temp0)
+		temp1 = object.value7
+		temp1 >>= 2
+		if object.value3 > 60
+			BoxCollisionTest(C_TOUCH, object.entityPos, temp0, -64, temp1, -56, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				PlaySfx(SfxName[Warp], 0)
+				object.state = 3
+				object.priority = PRIORITY_ACTIVE_PAUSED
+				stage.state = 3
+				object[0].controlMode = -1
+				fadeColor = 208
+				fadeColor <<= 16
+				temp0 = 255
+				temp0 <<= 8
+				fadeColor += temp0
+				fadeColor += 224
+				object.value9 = 0
+			end if
+		end if
+		break
+	case 3
+		options.touchControls = 0
+		music.volume -= 2
+		object.value9 += 8
+		SetScreenFade(208, 255, 224, object.value9)
+		if object.value9 == 0x400
+			specialStage.nextZone = stage.listPos
+			stage.activeList = SPECIAL_STAGE
+			stage.listPos = specialStage.listPos
+			LoadStage()
+		end if
+		break
+	case 4
+		currentPlayer = object.value10
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -44, 8, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			if currentPlayer == 0
+				vs.restartX1 = object.xpos
+				vs.restartY1 = object.ypos
+			else
+				vs.restartX2 = object.xpos
+				vs.restartY2 = object.ypos
+			end if
+			if object.animation != 1
+				object.value0 = 384
+			end if
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_ACTIVE
+			end if
+			object.animation = 1
+			object.state = 1
+			PlaySfx(SfxName[Star Post], 0)
+		end if
+		object.animationTimer++
+		object.animationTimer &= 7
+		object.frame = object.animationTimer
+		object.frame >>= 2
+		break
+	end switch
+	if object.animation == 1
+		Cos(object.value1, object.value0)
+		object.value1 *= -0x500
+		Sin(object.value2, object.value0)
+		object.value2 *= 0x500
+		object.value1 += object.xpos
+		object.value2 += object.ypos
+		object.value2 -= 0x1A0000
+		object.value0 += 32
+		if object.value0 > 0x580
+			object.value0 = 0
+			object.animation = 2
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				if object.value4 == 0
+					object.priority = PRIORITY_ACTIVE_BOUNDS
+				end if
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	switch object.animation
+	case 0
+		DrawSprite(2)
+		break
+	case 1
+		DrawSprite(3)
+		DrawSpriteXY(0, object.value1, object.value2)
+		break
+	case 2
+		DrawSprite(3)
+		temp0 = object.ypos
+		temp0 -= 0x240000
+		DrawSpriteXY(object.frame, object.xpos, temp0)
+		break
+	end switch
+	if object.value4 > 0
+		temp0 = 0
+		temp1 = object.value5
+		Sin(temp4, object.value6)
+		temp4 *= 3
+		object.value8 = object.value6
+		object.value8 &= 15
+		object.value8 >>= 2
+		object.value8 += object.value4
+		while temp0 < 4
+			Sin(temp2, temp1)
+			temp2 <<= 12
+			Cos(temp3, temp1)
+			temp3 <<= 10
+			Sin(temp5, temp1)
+			temp5 *= temp4
+			temp3 += temp5
+			temp2 *= object.value7
+			temp2 >>= 7
+			temp3 *= object.value7
+			temp3 >>= 7
+			temp2 += object.xpos
+			temp3 += object.ypos
+			temp3 -= 0x3C0000
+			DrawSpriteXY(object.value8, temp2, temp3)
+			temp0++
+			temp1 += 128
+		loop
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 137)
+	SpriteFrame(-8, -8, 16, 16, 1, 202)
+	SpriteFrame(-8, -44, 16, 64, 1, 137)
+	SpriteFrame(-8, -28, 16, 48, 1, 153)
+	SpriteFrame(-1, -1, 3, 3, 76, 214)
+	SpriteFrame(-3, -3, 7, 7, 68, 214)
+	SpriteFrame(-7, -7, 15, 15, 52, 214)
+	SpriteFrame(-3, -3, 7, 7, 68, 214)
+	SetTableValue(TypeName[Star Post], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(StarPost_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(StarPost_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+	if starPostID > 31
+		arrayPos0 = starPostID
+		currentPlayer = 0
+		while currentPlayer < playerCount
+			object[currentPlayer].xpos = object[arrayPos0].xpos
+			object[currentPlayer].ypos = object[arrayPos0].ypos
+			currentPlayer++
+		loop
+		foreach (TypeName[Star Post], arrayPos1, ALL_ENTITIES)
+			if object[arrayPos1].propertyValue < object[arrayPos0].propertyValue
+				object[arrayPos1].state = 1
+				object[arrayPos1].animation = 2
+				object[arrayPos1].value0 = 0
+			end if
+		next
+		screen.cameraX = object[0].ixpos
+		screen.cameraY = object[0].iypos
+		object[arrayPos0].state = 1
+		object[arrayPos0].animation = 2
+		stage.milliSeconds = recMilliSeconds
+		stage.seconds = recSeconds
+		stage.minutes = recMinutes
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

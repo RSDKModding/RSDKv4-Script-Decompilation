@@ -1,0 +1,188 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Newtron Fly Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 65 : TYPE_NEWTRONFLY
+
+// Function declarations
+reserve function NewtronFly_DebugDraw
+reserve function NewtronFly_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function NewtronFly_DebugDraw
+	DrawSprite(object.direction)
+end function
+
+
+function NewtronFly_DebugSpawn
+	CreateTempObject(TypeName[Newtron Fly], object.direction, object.xpos, object.ypos)
+	object[tempObjectPos].inkEffect = INK_ALPHA
+	object[tempObjectPos].alpha = 0
+	object[tempObjectPos].value1 = object.xpos
+	object[tempObjectPos].value2 = object.ypos
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -64, 128, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object.state = 1
+			end if
+		next
+		break
+	case 1
+		object.priority = PRIORITY_ACTIVE
+		if object.alpha < 248
+			object.alpha += 4
+			if object[0].xpos > object.xpos
+				object.propertyValue = 0
+			else
+				object.propertyValue = 1
+			end if
+		else
+			object.alpha = 255
+			object.animation = 1
+			if object.propertyValue == 0
+				object.xvel = 0x20000
+			else
+				object.xvel = -0x20000
+			end if
+			object.direction = object.propertyValue
+			object.state++
+		end if
+		break
+	case 2
+		object.ypos += object.yvel
+		object.yvel += 0x3800
+		ObjectTileCollision(CMODE_FLOOR, 0, 8, 0)
+		if checkResult == 1
+			object.yvel = 0
+			object.animationTimer = 0
+			object.animation = 2
+			object.state++
+		end if
+		break
+	case 3
+		object.xpos += object.xvel
+		ObjectTileGrip(CMODE_FLOOR, 0, 8, 0)
+		break
+	end switch
+	if object.outOfBounds == 1
+		temp0 = object.xpos
+		temp1 = object.ypos
+		object.xpos = object.value1
+		object.ypos = object.value2
+		if object.outOfBounds == 1
+			object.yvel = 0
+			object.xpos = object.value1
+			object.ypos = object.value2
+			object.animation = 0
+			object.animationTimer = 0
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+			object.alpha = 0
+			object.state = 0
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+		end if
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		switch object.state
+		case 2
+		case 3
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -8, 16, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+			if checkResult == 1
+				CallFunction(PlayerObject_BadnikBreak)
+			end if
+			break
+		end switch
+	next
+	switch object.animation
+	case 1
+		if object.animationTimer < 41
+			object.frame = object.animationTimer
+			object.frame /= 20
+			object.animationTimer++
+		end if
+		object.frame += 2
+		break
+	case 2
+		object.frame = object.animationTimer
+		object.frame /= 3
+		object.frame += 5
+		object.animationTimer++
+		object.animationTimer %= 6
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	switch object.animation
+	case 0
+		DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.ypos)
+		break
+	case 1
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		break
+	case 2
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == 1
+		LoadSpriteSheet("GHZ/Objects2.gif")
+		SpriteFrame(-20, -20, 39, 39, 161, 1)
+		SpriteFrame(-19, -20, 39, 39, 201, 1)
+		SpriteFrame(-18, -20, 37, 35, 218, 41)
+		SpriteFrame(-15, -18, 36, 22, 1, 41)
+		SpriteFrame(-20, -16, 40, 16, 38, 41)
+		SpriteFrame(-28, -9, 8, 8, 79, 41)
+		SpriteFrame(-34, -10, 14, 8, 88, 41)
+	end if
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == 1
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-20, -20, 39, 39, 1, 124)
+		SpriteFrame(-19, -20, 39, 39, 41, 124)
+		SpriteFrame(-18, -20, 37, 35, 81, 128)
+		SpriteFrame(-15, -18, 36, 22, 1, 204)
+		SpriteFrame(-20, -16, 40, 16, 38, 204)
+		SpriteFrame(-28, -9, 8, 8, 79, 204)
+		SpriteFrame(-34, -10, 14, 8, 88, 204)
+	end if
+	foreach (TypeName[Newtron Fly], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].value2 = object[arrayPos0].ypos
+		object[arrayPos0].inkEffect = INK_ALPHA
+		object[arrayPos0].alpha = 0
+	next
+	SetTableValue(TypeName[Newtron Fly], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(NewtronFly_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(NewtronFly_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

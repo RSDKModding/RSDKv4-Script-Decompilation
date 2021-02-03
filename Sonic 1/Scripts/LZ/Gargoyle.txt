@@ -1,0 +1,87 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Gargoyle Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 53 : TYPE_GARGOYLE
+
+// Function declarations
+reserve function Gargoyle_DebugDraw
+reserve function Gargoyle_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Gargoyle_DebugDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+function Gargoyle_DebugSpawn
+	CreateTempObject(TypeName[Gargoyle], 0, object.xpos, object.ypos)
+	object[tempObjectPos].direction = object.direction
+	object[tempObjectPos].value1 = 60
+	object[tempObjectPos].value0 = 60
+end function
+
+
+event ObjectMain
+	temp0 = object.ixpos
+	temp0 -= screen.cameraX
+	Abs(temp0)
+	if temp0 < screen.xcenter
+		temp0 = object.iypos
+		temp0 -= screen.cameraY
+		Abs(temp0)
+		if temp0 < screen.ycenter
+			object.value0--
+			if object.value0 <= 0
+				PlaySfx(SfxName[Small Fireball], 0)
+				CreateTempObject(TypeName[Gargoyle Shot], 0, object.xpos, object.ypos)
+				object[tempObjectPos].drawOrder = 2
+				if object.direction == FLIP_NONE
+					object[tempObjectPos].xvel = -0x20000
+				else
+					object[tempObjectPos].xvel = 0x20000
+				end if
+				object[tempObjectPos].ypos += 0x80000
+				object[tempObjectPos].direction = object.direction
+				object.value0 = object.value1
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -15, 32, 31, 93, 128)
+	foreach (TypeName[Gargoyle], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].value1 = object[arrayPos0].propertyValue
+		object[arrayPos0].value1++
+		object[arrayPos0].value1 *= 30
+		object[arrayPos0].value0 = object[arrayPos0].value1
+	next
+	SetTableValue(TypeName[Gargoyle], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Gargoyle_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Gargoyle_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

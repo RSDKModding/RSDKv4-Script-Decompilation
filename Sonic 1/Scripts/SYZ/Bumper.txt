@@ -1,0 +1,132 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Bumper Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 49 : TYPE_BUMPER
+
+// Function declarations
+reserve function Bumper_DebugDraw
+reserve function Bumper_DebugSpawn
+
+// Static Values
+
+// Tables
+
+function Bumper_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function Bumper_DebugSpawn
+	CreateTempObject(TypeName[Bumper], 0, object.xpos, object.ypos)
+	object[tempObjectPos].drawOrder = 4
+end function
+
+
+event ObjectMain
+	if object.state > 0
+		object.frame = object.value0
+		object.frame /= 5
+		object.frame++
+		object.value0++
+		if object.value0 > 22
+			object.value0 = 0
+			object.state = 0
+			object.frame = 0
+		end if
+	end if
+	if object.outOfBounds == 1
+		object.value1 = 0
+		object.priority = PRIORITY_ACTIVE_BOUNDS
+	end if
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object[currentPlayer].animation != ANI_HURT
+			BoxCollisionTest(C_TOUCH, object.entityPos, -7, -6, 7, 6, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+			if checkResult == 1
+				if object.state == 0
+					PlaySfx(SfxName[Bumper], 0)
+					if object.value1 < 5
+						CreateTempObject(TypeName[Object Score], 16, object.xpos, object.ypos)
+						player.score += 10
+						object.value1++
+					end if
+				end if
+				if object.value0 > 5
+					PlaySfx(SfxName[Bumper], 0)
+				end if
+				object.state = 1
+				object.priority = PRIORITY_ACTIVE
+				temp0 = object[currentPlayer].xpos
+				temp0 -= object.xpos
+				temp1 = object[currentPlayer].ypos
+				temp1 -= object.ypos
+				ATan2(temp2, temp0, temp1)
+				Cos256(temp0, temp2)
+				Sin256(temp1, temp2)
+				temp0 *= 0x700
+				temp1 *= 0x700
+				if object[currentPlayer].state == PlayerObject_FlyCarry
+					object[1].value36 = 30
+				end if
+				CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
+				temp2 = checkResult
+				CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
+				temp2 |= checkResult
+				CheckEqual(object[currentPlayer].animation, ANI_FLYING)
+				temp2 |= checkResult
+				if temp2 == 0
+					object[currentPlayer].state = PlayerObject_HandleAir
+					if object[currentPlayer].animation != ANI_JUMPING
+						if object[currentPlayer].animation != ANI_RUNNING
+							object[currentPlayer].animation = ANI_WALKING
+						end if
+					end if
+				end if
+				if object[currentPlayer].animation != ANI_GLIDING
+					object[currentPlayer].xvel = temp0
+					object[currentPlayer].speed = object[currentPlayer].xvel
+					object[currentPlayer].value1 = 0
+				end if
+				object[currentPlayer].yvel = temp1
+				object[currentPlayer].gravity = GRAVITY_AIR
+				object[currentPlayer].tileCollisions = 1
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-14, -14, 28, 28, 1, 131)
+	SpriteFrame(-12, -12, 24, 24, 30, 131)
+	SpriteFrame(-16, -16, 32, 32, 55, 131)
+	SpriteFrame(-12, -12, 24, 24, 30, 131)
+	SpriteFrame(-16, -16, 32, 32, 55, 131)
+	SpriteFrame(-16, -16, 32, 32, 55, 131)
+	foreach (TypeName[Bumper], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+	next
+	SetTableValue(TypeName[Bumper], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(Bumper_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(Bumper_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

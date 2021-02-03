@@ -1,0 +1,253 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Transporter Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 69 : TYPE_TRANSPORTER
+
+// Function declarations
+reserve function Transporter_Function155
+
+// Static Values
+
+// Tables
+public table Transporter_table47
+	1, 1, 7, 1, 7, 1, 7, 1
+end table
+
+public table Transporter_table46
+	0, 0, 0, 0, 0, 0, 0, 0
+end table
+
+private table Transporter_table0
+	0x7940000, 0x98C0000, 
+end table
+
+private table Transporter_table1
+	0x940000, 0x38C0000
+end table
+
+private table Transporter_table2
+	0x7940000, 0x2E80000, 0x7A40000, 0x2C00000, 0x7D00000, 0x2AC0000, 0x8580000, 0x2AC0000, 0x8840000, 0x2980000, 0x8940000, 0x2700000, 0x8940000, 0x1900000
+end table
+
+private table Transporter_table3
+	0x8940000, 0x6900000
+end table
+
+private table Transporter_table4
+	0x11940000, 0x4700000, 0x11840000, 0x4980000, 0x11580000, 0x4AC0000, 0xFD00000, 0x4AC0000, 0xFA40000, 0x4C00000, 0xF940000, 0x4E80000, 0xF940000, 0x5900000
+end table
+
+private table Transporter_table5
+	0x12940000, 0x4900000
+end table
+
+private table Transporter_table6
+	0x15940000, 0x7E80000, 0x15840000, 0x7C00000, 0x15600000, 0x7AC0000, 0x14D00000, 0x7AC0000, 0x14A40000, 0x7980000, 0x14940000, 0x7700000, 0x14940000, 0x5900000
+end table
+
+private table Transporter_table7
+	0x8940000, 0x900000
+end table
+
+function Transporter_Function155
+	temp0 = object.value1
+	temp2 = 0x1000
+	temp0 -= object[currentPlayer].xpos
+	if temp0 < 0
+		FlipSign(temp0)
+		FlipSign(temp2)
+	end if
+	temp0 >>= 16
+	temp1 = object.value2
+	temp3 = 0x1000
+	temp1 -= object[currentPlayer].ypos
+	if temp1 < 0
+		FlipSign(temp1)
+		FlipSign(temp3)
+	end if
+	temp1 >>= 16
+	if temp1 >= temp0
+		temp1 = object.value2
+		temp1 -= object[currentPlayer].ypos
+		temp1 &= -0x10000
+		temp1 /= temp3
+		temp0 = object.value1
+		temp0 -= object[currentPlayer].xpos
+		if temp0 != 0
+			temp0 &= -0x10000
+			temp0 /= temp1
+		end if
+		temp0 <<= 8
+		temp3 <<= 8
+		temp1 >>= 8
+		object[currentPlayer].xvel = temp0
+		object[currentPlayer].yvel = temp3
+		Abs(temp1)
+		object.value3 = temp1
+	else
+		temp0 = object.value1
+		temp0 -= object[currentPlayer].xpos
+		temp0 &= -0x10000
+		temp0 /= temp2
+		temp1 = object.value2
+		temp1 -= object[currentPlayer].ypos
+		if temp1 != 0
+			temp1 &= -0x10000
+			temp1 /= temp0
+		end if
+		temp1 <<= 8
+		temp2 <<= 8
+		temp0 >>= 8
+		object[currentPlayer].xvel = temp2
+		object[currentPlayer].yvel = temp1
+		Abs(temp0)
+		object.value3 = temp0
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if object[currentPlayer].state != PlayerObject_Blank
+				temp0 = object[currentPlayer].xpos
+				temp0 -= object.xpos
+				if object.direction == FLIP_X
+					temp0 += 0xF0000
+				end if
+				if temp0 >= 0
+					if temp0 < 0x100000
+						temp1 = object[currentPlayer].ypos
+						temp1 -= object.ypos
+						temp1 += 0x200000
+						if temp1 >= 0
+							if temp1 < 0x400000
+								temp0 = 1
+								if object.propertyValue == 7
+									if object[currentPlayer].value0 < 50
+										temp0 = 0
+									else
+										if stage.debugMode == 0
+											if currentPlayer == 0
+												CallNativeFunction2(SetAchievement, 8, 100)
+											end if
+										end if
+									end if
+								end if
+								if temp0 == 1
+									CreateTempObject(TypeName[Transporter], object.propertyValue, object.xpos, object.ypos)
+									GetTableValue(object[tempObjectPos].value4, object.propertyValue, Transporter_table46)
+									GetTableValue(object[tempObjectPos].value5, object.propertyValue, Transporter_table47)
+									object[tempObjectPos].state = 1
+									object[tempObjectPos].value0 = currentPlayer
+									object[currentPlayer].state = PlayerObject_Blank
+									object[currentPlayer].tileCollisions = 0
+									object[currentPlayer].animation = ANI_JUMPING
+									object[currentPlayer].value5 = 0
+									object[currentPlayer].animationSpeed = 0
+									object[currentPlayer].xvel = 0
+									object[currentPlayer].yvel = 0
+									object[currentPlayer].gravity = GRAVITY_AIR
+									object[currentPlayer].scrollTracking = 1
+									object[currentPlayer].xpos = object.xpos
+									object[currentPlayer].ypos = object.ypos
+									PlaySfx(SfxName[Rolling], 0)
+								end if
+							end if
+						end if
+					end if
+				end if
+			end if
+		next
+		break
+	case 1
+		currentPlayer = object.value0
+		Sin256(object[currentPlayer].ypos, object.angle)
+		object.angle += 2
+		object[currentPlayer].ypos <<= 11
+		FlipSign(object[currentPlayer].ypos)
+		object[currentPlayer].ypos += object.ypos
+		if object[currentPlayer].value7 < 2
+			object[currentPlayer].value7 = 2
+		end if
+		if object.angle == 128
+			temp0 = object.value6
+			temp0 <<= 1
+			GetTableValue(object.value1, temp0, object.value4)
+			temp0++
+			GetTableValue(object.value2, temp0, object.value4)
+			if object.propertyValue == 6
+				object[currentPlayer].ypos += 0x8000000
+				if currentPlayer == 0
+					tileLayer[2].scrollPos -= 0x1000000
+					screen.cameraY += 0x800
+					screen.yoffset += 0x800
+				end if
+				foreach (TypeName[Ring], arrayPos0, ACTIVE_ENTITIES)
+					BoxCollisionTest(C_TOUCH, object.entityPos, -128, -256, 0, 0, arrayPos0, -8, -8, 8, 8)
+					if checkResult == 1
+						object[arrayPos0].ypos += 0x8000000
+					end if
+				next
+			end if
+			CallFunction(Transporter_Function155)
+			object.state++
+			PlaySfx(SfxName[Release], 0)
+		end if
+		break
+	case 2
+		currentPlayer = object.value0
+		object.value3--
+		if object.value3 < 0
+			object[currentPlayer].xpos = object.value1
+			object[currentPlayer].ypos = object.value2
+			object.value6++
+			if object.value6 >= object.value5
+				object.type = TypeName[Blank Object]
+				object[currentPlayer].ypos &= 0x7FF0000
+				object[currentPlayer].state = PlayerObject_HandleAir
+				object[currentPlayer].animation = ANI_WALKING
+				object[currentPlayer].tileCollisions = 1
+				object[currentPlayer].speed = 0
+				object[currentPlayer].xvel = 0
+				object[currentPlayer].yvel = 0x20000
+			else
+				temp0 = object.value6
+				temp0 <<= 1
+				GetTableValue(object.value1, temp0, object.value4)
+				temp0++
+				GetTableValue(object.value2, temp0, object.value4)
+				CallFunction(Transporter_Function155)
+			end if
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SetTableValue(Transporter_table0, 0, Transporter_table46)
+	SetTableValue(Transporter_table1, 1, Transporter_table46)
+	SetTableValue(Transporter_table2, 2, Transporter_table46)
+	SetTableValue(Transporter_table3, 3, Transporter_table46)
+	SetTableValue(Transporter_table4, 4, Transporter_table46)
+	SetTableValue(Transporter_table5, 5, Transporter_table46)
+	SetTableValue(Transporter_table6, 6, Transporter_table46)
+	SetTableValue(Transporter_table7, 7, Transporter_table46)
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

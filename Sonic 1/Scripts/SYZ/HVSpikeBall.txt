@@ -1,0 +1,132 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: HV Spike Ball Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 57 : TYPE_HVSPIKEBALL
+
+// Function declarations
+reserve function HVSpikeBall_DebugDraw
+reserve function HVSpikeBall_DebugSpawn
+
+// Static Values
+public value HVSpikeBall_value33 = 0;
+
+// Tables
+
+function HVSpikeBall_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function HVSpikeBall_DebugSpawn
+	CreateTempObject(TypeName[HV Spike Ball], object.direction, object.xpos, object.ypos)
+	temp0 = object[0].value17
+	temp0 -= HVSpikeBall_value33
+	if temp0 == 0
+		if object.direction == FLIP_NONE
+			object[tempObjectPos].value0 = 0x1800
+			object[tempObjectPos].value1 = 0
+			object[tempObjectPos].xpos -= 0x300000
+		else
+			object[tempObjectPos].value0 = -0x1800
+			object[tempObjectPos].value1 = 0
+			object[tempObjectPos].xpos -= 0x300000
+		end if
+	else
+		if object.direction == FLIP_NONE
+			object[tempObjectPos].value0 = 0
+			object[tempObjectPos].value1 = 0x1800
+			object[tempObjectPos].ypos -= 0x300000
+		else
+			object[tempObjectPos].value0 = 0
+			object[tempObjectPos].value1 = -0x1800
+			object[tempObjectPos].ypos -= 0x500000
+		end if
+	end if
+end function
+
+
+event ObjectMain
+	object.angle = SYZSetup_value29
+	object.angle *= 512
+	object.angle /= 356
+	temp0 = object.xpos
+	temp1 = object.ypos
+	Cos(object.xpos, object.angle)
+	object.xpos *= object.value0
+	object.xpos += temp0
+	Sin(object.ypos, object.angle)
+	object.ypos *= object.value1
+	object.ypos += temp1
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			CallFunction(PlayerObject_Hit)
+		end if
+	next
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	Cos(temp0, object.angle)
+	temp0 *= object.value0
+	temp0 += object.xpos
+	Sin(temp1, object.angle)
+	temp1 *= object.value1
+	temp1 += object.ypos
+	DrawSpriteXY(0, temp0, temp1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-24, -24, 48, 48, 61, 178)
+	foreach (TypeName[HV Spike Ball], arrayPos0, ALL_ENTITIES)
+		switch object[arrayPos0].propertyValue
+		case 0
+			object[arrayPos0].value0 = 0x1800
+			object[arrayPos0].value1 = 0
+			object[arrayPos0].xpos -= 0x300000
+			break
+		case 1
+			object[arrayPos0].value0 = -0x1800
+			object[arrayPos0].value1 = 0
+			object[arrayPos0].xpos -= 0x300000
+			break
+		case 2
+			object[arrayPos0].value0 = 0
+			object[arrayPos0].value1 = 0x1800
+			object[arrayPos0].ypos -= 0x300000
+			break
+		case 3
+			object[arrayPos0].value0 = 0
+			object[arrayPos0].value1 = -0x1800
+			object[arrayPos0].ypos -= 0x500000
+			break
+		end switch
+	next
+	temp0 = 0
+	HVSpikeBall_value33 = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[HV Spike Ball], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(HVSpikeBall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(HVSpikeBall_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+end event

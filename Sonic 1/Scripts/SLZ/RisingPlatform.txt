@@ -1,0 +1,294 @@
+// ----------------------------------
+// RSDK Project: Sonic 1/Sonic 2
+// Script Description: Rising Platform Object
+// Script Author: Christan Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+//-------Aliases-------//
+private alias 54 : TYPE_RISINGPLATFORM
+
+// Function declarations
+reserve function RisingPlatform_DebugDraw
+reserve function RisingPlatform_DebugSpawn
+reserve function RisingPlatform_Function121
+reserve function RisingPlatform_Function122
+reserve function RisingPlatform_Function123
+reserve function RisingPlatform_Function124
+
+// Static Values
+public value RisingPlatform_value32 = 0;
+
+// Tables
+private table RisingPlatform_table28
+	0x400000, 0x800000, 0xD00000, 0x400000, 0x800000, 0xD00000, 0x500000, 0x900000, 0xB00000, 0x500000, 0x900000, 0xB00000, 0x800000, 0x800000, 0xC00000
+end table
+
+private table RisingPlatform_table29
+	0, 0, 0, 2, 2, 2, 0, 0, 0, 2, 2, 2, 4, 6, 8
+end table
+
+function RisingPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+function RisingPlatform_DebugSpawn
+	temp0 = object[0].value17
+	temp0 -= RisingPlatform_value32
+	CreateTempObject(TypeName[Rising Platform], temp0, object.xpos, object.ypos)
+	if temp0 < 14
+		object[tempObjectPos].value0 = object[tempObjectPos].xpos
+		object[tempObjectPos].value1 = object[tempObjectPos].ypos
+		object[tempObjectPos].value2 = object[tempObjectPos].xpos
+		object[tempObjectPos].value3 = object[tempObjectPos].ypos
+		temp0 = object[tempObjectPos].propertyValue
+		temp0 &= 15
+		GetTableValue(object[tempObjectPos].value5, temp0, RisingPlatform_table28)
+		GetTableValue(object[tempObjectPos].state, temp0, RisingPlatform_table29)
+		object[tempObjectPos].value6 = 0
+		object[tempObjectPos].value7 = 0
+		object[tempObjectPos].value8 = 0
+	else
+		object[tempObjectPos].value0 = 60
+		object[tempObjectPos].value1 = 60
+		object[tempObjectPos].state = 9
+		object[tempObjectPos].priority = PRIORITY_XBOUNDS
+	end if
+end function
+
+
+function RisingPlatform_Function121
+	if object.value7 == 0
+		if object.value4 < 0x80000
+			object.value4 += 0x1000
+		end if
+	else
+		if object.value4 > 0x4000
+			object.value4 -= 0x1000
+		end if
+	end if
+	if object.value6 > object.value5
+		object.value7 = 1
+	end if
+	object.value6 += object.value4
+	temp0 = object.value5
+	temp0 <<= 1
+	if object.value6 >= temp0
+		object.value8 = 1
+		object.value6 = temp0
+	end if
+end function
+
+
+function RisingPlatform_Function122
+	if object.value7 == 0
+		if object.value4 < 0x80000
+			object.value4 += 0x1000
+		end if
+	else
+		if object.value4 > 0
+			object.value4 -= 0x1000
+		end if
+	end if
+	if object.value6 > object.value5
+		object.value7 = 1
+	end if
+	object.value6 += object.value4
+	if object.value4 == 0
+		object.value8 = 1
+	end if
+end function
+
+
+function RisingPlatform_Function123
+	temp6 = object.xpos
+	temp6 &= -0x10000
+	temp0 = object.value2
+	temp0 &= -0x10000
+	temp6 -= temp0
+	temp7 = object.ypos
+	temp7 &= -0x10000
+	temp0 = object.value3
+	temp0 &= -0x10000
+	temp7 -= temp0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -8, 40, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == 1
+			object[currentPlayer].xpos -= temp6
+			object[currentPlayer].ypos -= temp7
+		end if
+	next
+	object.xpos = object.value2
+	object.ypos = object.value3
+end function
+
+
+function RisingPlatform_Function124
+	if object.outOfBounds == 1
+		object.xpos = object.value0
+		object.ypos = object.value1
+		object.value2 = object.xpos
+		object.value3 = object.ypos
+		object.value6 = 0
+		object.value7 = 0
+		object.value8 = 0
+		object.state = 10
+	end if
+end function
+
+
+event ObjectMain
+	switch object.state
+	case 0
+	case 2
+	case 4
+	case 6
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -8, 40, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			if checkResult == 1
+				object.state++
+				object.priority = PRIORITY_ACTIVE
+			end if
+		next
+		break
+	case 1
+		CallFunction(RisingPlatform_Function121)
+		object.value3 = object.value6
+		FlipSign(object.value3)
+		object.value3 += object.value1
+		CallFunction(RisingPlatform_Function123)
+		CallFunction(RisingPlatform_Function124)
+		break
+	case 3
+		CallFunction(RisingPlatform_Function121)
+		object.value3 = object.value6
+		object.value3 += object.value1
+		CallFunction(RisingPlatform_Function123)
+		CallFunction(RisingPlatform_Function124)
+		break
+	case 5
+		CallFunction(RisingPlatform_Function121)
+		object.value3 = object.value6
+		object.value3 >>= 1
+		FlipSign(object.value3)
+		object.value3 += object.value1
+		object.value2 = object.value6
+		object.value2 += object.value0
+		CallFunction(RisingPlatform_Function123)
+		CallFunction(RisingPlatform_Function124)
+		break
+	case 7
+		CallFunction(RisingPlatform_Function121)
+		object.value3 = object.value6
+		object.value3 >>= 1
+		object.value3 += object.value1
+		object.value2 = object.value6
+		FlipSign(object.value2)
+		object.value2 += object.value0
+		CallFunction(RisingPlatform_Function123)
+		CallFunction(RisingPlatform_Function124)
+		break
+	case 8
+		CallFunction(RisingPlatform_Function122)
+		object.value3 = object.value6
+		FlipSign(object.value3)
+		object.value3 += object.value1
+		CallFunction(RisingPlatform_Function123)
+		temp0 = object.value4
+		temp0 >>= 8
+		if temp0 > 256
+			temp0 = 256
+		end if
+		object.alpha = temp0
+		if object.value8 == 1
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	case 9
+		object.value1--
+		if object.value1 <= 0
+			CreateTempObject(TypeName[Rising Platform], 0, object.xpos, object.ypos)
+			object[tempObjectPos].value0 = object.xpos
+			object[tempObjectPos].value1 = object.ypos
+			object[tempObjectPos].value2 = object.xpos
+			object[tempObjectPos].value3 = object.ypos
+			temp0 = 14
+			GetTableValue(object[tempObjectPos].value5, temp0, RisingPlatform_table28)
+			GetTableValue(object[tempObjectPos].state, temp0, RisingPlatform_table29)
+			object[tempObjectPos].value6 = 0
+			object[tempObjectPos].value7 = 0
+			object[tempObjectPos].value8 = 0
+			object[tempObjectPos].inkEffect = INK_ALPHA
+			object.value1 = object.value0
+		end if
+		break
+	case 10
+		if object.outOfBounds == 1
+			temp0 = object.propertyValue
+			temp0 &= 15
+			GetTableValue(object.value5, temp0, RisingPlatform_table28)
+			GetTableValue(object.state, temp0, RisingPlatform_table29)
+			object.priority = PRIORITY_ACTIVE_BOUNDS
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.state == 8
+		DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+	else
+		if object.state < 9
+			DrawSprite(0)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-40, -8, 80, 32, 84, 188)
+	foreach (TypeName[Rising Platform], arrayPos0, ALL_ENTITIES)
+		GetBit(temp0, object[arrayPos0].propertyValue, 7)
+		if temp0 == 0
+			object[arrayPos0].value0 = object[arrayPos0].xpos
+			object[arrayPos0].value1 = object[arrayPos0].ypos
+			object[arrayPos0].value2 = object[arrayPos0].xpos
+			object[arrayPos0].value3 = object[arrayPos0].ypos
+			temp0 = object[arrayPos0].propertyValue
+			temp0 &= 15
+			GetTableValue(object[arrayPos0].value5, temp0, RisingPlatform_table28)
+			GetTableValue(object[arrayPos0].state, temp0, RisingPlatform_table29)
+			object[arrayPos0].value6 = 0
+			object[arrayPos0].value7 = 0
+			object[arrayPos0].value8 = 0
+		else
+			object[arrayPos0].value0 = object[arrayPos0].propertyValue
+			object[arrayPos0].value0 &= 127
+			object[arrayPos0].value0 *= 6
+			object[arrayPos0].value1 = object[arrayPos0].value0
+			object[arrayPos0].state = 9
+			object[arrayPos0].priority = PRIORITY_XBOUNDS
+		end if
+	next
+	temp0 = 0
+	RisingPlatform_value32 = DebugMode_ObjCount
+	while temp0 < 15
+		SetTableValue(TypeName[Rising Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(RisingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(RisingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-40, -8, 80, 32, 84, 188)
+end event
