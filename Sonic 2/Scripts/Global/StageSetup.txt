@@ -6,60 +6,64 @@
 // ----------------------------------
 
 //-------Aliases-------//
-private alias 4 : TYPE_STAGESETUP
 
 // Function declarations
-reserve function StageSetup_Function71
+reserve function StageSetup_HandleOscillationTable
 
 // Static Values
-public value StageSetup_value22 = 0;
-public value StageSetup_value21 = 0;
+public value StageSetup_monitorOverlayFrame = 0;
+public value StageSetup_oscillateFlipFlags = 0;
 
 // Tables
-public table StageSetup_table8
+public table StageSetup_initOscillationTable
 	128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0
 	128, 0, 0x3848, 238, 0x2080, 180, 0x3080, 270, 0x5080, 450, 0x7080, 630, 128, 0, 0x4000, 254
 end table
 
-public table StageSetup_table9
+public table StageSetup_oscillationTable
 	128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0
 	128, 0, 0x3848, 238, 0x2080, 180, 0x3080, 270, 0x5080, 450, 0x7080, 630, 128, 0, 0x4000, 254
 end table
 
-public table StageSetup_table10
+public table StageSetup_oscillateLimits
 	2, 0x1000, 2, 0x1800, 2, 0x2000, 2, 0x3000, 4, 0x2000, 8, 0x800, 8, 0x4000, 4, 0x4000
 	2, 0x3800, 2, 0x3800, 2, 0x2000, 3, 0x3000, 5, 0x5000, 7, 0x7000, 2, 0x4000, 2, 0x4000
 end table
 
 
-function StageSetup_Function71
+function StageSetup_HandleOscillationTable
 	temp0 = 0
 	temp1 = 0
 	while temp0 < 16
-		GetTableValue(temp4, temp1, StageSetup_table10)
-		GetTableValue(temp6, temp1, StageSetup_table9)
+		GetTableValue(temp4, temp1, StageSetup_oscillateLimits)		// temp4 = oscillateSpeed
+		GetTableValue(temp6, temp1, StageSetup_oscillationTable)	// temp6 = oscillatePos
 		temp1++
-		GetTableValue(temp5, temp1, StageSetup_table10)
-		GetTableValue(temp7, temp1, StageSetup_table9)
+
+		GetTableValue(temp5, temp1, StageSetup_oscillateLimits)		// temp5 = oscillateMax
+		GetTableValue(temp7, temp1, StageSetup_oscillationTable)	// temp7 = oscillateInc
 		temp1--
-		GetBit(temp2, StageSetup_value21, temp0)
-		if temp2 == 0
+
+		GetBit(temp2, StageSetup_oscillateFlipFlags, temp0)
+		if temp2 == false
 			temp7 += temp4
 			temp6 += temp7
 			if temp6 >= temp5
-				SetBit(StageSetup_value21, temp0, 1)
+				SetBit(StageSetup_oscillateFlipFlags, temp0, true)
 			end if
 		else
 			temp7 -= temp4
 			temp6 += temp7
 			if temp6 < temp5
-				SetBit(StageSetup_value21, temp0, 0)
+				SetBit(StageSetup_oscillateFlipFlags, temp0, false)
 			end if
 		end if
-		SetTableValue(temp6, temp1, StageSetup_table9)
+
+		SetTableValue(temp6, temp1, StageSetup_oscillationTable)
 		temp1++
-		SetTableValue(temp7, temp1, StageSetup_table9)
+
+		SetTableValue(temp7, temp1, StageSetup_oscillationTable)
 		temp1++
+
 		temp0++
 	loop
 end function
@@ -67,20 +71,26 @@ end function
 
 event ObjectMain
 	switch stage.state
-	case 2
-	case 3
+	case STAGE_PAUSED
+	case STAGE_FROZEN
+		// Do nothing
 		break
 	default
+		// Handle Ring Frame
 		ringTimer++
 		if ringTimer == 4
 			ringTimer = 0
 			ringFrame++
 			ringFrame &= 7
 		end if
-		StageSetup_value22++
-		if StageSetup_value22 > 17
-			StageSetup_value22 = 0
+
+		// Handle Monitor overlay frame
+		StageSetup_monitorOverlayFrame++
+		if StageSetup_monitorOverlayFrame > 17
+			StageSetup_monitorOverlayFrame = 0
 		end if
+		
+		// Handle Player Score Bonus
 		if options.gameMode != 2
 			if player.score >= player.scoreBonus
 				player.lives++
@@ -91,12 +101,16 @@ event ObjectMain
 				object[25].priority = PRIORITY_ACTIVE
 			end if
 		end if
+
+		// Handle Oscillations & Platform Array movements
 		oscillation++
 		oscillation &= 511
-		CallFunction(StageSetup_Function71)
-		if stage.timeEnabled == 1
+		CallFunction(StageSetup_HandleOscillationTable)
+
+		// Handle Time overs
+		if stage.timeEnabled == true
 			if stage.minutes == 10
-				CheckEqual(stage.debugMode, 1)
+				CheckEqual(stage.debugMode, true)
 				temp0 = checkResult
 				CheckEqual(options.gameMode, 2)
 				temp0 |= checkResult
@@ -106,12 +120,14 @@ event ObjectMain
 					object[0].type = TypeName[Player Object]
 					CallFunction(PlayerObject_Kill)
 				end if
-				stage.minutes = 9
-				stage.seconds = 59
-				stage.milliSeconds = 99
-				stage.timeEnabled = 0
+				stage.minutes 		= 9
+				stage.seconds 		= 59
+				stage.milliSeconds 	= 99
+				stage.timeEnabled 	= false
 			end if
 		end if
+
+		//Boundaries: Left & Bottom
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = object[currentPlayer].collisionLeft
 			temp0 <<= 16
@@ -119,18 +135,20 @@ event ObjectMain
 			temp1 = stage.curXBoundary1
 			temp1 <<= 16
 			if temp0 < temp1
-				if object[currentPlayer].right == 1
-					object[currentPlayer].xvel = 0x10000
+				if object[currentPlayer].right == true
+					object[currentPlayer].xvel 	= 0x10000
 					object[currentPlayer].speed = 0x10000
 				else
-					object[currentPlayer].xvel = 0
+					object[currentPlayer].xvel 	= 0
 					object[currentPlayer].speed = 0
 				end if
+
 				object[currentPlayer].xpos = temp1
 				temp0 = object[currentPlayer].collisionLeft
 				temp0 <<= 16
 				object[currentPlayer].xpos -= temp0
 			end if
+
 			temp1 = stage.curYBoundary2
 			temp1 <<= 16
 			if temp1 < stage.deathBoundary
@@ -144,34 +162,40 @@ event ObjectMain
 			end if
 		next
 	end switch
-	if options.attractMode == 0
+
+	// Handle Touch Controls
+	if options.attractMode == false
 		if object[0].controlMode > -1
-			options.touchControls = 1
+			options.touchControls = true
 		else
-			options.touchControls = 0
+			options.touchControls = false
 		end if
 	else
-		options.touchControls = 0
+		options.touchControls = false
 	end if
+
+	// Sort players, player 1 should always be on top of player 2
 	currentPlayer = playerCount
 	currentPlayer--
 	while currentPlayer > -1
-		if object[currentPlayer].visible == 1
+		if player[currentPlayer].visible == true
 			currentPlayer += playerCount
-			if object[currentPlayer].value18 == 0
+			if player[currentPlayer].sortedDrawOrder == 0
 				currentPlayer -= playerCount
-				arrayPos0 = object[currentPlayer].value18
+				arrayPos0 = player[currentPlayer].sortedDrawOrder
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
+
 				currentPlayer += playerCount
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
 				currentPlayer -= playerCount
 			else
 				currentPlayer -= playerCount
-				arrayPos0 = object[currentPlayer].value18
+				arrayPos0 = player[currentPlayer].sortedDrawOrder
 				currentPlayer += playerCount
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
+
 				currentPlayer -= playerCount
-				arrayPos0 = object[currentPlayer].value18
+				arrayPos0 = player[currentPlayer].sortedDrawOrder
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
 			end if
 		end if
@@ -181,49 +205,61 @@ end event
 
 
 event ObjectStartup
-	SetMusicTrack("ActComplete.ogg", 1, 0)
-	SetMusicTrack("Invincibility.ogg", 2, 0x9717)
-	SetMusicTrack("Continue.ogg", 3, 0)
-	SetMusicTrack("Boss.ogg", 4, 1)
-	SetMusicTrack("GameOver.ogg", 5, 0)
-	SetMusicTrack("Drowning.ogg", 6, 0)
-	SetMusicTrack("Super.ogg", 7, 1)
-	stage.timeOver = 0
-	if options.attractMode == 0
+	SetMusicTrack("ActComplete.ogg", 1, false)
+	SetMusicTrack("Invincibility.ogg", 2, 38679)
+	SetMusicTrack("Continue.ogg", 3, false)
+	SetMusicTrack("Boss.ogg", 4, true)
+	SetMusicTrack("GameOver.ogg", 5, false)
+	SetMusicTrack("Drowning.ogg", 6, false)
+	SetMusicTrack("Super.ogg", 7, true)
+
+	stage.timeOver = false
+
+	if options.attractMode == false
+		// There is code here on the official PC version...
+		// however! we don't have that!
 	else
+		//Set Object Range, changes internal bounds so attract mode always looks the same
 		SetObjectRange(424)
 	end if
-	SpeedUpMusic = 0
-	SlowDownMusic = 0
-	stage.musicFlag = 0
+
+	SpeedUpMusic 	= 0
+	SlowDownMusic 	= 0
+	stage.musicFlag = false
+
 	stage.deathBoundary = stage.curYBoundary2
 	stage.deathBoundary <<= 16
+
 	foreach (TypeName[Stage Setup], arrayPos0, ALL_ENTITIES)
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
 	object[8].type = TypeName[Stage Setup]
 	object[8].priority = PRIORITY_ACTIVE_PAUSED
+
 	foreach (TypeName[HUD], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].type = TypeName[Blank Object]
 		if credits.screen == 0
-			object[9].type = TypeName[HUD]
-			object[9].priority = PRIORITY_ACTIVE
-			object[9].drawOrder = 6
+			object[9].type 			= TypeName[HUD]
+			object[9].priority 		= PRIORITY_ACTIVE
+			object[9].drawOrder 	= 6
 			object[9].propertyValue = object[arrayPos0].propertyValue
 		end if
 	next
-	ringExtraLife = 100
-	oscillation = 0
-	StageSetup_value21 = 0xBE00
+
+	ringExtraLife 						= 100
+	oscillation 						= 0
+	StageSetup_oscillateFlipFlags 	= 0b1011111000000000
 	temp0 = 0
 	while temp0 < 32
-		GetTableValue(temp1, temp0, StageSetup_table8)
-		SetTableValue(temp1, temp0, StageSetup_table9)
+		GetTableValue(temp1, temp0, StageSetup_initOscillationTable)
+		SetTableValue(temp1, temp0, StageSetup_oscillationTable)
 		temp0++
 	loop
+
 	if options.saveSlot > 0
 		options.shieldType = 0
 	end if
+
 	blueShieldType = TypeName[Blue Shield]
 	invincibilityType = TypeName[Invincibility]
 end event

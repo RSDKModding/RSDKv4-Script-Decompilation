@@ -12,6 +12,8 @@ public alias  65536 	: HITBOX_AUTO
 public alias  arrayPos6 : currentPlayer
 public alias  arrayPos7 : playerCount
 
+public alias  -1 		: DRAWORDER_PLAYER
+
 // Variables
 public alias object.type			:	player.type		 // Normally just TypeName[Player Object] but may be [Debug mode] or other things in certain situations
 public alias object.entityPos		:	player.entityPos // Where the player is on the object list. P1 should be 0, P2 should be 1
@@ -76,7 +78,7 @@ public alias object.value11	:	camera.lockTimer			// A timer of how long the came
 public alias object.value14 :	player.skidding
 public alias object.value16	:	player.isPlayer2			// 0/false is player 1, 1/true if player 2
 public alias object.value17	:	debugMode.currentSelection
-public alias object.value18	:	player.currentPlane
+public alias object.value18	:	player.sortedDrawOrder
 public alias object.value19	:	player.enemyChainCounter	// How many times the player has bounced on enemies in a row
 public alias object.value20	:	player.speedCap 			// Not to be confused with options.speedCap
 public alias object.value21	:	player.acceleration
@@ -98,6 +100,7 @@ public alias object.value38	:	player.hitboxLeft
 public alias object.value39	:	player.hitboxRight
 public alias object.value40	:	player.hitboxTop
 public alias object.value41	:	player.hitboxBottom
+public alias object.value42	:	player.prevGravity
 
 // Function declarations
 reserve function PlayerObject_ProcessPlayer
@@ -356,7 +359,7 @@ function PlayerObject_RestorePowerup
 		ResetObjectEntity(arrayPos0, goggleType, 0, 0, 0)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		object[arrayPos0].value0 = currentPlayer
-		object[arrayPos0].drawOrder = -1
+		object[arrayPos0].drawOrder = DRAWORDER_PLAYER
 	end switch
 end function
 
@@ -905,7 +908,7 @@ function PlayerObject_Kill
 	object[currentPlayer].interaction = false
 	player.invulnerable[currentPlayer] = 0
 	object[currentPlayer].visible = true
-	player.currentPlane[currentPlayer] = 6
+	player[currentPlayer].sortedDrawOrder = 6
 	if currentPlayer == 0
 		object[currentPlayer].priority = PRIORITY_ACTIVE_PAUSED
 		if object[1].type == TypeName[Player 2 Object]
@@ -1936,7 +1939,7 @@ function PlayerObject_HandleGround
 			if ringTimer == 0
 				CreateTempObject(TypeName[Dust Puff], 0, player.xpos, player.ypos)
 				object[tempObjectPos].iypos += player.collisionBottom
-				object[tempObjectPos].drawOrder = player.currentPlane
+				object[tempObjectPos].drawOrder = player.sortedDrawOrder
 			end if
 			if player.speed > 0
 				player.direction = FLIP_NONE
@@ -2771,7 +2774,7 @@ function PlayerObject_KnuxGlideSlide
 			if ringTimer == 0
 				CreateTempObject(TypeName[Dust Puff], 0, player.xpos, player.ypos)
 				object[tempObjectPos].iypos += player.collisionBottom
-				object[tempObjectPos].drawOrder = player.currentPlane
+				object[tempObjectPos].drawOrder = player.sortedDrawOrder
 				if player.timer == 0
 					PlaySfx(SfxName[Sliding], 0)
 					player.timer = 1
@@ -3093,7 +3096,7 @@ function PlayerObject_Hurt
 		ringExtraLife = 100
 		break
 	case 3 // Death - Gadzooks!
-		player.currentPlane = 6
+		player.sortedDrawOrder = 6
 		player.speed = 0
 		player.yvel = -0x70000
 		player.xvel = 0
@@ -3514,15 +3517,15 @@ event ObjectMain
 				end if
 			end if
 			if player.collisionEnabled == false
-				temp0 = object.value42
-				object.value42 = player.gravity
+				temp0 = player.prevGravity
+				player.prevGravity = player.gravity
 				ProcessObjectMovement()
-				object.value42 ^= 1
+				player.prevGravity ^= 1
 				CheckEqual(player.gravity, GRAVITY_GROUND)
-				object.value42 |= checkResult
-				object.value42 ^= 1
+				player.prevGravity |= checkResult
+				player.prevGravity ^= 1
 				if temp0 == true
-					if object.value42 == 0
+					if player.prevGravity == 0
 						player.enemyChainCounter = 0
 						achieveRingCount = 0
 						if player.animation == ANI_JUMPING
@@ -3564,15 +3567,15 @@ event ObjectMain
 			end if
 		end if
 		if player.collisionEnabled == false
-			temp0 = object.value42
-			object.value42 = player.gravity
+			temp0 = player.prevGravity
+			player.prevGravity = player.gravity
 			ProcessObjectMovement()
-			object.value42 ^= 1
+			player.prevGravity ^= 1
 			CheckEqual(player.gravity, GRAVITY_GROUND)
-			object.value42 |= checkResult
-			object.value42 ^= 1
+			player.prevGravity |= checkResult
+			player.prevGravity ^= 1
 			if temp0 == true
-				if object.value42 == 0
+				if player.prevGravity == 0
 					player.enemyChainCounter = 0
 					achieveRingCount = 0
 					if player.animation == ANI_JUMPING
@@ -3649,18 +3652,18 @@ event ObjectStartup
 		object[0].groupID = GROUP_PLAYERS
 		player.state[0] = PlayerObject_HandleAir
 		object[0].priority = PRIORITY_ACTIVE
-		object[0].drawOrder = -1
-		player.currentPlane[0] = 4
-		player.rollingDecelerationP[0] = 0x2000
+		object[0].drawOrder = DRAWORDER_PLAYER
+		player[0].sortedDrawOrder = 4
+		player[0].rollingDecelerationP = 0x2000
 		if options.spindash == true
-			player.spindashFunction[0] = PlayerObject_StartSpindash
+			player[0].spindashFunction = PlayerObject_StartSpindash
 		else
-			player.spindashFunction[0] = PlayerObject_StartJump
+			player[0].spindashFunction = PlayerObject_StartJump
 		end if
-		player.hitboxLeft[0] 	= HITBOX_AUTO
-		player.hitboxRight[0] 	= HITBOX_AUTO
-		player.hitboxTop[0] 	= HITBOX_AUTO
-		player.hitboxBottom[0] 	= HITBOX_AUTO
+		player[0].hitboxLeft 	= HITBOX_AUTO
+		player[0].hitboxRight 	= HITBOX_AUTO
+		player[0].hitboxTop 	= HITBOX_AUTO
+		player[0].hitboxBottom 	= HITBOX_AUTO
 		PlayerObject_SuperState = 0
 		PlayerObject_SuperRingDecFrames = 0
 		PlayerObject_SuperCounter1 = 0
@@ -3670,26 +3673,26 @@ event ObjectStartup
 			LoadAnimation("SuperSonic.ani") // Also load Super's animations in case player decides to transform later
 			LoadAnimation("Sonic.ani")
 			CallFunction(PlayerObject_HandleSuperPalSonic) // Initialize fur colors
-			player.character[0] = 0
-			player.jumpOffset[0] = -5 // Offset by 5 pixels when rolling
-			player.jumpAbility[0] = PlayerObject_HandleShieldAbilities // Sonic's ability is the shield moves (& Insta-shield with S3K shields)
+			player[0].character = 0
+			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
+			player[0].jumpAbility = PlayerObject_HandleShieldAbilities // Sonic's ability is the shield moves (& Insta-shield with S3K shields)
 			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
 			break
 		case 1
 			object[0].type = TypeName[Tails Object]
-			player.character[0] = 1
+			player[0].character = 1
 			CallFunction(PlayerObject_HandleSuperPalTails) // Initialize fur colors
 			LoadAnimation("Tails.ani")
-			player.jumpOffset[0] = -1 // Tails is shorter, so change this to account for that
-			player.jumpAbility[0] = PlayerObject_StartTailsFlight // Tails's ability is flight
+			player[0].jumpOffset = -1 // Tails is shorter, so change this to account for that
+			player[0].jumpAbility = PlayerObject_StartTailsFlight // Tails's ability is flight
 			stage.player2Enabled = false
 			break
 		case 2
 			LoadAnimation("Knuckles.ani")
 			CallFunction(PlayerObject_HandleSuperPalKnux) // Initialize fur colors
-			player.character[0] = 2
-			player.jumpOffset[0] = -5 // Offset by 5 pixels when rolling
-			player.jumpAbility[0] = PlayerObject_StartKnuxGlide // Knuckles's ability is gliding
+			player[0].character = 2
+			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
+			player[0].jumpAbility = PlayerObject_StartKnuxGlide // Knuckles's ability is gliding
 			ANI_PEELOUT = ANI_RUNNING // Disable the "Peelout" animation from showing up
 			if options.saveSlot > 0 // Force 2P Tails to be off if not on no-save
 				stage.player2Enabled = false
