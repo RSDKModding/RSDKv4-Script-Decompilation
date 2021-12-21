@@ -8,14 +8,22 @@
 //-------Aliases-------//
 private alias 61 : TYPE_HPZTRIGGER
 
+private alias object.value0 : object.timer
 
-// Static Values
+private alias 0 : STATE_BLANK
+private alias 1 : STATE_PAUSE
+private alias 2 : STATE_FADEOUT
 
-// Tables
+private alias object.state : player.state
+private alias object.yvel : player.yvel
+private alias object.animation : player.animation
+private alias object.value25 : player.gravityValue
 
 event ObjectMain
+
+	// Check if the camera bounds should change now
 	BoxCollisionTest(C_TOUCH, object.entityPos, -68, 0, 68, 0x1400, 0, 0, 0, 0, 0)
-	if checkResult == 1
+	if checkResult == true
 		stage.curYBoundary2 = 0x1000
 		stage.deathBoundary = 0x1400
 		stage.deathBoundary <<= 16
@@ -24,35 +32,54 @@ event ObjectMain
 		stage.deathBoundary = stage.curYBoundary2
 		stage.deathBoundary <<= 16
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
+		// Check player collision
 		BoxCollisionTest(C_TOUCH, object.entityPos, -68, 512, 68, 0x1400, currentPlayer, 0, 0, 0, 0)
-		if checkResult == 1
-			object[currentPlayer].animation = ANI_WATERSLIDE
-			object[currentPlayer].state = PlayerObject_HandleAir
-			if object[currentPlayer].yvel >= 0x100000
-				object[currentPlayer].yvel = 0x100000
-				object[currentPlayer].yvel -= object[currentPlayer].value25
+
+		if checkResult == true
+
+			// Player has touched this object, start the transition
+
+			// Make the player start flailing
+			player[currentPlayer].animation = ANI_WATERSLIDE
+
+			// Player should already be in this state, but it doesn't hurt
+			player[currentPlayer].state = PlayerObject_HandleAir
+
+			// Enforce minimum Y velocity
+			if player[currentPlayer].yvel >= 0x100000
+				player[currentPlayer].yvel = 0x100000
+				player[currentPlayer].yvel -= player[currentPlayer].gravityValue
 			end if
+
+			// If P1, switch to main state
 			if currentPlayer == 0
-				if object.state == 0
-					object.state = 1
+				if object.state == STATE_BLANK
+					object.state = STATE_PAUSE
 				end if
 			end if
 		end if
+
 	next
+
 	switch object.state
-	case 1
-		object.value0++
-		if object.value0 == 60
-			object.value0 = 0
+	case STATE_PAUSE
+		// Letting the player fall for a second
+		object.timer++
+		if object.timer == 60
+			object.timer = 0
 			object.state++
 		end if
 		break
-	case 2
+
+	case STATE_FADEOUT
+		// Fading out to go to HPZ
 		music.volume -= 2
-		object.value0 += 8
-		SetScreenFade(0, 0, 0, object.value0)
-		if object.value0 == 384
+		object.timer += 8
+		SetScreenFade(0, 0, 0, object.timer)
+		if object.timer == 384
 			starPostID = 0
 			stage.listPos = 20
 			StopMusic()
@@ -64,17 +91,30 @@ end event
 
 
 event ObjectStartup
+
+	// Cycle through all HPZ Trigger objects and...
 	foreach (TypeName[HPZ Trigger], arrayPos0, ALL_ENTITIES)
+
 		if options.gameMode == 2
+
+			// Erase it if in time attack
 			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+
 		else
-			if options.vsMode == 0
+			if options.vsMode == false
+
+				// Give it the XBOUNDS priority if in single player
 				object[arrayPos0].priority = PRIORITY_XBOUNDS
+
 			else
+
+				// Erase it if in 2P mode
 				ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+
 			end if
 		end if
 	next
+
 end event
 
 event RSDKDraw

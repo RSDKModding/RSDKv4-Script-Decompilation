@@ -8,18 +8,18 @@
 //-------Aliases-------//
 private alias 44 : TYPE_BALLHOG
 
+private alias object.value1 : object.timer
+
 // Function declarations
 reserve function BallHog_DebugDraw
 reserve function BallHog_DebugSpawn
 
-// Static Values
-
 // Tables
-public table BallHog_table37
-	0, 2, 3, 2, 0, 2, 3, 2, 0, 2, 3, 2, 0, 1, 0
+public table BallHog_animSpriteTable
+	0,  2,  3,  2,  0,  2,  3,  2,  0,  2,  3,  2,  0,  1, 0
 end table
 
-public table BallHog_table36
+public table BallHog_animDelayTable
 	20, 20, 10, 10, 20, 20, 10, 10, 20, 20, 10, 10, 20, 10
 end table
 
@@ -37,35 +37,51 @@ end function
 
 
 event ObjectMain
+
+	// Check collision with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -18, 12, 18, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
+		if checkResult == true
 			CallFunction(PlayerObject_BadnikBreak)
 		end if
 	next
+
+	// Sidestep a little
 	if object.frame == 3
 		object.ypos += object.yvel
 		object.yvel += 0x95C0
 		ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
-		if checkResult == 0
+		if checkResult == false
 			object.animationTimer = 2
 		end if
 	end if
+
+	// Update animation & ball lobbing
 	object.animationTimer--
+
 	if object.animationTimer <= 0
-		GetTableValue(object.animationTimer, object.value1, BallHog_table36)
-		GetTableValue(object.frame, object.value1, BallHog_table37)
-		object.value1++
-		if object.value1 >= 14
-			object.value1 = 0
+
+		GetTableValue(object.animationTimer, object.timer, BallHog_animDelayTable)
+		GetTableValue(object.frame, object.timer, BallHog_animSpriteTable)
+
+		object.timer++
+
+		if object.timer >= 14
+			object.timer = 0
 		end if
+
 		if object.frame == 3
 			object.yvel = -0x29999
 			object.ypos += object.yvel
 			object.yvel += 0x95C0
 		end if
+
 		if object.frame == 1
+			// Drop a bomb ball
+
 			CreateTempObject(TypeName[Ball Hog Bomb], 0, object.xpos, object.ypos)
+
+			// Make the bomb match the hog's direction
 			if object.direction == FLIP_NONE
 				object[tempObjectPos].xpos -= 0x40000
 				object[tempObjectPos].xvel = -0x10000
@@ -73,11 +89,15 @@ event ObjectMain
 				object[tempObjectPos].xpos += 0x40000
 				object[tempObjectPos].xvel = 0x10000
 			end if
+
 			object[tempObjectPos].ypos += 0xC0000
 			object[tempObjectPos].value0 = object.propertyValue
 			object[tempObjectPos].value0 *= 60
+
 		end if
+
 	end if
+
 end event
 
 

@@ -8,13 +8,14 @@
 //-------Aliases-------//
 private alias 8 : TYPE_ACTFINISH
 
+private alias TitleCard_value23 : TitleCard_zoneOrAct
 
 // Static Values
 
 // Tables
 
 event ObjectMain
-	options.touchControls = 0
+	options.touchControls = false
 	switch object.state
 	case 0
 		object.drawOrder = 6
@@ -57,9 +58,10 @@ event ObjectMain
 			object.value7 = 100
 			break
 		case 9
-			if stage.debugMode == 0
+			if stage.debugMode == false
 				if options.gameMode < 2
 					if stage.seconds == 59
+						// Cutting it really close there - give the player a ton of points
 						object.value7 = 0x186A0
 					end if
 				end if
@@ -89,9 +91,9 @@ event ObjectMain
 			break
 		end switch
 		if temp0 == 0
-			object.value10 = 1
+			object.value10 = true
 			object.value9 = 0xC350
-			if stage.debugMode == 0
+			if stage.debugMode == false
 				CallNativeFunction2(SetAchievement, 6, 100)
 			end if
 		end if
@@ -148,14 +150,14 @@ event ObjectMain
 		temp0 |= checkResult
 		CheckGreater(object.value9, 0)
 		temp0 |= checkResult
-		if temp0 == 1
+		if temp0 == true
 			object.value0++
 			if object.value0 == 2
 				PlaySfx(SfxName[Score Add], 0)
 				object.value0 = 0
 			end if
 		else
-			if options.vsMode == 0
+			if options.vsMode == false
 				if object.value11 >= 0x2710
 					object.state = 6
 				else
@@ -172,7 +174,7 @@ event ObjectMain
 		object.value0++
 		if object.value0 == 60
 			object.value0 = 0
-			object.value12 = 1
+			object.value12 = true
 			player.continues++
 			PlaySfx(SfxName[Continue], 0)
 			object.state = 4
@@ -196,8 +198,8 @@ event ObjectMain
 			stage.listPos++
 			if stage.listPos > 20
 				stage.listPos = 12
-				if options.stageSelectFlag == 0
-					if stage.debugMode == 0
+				if options.stageSelectFlag == false
+					if stage.debugMode == false
 						if options.gameMode == 0
 							ReadSaveRAM()
 							saveRAM[46] = 1
@@ -211,7 +213,7 @@ event ObjectMain
 			if options.gameMode == 1
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
-				if stage.player2Enabled == 1
+				if stage.player2Enabled == true
 					saveRAM[arrayPos1] = 3
 				else
 					saveRAM[arrayPos1] = stage.playerListPos
@@ -251,9 +253,9 @@ event ObjectMain
 			else
 				temp0 = engine.trialMode
 				if stage.listPos >= stage.listSize
-					temp0 = 1
+					temp0 = true
 				end if
-				if temp0 == 0
+				if temp0 == false
 					LoadStage()
 				else
 					stage.activeList = PRESENTATION_STAGE
@@ -268,15 +270,21 @@ end event
 
 
 event ObjectDraw
+
 	SetActivePalette(0, 0, screen.ysize)
+
 	temp7 = object.value1
 	temp7 += screen.xcenter
+
 	DrawSpriteScreenXY(0, temp7, 64)
 	DrawSpriteScreenXY(1, temp7, 64)
+
 	temp7 = object.value2
 	temp7 += screen.xcenter
 	DrawSpriteScreenXY(2, temp7, 82)
-	if TitleCard_value23 == 0
+
+	// Determine whether to show `got through zone` or `got through act`
+	if TitleCard_zoneOrAct == false
 		DrawSpriteScreenXY(3, temp7, 82)
 		temp1 = stage.actNum
 		temp1 += 4
@@ -284,10 +292,12 @@ event ObjectDraw
 	else
 		DrawSpriteScreenXY(4, temp7, 82)
 	end if
+
 	temp7 = object.value3
 	temp7 += screen.xcenter
 	DrawSpriteScreenXY(8, temp7, 120)
 	DrawSpriteScreenXY(13, temp7, 120)
+
 	temp7 += 88
 	DrawNumbers(14, temp7, 121, object.value7, 6, 8, 0)
 	temp7 = object.value4
@@ -296,7 +306,7 @@ event ObjectDraw
 	DrawSpriteScreenXY(13, temp7, 136)
 	temp7 += 88
 	DrawNumbers(14, temp7, 137, object.value8, 5, 8, 0)
-	if object.value10 == 1
+	if object.value10 == true
 		temp7 = object.value5
 		temp7 += screen.xcenter
 		DrawSpriteScreenXY(10, temp7, 152)
@@ -309,9 +319,9 @@ event ObjectDraw
 	DrawSpriteScreenXY(12, temp7, 168)
 	temp7 += 88
 	DrawNumbers(14, temp7, 169, object.value11, 6, 8, 0)
-	if object.value12 == 1
+	if object.value12 == true
 		GetBit(temp0, oscillation, 4)
-		if temp0 == 1
+		if temp0 == true
 			GetBit(temp0, oscillation, 5)
 			temp0 += 24
 			temp1 = screen.xcenter
@@ -325,26 +335,35 @@ end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Display.gif")
+
+	// Assign sprite frames based on current characters in play
 	switch stage.playerListPos
 	case 0
 	case 3
 		SpriteFrame(-64, 0, 72, 16, 1, 222)
 		SpriteFrame(16, 0, 48, 16, 1, 205)
 		break
+
 	case 1
-		if options.region == 0
+		// Determine Miles Vs Tails
+		if options.region == false
 			SpriteFrame(-61, 0, 69, 16, 74, 222)
 		else
 			SpriteFrame(-71, 0, 79, 16, 144, 222)
 		end if
 		SpriteFrame(16, 0, 48, 16, 1, 205)
 		break
+		
 	case 2
 		SpriteFrame(-94, 0, 128, 16, 34, 188)
 		SpriteFrame(40, 0, 48, 16, 1, 205)
 		break
+
 	end switch
+
+	// Frames that are the same for everyone
 	SpriteFrame(-88, 0, 112, 16, 50, 205)
 	SpriteFrame(33, 0, 46, 16, 163, 205)
 	SpriteFrame(33, 0, 62, 16, 83, 1)

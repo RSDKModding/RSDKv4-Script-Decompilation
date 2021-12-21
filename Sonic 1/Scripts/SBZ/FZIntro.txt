@@ -8,12 +8,19 @@
 //-------Aliases-------//
 private alias 75 : TYPE_FZINTRO
 
+private alias object.value0 : object.targetPlayer
 
-// Static Values
-
-// Tables
+private alias object.xpos 		: player.xpos
+private alias object.ypos 		: player.ypos
+private alias object.yvel 		: player.yvel
+private alias object.speed 		: player.speed
+private alias object.gravity 	: player.gravity
+private alias object.direction 	: player.direction
+private alias object.animation 	: player.animation
+private alias object.value26 	: player.flightVelocity
 
 event ObjectMain
+
 	switch object.state
 	case 0
 		tileLayer[2].scrollPos = 0x800000
@@ -21,66 +28,78 @@ event ObjectMain
 		if recAnimation != 0
 			temp0 = recAnimation
 			currentPlayer = 0
+
+			// Create a FZ Intro object for each player
 			while currentPlayer < playerCount
-				object[currentPlayer].xpos = object.xpos
-				object[currentPlayer].ypos = object.ypos
+				player[currentPlayer].xpos = object.xpos
+				player[currentPlayer].ypos = object.ypos
 				CreateTempObject(TypeName[FZ Intro], 0, object.xpos, object.ypos)
 				object[tempObjectPos].state = 1
-				object[tempObjectPos].value0 = currentPlayer
+				object[tempObjectPos].targetPlayer = currentPlayer
 				object[tempObjectPos].direction = temp0
 				object[tempObjectPos].direction &= 255
 				temp0 >>= 8
 				object[tempObjectPos].animation = temp0
 				object[tempObjectPos].animation &= 255
 				temp0 >>= 8
-				object[currentPlayer].yvel = -0x80000
-				object[currentPlayer].gravity = GRAVITY_AIR
-				object[currentPlayer].state = PlayerObject_HandleAir
+				player[currentPlayer].yvel = -0x80000
+				player[currentPlayer].gravity = GRAVITY_AIR
+				player[currentPlayer].state = PlayerObject_HandleAir
 				currentPlayer++
 			loop
 			recAnimation = 0
 		end if
+
 		object.type = TypeName[Blank Object]
 		temp0 = stage.newYBoundary2
 		temp0 -= screen.ysize
 		stage.newYBoundary1 = temp0
 		break
+
 	case 1
-		currentPlayer = object.value0
-		object[currentPlayer].direction = object.direction
-		object[currentPlayer].animation = object.animation
-		if object[currentPlayer].animation == ANI_JUMPING
-			object[currentPlayer].state = PlayerObject_HandleAir
+		currentPlayer = object.targetPlayer
+	
+		player[currentPlayer].direction = object.direction
+		player[currentPlayer].animation = object.animation
+
+		if player[currentPlayer].animation == ANI_JUMPING
+			player[currentPlayer].state = PlayerObject_HandleAir
 			object.state = 2
 		end if
-		if object[currentPlayer].animation == ANI_FLYING
-			object[currentPlayer].state = PlayerObject_HandleTailsFlight
-			object[currentPlayer].value26 = 0x800
-			object[currentPlayer].yvel >>= 2
+	
+		if player[currentPlayer].animation == ANI_FLYING
+			player[currentPlayer].state = PlayerObject_HandleTailsFlight
+			player[currentPlayer].flightVelocity = 0x800
+			player[currentPlayer].yvel >>= 2
 			object.state = 2
 		end if
-		if object[currentPlayer].animation == ANI_GLIDING
-			if object[currentPlayer].direction == FLIP_X
-				object[currentPlayer].state = PlayerObject_KnuxGlideLeft
+	
+		if player[currentPlayer].animation == ANI_GLIDING
+			if player[currentPlayer].direction == FLIP_X
+				player[currentPlayer].state = PlayerObject_KnuxGlideLeft
 			else
-				object[currentPlayer].state = PlayerObject_KnuxGlideRight
+				player[currentPlayer].state = PlayerObject_KnuxGlideRight
 			end if
 			object.state = 2
 		end if
-		if object[currentPlayer].animation == ANI_GLIDING_DROP
-			object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+	
+		if player[currentPlayer].animation == ANI_GLIDING_DROP
+			player[currentPlayer].state = PlayerObject_KnuxGlideDrop
 			object.state = 2
 		end if
+	
 		if object.state != 2
-			object[currentPlayer].state = PlayerObject_HandleAir
-			object[currentPlayer].direction = FLIP_NONE
-			object[currentPlayer].animation = ANI_BOUNCING
+			player[currentPlayer].state = PlayerObject_HandleAir
+			player[currentPlayer].direction = FLIP_NONE
+			player[currentPlayer].animation = ANI_BOUNCING
 			object.state = 2
 		end if
 		break
+
 	case 2
 		object.type = TypeName[Blank Object]
 		break
+		
 	end switch
 end event
 

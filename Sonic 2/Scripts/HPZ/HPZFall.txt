@@ -8,13 +8,20 @@
 //-------Aliases-------//
 private alias 56 : TYPE_HPZFALL
 
+private alias object.value0 : object.targetPlayer
 
-// Static Values
-
-// Tables
+private alias object.state : player.state
+private alias object.animation : player.animation
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.value26 : player.flightVelocity
 
 event ObjectMain
+
 	if object.state == 0
+
+		// Object when placed in level
+
 		if recAnimation != 0
 			temp0 = recAnimation
 		else
@@ -23,46 +30,89 @@ event ObjectMain
 			temp0 |= ANI_WATERSLIDE
 			temp0 <<= 8
 		end if
+
+		// Cycle through each player
+		//  - Not using foreach because more needs to be done than just changing player values
 		currentPlayer = 0
 		while currentPlayer < playerCount
+
+			// Create a personalized HPZFall object for the current player
+
+			// Create the object
 			CreateTempObject(TypeName[HPZ Fall], 0, object.xpos, object.ypos)
+
+			// Set object's stage to be the one that does stuff
+
 			object[tempObjectPos].state = 1
-			object[tempObjectPos].value0 = currentPlayer
+
+			// Set the object's targeted player
+			object[tempObjectPos].targetPlayer = currentPlayer
+
+			// Set the direction the player should face
 			object[tempObjectPos].direction = temp0
 			object[tempObjectPos].direction &= 255
+
 			temp0 >>= 8
+
+			// Set the animation the player should use
 			object[tempObjectPos].animation = temp0
 			object[tempObjectPos].animation &= 255
 			temp0 >>= 8
+
 			currentPlayer++
 		loop
+
+		// Erase this object
 		object.type = TypeName[Blank Object]
+
 	else
-		currentPlayer = object.value0
-		if object[currentPlayer].gravity == GRAVITY_GROUND
+
+		// Object when spawned by HPZFall
+
+		// Set the currentPlayer to this object's targetted player
+		currentPlayer = object.targetPlayer
+
+		// If the player has landed, then reset this object
+		if player[currentPlayer].gravity == GRAVITY_GROUND
 			object.type = TypeName[Blank Object]
 		else
-			object[currentPlayer].direction = object.direction
-			object[currentPlayer].animation = object.animation
-			if object[currentPlayer].animation == ANI_JUMPING
-				object[currentPlayer].state = PlayerObject_HandleAir
+
+			// Set the player's direction and animation to what they should be
+			player[currentPlayer].direction = object.direction
+			player[currentPlayer].animation = object.animation
+
+			// Below animation checks should never be true, but they are here just in case
+
+			// If the player starts rolling, delete this object
+			if player[currentPlayer].animation == ANI_JUMPING
+				player[currentPlayer].state = PlayerObject_HandleAir
+
 				object.type = TypeName[Blank Object]
 			end if
-			if object[currentPlayer].animation == ANI_FLYING
-				object[currentPlayer].state = PlayerObject_HandleTailsFlight
-				object[currentPlayer].value26 = 0x800
+
+			// If the player is flying, delete this object
+			if player[currentPlayer].animation == ANI_FLYING
+				player[currentPlayer].state = PlayerObject_HandleTailsFlight
+				player[currentPlayer].flightVelocity = 0x800
+
 				object.type = TypeName[Blank Object]
 			end if
-			if object[currentPlayer].animation == ANI_GLIDING
-				if object[currentPlayer].direction == FLIP_X
-					object[currentPlayer].state = PlayerObject_KnuxGlideLeft
+
+			// If the player is gliding, delete this object
+			if player[currentPlayer].animation == ANI_GLIDING
+				if player[currentPlayer].direction == FLIP_X
+					player[currentPlayer].state = PlayerObject_KnuxGlideLeft
 				else
-					object[currentPlayer].state = PlayerObject_KnuxGlideRight
+					player[currentPlayer].state = PlayerObject_KnuxGlideRight
 				end if
+
 				object.type = TypeName[Blank Object]
 			end if
-			if object[currentPlayer].animation == ANI_GLIDING_DROP
-				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+
+			// If the player is dropping from a glide, delete this object
+			if player[currentPlayer].animation == ANI_GLIDING_DROP
+				player[currentPlayer].state = PlayerObject_KnuxGlideDrop
+
 				object.type = TypeName[Blank Object]
 			end if
 		end if

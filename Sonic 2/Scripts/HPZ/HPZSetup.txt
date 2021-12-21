@@ -10,17 +10,20 @@ private alias 40 : TYPE_HPZSETUP
 
 // Function declarations
 reserve function HPZSetup_Function97
-reserve function HPZSetup_Function98
-reserve function HPZSetup_Function99
-reserve function HPZSetup_Function100
-reserve function HPZSetup_Function101
-reserve function HPZSetup_Function102
+reserve function HPZSetup_InitSuperSonicPal
+reserve function HPZSetup_InitSuperTailsPal
+reserve function HPZSetup_InitSuperKnuxPal
+reserve function HPZSetup_SpeedUpMusic
+reserve function HPZSetup_SlowDownMusic
 
 // Static Values
 public value HPZSetup_value33 = 0;
 public value HPZSetup_value34 = 0;
 public value HPZSetup_value35 = 0;
 public value HPZSetup_value36 = 0;
+
+private alias HPZSetup_value33 : HPZSetup_flashTimer
+private alias HPZSetup_value34 : HPZSetup_bossEncounterFlag
 
 // Tables
 public table HPZSetup_table38
@@ -85,7 +88,7 @@ function HPZSetup_Function97
 end function
 
 
-function HPZSetup_Function98
+function HPZSetup_InitSuperSonicPal
 	temp0 = 0
 	GetPaletteEntry(1, 2, temp1)
 	SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
@@ -130,7 +133,7 @@ function HPZSetup_Function98
 end function
 
 
-function HPZSetup_Function99
+function HPZSetup_InitSuperTailsPal
 	temp0 = 0
 	GetPaletteEntry(1, 13, temp1)
 	SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
@@ -285,7 +288,7 @@ function HPZSetup_Function99
 end function
 
 
-function HPZSetup_Function100
+function HPZSetup_InitSuperKnuxPal
 	temp0 = 0
 	GetPaletteEntry(1, 26, temp1)
 	SetTableValue(temp1, temp0, PlayerObject_KnuxSuperAltPal)
@@ -299,63 +302,79 @@ function HPZSetup_Function100
 end function
 
 
-function HPZSetup_Function101
+function HPZSetup_SpeedUpMusic
+
 	CheckEqual(object[25].type, TypeName[Music Event])
 	temp0 = checkResult
+
 	CheckEqual(object[25].propertyValue, 2)
 	temp0 &= checkResult
+
 	CheckEqual(stage.musicFlag, 0)
 	temp0 &= checkResult
+
 	if temp0 == 0
 		switch music.currentTrack
 		case 0
 			SetMusicTrack("Invincibility_F.ogg", 2, 0x78B1)
 			SwapMusicTrack("MysticCave2_F.ogg", 0, 0x3BA8, 0x1F40)
 			break
+
 		case 2
 			SetMusicTrack("MysticCave2_F.ogg", 0, 0x3BA8)
 			SwapMusicTrack("Invincibility_F.ogg", 2, 0x78B1, 0x1F40)
 			break
+
 		case 4
 		case 6
 		case 7
 			SetMusicTrack("MysticCave2_F.ogg", 0, 0x3BA8)
 			SetMusicTrack("Invincibility_F.ogg", 2, 0x78B1)
 			break
+
 		end switch
 	else
 		stage.musicFlag = 1
 	end if
+
 end function
 
 
-function HPZSetup_Function102
+function HPZSetup_SlowDownMusic
+
 	CheckEqual(object[25].type, TypeName[Music Event])
 	temp0 = checkResult
+
 	CheckEqual(object[25].propertyValue, 2)
 	temp0 &= checkResult
+
 	CheckEqual(stage.musicFlag, 0)
 	temp0 &= checkResult
+
 	if temp0 == 0
 		switch music.currentTrack
 		case 0
 			SetMusicTrack("Invincibility.ogg", 2, 0x9717)
 			SwapMusicTrack("MysticCave2.ogg", 0, 0x48F0, 0x30D4)
 			break
+
 		case 2
 			SetMusicTrack("MysticCave2.ogg", 0, 0x48F0)
 			SwapMusicTrack("Invincibility.ogg", 2, 0x9717, 0x30D4)
 			break
+
 		case 4
 		case 6
 		case 7
 			SetMusicTrack("MysticCave2.ogg", 0, 0x48F0)
 			SetMusicTrack("Invincibility.ogg", 2, 0x9717)
 			break
+
 		end switch
 	else
 		stage.musicFlag = 2
 	end if
+
 end function
 
 
@@ -465,8 +484,8 @@ event ObjectMain
 	else
 		object.value6--
 	end if
-	if HPZSetup_value33 > 0
-		HPZSetup_value33--
+	if HPZSetup_flashTimer > 0
+		HPZSetup_flashTimer--
 	end if
 	temp0 = object.value8
 	temp0 /= 6
@@ -511,8 +530,8 @@ event ObjectMain
 		end if
 	end if
 	if HPZSetup_value36 == 0
-		if stage.debugMode == 0
-			if options.stageSelectFlag == 0
+		if stage.debugMode == false
+			if options.stageSelectFlag == false
 				if object[30].type == TypeName[Act Finish]
 					HPZSetup_value36 = 1
 					CallNativeFunction2(SetAchievement, 7, 100)
@@ -533,7 +552,7 @@ event ObjectDraw
 		temp0 = screen.ysize
 	end if
 	SetActivePalette(0, 0, temp0)
-	if HPZSetup_value33 > 0
+	if HPZSetup_flashTimer > 0
 		SetActivePalette(2, temp0, screen.ysize)
 	else
 		SetActivePalette(1, temp0, screen.ysize)
@@ -543,40 +562,63 @@ end event
 
 
 event ObjectStartup
+
 	if stage.actNum == 1
+
+		// Normal Hidden Palace Zone
 		SetMusicTrack("MysticCave2.ogg", 0, 0x48EF)
-		SpeedUpMusic = HPZSetup_Function101
-		SlowDownMusic = HPZSetup_Function102
+		SpeedUpMusic = HPZSetup_SpeedUpMusic
+		SlowDownMusic = HPZSetup_SlowDownMusic
+
 	else
+
+		// Proto Palace Zone
 		SetMusicTrack("Extra.ogg", 0, 0xE9CC)
+
 	end if
-	if stage.player2Enabled == 1
+
+	if stage.player2Enabled == true
 		object[1].xpos = object[0].xpos
 	end if
+
 	animalType1 = TypeName[Rocky]
 	animalType2 = TypeName[Mocky]
+
 	SetPaletteEntry(0, 192, 0)
+
 	object[10].type = TypeName[HPZ Setup]
 	object[10].priority = PRIORITY_ACTIVE
 	object[10].drawOrder = 0
 	object[10].value5 = 2
 	object[10].value7 = 4
+
+	// Load the water palette
 	LoadPalette("HPZ_WaterPal.act", 1, 0, 0, 256)
-	CallFunction(HPZSetup_Function98)
-	CallFunction(HPZSetup_Function99)
-	CallFunction(HPZSetup_Function100)
+
+	// Initialize the Super palettes
+	CallFunction(HPZSetup_InitSuperSonicPal)
+	CallFunction(HPZSetup_InitSuperTailsPal)
+	CallFunction(HPZSetup_InitSuperKnuxPal)
+
+	// Load the electric flash palette in case the player gets an eletric shield
 	LoadPalette("ElectricFlash.act", 2, 0, 0, 256)
-	HPZSetup_value33 = 0
-	HPZSetup_value34 = 0
+
+	HPZSetup_flashTimer = 0
+	HPZSetup_bossEncounterFlag = false
+
+	// MAke the next stage OOZ
 	stage.listPos = 20
 	stage.activeList = REGULAR_STAGE
+
 	SetLayerDeformation(1, 64, 2, 0, 0, 0)
+
 	temp0 = 0
 	while temp0 < 256
 		Rand(temp1, 4)
 		SetLayerDeformation(3, 16, temp1, 1, temp0, 16)
 		temp0 += 16
 	loop
+
 end event
 
 event RSDKDraw

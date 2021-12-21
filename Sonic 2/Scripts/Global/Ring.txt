@@ -8,13 +8,25 @@
 //-------Aliases-------//
 private alias 10 : TYPE_RING
 
+private alias object.value1 : ring.targetPlayer
+
+private alias 0 : STATE_UNATTRACTED
+private alias 1 : STATE_ATTRACTED
+
+// Player aliases
+private alias object.state   : player.state
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.value0  : player.rings
+private alias object.value16 : player.isPlayer2
+private alias object.value18 : player.currentPlane
+private alias object.value37 : player.shield
+
+private alias 4 : SHIELD_LIGHTNING
+
 // Function declarations
 reserve function Ring_DebugDraw
 reserve function Ring_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function Ring_DebugDraw
 	DrawSprite(0)
@@ -28,43 +40,75 @@ end function
 
 
 event ObjectMain
+
+	// Check interaction with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		CheckEqual(object[0].state, PlayerObject_Knockback)
+
+		// Make sure that the player isn't supposed to ignore rings right now
+		CheckEqual(player[0].state, PlayerObject_Knockback)
 		temp0 = checkResult
-		CheckEqual(object[currentPlayer].state, PlayerObject_Knockback)
+		CheckEqual(player[currentPlayer].state, PlayerObject_Knockback)
 		temp0 = checkResult
-		CheckEqual(object[currentPlayer].state, PlayerObject_Hurt)
+		CheckEqual(player[currentPlayer].state, PlayerObject_Hurt)
 		temp0 |= checkResult
-		if temp0 == 0
+
+		if temp0 == false
+			// All checks passed, see if the player is touching the ring
+
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
+				// Player is touching ring - collect it
+
+				// Turn this object into a sparkle
 				object.type = TypeName[Ring Sparkle]
-				object.drawOrder = object[currentPlayer].value18
-				if object[currentPlayer].value16 == 1
-					object[0].value0++
-					if object[0].value0 > 999
-						object[0].value0 = 999
+
+				// Set this object to the same drawOrder as the player
+				object.drawOrder = player[currentPlayer].currentPlane
+
+				// Add it to the player's ring count
+
+				if player[currentPlayer].isPlayer2 == true
+
+					// P2 Tails in normal gameplay (not VS)
+					// So add it to P1's ring count
+					player[0].rings++
+					if player[0].rings > 999
+						player[0].rings = 999
 					end if
+
 				else
-					object[currentPlayer].value0++
-					if object[currentPlayer].value0 > 999
-						object[currentPlayer].value0 = 999
+
+					// Either:
+					// A) P2 in VS, or
+					// B) P1 in any mode
+					// In any case, give the ring to the player that collected it
+					player[currentPlayer].rings++
+					if player[currentPlayer].rings > 999
+						player[currentPlayer].rings = 999
 					end if
+
 				end if
-				if object[0].value0 >= ringExtraLife
+
+				// Check if the player should get an extra life
+				if player[0].rings >= ringExtraLife
+
+					// Not in time attack?
 					if options.gameMode != 2
+						// Give the player an extra life and play the music
 						player.lives++
 						PlaySfx(SfxName[Life], 0)
 						PauseMusic()
 						ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
 						object[25].priority = PRIORITY_ACTIVE
 					end if
+
 					ringExtraLife += 100
 					if ringExtraLife > 300
 						ringExtraLife = 1000
 					end if
 				end if
-				if options.vsMode == 1
+
+				if options.vsMode == true
 					if vs.playerID == 0
 						if currentPlayer == 0
 							vs.totalRings1P++
@@ -79,6 +123,8 @@ event ObjectMain
 						end if
 					end if
 				end if
+
+				// Play the ring sound
 				if ringPan == 0
 					PlaySfx(SfxName[Ring L], 0)
 					SetSfxAttributes(SfxName[Ring L], -1, -100)
@@ -89,27 +135,34 @@ event ObjectMain
 					ringPan = 0
 				end if
 			else
-				if object.state == 0
-					if object[currentPlayer].value37 == 4
+				// Check if the ring should get attracted
+				if object.state == STATE_UNATTRACTED
+					if player[currentPlayer].shield == SHIELD_LIGHTNING
 						BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-						if checkResult == 1
-							object.state = 1
-							object.value1 = currentPlayer
+						if checkResult == true
+							// Make the ring attracted to the player
+							object.state = STATE_ATTRACTED
+							ring.targetPlayer = currentPlayer
 						end if
 					end if
 				end if
 			end if
 		end if
 	next
-	if object.state == 1
-		arrayPos0 = object.value1
-		if object[arrayPos0].value37 != 4
+
+	if object.state == STATE_ATTRACTED
+		arrayPos0 = ring.targetPlayer
+
+		if player[arrayPos0].shield != SHIELD_LIGHTNING
+			// If the player lost their shield, then make this ring dropped
 			object.type = TypeName[Lose Ring]
 			object.animationSpeed = 128
 			object.alpha = 256
 		else
-			arrayPos0 = object.value1
-			if object.xpos > object[arrayPos0].xpos
+			arrayPos0 = ring.targetPlayer
+
+			// Move closer to the player
+			if object.xpos > player[arrayPos0].xpos
 				if object.xvel > 0
 					object.xvel -= 0xC000
 				else
@@ -122,7 +175,8 @@ event ObjectMain
 					object.xvel += 0x3000
 				end if
 			end if
-			if object.ypos > object[arrayPos0].ypos
+
+			if object.ypos > player[arrayPos0].ypos
 				if object.yvel > 0
 					object.yvel -= 0xC000
 				else
@@ -135,6 +189,7 @@ event ObjectMain
 					object.yvel += 0x3000
 				end if
 			end if
+
 			object.xpos += object.xvel
 			object.ypos += object.yvel
 		end if
@@ -143,15 +198,24 @@ end event
 
 
 event ObjectDraw
+
+	// All rings use the same frame
+	// (Animation is handled by Stage Setup object)
 	DrawSprite(ringFrame)
+
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Items.gif")
+
+	// Set each ring's draw order to 4
 	foreach (TypeName[Ring], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 4
 	next
+
+	// Ring frames
 	SpriteFrame(-8, -8, 16, 16, 1, 1)
 	SpriteFrame(-8, -8, 16, 16, 1, 18)
 	SpriteFrame(-8, -8, 16, 16, 1, 35)
@@ -160,10 +224,13 @@ event ObjectStartup
 	SpriteFrame(-8, -8, 16, 16, 1, 86)
 	SpriteFrame(-8, -8, 16, 16, 1, 103)
 	SpriteFrame(-8, -8, 16, 16, 1, 120)
+
+	// Add the Ring to the debug mode object list
 	SetTableValue(TypeName[Ring], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Ring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Ring_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+	
 end event
 
 event RSDKDraw

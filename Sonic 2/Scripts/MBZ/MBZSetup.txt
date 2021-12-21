@@ -8,49 +8,64 @@
 //-------Aliases-------//
 private alias 40 : TYPE_MBZSETUP
 
+private alias object.value10 : MBZSetup.fadeValue // Slight misnomer - more like a bool flag instead
+
+private alias 3 : SHIELD_FIRE
+
 // Function declarations
-reserve function MBZSetup_Function97
-reserve function MBZSetup_Function98
-reserve function MBZSetup_Function99
+reserve function MBZSetup_HandleGround
+
+// These two are unused
+reserve function MBZSetup_SpeedUpMusic
+reserve function MBZSetup_SlowDownMusic
 
 // Static Values
-public value ZoneSetup_value33 = 0;
-public value ZoneSetup_value34 = 0;
-public value ZoneSetup_value35 = 0;
-public value ZoneSetup_value36 = 0;
-public value ZoneSetup_value37 = 0;
-public value ZoneSetup_value38 = 0;
-public value ZoneSetup_value39 = 0;
-public value ZoneSetup_value40 = 0;
-public value ZoneSetup_value41 = 0;
+// All but value 41 are unused
+public value ZoneSetup_value33 = 0
+public value ZoneSetup_value34 = 0
+public value ZoneSetup_value35 = 0
+public value ZoneSetup_value36 = 0
+public value ZoneSetup_value37 = 0
+public value ZoneSetup_value38 = 0
+public value ZoneSetup_value39 = 0
+public value ZoneSetup_value40 = 0
+public value ZoneSetup_value41 = 0
 
 // Tables
-public table MBZSetup_table39
+
+// Palette cycle for the stage
+public table MBZSetup_PalCycle
 	0xE00000, 0xE06000, 0xE0A000, 0xE0E000, 0xE0E000, 0xE00000, 0xE06000, 0xE0A000, 0xE0C020, 0xE0E000, 0xE00000, 0xE06000, 0xE06000, 0xE0E040, 0xE0E080, 0xE02000
 	0xE04000, 0xE08000, 0xE0E060, 0xE0E0A0, 0xE0E080, 0xE02000, 0xE06000, 0xE0E040, 0xE0C020, 0xE0E000, 0xE00000, 0xE06000, 0xE06000, 0xE0C020, 0xE0E000, 0xE00000
 	0xE00000, 0xE06000, 0xE0A000, 0xE0E000, 0xE0C000, 0xC00000, 0xE04000, 0xE08000, 0xE06000, 0xC0A000, 0xA00000, 0xE02000, 0xC00000, 0xC04000, 0xE08000, 0x800000
 	0xA00000, 0xE02000, 0xE06000, 0xC0A000, 0xE0C000, 0xC00000, 0xE04000, 0xE08000, 0xE0A000, 0xE0E000, 0xE00000, 0xE06000, 0xE06000, 0xE0A000, 0xE0E000, 0xE00000
 end table
 
-public table MBZSetup_table38
+// Stage deformation data
+public table MBZSetup_DeformationTable
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
 	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
 	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
 end table
 
-function MBZSetup_Function97
+
+// Modified version of PlayerObject_HandleGround
+function MBZSetup_HandleGround
 	if object.animation != ANI_SKIDDING
-		temp7 = 1
+		temp7 = true
 	else
-		temp7 = 0
+		temp7 = false
 	end if
+
 	CallFunction(PlayerObject_HandleMovement)
+
 	if object.gravity == GRAVITY_AIR
 		object.state = PlayerObject_HandleAir
 		CallFunction(PlayerObject_HandleAirMovement)
 	else
 		CallFunction(PlayerObject_ResetOnFloor)
+
 		if object.speed == 0
 			if object.collisionMode == CMODE_FLOOR
 				if object.value1 < 240
@@ -95,6 +110,7 @@ function MBZSetup_Function97
 				end if
 			end if
 		end if
+
 		if object.value14 > 0
 			if temp7 == 1
 				PlaySfx(SfxName[Skidding], 0)
@@ -119,21 +135,24 @@ function MBZSetup_Function97
 				object.animationSpeed = 0
 			end if
 		end if
-		if object.jumpPress == 1
+		if object.jumpPress == true
 			CallFunction(PlayerObject_StartJump)
 		end if
 	end if
 end function
 
 
-function MBZSetup_Function98
+// Unused - would've been used to speed up stage music
+// Interestingly, it calls for "MarathonBase_F.ogg" - a song that isn't in the RSDK
+// Could this have been the stage's original name..?
+function MBZSetup_SpeedUpMusic
 	CheckEqual(object[25].type, TypeName[Music Event])
 	temp0 = checkResult
 	CheckEqual(object[25].propertyValue, 2)
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, 0)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
 		case 0
 			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
@@ -154,14 +173,17 @@ function MBZSetup_Function98
 end function
 
 
-function MBZSetup_Function99
+// Unused - would've been used to slow down stage music
+// Interestingly, it calls for "MarathonBase.ogg" - a song that isn't in the RSDK
+// Could this have been the stage's original name..?
+function MBZSetup_SlowDownMusic
 	CheckEqual(object[25].type, TypeName[Music Event])
 	temp0 = checkResult
 	CheckEqual(object[25].propertyValue, 2)
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, 0)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
 		case 0
 			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
@@ -183,31 +205,37 @@ end function
 
 
 event ObjectMain
+
+	// Pulsing palette
 	object.value1++
 	if object.value1 == 12
 		object.value1 = 0
 		object.value3 += 4
 		object.value3 &= 63
-		GetTableValue(temp0, object.value3, MBZSetup_table39)
+		GetTableValue(temp0, object.value3, MBZSetup_PalCycle)
 		SetPaletteEntry(0, 96, temp0)
 		object.value4 += 4
 		object.value4 &= 63
-		GetTableValue(temp0, object.value4, MBZSetup_table39)
+		GetTableValue(temp0, object.value4, MBZSetup_PalCycle)
 		SetPaletteEntry(0, 97, temp0)
 		object.value5 += 4
 		object.value5 &= 63
-		GetTableValue(temp0, object.value5, MBZSetup_table39)
+		GetTableValue(temp0, object.value5, MBZSetup_PalCycle)
 		SetPaletteEntry(0, 98, temp0)
 		object.value6 += 4
 		object.value6 &= 63
-		GetTableValue(temp0, object.value6, MBZSetup_table39)
+		GetTableValue(temp0, object.value6, MBZSetup_PalCycle)
 		SetPaletteEntry(0, 99, temp0)
 	end if
+
+	// Cycling palette
 	object.value2++
 	if object.value2 == 4
 		object.value2 = 0
 		RotatePalette(0, 100, 105, 0)
 	end if
+
+	// Ani Tiles
 	if object.value7 < 2
 		temp0 = object.value8
 		temp0 += 462
@@ -232,38 +260,50 @@ event ObjectMain
 	else
 		object.value7--
 	end if
+
+	// Clouds scrolling
 	object.value9++
 	if object.value9 > 7
 		tileLayer[1].deformationOffset++
 		object.value9 = 0
 	end if
+
 	GetTableValue(temp0, 21, StageSetup_oscillationTable)
 	if temp0 == 0
 		ZoneSetup_value41++
 		ZoneSetup_value41 &= 3
 	end if
+
+	// Randomize the animals
 	temp0 = oscillation
 	temp0 &= 15
 	if temp0 > 11
 		temp0 = 5
 	end if
-	temp0 += 41
+	temp0 += TypeName[Flicky]
 	animalType1 = temp0
 	animalType2 = temp0
+
+	// Check interaction with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if object[currentPlayer].animation == ANI_TWIRL
 			object[currentPlayer].frame %= 24
 		end if
+
 		temp1 = object[currentPlayer].xpos
 		temp1 >>= 16
+
 		temp2 = object[currentPlayer].ypos
 		temp2 >>= 16
 		temp2 += 6
+
+		// Get the B-version "angle" of the tile the player is on
+		// "Angle" is actually used to hold flags and such, same goes for other stages
 		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
 		switch temp0
 		case 1
 			if object[currentPlayer].yvel > -1
-				object[currentPlayer].state = MBZSetup_Function97
+				object[currentPlayer].state = MBZSetup_HandleGround
 				if object[currentPlayer].animation == ANI_JUMPING
 					object[currentPlayer].animation = ANI_WALKING
 				end if
@@ -272,14 +312,18 @@ event ObjectMain
 				object[currentPlayer].ypos += 0x10000
 			end if
 			break
+
 		case 3
-			if object[currentPlayer].value37 != 3
+			// Lava tile
+			// Only harm the player if they don't have a flame shield
+			if object[currentPlayer].value37 != SHIELD_FIRE
 				CallFunction(PlayerObject_Hit)
 			end if
 			break
 		end switch
 	next
-	if object.value10 == 1
+
+	if MBZSetup.fadeValue == true
 		if object.alpha < 128
 			object.alpha += 4
 		end if
@@ -288,7 +332,8 @@ event ObjectMain
 			object.alpha -= 4
 		end if
 	end if
-	object.value10 = 0
+
+	MBZSetup.fadeValue = false
 end event
 
 
@@ -311,7 +356,7 @@ event ObjectStartup
 	while arrayPos0 < 576
 		temp0 = arrayPos0
 		temp0 &= 63
-		GetTableValue(stage[arrayPos0].deformationData2, temp0, MBZSetup_table38)
+		GetTableValue(stage[arrayPos0].deformationData2, temp0, MBZSetup_DeformationTable)
 		arrayPos0++
 	loop
 	ZoneSetup_value33 = 0

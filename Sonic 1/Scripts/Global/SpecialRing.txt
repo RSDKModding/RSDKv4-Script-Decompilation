@@ -8,53 +8,88 @@
 //-------Aliases-------//
 private alias 22 : TYPE_SPECIALRING
 
+private alias 0 : STATE_FLOATING
+private alias 1 : STATE_DISAPPEARING
+
+private alias object.type : player.type
+private alias object.direction : player.direction
+private alias object.controlMode : player.controlMode
+private alias object.jumpPress : player.jumpPress
+private alias object.jumpHold : player.jumpHold
+private alias object.up : player.up
+private alias object.down : player.down
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.value0 : player.rings
+private alias object.value16 : player.isPlayer2
 
 // Static Values
 
 // Tables
 
 event ObjectMain
-	if object.state == 0
-		if object[0].value0 > 49
+
+	// Normal state?
+	if object.state == STATE_FLOATING
+
+		// Are 50 or more rings collected?
+		if player[0].rings > 49
+
+			// Did P1 collide with the special ring?
 			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object[0].type = TypeName[Blank Object]
-				object[playerCount].type = TypeName[Blank Object]
-				object[0].controlMode = -1
-				object[0].direction = FLIP_NONE
+
+			if checkResult == true
+
+				// Make P1 and its shield "disappear"
+				player[0].type = TypeName[Blank Object]
+				player[playerCount].type = TypeName[Blank Object]
+				player[0].controlMode = -1
+				player[0].direction = FLIP_NONE
+
 				ResetObjectEntity(4, TypeName[Blank Object], 0, 0, 0)
 				object.drawOrder = 4
-				object.state = 1
+				object.state = STATE_DISAPPEARING
 				object.frame = 32
 				StopSfx(SfxName[Flying])
 				StopSfx(SfxName[Tired])
 				PlaySfx(SfxName[Special Ring], 0)
-				object[0].left = 0
-				object[0].right = 0
-				if stage.player2Enabled == 1
-					if object[1].value16 == 1
-						object[1].controlMode = -1
-						object[1].up = 0
-						object[1].down = 0
-						object[1].left = 0
-						object[1].right = 0
-						object[1].jumpPress = 0
-						object[1].jumpHold = 0
+				player[0].left = false
+				player[0].right = false
+				if stage.player2Enabled == true
+					if player[1].isPlayer2 == true
+						player[1].controlMode = -1
+						player[1].up = false
+						player[1].down = false
+						player[1].left = false
+						player[1].right = false
+						player[1].jumpPress = false
+						player[1].jumpHold = false
 					end if
 				end if
+
 			end if
+
 		end if
+
 	end if
+
+	// If the player is Super, don't show up
+	// -> This should only happen in Debug Mode, since special rings are unloaded
+	//    if the player has max emeralds during startup
 	if PlayerObject_SuperState == 1
 		ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 	end if
+
 end event
 
 
 event ObjectDraw
+
 	switch object.state
-	case 0
-		if object[0].value0 > 49
+	case STATE_FLOATING
+		// Only show up if there are 50 or more rings collected
+		if player[0].rings > 49
+
 			temp0 = object.frame
 			temp0 >>= 2
 			if temp0 > 3
@@ -62,14 +97,19 @@ event ObjectDraw
 			else
 				object.direction = FLIP_NONE
 			end if
+			
 			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
 			object.frame++
 			if object.frame > 31
 				object.frame = 0
 			end if
+
 		end if
 		break
-	case 1
+
+	case STATE_DISAPPEARING
+		// Determine whether to flip the sprite or not based on current frame
 		temp0 = object.frame
 		temp0 >>= 2
 		if temp0 > 11
@@ -77,7 +117,10 @@ event ObjectDraw
 		else
 			object.direction = FLIP_NONE
 		end if
+
+		// Draw the sprite
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
 		if temp0 == 11
 			object.direction = FLIP_X
 			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
@@ -87,17 +130,24 @@ event ObjectDraw
 				DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 			end if
 		end if
+
 		object.frame++
-		if object.frame > 63
+		if object.frame > 63 // Time to disappear?
+			// Clear this object
 			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 		end if
 		break
+
 	end switch
+
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Items2.gif")
+
+	// Sprite frames
 	SpriteFrame(-32, -32, 64, 64, 83, 1)
 	SpriteFrame(-28, -32, 56, 64, 199, 131)
 	SpriteFrame(-24, -32, 48, 64, 148, 1)
@@ -114,21 +164,34 @@ event ObjectStartup
 	SpriteFrame(-16, -32, 48, 64, 101, 66)
 	SpriteFrame(0, -32, 32, 64, 222, 1)
 	SpriteFrame(-32, -32, 32, 64, 124, 131)
-	if options.superStates == 0
+
+	// Find max emerald count
+	if options.superStates == false
 		temp0 = 63
 	else
 		temp0 = 127
 	end if
+
+	// Are all emeralds already gathered?
 	if specialStage.emeralds >= temp0
+
+		// Big rings aren't needed anymore, delete them
 		foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
 			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 		next
+
 	end if
+
+	// Is the game in time attack?
 	if options.gameMode == 2
+	
+		// Delete every big ring, they shouldn't be in time attack
 		foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
 			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 		next
+
 	end if
+
 end event
 
 event RSDKDraw

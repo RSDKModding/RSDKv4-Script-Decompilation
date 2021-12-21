@@ -8,82 +8,121 @@
 //-------Aliases-------//
 private alias 28 : TYPE_FIRESHIELD
 
+private alias object.value0 : object.timer
+private alias object.value18 : object.currentPlane
 
-// Static Values
+// Bubble shield states
+// Divided into 2 - passive versions and active versions
+private alias 0 : STATE_INITP
+private alias 1 : STATE_MAINP
+private alias 2 : STATE_INITA
+private alias 3 : STATE_MAINA
 
 // Tables
-public table FireShield_table15
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 6, 7, 4, 5, 2, 3
-	0, 1
+
+// Passive/idle ver - just staying around the player normally
+public table FireShield_animSpriteTableP
+	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1
 end table
 
-public table FireShield_table16
+// Active - During flame dash
+public table FireShield_animSpriteTableA
 	10, 11, 12, 10, 12, 13, 10, 11, 12, 10, 12, 13, 0
 end table
 
 
 event ObjectMain
+
 	object.drawOrder = -1
+
+	// Unload if the player shouldn't have a shield
 	if object[-playerCount].state == PlayerObject_Death
 		object.type = TypeName[Blank Object]
 	end if
 	if object[-playerCount].state == PlayerObject_Drown
 		object.type = TypeName[Blank Object]
 	end if
+
 	switch object.state
-	case 0
+	case STATE_INITP
 		object.animationTimer = 0
-		object.value0 = 0
-		object.value18 = 0
+		object.timer = 0
+		object.currentPlane = 0
 		object.direction = FLIP_NONE
-		GetTableValue(object.frame, object.value0, FireShield_table15)
+		GetTableValue(object.frame, object.timer, FireShield_animSpriteTableP)
 		object.state++
-	case 1
+		// Fall through to below
+
+	case STATE_MAINP
 		object.animationTimer++
+
 		if object.animationTimer >= 3
+
 			object.animationTimer = 1
-			object.value0++
-			object.value18 ^= 1
-			if object.value0 >= 10
+			object.timer++
+			object.currentPlane ^= 1
+
+			if object.timer >= 10
+
 				object.direction = FLIP_Y
-				if object.value0 >= 18
-					object.value0 = 0
+
+				if object.timer >= 18
+					object.timer = 0
 					object.direction = FLIP_NONE
 				end if
+
 			end if
-			GetTableValue(object.frame, object.value0, FireShield_table15)
+
+			GetTableValue(object.frame, object.timer, FireShield_animSpriteTableP)
+
 		end if
+
 		break
-	case 2
+
+	case STATE_INITA
 		object.animationTimer = 0
-		object.value0 = 0
-		object.value18 = 0
-		GetTableValue(object.frame, object.value0, FireShield_table16)
+		object.timer = 0
+		object.currentPlane = 0
+		GetTableValue(object.frame, object.timer, FireShield_animSpriteTableA)
 		object.state++
-	case 3
+		// Fall through again
+
+	case STATE_MAINA
 		object.animationTimer++
+
 		if object.animationTimer >= 3
+
 			object.animationTimer = 1
-			object.value0++
-			if object.value0 >= 12
-				object.state = 0
+			object.timer++
+
+			if object.timer >= 12
+				object.state = STATE_INITP
 			end if
-			GetTableValue(object.frame, object.value0, FireShield_table16)
+
+			GetTableValue(object.frame, object.timer, FireShield_animSpriteTableA)
+
 		end if
+
 		break
+
 	end switch
 end event
 
 
 event ObjectDraw
+
 	if PlayerObject_SuperState != 1
 		DrawSpriteFX(object.frame, FX_FLIP, object[-playerCount].xpos, object[-playerCount].ypos)
 	end if
+
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Items3.gif")
+
+	// Flame shield frames
 	SpriteFrame(-16, 9, 37, 15, 131, 52)
 	SpriteFrame(-20, -24, 39, 15, 131, 68)
 	SpriteFrame(-20, 3, 40, 21, 148, 101)
@@ -99,6 +138,7 @@ event ObjectStartup
 	SpriteFrame(-32, -19, 56, 38, 135, 175)
 	SpriteFrame(-40, -24, 63, 47, 192, 166)
 	SpriteFrame(0, 0, 1, 1, 1, 1)
+
 end event
 
 event RSDKDraw

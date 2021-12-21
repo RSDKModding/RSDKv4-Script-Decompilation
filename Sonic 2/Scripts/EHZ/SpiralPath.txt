@@ -12,11 +12,15 @@ private alias 48 : TYPE_SPIRALPATH
 // Static Values
 
 // Tables
-public table SpiralPath_table45
+
+// Used to determine which frame the player should use when corkscrewing
+public table SpiralPath_spriteTable
 	6, 5, 4, 3, 2, 1, 0, 11, 10, 9, 8, 7
 end table
 
-public table SpiralPath_table44
+
+// Values for the small player Y Pos offset when corkscrewing
+public table SpiralPath_offsetTable
 	32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32
 	32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 31, 31
 	31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 30, 30, 30
@@ -47,25 +51,36 @@ end table
 
 
 event ObjectMain
+
 	object.priority = PRIORITY_ACTIVE
+
 	temp2 = 0
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
 		temp0 = object[currentPlayer].xpos
 		temp0 -= object.xpos
+
 		GetBit(temp3, object.value1, temp2)
-		if temp3 == 0
+
+		if temp3 == false
 			if object[currentPlayer].value42 == 0
+
 				BoxCollisionTest(C_TOUCH, object.entityPos, -192, 8, 192, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+
+				if checkResult == true
 					SetBit(object.value1, temp2, 1)
 					object[currentPlayer].yvel = 0
 				end if
+
 			end if
 		else
+
 			temp0 += 0xD00000
 			temp1 = object[currentPlayer].xvel
 			Abs(temp1)
 			CheckLower(temp1, 0x60000)
+
 			temp3 = checkResult
 			CheckLower(object[currentPlayer].yvel, -0x40000)
 			temp3 |= checkResult
@@ -73,63 +88,89 @@ event ObjectMain
 			temp3 |= checkResult
 			CheckGreater(temp0, 0x19FFFFF)
 			temp3 |= checkResult
-			if temp3 == 1
+
+			if temp3 == true
+
 				SetBit(object.value1, temp2, 0)
+
 				if object[currentPlayer].value42 == 1
 					if object[currentPlayer].yvel >= 0
 						if object[currentPlayer].state != PlayerObject_HandleFlyCarry
 							if object[currentPlayer].animation != ANI_SKIDDING
+
 								object[currentPlayer].animation = ANI_TWIRL
 								object[currentPlayer].angle = 0
+
 							end if
 						end if
 					end if
 				end if
+
 			else
+
 				object[currentPlayer].yvel = 0
+
 				temp0 >>= 16
-				GetTableValue(object[currentPlayer].ypos, temp0, SpiralPath_table44)
+
+				GetTableValue(object[currentPlayer].ypos, temp0, SpiralPath_offsetTable)
+
 				object[currentPlayer].ypos -= object[currentPlayer].collisionBottom
 				object[currentPlayer].ypos += 19
 				object[currentPlayer].ypos <<= 16
 				object[currentPlayer].ypos += object.ypos
+
 				if object[currentPlayer].state == PlayerObject_HandleGround
 					if object[currentPlayer].gravity == GRAVITY_AIR
+
 						object[currentPlayer].prevAnimation = ANI_TWIRL
 						object[currentPlayer].animation = ANI_TWIRL
 						object[currentPlayer].animationSpeed = 0
 						object[currentPlayer].direction = FLIP_NONE
+
 						temp1 = object.xpos
 						temp1 -= 0xC40000
 						temp0 = object[currentPlayer].xpos
 						temp0 -= temp1
 						temp0 >>= 21
 						temp0 %= 12
+
 						if object[currentPlayer].speed > 0
 							object[currentPlayer].frame = temp0
 							object[currentPlayer].rotation = 0
 						else
-							GetTableValue(object[currentPlayer].frame, temp0, SpiralPath_table45)
+							GetTableValue(object[currentPlayer].frame, temp0, SpiralPath_spriteTable)
 							object[currentPlayer].rotation = 256
 						end if
+
 					end if
 				end if
+
 				object[currentPlayer].gravity = GRAVITY_GROUND
+
 			end if
 		end if
+
 		temp2++
+
 	next
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
+
 		object.priority = PRIORITY_ACTIVE_BOUNDS
+
 		temp0 = 0
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -192, 8, 192, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			temp0 |= checkResult
 		next
-		if temp0 == 0
+
+		if temp0 == false
 			object.value1 = 0
 		end if
+
 	end if
+
 end event
 
 event RSDKDraw

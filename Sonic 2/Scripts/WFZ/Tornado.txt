@@ -9,9 +9,7 @@
 private alias 43 : TYPE_TORNADO
 
 // Function declarations
-reserve function Tornado_Function102
-
-// Static Values
+reserve function Tornado_Explode
 
 // Tables
 public table Tornado_table42
@@ -34,7 +32,9 @@ public table Tornado_table40
 end table
 
 
-function Tornado_Function102
+// Called to create explosions after the Tornado gets shot
+// Poor Tails...
+function Tornado_Explode
 	if object.value1 == 0
 		object.value1 = 15
 		temp0 = object.xpos
@@ -53,6 +53,8 @@ end function
 event ObjectMain
 	object.value3 = object.ypos
 	object.drawOrder = 4
+	// States 0 though 4 are for the stage's intro
+	// States after that are for the chase cutscene when Tails helps you hitch a ride on Robotnik's ship
 	switch object.state
 	case 0
 		temp0 = object[0].xpos
@@ -60,13 +62,14 @@ event ObjectMain
 		if object.xpos < temp0
 			object.type = TypeName[Blank Object]
 		else
-			if stage.playerListPos == 1
+			if stage.playerListPos == 1 // Main player is Tails, shift him down a bit to account for his shorter height
 				object[0].ypos += 0x40000
 			end if
 			object.state++
 		end if
 		break
 	case 1
+		// Just flying straight for a brief moment
 		object.xpos += object.xvel
 		object.value0--
 		if object.value0 == 0
@@ -86,6 +89,7 @@ event ObjectMain
 		end if
 		break
 	case 2
+		// Tornado getting shot
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		temp0 = oscillation
@@ -100,17 +104,20 @@ event ObjectMain
 			object.value0 = 96
 			object.state = 3
 		end if
-		CallFunction(Tornado_Function102)
+		CallFunction(Tornado_Explode)
 		break
 	case 3
+		// Tornado after being shot, it's just falling now...
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		if object.outOfBounds == 1
+			// Despawn it when out of view
 			object.type = TypeName[Blank Object]
 		end if
-		CallFunction(Tornado_Function102)
+		CallFunction(Tornado_Explode)
 		break
 	case 4
+		// Start of end-of-level cutscene, start removing control from the player, 
 		BoxCollisionTest(C_TOUCH, object.entityPos, -640, -192, 0, 0, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		if checkResult == 1
 			if object[0].gravity == GRAVITY_GROUND
@@ -269,6 +276,7 @@ event ObjectMain
 		object.ypos += object.yvel
 		break
 	case 10
+		// This stage doesn't have an [Act Finish] object so this object takes it place
 		music.volume -= 2
 		object.value0 += 4
 		SetScreenFade(0, 0, 0, object.value0)
@@ -402,7 +410,7 @@ event ObjectStartup
 	SpriteFrame(-39, 32, 56, 16, 375, 90)
 	SpriteFrame(-55, 32, 16, 16, 386, 107)
 	SpriteFrame(-71, 32, 32, 16, 386, 124)
-	if playerCount > 1
+	if playerCount > 1 // Remove P2
 		object[1].type = TypeName[Blank Object]
 		playerCount = 1
 	end if

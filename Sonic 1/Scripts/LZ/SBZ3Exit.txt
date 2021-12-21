@@ -8,49 +8,76 @@
 //-------Aliases-------//
 private alias 77 : TYPE_SBZ3EXIT
 
+private alias object.value0 : object.timer // Not quite a fadeValue because it's used as simply a timer in the time attack variant
 
-// Static Values
+// Player values
+private alias object.type		 : player.type
+private alias object.groupID	 : player.groupID
+private alias object.controlMode : player.controlMode
+private alias object.animation	 : player.animation
 
-// Tables
+private alias 0 : STATE_WAIT
+private alias 1 : STATE_FINISH_NORMAL
+private alias 2 : STATE_FINISH_TATTACK
 
 event ObjectMain
+
 	switch object.state
-	case 0
+	case STATE_WAIT
+		// Check for player collision
 		BoxCollisionTest(C_TOUCH, object.entityPos, -128, -16, 128, 16, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			object[0].type = TypeName[Ring]
-			object[0].groupID = TypeName[Blank Object]
-			object[0].controlMode = -1
+		if checkResult == true
+			// Player colided, do stuff
+
+			// First, erase the player object (by turning them into a ring)
+			player[0].type = TypeName[Ring]
+			player[0].groupID = TypeName[Blank Object]
+			player[0].controlMode = -1
+
+			//Check for time attack
 			if options.gameMode == 2
-				object.state = 2
+
+				// Go into special time attack variant
+				object.state = STATE_FINISH_TATTACK
 				stage.timeEnabled = 0
+
 			else
-				object.state++
+				// Normal variant
+				object.state++ // STATE_FINISH_NORMAL
 			end if
+
 			recAnimation = 0
 			temp0 = 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-				temp1 = object[currentPlayer].animation
+				temp1 = player[currentPlayer].animation
 				temp1 <<= 8
-				temp1 |= object[currentPlayer].direction
+				temp1 |= player[currentPlayer].direction
 				temp1 <<= temp0
+
 				recAnimation |= temp1
 				temp0 += 16
 			next
 		end if
 		break
-	case 1
-		if object.value0 < 512
-			object.value0 += 8
+
+	case STATE_FINISH_NORMAL
+		// Normal variant - start fading out
+		if object.timer < 512
+			object.timer += 8
 			music.volume -= 2
 		else
-			object.direction = FLIP_NONE
+			// Fade done, go to SBZ3
+
+			object.direction = FLIP_NONE // ???
 			lampPostID = 0
 			stage.listPos++
+
 			if options.gameMode == 1
+
+				// There aren't any act results in this stage so save the game here (even if already on a completed save...)
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
-				if stage.player2Enabled == 1
+				if stage.player2Enabled == true
 					saveRAM[arrayPos1] = 3
 				else
 					saveRAM[arrayPos1] = stage.playerListPos
@@ -68,24 +95,30 @@ event ObjectMain
 				saveRAM[arrayPos1] = specialStage.emeralds
 				arrayPos1++
 				saveRAM[arrayPos1] = specialStage.listPos
+
 				WriteSaveRAM()
 			end if
+
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, object.value0)
+
+		SetScreenFade(0, 0, 0, object.timer)
 		break
-	case 2
-		if object.value0 < 60
-			object.value0++
+	case STATE_FINISH_TATTACK
+		// Time attack variant - no fade out and instead show Act Results after a second
+		if object.timer < 60
+			object.timer++
 			music.volume -= 2
 		else
 			object.type = TypeName[Blank Object]
+
 			object[30].type = TypeName[Act Finish]
 			object[30].drawOrder = 6
 			object[30].priority = PRIORITY_ACTIVE
 			PlayMusic(1)
 		end if
 		break
+
 	end switch
 end event
 
