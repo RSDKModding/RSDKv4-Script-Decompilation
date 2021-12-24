@@ -12,10 +12,6 @@ private alias 47 : TYPE_JAWS
 reserve function Jaws_DebugDraw
 reserve function Jaws_DebugSpawn
 
-// Static Values
-
-// Tables
-
 function Jaws_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end function
@@ -35,18 +31,21 @@ end function
 
 
 event ObjectMain
+
 	object.priority = PRIORITY_ACTIVE
 	object.xpos += object.xvel
+
 	object.value0--
 	if object.value0 == 0
 		object.direction ^= FLIP_X
 		FlipSign(object.xvel)
 		object.value0 = object.value1
 	end if
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		temp0 = object.xpos
 		object.xpos = object.value3
-		if object.outOfBounds == 1
+		if object.outOfBounds == true
 			object.xpos = object.value3
 			object.priority = PRIORITY_ACTIVE_BOUNDS
 			object.direction = object.propertyValue
@@ -64,12 +63,15 @@ event ObjectMain
 			object.xpos = temp0
 		end if
 	end if
+
+	// Check interaction with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 12, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
+		if checkResult == true
 			CallFunction(PlayerObject_BadnikBreak)
 		end if
 	next
+
 	object.frame = object.animationTimer
 	object.frame >>= 3
 	object.animationTimer++
@@ -83,22 +85,28 @@ end event
 
 
 event ObjectStartup
+
+	// Load sheet and sprites depending on which zone the player is currently in
 	CheckCurrentStageFolder("Zone04")
-	if checkResult == 1
+	if checkResult == true
+		// Labyrinth Zone
 		LoadSpriteSheet("LZ/Objects.gif")
 		SpriteFrame(-16, -12, 48, 24, 1, 105)
 		SpriteFrame(-16, -12, 45, 24, 1, 130)
 		SpriteFrame(-16, -12, 48, 24, 1, 155)
 		SpriteFrame(-16, -12, 45, 24, 47, 129)
 	end if
+
 	CheckCurrentStageFolder("Zone07")
-	if checkResult == 1
+	if checkResult == true
+		// ??? (Marathon Base Zone?)
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-16, -12, 48, 24, 1, 264)
 		SpriteFrame(-16, -12, 45, 24, 99, 264)
 		SpriteFrame(-16, -12, 48, 24, 50, 264)
 		SpriteFrame(-16, -12, 45, 24, 145, 264)
 	end if
+
 	foreach (TypeName[Jaws], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].value3 = object[arrayPos0].xpos
 		object[arrayPos0].direction = object[arrayPos0].propertyValue
@@ -113,10 +121,13 @@ event ObjectStartup
 		object[arrayPos0].value0 <<= 6
 		object[arrayPos0].value1 = object[arrayPos0].value0
 	next
+
+	// Add Jaws to the debug object list
 	SetTableValue(TypeName[Jaws], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Jaws_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Jaws_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+
 end event
 
 event RSDKDraw
