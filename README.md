@@ -1,16 +1,15 @@
 # Sonic 1/2 2013 Script Decompilation
 
-a full decompilation for the scripts in Sonic 1 & 2's mobile remakes
+A full decompilation for the scripts in Sonic 1 & 2's 2013 mobile remakes.
 
-- these scripts have been manually reverted back to what the original scripts could've looked like.
-- that means that:
-* function IDs have been recoverted back to function names
-* some function names have been given proper names
-* functions are in the proper order
-* default aliases have been re-added where possible
-* re-added static variables
-* re-added tables & values
+These scripts have been manually reverted back to what the original scripts could've looked like. This means that:
+* Function IDs have been recoverted back to function names
+* Some function names have been given proper names
+* Functions are in the proper order
+* Default aliases have been re-added where possible
+* Re-added static variables
+* Re-added tables & values
 
-- for anyone curious about how Sonic 1/2's scripting language works, check out the handbook (RetroScript Handbook v4.pdf) we made to help get people into using RSDKv4 (S1/S2)'s scripting language
+To use these scripts in mods, extract the scripts folder to the exe's root directory: eg `[rootdir]/Scripts/`. Mods are only required to include the scripts that have been changed.
 
-We recommend downloading the handbook to use it as it makes it easier to navigate.
+For anyone curious about how Sonic 1/2's scripting language works, check out the handbook (RetroScript Handbook v4.pdf) we made to help get people into using RetroScript v4. We recommend downloading the handbook as it makes it easier to navigate.
