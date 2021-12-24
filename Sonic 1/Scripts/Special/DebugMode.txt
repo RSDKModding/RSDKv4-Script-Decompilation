@@ -10,17 +10,17 @@ private alias 3 : TYPE_DEBUGMODE
 
 // Function declarations
 reserve function DebugMode_Function11
-reserve function DebugMode_Function12
-reserve function DebugMode_Function13
-reserve function DebugMode_Function14
-reserve function DebugMode_Function15
-reserve function DebugMode_Function16
-reserve function DebugMode_Function17
-reserve function DebugMode_Function18
-reserve function DebugMode_Function19
-reserve function DebugMode_Function20
-reserve function DebugMode_Function21
-reserve function DebugMode_Function22
+reserve function DebugMode_DummySpawn
+reserve function DebugMode_DummyDraw
+reserve function DebugMode_RemoveObject
+reserve function DebugMode_RemoveIconDraw
+reserve function DebugMode_LoadStage
+reserve function DebugMode_LoadIconDraw
+reserve function DebugMode_SaveStage
+reserve function DebugMode_SaveIconDraw
+reserve function DebugMode_ClrAllObjects
+reserve function DebugMode_ClrIconDraw
+reserve function DebugMode_FindBlockPos
 
 // Static Values
 public value DebugMode_ObjCount = 0;
@@ -48,8 +48,11 @@ public table DebugMode_SpawnTable
 end table
 
 
+// Shared by several functions to place (or remove) an object
 function DebugMode_Function11
 	temp0 = 0
+
+	// Loop through all objects
 	arrayPos0 = 32
 	while arrayPos0 < 0x420
 		if object[arrayPos0].type == TypeName[Blank Object]
@@ -63,6 +66,7 @@ function DebugMode_Function11
 		end if
 		arrayPos0++
 	loop
+
 	if temp0 != 0
 		arrayPos0 = temp0
 		ResetObjectEntity(temp0, temp5, temp4, temp6, temp7)
@@ -73,29 +77,29 @@ function DebugMode_Function11
 end function
 
 
-function DebugMode_Function12
+function DebugMode_DummySpawn
 	temp0 = 0
 end function
 
 
-function DebugMode_Function13
+function DebugMode_DummyDraw
 	DrawSprite(0)
 end function
 
 
-function DebugMode_Function14
+function DebugMode_RemoveObject
 	temp5 = 0
 	temp4 = 0
 	CallFunction(DebugMode_Function11)
 end function
 
 
-function DebugMode_Function15
+function DebugMode_RemoveIconDraw
 	DrawSprite(2)
 end function
 
 
-function DebugMode_Function16
+function DebugMode_LoadStage
 	ReadSaveRAM()
 	arrayPos0 = 32
 	arrayPos1 = 0x800
@@ -120,12 +124,12 @@ function DebugMode_Function16
 end function
 
 
-function DebugMode_Function17
+function DebugMode_LoadIconDraw
 	DrawSprite(3)
 end function
 
 
-function DebugMode_Function18
+function DebugMode_SaveStage
 	arrayPos0 = 32
 	arrayPos1 = 0x800
 	while arrayPos0 < 0x420
@@ -154,13 +158,15 @@ function DebugMode_Function18
 end function
 
 
-function DebugMode_Function19
+function DebugMode_SaveIconDraw
 	DrawSprite(4)
 end function
 
 
-function DebugMode_Function20
+function DebugMode_ClrAllObjects
 	temp0 = 0
+
+	// Loop through all objects and delete them
 	arrayPos0 = 32
 	while arrayPos0 < 0x420
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
@@ -169,12 +175,12 @@ function DebugMode_Function20
 end function
 
 
-function DebugMode_Function21
+function DebugMode_ClrIconDraw
 	DrawSprite(5)
 end function
 
 
-function DebugMode_Function22
+function DebugMode_FindBlockPos
 	temp2 = temp6
 	temp2 -= object[0].xpos
 	temp2 >>= 8
@@ -203,41 +209,55 @@ end function
 
 
 event ObjectMain
-	if options.touchControls == 1
+
+	if options.touchControls == true
 		if object.controlMode == 0
 			CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
+
 			if checkResult > -1
 				arrayPos0 = checkResult
 				temp0 = touchscreen[arrayPos0].xpos
 				temp0 -= saveRAM[39]
 				temp1 = touchscreen[arrayPos0].ypos
 				temp1 -= saveRAM[40]
+
 				ATan2(temp2, temp0, temp1)
 				temp2 += 32
 				temp2 &= 255
 				temp2 >>= 6
+
 				switch temp2
 				case 0
-					inputDown.right = 1
+					inputDown.right = true
 					break
+
 				case 1
-					inputDown.down = 1
+					inputDown.down = true
 					break
+
 				case 2
-					inputDown.left = 1
+					inputDown.left = true
 					break
+
 				case 3
-					inputDown.up = 1
+					inputDown.up = true
 					break
+
 				end switch
+
 			end if
+
 			temp0 = screen.xcenter
 			temp0 -= 48
+
 			temp1 = temp0
 			temp1 += 96
+
 			CheckTouchRect(temp0, 0, temp1, 56)
+
 			if checkResult > -1
 				arrayPos0 = checkResult
+
 				if touchscreen[arrayPos0].xpos > screen.xcenter
 					if touchJump == 0
 						object.value10++
@@ -245,7 +265,8 @@ event ObjectMain
 							object.value10 = 0
 						end if
 					end if
-					touchJump = 1
+
+					touchJump = true
 				else
 					if touchJump == 0
 						object.value10--
@@ -253,62 +274,78 @@ event ObjectMain
 							object.value10 += DebugMode_ObjCount
 						end if
 					end if
-					touchJump = 1
+
+					touchJump = true
 				end if
 			else
 				CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
+
 				switch checkResult
 				case -1
 					touchJump = 0
 					break
+
 				case 0
-					inputDown.buttonC = 1
+					inputDown.buttonC = true
 					if touchJump == 0
 						inputPress.buttonC |= inputDown.buttonC
 					end if
 					touchJump = inputDown.buttonC
 					break
+
 				end switch
 			end if
+
 			CheckTouchRect(0, 0, 112, 56)
+
 			if checkResult > -1
-				inputDown.buttonB = 1
+				inputDown.buttonB = true
 			end if
-			if touchDebug == 0
+
+			if touchDebug == false
 				inputPress.buttonB |= inputDown.buttonB
 			end if
+
 			touchDebug = inputDown.buttonB
 			temp0 = screen.xsize
 			temp0 -= 88
+
 			CheckTouchRect(temp0, 0, screen.xsize, 40)
+
 			if checkResult > -1
 				PlaySfx(SfxName[Menu Back], 0)
 				engine.state = 5
 			end if
-			if inputPress.start == 1
+
+			if inputPress.start == true
 				PlaySfx(SfxName[Menu Back], 0)
 				engine.state = 5
 			end if
 		end if
 	end if
-	temp0 = 0
-	if inputDown.left == 1
+
+	temp0 = false
+	if inputDown.left == true
 		object.xpos -= object.yvel
-		temp0 = 1
+		temp0 = true
 	end if
-	if inputDown.right == 1
+
+	if inputDown.right == true
 		object.xpos += object.yvel
-		temp0 = 1
+		temp0 = true
 	end if
-	if inputDown.up == 1
+
+	if inputDown.up == true
 		object.ypos -= object.yvel
-		temp0 = 1
+		temp0 = true
 	end if
-	if inputDown.down == 1
+
+	if inputDown.down == true
 		object.ypos += object.yvel
-		temp0 = 1
+		temp0 = true
 	end if
-	if temp0 == 1
+
+	if temp0 == true
 		object.yvel += 0xC00
 		if object.yvel > 0x100000
 			object.yvel = 0x100000
@@ -316,7 +353,8 @@ event ObjectMain
 	else
 		object.yvel = 0
 	end if
-	if inputPress.buttonB == 1
+
+	if inputPress.buttonB == true
 		object.type = TypeName[Player Object]
 		if stage.playerListPos == 1
 			object[+1].type = TypeName[Tails Object]
@@ -326,25 +364,25 @@ event ObjectMain
 		object.yvel = 0
 		object.frame = 0
 		object.controlMode = 0
-		object.interaction = 1
+		object.interaction = true
 		PlayerObject_value2 = 0
 		PlayerObject_value3 = 0
 	else
-		if inputPress.buttonA == 1
+		if inputPress.buttonA == true
 			object.value10++
 			if object.value10 >= DebugMode_ObjCount
 				object.value10 = 0
 			end if
 		end if
-		if inputDown.buttonA == 1
-			if inputPress.buttonC == 1
+		if inputDown.buttonA == true
+			if inputPress.buttonC == true
 				object.value10--
 				if object.value10 < 0
 					object.value10 += DebugMode_ObjCount
 				end if
 			end if
 		else
-			if inputPress.buttonC == 1
+			if inputPress.buttonC == true
 				GetTableValue(temp0, object.value10, DebugMode_SpawnTable)
 				CallFunction(temp0)
 				object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
@@ -355,6 +393,7 @@ end event
 
 
 event ObjectDraw
+
 	temp6 = object.xpos
 	temp7 = object.ypos
 	if temp6 < 0
@@ -369,19 +408,28 @@ event ObjectDraw
 	temp7 *= 0x180000
 	temp6 += 0xC0000
 	temp7 += 0xC0000
-	CallFunction(DebugMode_Function22)
+	CallFunction(DebugMode_FindBlockPos)
 	DrawSpriteXY(1, temp0, temp1)
+
+	// Temporarily switch to the selected object in order to draw the preview
 	GetTableValue(object.type, object.value10, DebugMode_TypeTable)
 	GetTableValue(temp0, object.value10, DebugMode_DrawTable)
 	CallFunction(temp0)
+
+	// Switch back
 	object.type = TypeName[Debug Mode]
+
+	// +/-
 	DrawSpriteScreenXY(6, screen.xcenter, 16)
 	DrawSpriteScreenXY(7, screen.xcenter, 16)
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Special/Objects.gif")
+
+	// Editor sprite frames
 	SpriteFrame(-12, -12, 24, 24, 251, 176)
 	SpriteFrame(-12, -12, 24, 24, 131, 454)
 	SpriteFrame(-12, -12, 24, 24, 131, 479)
@@ -390,30 +438,43 @@ event ObjectStartup
 	SpriteFrame(-12, -12, 24, 24, 308, 376)
 	SpriteFrame(-16, 0, 8, 8, 339, 390)
 	SpriteFrame(8, 0, 8, 8, 348, 390)
+
 	DebugMode_ObjCount = 0
+
+	// Fill the list up with dummy entries
 	temp0 = 0
 	while temp0 < 64
 		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
-		SetTableValue(DebugMode_Function13, temp0, DebugMode_DrawTable)
-		SetTableValue(DebugMode_Function12, temp0, DebugMode_SpawnTable)
+		SetTableValue(DebugMode_DummyDraw, temp0, DebugMode_DrawTable)
+		SetTableValue(DebugMode_DummySpawn, temp0, DebugMode_SpawnTable)
 		temp0++
 	loop
+
+	// Add the object deleter as an entry
 	SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
-	SetTableValue(DebugMode_Function15, DebugMode_ObjCount, DebugMode_DrawTable)
-	SetTableValue(DebugMode_Function14, DebugMode_ObjCount, DebugMode_SpawnTable)
+	SetTableValue(DebugMode_RemoveIconDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(DebugMode_RemoveObject, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+
+	// Is the player in the custom special stage bulder scene?
 	if stage.actNum == 8
+
+		// Load saved stage
 		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
-		SetTableValue(DebugMode_Function17, DebugMode_ObjCount, DebugMode_DrawTable)
-		SetTableValue(DebugMode_Function16, DebugMode_ObjCount, DebugMode_SpawnTable)
+		SetTableValue(DebugMode_LoadIconDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(DebugMode_LoadStage, DebugMode_ObjCount, DebugMode_SpawnTable)
 		DebugMode_ObjCount++
+
+		// Save current stage
 		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
-		SetTableValue(DebugMode_Function19, DebugMode_ObjCount, DebugMode_DrawTable)
-		SetTableValue(DebugMode_Function18, DebugMode_ObjCount, DebugMode_SpawnTable)
+		SetTableValue(DebugMode_SaveIconDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(DebugMode_SaveStage, DebugMode_ObjCount, DebugMode_SpawnTable)
 		DebugMode_ObjCount++
+
+		// Clear current stage
 		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypeTable)
-		SetTableValue(DebugMode_Function21, DebugMode_ObjCount, DebugMode_DrawTable)
-		SetTableValue(DebugMode_Function20, DebugMode_ObjCount, DebugMode_SpawnTable)
+		SetTableValue(DebugMode_ClrIconDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(DebugMode_ClrAllObjects, DebugMode_ObjCount, DebugMode_SpawnTable)
 		DebugMode_ObjCount++
 	end if
 end event

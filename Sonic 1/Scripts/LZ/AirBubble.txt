@@ -8,44 +8,63 @@
 //-------Aliases-------//
 private alias 43 : TYPE_AIRBUBBLE
 
+private alias object.value0 : object.timer
+private alias object.value1 : object.mainY
+private alias object.value2 : object.targetPlayer
 
-// Static Values
+// Player values
+private alias object.state			:	player.state
+private alias object.animation		:	player.animation
+private alias object.animationSpeed	:	player.animationSpeed
+private alias object.xvel			:	player.xvel
+private alias object.yvel			:	player.yvel
+private alias object.speed			:	player.speed
+private alias object.value3			:	player.drownCounter
+private alias object.value4			:	player.drownLevel
+private alias object.value36		:	player.tailsGrabTimeout
+private alias object.value37		:	player.shield
 
-// Tables
+// Shield constants
+private alias 2 : SHIELD_BUBBLE
 
 event ObjectMain
-	currentPlayer = object.value2
+	currentPlayer = object.targetPlayer
+
 	if object.state == 0
-		object.value0++
-		if object.value0 > 15
-			object.value0 = 0
+		object.timer++
+		if object.timer > 15
+			object.timer = 0
 			if object.frame == 8
 				object.type = TypeName[Blank Object]
 			end if
+
 			if object.frame < object.propertyValue
 				object.frame++
 			end if
 		end if
+
 		object.ypos += object.yvel
 		if currentPlayer != 0xFFFF
-			if object[currentPlayer].state == PlayerObject_Clinging
+			if player[currentPlayer].state == PlayerObject_Clinging
 				if object.propertyValue < 3
-					object.value1 += 0x40000
+					object.mainY += 0x40000
 				end if
 			end if
 		end if
+
 		if object.frame < 7
 			Sin(object.xpos, object.angle)
 			object.xpos <<= 9
-			object.xpos += object.value1
+			object.xpos += object.mainY
 			object.angle += 4
 			object.angle &= 511
 		end if
+
 		if object.iypos < stage.waterLevel
 			if object.propertyValue == 6
 				object.frame = 7
 				object.propertyValue = 8
-				object.value0 = 0
+				object.timer = 0
 				object.yvel = 0
 			else
 				if object.propertyValue < 6
@@ -54,77 +73,89 @@ event ObjectMain
 			end if
 		end if
 	else
-		CheckEqual(object[currentPlayer].animation, ANI_HURT)
+		CheckEqual(player[currentPlayer].animation, ANI_HURT)
 		temp0 = checkResult
-		CheckEqual(object[currentPlayer].animation, ANI_DYING)
+		CheckEqual(player[currentPlayer].animation, ANI_DYING)
 		temp0 |= checkResult
+
 		if temp0 != 0
 			object.value3 = 0
 		end if
-		if object.value0 < 20
-			object.value0++
+
+		if object.timer < 20
+			object.timer++
 			if object.value3 != 0
-				object[currentPlayer].animation = ANI_BREATHING
+				player[currentPlayer].animation = ANI_BREATHING
 			end if
-			if object.value0 > 9
+
+			if object.timer > 9
 				object.frame = 8
 			end if
 		else
 			object.type = TypeName[Blank Object]
+
 			if object.value3 != 0
-				object[currentPlayer].animation = ANI_WALKING
-				object[currentPlayer].animationSpeed = 20
+				player[currentPlayer].animation = ANI_WALKING
+				player[currentPlayer].animationSpeed = 20
 			end if
 		end if
 	end if
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		object.type = TypeName[Blank Object]
 	end if
+
 	if object.frame == 6
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].animation != ANI_DYING
-				if object[currentPlayer].value37 != 2
+			if player[currentPlayer].animation != ANI_DYING
+				if player[currentPlayer].shield != SHIELD_BUBBLE
 					BoxCollisionTest(C_TOUCH, object.entityPos, -2, -2, 2, 2, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-					if checkResult == 1
+
+					if checkResult == true
 						object.frame = 7
 						object.state = 1
-						object.value0 = 0
+						object.timer = 0
 						object.yvel = 0
-						object.value2 = currentPlayer
-						object[currentPlayer].yvel = 0
-						object[currentPlayer].xvel = 0
-						object[currentPlayer].speed = 0
-						CheckEqual(object[currentPlayer].animation, ANI_FLYING)
+						object.targetPlayer = currentPlayer
+						player[currentPlayer].yvel = 0
+						player[currentPlayer].xvel = 0
+						player[currentPlayer].speed = 0
+						CheckEqual(player[currentPlayer].animation, ANI_FLYING)
 						temp0 = checkResult
-						CheckEqual(object[currentPlayer].animation, ANI_FLYINGTIRED)
+						CheckEqual(player[currentPlayer].animation, ANI_FLYINGTIRED)
 						temp0 |= checkResult
-						CheckEqual(object[currentPlayer].animation, ANI_SWIM_LIFT)
+						CheckEqual(player[currentPlayer].animation, ANI_SWIM_LIFT)
 						temp0 |= checkResult
-						CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
+						CheckEqual(player[currentPlayer].animation, ANI_GLIDING)
 						temp0 |= checkResult
-						CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
+						CheckEqual(player[currentPlayer].animation, ANI_GLIDING_STOP)
 						temp0 |= checkResult
-						CheckEqual(object[currentPlayer].animation, ANI_CLIMBING)
+						CheckEqual(player[currentPlayer].animation, ANI_CLIMBING)
 						temp0 |= checkResult
-						CheckEqual(object[currentPlayer].animation, ANI_LEDGEPULLUP)
+						CheckEqual(player[currentPlayer].animation, ANI_LEDGEPULLUP)
 						temp0 |= checkResult
-						CheckEqual(object[currentPlayer].animation, ANI_CLINGING)
+						CheckEqual(player[currentPlayer].animation, ANI_CLINGING)
 						temp0 |= checkResult
-						CheckEqual(object[currentPlayer].animation, ANI_FANROTATE)
+						CheckEqual(player[currentPlayer].animation, ANI_FANROTATE)
 						temp0 |= checkResult
-						if temp0 == 0
-							object[currentPlayer].animation = ANI_BREATHING
+
+						if temp0 == false
+							player[currentPlayer].animation = ANI_BREATHING
 							object.value3 = 1
 						end if
-						object[currentPlayer].value3 = 0
-						object[currentPlayer].value4 = 0
-						if object[currentPlayer].state == PlayerObject_RollingJump
-							object[currentPlayer].state = PlayerObject_HandleAir
+
+						player[currentPlayer].drownCounter = 0
+						player[currentPlayer].drownLevel = 0
+
+						if player[currentPlayer].state == PlayerObject_RollingJump
+							player[currentPlayer].state = PlayerObject_HandleAir
 						end if
-						if object[currentPlayer].state == PlayerObject_FlyCarry
-							object[currentPlayer].state = PlayerObject_HandleAir
-							object[1].value36 = 30
+
+						if player[currentPlayer].state == PlayerObject_FlyCarry
+							player[currentPlayer].state = PlayerObject_HandleAir
+							player[1].tailsGrabTimeout = 30
 						end if
+
 						PlaySfx(SfxName[Breathing], 0)
 					end if
 				end if
@@ -140,7 +171,10 @@ end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("LZ/Objects.gif")
+
+	// Bubble frames
 	SpriteFrame(-2, -2, 4, 4, 61, 1)
 	SpriteFrame(-3, -3, 6, 6, 61, 6)
 	SpriteFrame(-4, -4, 8, 8, 68, 4)
@@ -150,6 +184,7 @@ event ObjectStartup
 	SpriteFrame(-16, -16, 32, 32, 86, 18)
 	SpriteFrame(-16, -16, 32, 32, 123, 1)
 	SpriteFrame(-15, -15, 30, 30, 156, 3)
+
 end event
 
 event RSDKDraw

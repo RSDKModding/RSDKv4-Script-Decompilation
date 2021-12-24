@@ -9,10 +9,10 @@
 private alias 39 : TYPE_SBZSETUP
 
 // Function declarations
-reserve function SBZSetup_Function93
-reserve function SBZSetup_Function94
-reserve function SBZSetup_Function95
-reserve function SBZSetup_Function96
+reserve function SBZSetup_BGEffectsAct1
+reserve function SBZSetup_BGEffectsAct2
+reserve function SBZSetup_SpeedUpMusic
+reserve function SBZSetup_SlowDownMusic
 
 // Static Values
 public value SBZSetup_value31 = 0;
@@ -77,7 +77,7 @@ public table SBZSetup_table4
 	0x1B00000, 0x72C0000, 0, 63, 8, 18, 0, 113, 8, 46, 56, 1, 40, 7, 8, 96, 2, 47, 0, 43, 8, 34, 56, 1, 40, 16, 32, 8, 40, 55
 end table
 
-function SBZSetup_Function93
+function SBZSetup_BGEffectsAct1
 	if object.value2 < 65
 		temp0 = object.value2
 		temp0 &= 7
@@ -146,7 +146,7 @@ function SBZSetup_Function93
 end function
 
 
-function SBZSetup_Function94
+function SBZSetup_BGEffectsAct2
 	RotatePalette(0, 172, 174, 1)
 	object.value12++
 	if object.value12 == 10
@@ -199,7 +199,7 @@ function SBZSetup_Function94
 end function
 
 
-function SBZSetup_Function95
+function SBZSetup_SpeedUpMusic
 	CheckEqual(object[25].type, TypeName[Music Event])
 	temp0 = checkResult
 	CheckEqual(object[25].propertyValue, 2)
@@ -223,7 +223,7 @@ function SBZSetup_Function95
 end function
 
 
-function SBZSetup_Function96
+function SBZSetup_SlowDownMusic
 	CheckEqual(object[25].type, TypeName[Music Event])
 	temp0 = checkResult
 	CheckEqual(object[25].propertyValue, 2)
@@ -292,38 +292,52 @@ end event
 
 event ObjectStartup
 	if stage.actNum < 5
+
+		// If in acts 1-4, then play the SBZ music
 		SetMusicTrack("ScrapBrain.ogg", 0, 1)
-		SpeedUpMusic = SBZSetup_Function95
-		SlowDownMusic = SBZSetup_Function96
+		SpeedUpMusic = SBZSetup_SpeedUpMusic
+		SlowDownMusic = SBZSetup_SlowDownMusic
+
 	else
+		// Act 5, play the Final Zone music
 		SetMusicTrack("Final.ogg", 0, 0x14AC8)
 	end if
+
+	// Cucky and Pocky are the animals that appear in Scrab Brain
 	animalType1 = TypeName[Cucky]
 	animalType2 = TypeName[Pocky]
+
 	object[10].type = TypeName[SBZ Setup]
 	object[10].priority = PRIORITY_ACTIVE
 	object[10].drawOrder = 0
+
+	// Init anim tiles
 	Copy16x16Tile(592, 604)
 	Copy16x16Tile(593, 605)
 	Copy16x16Tile(594, 606)
 	Copy16x16Tile(596, 604)
 	Copy16x16Tile(597, 605)
 	Copy16x16Tile(598, 606)
+
+	// Use different palette cycles and such based on the act
 	switch stage.actNum
 	case 1
-		object[10].value1 = SBZSetup_Function93
+		object[10].value1 = SBZSetup_BGEffectsAct1
 		break
+
 	case 2
 	case 5
 		SetPaletteEntry(0, 172, 0xC0E0E0)
 		SetPaletteEntry(0, 173, 0x60A0A0)
 		SetPaletteEntry(0, 174, 0x6060)
-		object[10].value1 = SBZSetup_Function94
+		object[10].value1 = SBZSetup_BGEffectsAct2
 		break
+
 	end switch
+
 	SBZSetup_value29 = 0
 	GetTableValue(SBZSetup_value30, SBZSetup_value29, SBZSetup_table25)
-	if options.attractMode == 1
+	if options.attractMode == true
 		if credits.screen == 6
 			PlayerObject_ReplayTable = SBZSetup_table3
 			PlayerObject_ReplaySize = 22

@@ -8,6 +8,10 @@
 //-------Aliases-------//
 private alias 13 : TYPE_MONITOR
 
+private alias object.value16	:	player.isPlayer2
+
+private alias StageSetup_value22 : StageSetup_monitorOverlayFrame
+
 // Function declarations
 reserve function Monitor_DebugDraw
 reserve function Monitor_DebugSpawn
@@ -15,12 +19,15 @@ reserve function Monitor_DebugSpawn
 // Static Values
 public value Monitor_value24 = 0;
 
+private alias Monitor_value24 : Monitor_debugStart
+
 // Tables
 
 function Monitor_DebugDraw
+
 	DrawSprite(0)
 	temp0 = object[0].value17
-	temp0 -= Monitor_value24
+	temp0 -= Monitor_debugStart
 	if temp0 == 5
 		temp0 += stage.playerListPos
 	else
@@ -28,19 +35,24 @@ function Monitor_DebugDraw
 			temp0 += 2
 		end if
 	end if
+
+
 	if temp0 > 12
+		// Is this happening in Labyrinth Zone?
 		CheckCurrentStageFolder("Zone04")
 		if checkResult == 0
 			temp0++
 		end if
 	end if
 	DrawSprite(temp0)
+
 end function
 
 
 function Monitor_DebugSpawn
+
 	temp0 = object[0].value17
-	temp0 -= Monitor_value24
+	temp0 -= Monitor_debugStart
 	if temp0 == 5
 		temp0 += stage.playerListPos
 	else
@@ -48,17 +60,23 @@ function Monitor_DebugSpawn
 			temp0 += 2
 		end if
 	end if
+
+
 	if temp0 > 12
+		// Labyrinth Zone?
 		CheckCurrentStageFolder("Zone04")
 		if checkResult == 0
 			temp0++
 		end if
 	end if
+
 	CreateTempObject(TypeName[Monitor], temp0, object.xpos, object.ypos)
+
 end function
 
 
 event ObjectMain
+
 	if object.state == 1
 		object.yvel += 0x3800
 		object.ypos += object.yvel
@@ -70,78 +88,132 @@ event ObjectMain
 			end if
 		end if
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
 		CheckGreater(object[currentPlayer].yvel, -1)
 		temp0 = checkResult
 		CheckEqual(object[currentPlayer].gravity, GRAVITY_GROUND)
 		temp0 |= checkResult
-		if temp0 == 1
+
+		if temp0 == true
+
 			CheckEqual(object[currentPlayer].animation, ANI_JUMPING)
 			temp0 = checkResult
 			CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
 			temp0 |= checkResult
 			CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
 			temp0 |= checkResult
-			if temp0 == 1
-				if object[currentPlayer].value16 == 0
+
+			if temp0 == true
+
+				// Is this Player 1?
+				if object[currentPlayer].value16 == false
+
+					// See if P1 has collided with the monitor
 					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 16, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+
 					if checkResult == 1
+
+						// Start resetting this object
 						object.state = 0
+
+						// Create and setup the smoke puff
 						CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
 						object[tempObjectPos].drawOrder = 4
 						object[currentPlayer].yvel += object[currentPlayer].value25
 						object[currentPlayer].yvel += object[currentPlayer].value25
+
+						// Player recoil
 						FlipSign(object[currentPlayer].yvel)
+
+						// Switch this item to the broken variant
 						object.type = TypeName[Broken Monitor]
+
 						if object.priority != PRIORITY_XBOUNDS_DESTROY
 							object.priority = PRIORITY_ACTIVE
 						end if
+
+						// Setup the alpha for the icon fading
 						object.alpha = 255
+
 						object.value0 = object.ypos
 						object.value1 = -0x30000
+
 						PlaySfx(SfxName[Destroy], 0)
+
 					end if
 				else
+
+					// Simply act as a box for P2 since only P1 can break monitors
 					BoxCollisionTest(C_BOX, object.entityPos, -15, -14, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 				end if
 			else
+
+				// Player isn't in a state to break the monitor, just act as a solid box
 				BoxCollisionTest(C_BOX, object.entityPos, -15, -14, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 			end if
+
 		else
+
+			// Check if the player hit the monitor
 			BoxCollisionTest(C_BOX, object.entityPos, -15, -16, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 4
+
+			// Did the player hit the monitor as a roof?
+			if checkResult == COL_BOTTOM
+
 				object.state = 1
 				object.yvel = -0x20000
 				object[currentPlayer].yvel = 0x20000
+
 			end if
+
 		end if
+
 	next
+
 end event
 
 
 event ObjectDraw
+
 	DrawSprite(0)
+
 	switch StageSetup_monitorOverlayFrame
 	case 0
 	case 1
 		break
+
 	case 6
 	case 7
 		DrawSprite(18)
 		break
+
 	case 12
 	case 13
 		DrawSprite(19)
 		break
+
 	default
 		DrawSprite(object.propertyValue)
+
 	end switch
+
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Items.gif")
+
+	// Monitor frames
+
+	// Base monitor sprite
 	SpriteFrame(-16, -16, 32, 32, 18, 1)
+
+	// Icons
 	SpriteFrame(-8, -9, 16, 14, 51, 16)
 	SpriteFrame(-8, -9, 16, 14, 68, 16)
 	SpriteFrame(-8, -9, 16, 14, 51, 31)
@@ -161,11 +233,16 @@ event ObjectStartup
 	SpriteFrame(-8, -9, 16, 14, 117, 71)
 	SpriteFrame(-8, -9, 16, 14, 51, 1)
 	SpriteFrame(-8, -9, 16, 14, 68, 1)
+	
 	temp0 = 0
-	Monitor_value24 = DebugMode_ObjCount
-	Monitor_value24--
+	
+	Monitor_debugStart = DebugMode_ObjCount
+	Monitor_debugStart--
+	
+	// Loop to add all monitors to debug mode
 	while temp0 < 16
 		temp2 = 1
+
 		if temp0 >= 4
 			if temp0 <= 6
 				temp1 = temp0
@@ -175,35 +252,52 @@ event ObjectStartup
 				end if
 			end if
 		end if
+
 		if temp0 == 12
+
+			// Goggles are only for Labyrinth Zone
 			CheckCurrentStageFolder("Zone04")
+
 			if checkResult == 0
 				temp2 = 0
 			end if
+
 		end if
+
 		if temp2 == 1
+
 			SetTableValue(TypeName[Monitor], DebugMode_ObjCount, DebugMode_TypesTable)
 			SetTableValue(Monitor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 			SetTableValue(Monitor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+
 			DebugMode_ObjCount++
+
 		end if
+
 		temp0++
+
 	loop
-	if stage.playerListPos == 1
+
+	// Switch life icons to the Tails variant if Tails is the main character
+	if stage.playerListPos == PlayerName[TAILS]
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 			if object[arrayPos0].propertyValue == 5
 				object[arrayPos0].propertyValue = 6
 			end if
 		next
 	end if
-	if stage.playerListPos == 2
+
+	// Switch life icons to the Knuckles variant if Knuckles is the main character
+	if stage.playerListPos == PlayerName[KNUCKLES]
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 			if object[arrayPos0].propertyValue == 5
 				object[arrayPos0].propertyValue = 7
 			end if
 		next
 	end if
+
 	if options.shieldType < 2
+
 		switch stage.listPos
 		case 12
 		case 13
@@ -216,6 +310,7 @@ event ObjectStartup
 				end if
 			next
 			break
+
 		default
 			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 				if object[arrayPos0].propertyValue >= 9
@@ -225,14 +320,21 @@ event ObjectStartup
 				end if
 			next
 		end switch
+
 	end if
-	if options.gameMode == 2
+
+	// Is the game in time attack?
+	if options.gameMode == 2	
+
+		// Delete every life monitor
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 			if object[arrayPos0].propertyValue == 5
 				object[arrayPos0].type = TypeName[Blank Object]
 			end if
 		next
+
 	end if
+
 end event
 
 event RSDKDraw

@@ -8,13 +8,12 @@
 //-------Aliases-------//
 private alias 49 : TYPE_BATBRAIN
 
+private alias object.value0 : object.mainX
+private alias object.value1 : object.mainY
+
 // Function declarations
 reserve function Batbrain_DebugDraw
 reserve function Batbrain_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function Batbrain_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
@@ -23,12 +22,13 @@ end function
 
 function Batbrain_DebugSpawn
 	CreateTempObject(TypeName[Batbrain], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value0 = object.xpos
-	object[tempObjectPos].value1 = object.ypos
+	object[tempObjectPos].mainX = object.xpos
+	object[tempObjectPos].mainY = object.ypos
 end function
 
 
 event ObjectMain
+
 	switch object.state
 	case 0
 		object.priority = PRIORITY_ACTIVE
@@ -127,12 +127,13 @@ event ObjectMain
 		end if
 		break
 	end switch
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.value0
-		object.ypos = object.value1
-		if object.outOfBounds == 1
+		object.xpos = object.mainX
+		object.ypos = object.mainY
+		if object.outOfBounds == true
 			object.xvel = 0
 			object.yvel = 0
 			object.direction = FLIP_NONE
@@ -145,19 +146,23 @@ event ObjectMain
 			object.ypos = temp1
 		end if
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -18, 12, 18, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
+		if checkResult == true
 			CallFunction(PlayerObject_BadnikBreak)
 		end if
 	next
+
 	switch object.animation
 	case 0
 		object.frame = 0
 		break
+
 	case 1
 		object.frame = 1
 		break
+
 	case 2
 		if object.animationTimer == 0
 			PlaySfx(SfxName[Batbrain Fly], 0)
@@ -168,7 +173,9 @@ event ObjectMain
 		object.animationTimer++
 		object.animationTimer &= 15
 		break
+
 	end switch
+
 end event
 
 
@@ -178,8 +185,9 @@ end event
 
 
 event ObjectStartup
+
 	CheckCurrentStageFolder("Zone02")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("MZ/Objects.gif")
 		SpriteFrame(-7, -12, 14, 24, 37, 98)
 		SpriteFrame(-12, -14, 32, 30, 52, 81)
@@ -187,8 +195,9 @@ event ObjectStartup
 		SpriteFrame(-12, -8, 29, 28, 85, 81)
 		SpriteFrame(-15, -6, 35, 20, 1, 106)
 	end if
+	
 	CheckCurrentStageFolder("Zone07")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-7, -12, 14, 24, 52, 68)
 		SpriteFrame(-12, -14, 32, 30, 1, 93)
@@ -196,15 +205,21 @@ event ObjectStartup
 		SpriteFrame(-12, -8, 29, 28, 34, 93)
 		SpriteFrame(-15, -6, 35, 20, 64, 99)
 	end if
+
 	foreach (TypeName[Batbrain], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value0 = object[arrayPos0].xpos
-		object[arrayPos0].value1 = object[arrayPos0].ypos
+
+		// Store the object's starting pos
+		object[arrayPos0].mainX = object[arrayPos0].xpos
+		object[arrayPos0].mainY = object[arrayPos0].ypos
 		object[arrayPos0].drawOrder = 5
 	next
+
+	// Add the object to the stage's debug object list
 	SetTableValue(TypeName[Batbrain], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Batbrain_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Batbrain_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+	
 end event
 
 event RSDKDraw

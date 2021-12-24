@@ -8,6 +8,9 @@
 //-------Aliases-------//
 private alias 9 : TYPE_DEBUGMODE
 
+private alias object.value17	:	debugMode.currentSelection
+private alias object.value18	:	player.currentPlane
+
 // Function declarations
 reserve function DebugMode_BlankSpawn
 reserve function DebugMode_BlankDraw
@@ -17,6 +20,8 @@ public value DebugMode_ObjCount = 0;
 public value DebugMode_ExitTimer = 0;
 
 // Tables
+
+// Large table to hold the types of every object
 public table DebugMode_TypesTable
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -36,6 +41,7 @@ public table DebugMode_TypesTable
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 end table
 
+// Large table to hold the draw functions of every object
 public table DebugMode_DrawTable
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -55,6 +61,7 @@ public table DebugMode_DrawTable
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 end table
 
+// Large table to hold the spawn functions of every object
 public table DebugMode_SpawnTable
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -84,11 +91,12 @@ function DebugMode_BlankDraw
 	DrawSprite(0)
 end function
 
-
 event ObjectMain
 	if DebugMode_ExitTimer == 0
-		if options.touchControls == 1
+		if options.touchControls == true
+
 			CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
+
 			if checkResult > -1
 				arrayPos0 = checkResult
 				temp0 = touchscreen[arrayPos0].xpos
@@ -101,120 +109,156 @@ event ObjectMain
 				temp2 >>= 5
 				switch temp2
 				case 0
-					inputDown.right = 1
+					inputDown.right = true
 					break
+
 				case 1
-					inputDown.right = 1
-					inputDown.down = 1
+					inputDown.right = true
+					inputDown.down = true
 					break
+
 				case 2
-					inputDown.down = 1
+					inputDown.down = true
 					break
+
 				case 3
-					inputDown.down = 1
-					inputDown.left = 1
+					inputDown.down = true
+					inputDown.left = true
 					break
+
 				case 4
-					inputDown.left = 1
+					inputDown.left = true
 					break
+
 				case 5
-					inputDown.left = 1
-					inputDown.up = 1
+					inputDown.left = true
+					inputDown.up = true
 					break
+
 				case 6
-					inputDown.up = 1
+					inputDown.up = true
 					break
+
 				case 7
-					inputDown.up = 1
-					inputDown.right = 1
+					inputDown.up = true
+					inputDown.right = true
 					break
+
 				end switch
+
 			end if
+
 			temp0 = screen.xcenter
 			temp0 -= 48
+
 			temp1 = temp0
 			temp1 += 96
+
 			CheckTouchRect(temp0, 0, temp1, 56)
 			if checkResult > -1
 				arrayPos0 = checkResult
+
 				if touchscreen[arrayPos0].xpos > screen.xcenter
-					if touchJump == 0
-						object.value17++
-						if object.value17 >= DebugMode_ObjCount
-							object.value17 = 0
+					if touchJump == false
+						debugMode.currentSelection++
+						if debugMode.currentSelection >= DebugMode_ObjCount
+							debugMode.currentSelection = 0
 						end if
 					end if
-					touchJump = 1
+
+					touchJump = true
 				else
-					if touchJump == 0
-						object.value17--
-						if object.value17 < 0
-							object.value17 += DebugMode_ObjCount
+					if touchJump == false
+						debugMode.currentSelection--
+
+						if debugMode.currentSelection < 0
+							debugMode.currentSelection += DebugMode_ObjCount
 						end if
 					end if
-					touchJump = 1
+					touchJump = true
 				end if
 			else
+
 				CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
+
 				switch checkResult
 				case -1
-					touchJump = 0
+					touchJump = false
 					break
+
 				case 0
-					inputDown.buttonC = 1
-					if touchJump == 0
+					inputDown.buttonC = true
+					if touchJump == false
 						inputPress.buttonC |= inputDown.buttonC
 					end if
 					touchJump = inputDown.buttonC
 					break
+
 				end switch
 			end if
+
 			temp0 = screen.xsize
 			temp0 -= 88
+
 			CheckTouchRect(temp0, 0, screen.xsize, 40)
 			if checkResult > -1
-				if options.stageSelectFlag == 1
+				if options.stageSelectFlag == true
+
+					// Start going to level select
 					StopMusic()
 					DebugMode_ExitTimer = 8
 					object.priority = PRIORITY_ACTIVE_PAUSED
 					options.touchControls = 0
 					stage.state = 3
+
 				else
+					// Pause the game
 					PlaySfx(SfxName[Menu Back], 0)
 					engine.state = 5
 				end if
 			end if
-			if inputPress.start == 1
+
+			if inputPress.start == true
+				// Pause the game
 				PlaySfx(SfxName[Menu Back], 0)
 				engine.state = 5
 			end if
 		end if
+
 		CheckTouchRect(0, 0, 112, 56)
+		
 		if checkResult > -1
-			inputDown.buttonB = 1
+			inputDown.buttonB = true
 		end if
-		if touchDebug == 0
+
+		if touchDebug == false
 			inputPress.buttonB |= inputDown.buttonB
 		end if
+
 		touchDebug = inputDown.buttonB
-		temp0 = 0
-		if inputDown.left == 1
+		temp0 = false
+
+		if inputDown.left == true
 			object.xpos -= object.yvel
-			temp0 = 1
+			temp0 = true
 		end if
-		if inputDown.right == 1
+
+		if inputDown.right == true
 			object.xpos += object.yvel
-			temp0 = 1
+			temp0 = true
 		end if
-		if inputDown.up == 1
+
+		if inputDown.up == true
 			object.ypos -= object.yvel
-			temp0 = 1
+			temp0 = true
 		end if
-		if inputDown.down == 1
+
+		if inputDown.down == true
 			object.ypos += object.yvel
-			temp0 = 1
+			temp0 = true
 		end if
-		if temp0 == 1
+
+		if temp0 == true
 			object.yvel += 0xC00
 			if object.yvel > 0x100000
 				object.yvel = 0x100000
@@ -222,10 +266,14 @@ event ObjectMain
 		else
 			object.yvel = 0
 		end if
+
 		object.value3 = 0
 		object.value4 = 0
-		if inputPress.buttonB == 1
+
+		if inputPress.buttonB == true
 			if DebugMode_ExitTimer == 0
+
+				// Exit Debug Mode
 				if stage.playerListPos == 1
 					object.type = TypeName[Tails Object]
 				else
@@ -238,61 +286,88 @@ event ObjectMain
 				object.animation = ANI_WALKING
 				object.animationSpeed = 0
 				object.frame = 0
-				object.controlMode = 0
+				object.controlMode = false
 				object.drawOrder = -1
-				object.value18 = 4
-				object.interaction = 1
+				player.currentPlane = 4
+				object.interaction = true
 				object.tileCollisions = 1
-				object.visible = 1
+				object.visible = true
+
 			end if
 		else
-			if inputPress.buttonA == 1
-				object.value17++
-				if object.value17 >= DebugMode_ObjCount
-					object.value17 = 0
+			if inputPress.buttonA == true
+				// Go up one on the debug item list
+				debugMode.currentSelection++
+				if debugMode.currentSelection >= DebugMode_ObjCount
+					debugMode.currentSelection = 0
 				end if
 			end if
-			if inputDown.buttonA == 1
-				if inputPress.buttonC == 1
-					object.value17--
-					if object.value17 < 0
-						object.value17 += DebugMode_ObjCount
+			if inputDown.buttonA == true
+				if inputPress.buttonC == true
+					// Go down one on the debug item list
+					debugMode.currentSelection--
+					if debugMode.currentSelection < 0
+						debugMode.currentSelection += DebugMode_ObjCount
 					end if
 				end if
 			else
-				if inputPress.buttonC == 1
-					GetTableValue(temp0, object.value17, DebugMode_SpawnTable)
+				if inputPress.buttonC == true
+					// Place the object
+					GetTableValue(temp0, debugMode.currentSelection, DebugMode_SpawnTable)
 					CallFunction(temp0)
 					object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
 				end if
 			end if
 		end if
 	else
-		options.touchControls = 0
+
+		options.touchControls = false
+
 		DebugMode_ExitTimer += 8
 		SetScreenFade(0, 0, 0, DebugMode_ExitTimer)
+
 		if DebugMode_ExitTimer == 384
+
+			// Load the level select
 			starPostID = 0
 			stage.activeList = PRESENTATION_STAGE
 			stage.listPos = 5
 			LoadStage()
+
 		end if
+
 	end if
 end event
 
 
 event ObjectDraw
-	GetTableValue(object.type, object.value17, DebugMode_TypesTable)
-	GetTableValue(temp0, object.value17, DebugMode_DrawTable)
+
+	// Set this object to the selected type
+	GetTableValue(object.type, debugMode.currentSelection, DebugMode_TypesTable)
+
+	// Get the draw function of the selected object
+	GetTableValue(temp0, debugMode.currentSelection, DebugMode_DrawTable)
+
+	// Call said draw function
 	CallFunction(temp0)
+
+	// Go back to being a Debug Mode object
 	object.type = TypeName[Debug Mode]
+
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Display.gif")
+
+	// Appears as just a white square in this game, but it would be Sonic's (otherwise unused) CD life icon if using S1 2013's sheets
 	SpriteFrame(-8, -8, 16, 16, 188, 239)
+
 	DebugMode_ObjCount = 0
+
+	// Fill the table wilt empty values
+	// - Not needed on first run, but needed when refreshing a new scene in order to clear the table
 	temp0 = 0
 	while temp0 < 256
 		SetTableValue(TypeName[DebugMode], temp0, DebugMode_TypesTable)
@@ -300,7 +375,9 @@ event ObjectStartup
 		SetTableValue(DebugMode_BlankSpawn, temp0, DebugMode_SpawnTable)
 		temp0++
 	loop
+
 	DebugMode_ExitTimer = 0
+
 end event
 
 event RSDKDraw

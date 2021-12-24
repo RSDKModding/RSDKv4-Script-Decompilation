@@ -8,13 +8,16 @@
 //-------Aliases-------//
 private alias 10 : TYPE_RING
 
+private alias object.value1 : ring.targetPlayer
+
+private alias object.value0  : player.rings
+private alias object.value37 : player.shield
+
+private alias 4 : SHIELD_LIGHTNING
+
 // Function declarations
 reserve function Ring_DebugDraw
 reserve function Ring_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function Ring_DebugDraw
 	DrawSprite(0)
@@ -28,22 +31,37 @@ end function
 
 
 event ObjectMain
+
+	// Interact with player(s)
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
+		// Check if the player should be able to collect rings
 		CheckEqual(object[0].state, PlayerObject_Knockback)
 		temp0 = checkResult
 		CheckEqual(object[currentPlayer].state, PlayerObject_Knockback)
 		temp0 = checkResult
 		CheckEqual(object[currentPlayer].state, PlayerObject_Hurt)
 		temp0 |= checkResult
-		if temp0 == 0
+
+		if temp0 == false
+
+			// Did the player collide with the ring?
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
+
+				// Make the ring disappear
 				object.type = TypeName[Ring Sparkle]
-				object[0].value0++
-				if object[0].value0 > 999
-					object[0].value0 = 999
+
+				// Add to the player's ring count
+				player[0].rings++
+
+				// Max 999 rings
+				if player[0].rings > 999
+					player[0].rings = 999
 				end if
-				if object[0].value0 >= ringExtraLife
+
+				// Give the player an extra life if needed
+				if player[0].rings >= ringExtraLife
 					if options.gameMode != 2
 						player.lives++
 						PlaySfx(SfxName[Life], 0)
@@ -52,7 +70,7 @@ event ObjectMain
 						object[25].priority = PRIORITY_ACTIVE
 					end if
 					if stage.debugMode == 0
-						if object[0].value0 >= 200
+						if player[0].rings >= 200
 							CallNativeFunction2(SetAchievement, 4, 100)
 						end if
 					end if
@@ -61,6 +79,8 @@ event ObjectMain
 						ringExtraLife = 1000
 					end if
 				end if
+
+				// Update achievment collection
 				if object.propertyValue == 1
 					if stage.debugMode == 0
 						if options.attractMode == 0
@@ -76,6 +96,8 @@ event ObjectMain
 						end if
 					end if
 				end if
+
+				// Play the ring chime
 				if ringPan == 0
 					PlaySfx(SfxName[Ring L], 0)
 					SetSfxAttributes(SfxName[Ring L], -1, -100)
@@ -85,27 +107,46 @@ event ObjectMain
 					SetSfxAttributes(SfxName[Ring R], -1, 100)
 					ringPan = 0
 				end if
+
 			else
+
+				// Is this just a normal ring?
 				if object.state == 0
-					if object[currentPlayer].value37 == 4
+
+					// Does the player have the lightning shield?
+					if player[currentPlayer].shield == SHIELD_LIGHTNING
+
+						// Check if this ring falls within the lightning shield attraction range
 						BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-						if checkResult == 1
+						if checkResult == true
 							object.state = 1
-							object.value1 = currentPlayer
+							ring.targetPlayer = currentPlayer
 						end if
+
 					end if
+
 				end if
+
 			end if
 		end if
 	next
+
+	// Attracted ring?
 	if object.state == 1
-		arrayPos0 = object.value1
-		if object[arrayPos0].value37 != 4
+
+		// Check if the player's lost their lightning shield
+		arrayPos0 = ring.targetPlayer
+		if player[arrayPos0].shield != SHIELD_LIGHTNING
+
+			// Make the ring fall to the ground
 			object.type = TypeName[Lose Ring]
 			object.animationSpeed = 128
 			object.alpha = 256
+
 		else
-			arrayPos0 = object.value1
+
+			// Move to the player
+			arrayPos0 = ring.targetPlayer
 			if object.xpos > object[arrayPos0].xpos
 				if object.xvel > 0
 					object.xvel -= 0xC000
@@ -132,10 +173,14 @@ event ObjectMain
 					object.yvel += 0x3000
 				end if
 			end if
+
 			object.xpos += object.xvel
 			object.ypos += object.yvel
+
 		end if
+
 	end if
+
 end event
 
 
@@ -145,11 +190,17 @@ end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Items.gif")
+
 	foreach (TypeName[Ring], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 4
 	next
+
+	// Reset the achievment value
 	achieveRingCount = 0
+
+	// Ring frames
 	SpriteFrame(-8, -8, 16, 16, 1, 1)
 	SpriteFrame(-8, -8, 16, 16, 1, 18)
 	SpriteFrame(-8, -8, 16, 16, 1, 35)
@@ -158,6 +209,8 @@ event ObjectStartup
 	SpriteFrame(-8, -8, 16, 16, 1, 86)
 	SpriteFrame(-8, -8, 16, 16, 1, 103)
 	SpriteFrame(-8, -8, 16, 16, 1, 120)
+
+	// Add the ring to the stage's debug mode list
 	SetTableValue(TypeName[Ring], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Ring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Ring_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)

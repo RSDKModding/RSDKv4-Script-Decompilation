@@ -8,46 +8,58 @@
 //-------Aliases-------//
 private alias 67 : TYPE_BOSSFIREBALL
 
+private alias object.value0 : object.timer
+private alias object.value1 : object.flipFlag
+
 // Function declarations
-reserve function BossFireball_Function153
+reserve function BossFireball_Animate
 
-// Static Values
 
-// Tables
+// Shared by several states in order to animate the fireball
+function BossFireball_Animate
 
-function BossFireball_Function153
 	object.frame = object.animationTimer
 	object.frame /= 12
+
 	object.direction = object.animationTimer
 	object.direction /= 6
 	object.direction &= FLIP_X
-	object.direction += object.value1
+	object.direction += object.flipFlag
+
 	object.animationTimer++
 	object.animationTimer %= 24
+	
 end function
 
 
 event ObjectMain
+
 	switch object.state
 	case 0
-		object.value1 = 2
-		object.value0++
-		if object.value0 == 30
-			object.value0 = 0
-			object.value1 = 0
+		object.flipFlag = FLIP_Y
+		object.timer++
+
+		if object.timer == 30
+			object.timer = 0
+			object.flipFlag = 0
 			object.state++
 			PlaySfx(SfxName[Small Fireball], 0)
 		end if
-		CallFunction(BossFireball_Function153)
+
+		CallFunction(BossFireball_Animate)
 		break
+
 	case 1
 		object.yvel += 0x1800
 		object.ypos += object.yvel
+
 		if object.yvel > 0x30000
 			object.drawOrder = 5
 		end if
+
 		ObjectTileCollision(CSIDE_FLOOR, 0, 4, 0)
-		if checkResult == 1
+
+		if checkResult == true
 			CreateTempObject(TypeName[Boss Fireball], 0, object.xpos, object.ypos)
 			object[tempObjectPos].value3 = object.xpos
 			object[tempObjectPos].value3 -= 0x100000
@@ -62,92 +74,126 @@ event ObjectMain
 			object[tempObjectPos].drawOrder = 5
 			object.state++
 		end if
-		CallFunction(BossFireball_Function153)
+
+		CallFunction(BossFireball_Animate)
 		break
+
 	case 2
-		object.value0++
-		if object.value0 == 120
-			object.value0 = 0
+		object.timer++
+
+		if object.timer == 120
+			object.timer = 0
 			object.state = 7
 			object.frame = 2
 			object.direction = FLIP_NONE
 		else
-			CallFunction(BossFireball_Function153)
+			CallFunction(BossFireball_Animate)
 		end if
+
 		break
+
 	case 3
 		object.xpos += object.xvel
+
 		if object.xvel > 0
 			if object.xpos >= object.value3
+
 				object.xvel = 0
 				object.xpos = object.value3
 				object.state = 2
+
 				CreateTempObject(TypeName[Boss Fireball], 0, object.xpos, object.ypos)
 				object[tempObjectPos].value3 = object.xpos
 				object[tempObjectPos].value3 += 0x100000
 				object[tempObjectPos].xvel = 0xA000
 				object[tempObjectPos].state = 4
 				object[tempObjectPos].drawOrder = 5
+
 			end if
 		else
 			if object.xpos <= object.value3
+
 				object.xvel = 0
 				object.xpos = object.value3
 				object.state = 2
+
 				CreateTempObject(TypeName[Boss Fireball], 0, object.xpos, object.ypos)
 				object[tempObjectPos].value3 = object.xpos
 				object[tempObjectPos].value3 -= 0x100000
 				object[tempObjectPos].xvel = -0xA000
 				object[tempObjectPos].state = 4
 				object[tempObjectPos].drawOrder = 5
+
 			end if
 		end if
-		CallFunction(BossFireball_Function153)
+
+		CallFunction(BossFireball_Animate)
+
 		break
+
 	case 4
 		object.xpos += object.xvel
+
 		if object.xvel > 0
 			if object.xpos >= object.value3
+
 				object.xpos = object.value3
 				object.state = 5
+
 				CreateTempObject(TypeName[Boss Fireball], 0, object.xpos, object.ypos)
 				object[tempObjectPos].xvel = 0xA000
 				object[tempObjectPos].state = 6
 				object[tempObjectPos].drawOrder = 5
+
 			end if
 		else
 			if object.xpos <= object.value3
+
 				object.xpos = object.value3
 				object.state = 5
+
 				CreateTempObject(TypeName[Boss Fireball], 0, object.xpos, object.ypos)
 				object[tempObjectPos].xvel = -0xA000
 				object[tempObjectPos].state = 6
 				object[tempObjectPos].drawOrder = 5
+
 			end if
 		end if
-		CallFunction(BossFireball_Function153)
+
+		CallFunction(BossFireball_Animate)
+
 		break
+
 	case 5
-		object.value0++
-		temp0 = object.value0
+		object.timer++
+
+		temp0 = object.timer
 		temp0 %= 48
+
 		if temp0 == 0
 			CreateTempObject(TypeName[Boss Fireball], 0, object.xpos, object.ypos)
+
 			object[tempObjectPos].xvel = object.xvel
 			object[tempObjectPos].state = 6
 			object[tempObjectPos].drawOrder = 5
 		end if
-		if object.value0 == 120
-			object.value0 = 0
+
+		if object.timer == 120
+
+			object.timer = 0
 			object.state = 7
 			object.frame = 2
 			object.direction = FLIP_NONE
+
 		else
-			CallFunction(BossFireball_Function153)
+			CallFunction(BossFireball_Animate)
 		end if
+
 		break
+
 	case 6
 		object.xpos += object.xvel
+
 		if object.gravity == GRAVITY_GROUND
 			ObjectTileGrip(CSIDE_FLOOR, 0, 4, 0)
 			object.gravity = checkResult
@@ -157,27 +203,38 @@ event ObjectMain
 			object.yvel += 0x1800
 			object.ypos += object.yvel
 		end if
-		if object.outOfBounds == 1
+
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
-		object.value0++
-		if object.value0 == 90
+
+		object.timer++
+
+		if object.timer == 90
 			object.type = TypeName[Blank Object]
 		end if
-		CallFunction(BossFireball_Function153)
+
+		CallFunction(BossFireball_Animate)
+
 		break
+
 	case 7
-		object.value0++
-		if object.value0 == 8
+		object.timer++
+
+		if object.timer == 8
 			object.type = TypeName[Blank Object]
 		end if
+
 		break
+
 	end switch
+
+	// Check for player collision
 	if object.state > 0
 		if object.frame < 2
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_FireHit)
 				end if
 			next

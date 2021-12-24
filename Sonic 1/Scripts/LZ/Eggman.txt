@@ -8,11 +8,15 @@
 //-------Aliases-------//
 private alias 71 : TYPE_EGGMAN
 
+private alias object.value0  : object.mainX
+private alias object.value1  : object.mainY
+private alias object.value8  : object.remainingHits
+private alias object.value9  : object.invulnerable
+private alias object.value10 : object.achieveFlag
+
 // Function declarations
 reserve function Eggman_Function163
 reserve function Eggman_Function164
-
-// Static Values
 
 // Tables
 public table Eggman_table36
@@ -24,16 +28,18 @@ function Eggman_Function163
 	Sin256(temp0, object.value3)
 	temp0 <<= 10
 	object.ypos += temp0
+
 	object.value3 += 2
 	object.value3 &= 255
 end function
 
 
 function Eggman_Function164
-	object.value0 += object.xvel
-	object.value1 += object.yvel
-	object.xpos = object.value0
-	object.ypos = object.value1
+	object.mainX += object.xvel
+	object.mainY += object.yvel
+
+	object.xpos = object.mainX
+	object.ypos = object.mainY
 end function
 
 
@@ -45,7 +51,7 @@ event ObjectMain
 			if object[currentPlayer].xpos >= temp0
 				object.xvel = 0x6000
 				object.yvel = -0x18000
-				object.value1 = object.ypos
+				object.mainY = object.ypos
 				object.value3 = 0
 				object.state++
 				object.priority = PRIORITY_ACTIVE
@@ -61,14 +67,14 @@ event ObjectMain
 	case 1
 		temp1 = -2
 		GetTableValue(temp0, 1, Eggman_table36)
-		if object.value0 >= temp0
-			object.value0 = temp0
+		if object.mainX >= temp0
+			object.mainX = temp0
 			object.xvel = 0
 			temp1++
 		end if
 		GetTableValue(temp0, 2, Eggman_table36)
-		if object.value1 <= temp0
-			object.value1 = temp0
+		if object.mainY <= temp0
+			object.mainY = temp0
 			object.yvel = 0
 			temp1++
 		end if
@@ -82,14 +88,14 @@ event ObjectMain
 	case 2
 		temp1 = -2
 		GetTableValue(temp0, 3, Eggman_table36)
-		if object.value0 >= temp0
-			object.value0 = temp0
+		if object.mainX >= temp0
+			object.mainX = temp0
 			object.xvel = 0
 			temp1++
 		end if
 		GetTableValue(temp0, 4, Eggman_table36)
-		if object.value1 <= temp0
-			object.value1 = temp0
+		if object.mainY <= temp0
+			object.mainY = temp0
 			object.yvel = 0
 			temp1++
 		end if
@@ -101,8 +107,8 @@ event ObjectMain
 		break
 	case 3
 		GetTableValue(temp0, 5, Eggman_table36)
-		if object.value1 <= temp0
-			object.value1 = temp0
+		if object.mainY <= temp0
+			object.mainY = temp0
 			if object.value2 == 0
 				object.xvel = 0x14000
 				object.yvel--
@@ -111,7 +117,7 @@ event ObjectMain
 				object.yvel--
 			end if
 			object.direction = FLIP_X
-			object.value0 = object.xpos
+			object.mainX = object.xpos
 			object.state++
 			CallFunction(Eggman_Function164)
 		else
@@ -125,7 +131,7 @@ event ObjectMain
 			end if
 			Sin256(object.xpos, object.value4)
 			object.xpos <<= 12
-			object.xpos += object.value0
+			object.xpos += object.mainX
 			temp0 = object.yvel
 			temp1 = 0x7FFFFFFF
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -133,7 +139,7 @@ event ObjectMain
 					temp1 = object[currentPlayer].ypos
 				end if
 			next
-			temp1 -= object.value1
+			temp1 -= object.mainY
 			if temp1 >= 0
 				temp1 -= 0x480000
 				if temp1 >= 0
@@ -152,27 +158,27 @@ event ObjectMain
 				temp0 <<= 1
 			end if
 			if temp0 == 0
-				object.ypos = object.value1
+				object.ypos = object.mainY
 				CallFunction(Eggman_Function163)
 			else
-				object.value1 = object.ypos
+				object.mainY = object.ypos
 				object.value3 = 0
-				object.value1 += temp0
-				object.ypos = object.value1
+				object.mainY += temp0
+				object.ypos = object.mainY
 			end if
 		end if
 		break
 	case 4
 		temp1 = -2
 		GetTableValue(temp0, 6, Eggman_table36)
-		if object.value0 >= temp0
-			object.value0 = temp0
+		if object.mainX >= temp0
+			object.mainX = temp0
 			object.xvel = 0
 			temp1++
 		end if
 		GetTableValue(temp0, 7, Eggman_table36)
-		if object.value1 <= temp0
-			object.value1 = temp0
+		if object.mainY <= temp0
+			object.mainY = temp0
 			object.yvel = 0
 			temp1++
 		end if
@@ -222,10 +228,10 @@ event ObjectMain
 			object.animation = 6
 			object.animationTimer = 0
 			object.value6 = 2
-			object.value1 = object.ypos
+			object.mainY = object.ypos
 			object.state++
 			if stage.debugMode == 0
-				if object.value10 == 0
+				if object.achieveFlag == 0
 					CallNativeFunction2(SetAchievement, 6, 100)
 				end if
 			end if
@@ -242,49 +248,74 @@ event ObjectMain
 		end if
 		break
 	case 7
-		if object.outOfBounds == 1
+		if object.outOfBounds == true
 			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 			object.value2 = 0
 		else
 			CallFunction(Eggman_Function164)
 		end if
 		break
+
 	end switch
-	if object.value8 != 0
-		if object.value9 > 0
-			object.value9--
+
+	// Can't hurt Eggman if he's already at 0 health
+	if object.remainingHits != 0
+
+		// Update invulnerablability
+		if object.invulnerable > 0
+			object.invulnerable--
 		end if
+
+		// Check interaction with players
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object.value9 == 0
+
+			// If invulnerable, don't interact
+			if object.invulnerable == 0
+
+				// CHeck if the player is in one of the following animations
 				CheckEqual(object[currentPlayer].animation, ANI_HURT)
 				temp0 = checkResult
 				CheckEqual(object[currentPlayer].animation, ANI_DYING)
 				temp0 |= checkResult
 				CheckEqual(object[currentPlayer].animation, ANI_DROWNING)
 				temp0 |= checkResult
+
 				if temp0 != 0
+					// Player is in one of those animations, start laughing at them
 					if object.animation != 2
 						object.animation = 2
 						object.animationTimer = 0
 					end if
+
+					// If P1 was hit, set achievment flag to unobtainable
 					if currentPlayer == 0
-						object.value10 = 1
+						object.achieveFlag = 1
 					end if
 				end if
+
+				// Check player collision
 				BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
+					
+					// See if the player should be hit or is attacking
 					CallFunction(PlayerObject_CheckHit)
-					if checkResult == 1
-						object.value8--
-						if object.value8 == 0
+
+					if checkResult == true
+						// Player has active hitbox, decrease health by 1
+						object.remainingHits--
+
+						// Check if the boss should be defeated or not
+						if object.remainingHits == 0
+							// Final hit, increase score and start exploding
 							player.score += 1000
 							object.animation = 4
 							object.animationTimer = 0
 							object.value2 = 1
 						else
+							// Simply got hit, do the hit stuff
 							object.animation = 3
 							object.animationTimer = 0
-							object.value9 = 32
+							object.invulnerable = 32
 							PlaySfx(SfxName[Boss Hit], 0)
 						end if
 					end if
@@ -292,6 +323,7 @@ event ObjectMain
 			end if
 		next
 	end if
+
 	if object.value2 == 1
 		temp0 = oscillation
 		temp0 &= 7
@@ -365,6 +397,7 @@ event ObjectDraw
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 	end switch
+
 	switch object.value6
 	case 1
 		temp0 = object.value7
@@ -374,6 +407,7 @@ event ObjectDraw
 		object.value7 &= 7
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
+
 	case 2
 		temp0 = object.value7
 		temp0 /= 3
@@ -384,12 +418,16 @@ event ObjectDraw
 		end if
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
+
 	end switch
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Eggman.gif")
+
+	// Wet Eggman frames
 	SpriteFrame(-28, -32, 64, 56, 1, 1)
 	SpriteFrame(-28, -32, 64, 56, 66, 1)
 	SpriteFrame(-28, -32, 64, 56, 131, 1)
@@ -409,42 +447,64 @@ event ObjectStartup
 	SpriteFrame(34, -8, 32, 26, 213, 16)
 	SpriteFrame(34, 1, 10, 9, 196, 2)
 	SpriteFrame(33, 0, 15, 11, 196, 12)
+
+	// Setup values
 	foreach (TypeName[Eggman], arrayPos0, ALL_ENTITIES)
+
+		// Set position points for changing behaviours
+		// (Think of how he turns after reaching a certain point, etc.)
 		temp0 = -0x700000
 		temp0 += object[arrayPos0].xpos
 		SetTableValue(temp0, 0, Eggman_table36)
+
 		temp0 = 0x380000
 		temp0 += object[arrayPos0].xpos
 		SetTableValue(temp0, 1, Eggman_table36)
+
 		temp0 = -0xC00000
 		temp0 += object[arrayPos0].ypos
 		SetTableValue(temp0, 2, Eggman_table36)
+
 		temp0 = 0x600000
 		temp0 += object[arrayPos0].xpos
 		SetTableValue(temp0, 3, Eggman_table36)
+
 		temp0 = -0x1000000
 		temp0 += object[arrayPos0].ypos
 		SetTableValue(temp0, 4, Eggman_table36)
+
 		temp0 = -0x4C00000
 		temp0 += object[arrayPos0].ypos
 		SetTableValue(temp0, 5, Eggman_table36)
+
 		temp0 = 0x13C0000
 		temp0 += object[arrayPos0].xpos
 		SetTableValue(temp0, 6, Eggman_table36)
+
 		temp0 = -0x5000000
 		temp0 += object[arrayPos0].ypos
 		SetTableValue(temp0, 7, Eggman_table36)
+
 		temp0 = 0xB80000
 		temp0 += object[arrayPos0].xpos
 		SetTableValue(temp0, 8, Eggman_table36)
+
 		temp0 = -0x4D00000
 		temp0 += object[arrayPos0].ypos
 		SetTableValue(temp0, 9, Eggman_table36)
-		object[arrayPos0].value0 = object[arrayPos0].xpos
-		object[arrayPos0].value1 = object[arrayPos0].ypos
+
+		// Store the starting position
+		object[arrayPos0].mainX = object[arrayPos0].xpos
+		object[arrayPos0].mainY = object[arrayPos0].ypos
+
+		// Make it in the first animation state
 		object[arrayPos0].animation = 1
-		object[arrayPos0].value8 = 8
+
+		// It takes 8 hits to drown this egg
+		object[arrayPos0].remainingHits = 8
+	
 	next
+
 end event
 
 event RSDKDraw

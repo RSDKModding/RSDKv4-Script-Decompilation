@@ -8,13 +8,13 @@
 //-------Aliases-------//
 private alias 71 : TYPE_CONVEYORWHEEL
 
+private alias object.state   : player.state
+private alias object.speed   : player.speed
+private alias object.gravity : player.gravity
+
 // Function declarations
 reserve function ConveyorWheel_DebugDraw
 reserve function ConveyorWheel_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function ConveyorWheel_DebugDraw
 	DrawSprite(0)
@@ -28,26 +28,30 @@ end function
 
 
 event ObjectMain
+
+	// Check interaction with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
 		BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			if object[currentPlayer].gravity == GRAVITY_GROUND
-				if object[currentPlayer].state == PlayerObject_KnuxGlideSlide
-					object[currentPlayer].state = PlayerObject_HandleGround
+		if checkResult == true
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				if player[currentPlayer].state == PlayerObject_KnuxGlideSlide
+					player[currentPlayer].state = PlayerObject_HandleGround
 				end if
-				if object[currentPlayer].state == PlayerObject_KnuxGlideDrop
-					object[currentPlayer].state = PlayerObject_HandleGround
+				if player[currentPlayer].state == PlayerObject_KnuxGlideDrop
+					player[currentPlayer].state = PlayerObject_HandleGround
 				end if
-				if object[currentPlayer].speed < 0x40000
-					object[currentPlayer].speed = 0x40000
+				if player[currentPlayer].speed < 0x40000
+					player[currentPlayer].speed = 0x40000
 				else
-					if object[currentPlayer].speed > 0xF0000
-						object[currentPlayer].speed = 0xF0000
+					if player[currentPlayer].speed > 0xF0000
+						player[currentPlayer].speed = 0xF0000
 					end if
 				end if
 			end if
 		end if
 	next
+
 	object.angle += 4
 	object.angle &= 511
 end event
@@ -65,15 +69,22 @@ end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("SBZ/Objects.gif")
+
+	// Wheel frame
 	SpriteFrame(-7, -7, 14, 14, 65, 123)
+
 	foreach (TypeName[Conveyor Wheel], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 5
 	next
+
+	// Add this object to the debug item list
 	SetTableValue(TypeName[Conveyor Wheel], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(ConveyorWheel_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(ConveyorWheel_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+
 end event
 
 event RSDKDraw
