@@ -9,9 +9,15 @@
 private alias 28 : TYPE_FIRESHIELD
 
 private alias object.value0 : object.timer
-private alias object.value18 : object.currentPlane
+private alias object.value18 : object.sortedDrawOrder
 
-// Bubble shield states
+private alias -1 : DRAWORDER_PLAYER
+
+private alias object.state : player.state
+private alias object.xpos  : player.xpos
+private alias object.ypos  : player.ypos
+
+// Flame shield states
 // Divided into 2 - passive versions and active versions
 private alias 0 : STATE_INITP
 private alias 1 : STATE_MAINP
@@ -33,13 +39,13 @@ end table
 
 event ObjectMain
 
-	object.drawOrder = -1
+	object.drawOrder = DRAWORDER_PLAYER
 
 	// Unload if the player shouldn't have a shield
-	if object[-playerCount].state == PlayerObject_Death
+	if player[-playerCount].state == PlayerObject_Death
 		object.type = TypeName[Blank Object]
 	end if
-	if object[-playerCount].state == PlayerObject_Drown
+	if player[-playerCount].state == PlayerObject_Drown
 		object.type = TypeName[Blank Object]
 	end if
 
@@ -47,12 +53,11 @@ event ObjectMain
 	case STATE_INITP
 		object.animationTimer = 0
 		object.timer = 0
-		object.currentPlane = 0
+		object.sortedDrawOrder = 0
 		object.direction = FLIP_NONE
 		GetTableValue(object.frame, object.timer, FireShield_animSpriteTableP)
 		object.state++
 		// Fall through to below
-
 	case STATE_MAINP
 		object.animationTimer++
 
@@ -60,7 +65,7 @@ event ObjectMain
 
 			object.animationTimer = 1
 			object.timer++
-			object.currentPlane ^= 1
+			object.sortedDrawOrder ^= 1
 
 			if object.timer >= 10
 
@@ -82,11 +87,10 @@ event ObjectMain
 	case STATE_INITA
 		object.animationTimer = 0
 		object.timer = 0
-		object.currentPlane = 0
+		object.sortedDrawOrder = 0
 		GetTableValue(object.frame, object.timer, FireShield_animSpriteTableA)
 		object.state++
 		// Fall through again
-
 	case STATE_MAINA
 		object.animationTimer++
 
@@ -112,7 +116,7 @@ end event
 event ObjectDraw
 
 	if PlayerObject_SuperState != 1
-		DrawSpriteFX(object.frame, FX_FLIP, object[-playerCount].xpos, object[-playerCount].ypos)
+		DrawSpriteFX(object.frame, FX_FLIP, player[-playerCount].xpos, player[-playerCount].ypos)
 	end if
 
 end event
@@ -137,7 +141,7 @@ event ObjectStartup
 	SpriteFrame(-24, -23, 48, 46, 85, 175)
 	SpriteFrame(-32, -19, 56, 38, 135, 175)
 	SpriteFrame(-40, -24, 63, 47, 192, 166)
-	SpriteFrame(0, 0, 1, 1, 1, 1)
+	SpriteFrame(0, 0, 1, 1, 1, 1) // (Empty)
 
 end event
 

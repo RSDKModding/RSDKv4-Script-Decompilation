@@ -8,13 +8,24 @@
 // Aliases
 private alias 21 : TYPE_ANIMALPRISON
 
+private alias object.animation	 : player.animation
+private alias object.xpos		 : player.xpos
+private alias object.ypos		 : player.ypos
+private alias object.xvel		 : player.xvel
+private alias object.yvel		 : player.yvel
+private alias object.speed		 : player.speed
+private alias object.gravity	 : player.gravity
+private alias object.jumpPress	 : player.jumpPress
+private alias object.jumpHold	 : player.jumpHold
+private alias object.up			 : player.up
+private alias object.down		 : player.down
+private alias object.left		 : player.left
+private alias object.right		 : player.right
+private alias object.controlMode : player.controlMode
+
 // Function declarations
 reserve function AnimalPrison_DebugDraw
 reserve function AnimalPrison_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function AnimalPrison_DebugDraw
 	DrawSprite(2)
@@ -42,14 +53,17 @@ event ObjectMain
 		object.animationTimer++
 		object.animationTimer %= 6
 		break
+
 	case 1
-		if object[0].controlMode == -1
-			object[0].left = 0
-			object[0].right = 1
-			object[0].up = 0
-			object[0].down = 0
-			object[0].jumpHold = 0
+		if player[0].controlMode == -1
+			// Make the player start running to the right
+			player[0].left     = false
+			player[0].right    = true
+			player[0].up       = false
+			player[0].down     = false
+			player[0].jumpHold = false
 		end if
+
 		object.value0++
 		temp0 = object.value0
 		temp0 &= 7
@@ -66,6 +80,7 @@ event ObjectMain
 			object[tempObjectPos].drawOrder = 4
 			PlaySfx(SfxName[Explosion], 0)
 		end if
+
 		if object.value0 == 60
 			temp1 = object.ypos
 			temp1 += 0x40000
@@ -99,6 +114,7 @@ event ObjectMain
 		object.animationTimer++
 		object.animationTimer %= 6
 		break
+
 	case 2
 		object.value0++
 		temp0 = object.value0
@@ -126,6 +142,7 @@ event ObjectMain
 		object.animationTimer++
 		object.animationTimer %= 6
 		break
+
 	case 3
 		if object.value0 < 300
 			object.value0++
@@ -138,6 +155,7 @@ event ObjectMain
 			object.state++
 		end if
 		break
+
 	end switch
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		switch object.state
@@ -147,34 +165,39 @@ event ObjectMain
 			if checkResult == 1
 				object.state = 1
 				stage.timeEnabled = 0
-				if object[currentPlayer].animation == ANI_JUMPING
-					object[currentPlayer].animation = ANI_WALKING
+				if player[currentPlayer].animation == ANI_JUMPING
+					player[currentPlayer].animation = ANI_WALKING
 				end if
 				if PlayerObject_SuperState == 1
 					PlayerObject_SuperState = 2
 				end if
-				object[0].controlMode = -1
+				player[0].controlMode = -1
 			end if
 			break
+
 		case 1
 			BoxCollisionTest(C_BOX, object.entityPos, -32, -24, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			BoxCollisionTest(C_BOX, object.entityPos, -11, -40, 11, -24, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			break
+
 		end switch
+
 		temp0 = screen.xcenter
 		temp0 += 40
 		temp0 <<= 16
 		temp1 = object.xpos
 		temp1 += temp0
-		if object[currentPlayer].xpos > temp1
-			object[currentPlayer].xpos = temp1
-			object[currentPlayer].speed = 0
-			object[currentPlayer].xvel = 0
-			if object[currentPlayer].gravity == GRAVITY_GROUND
-				object[currentPlayer].yvel = 0
+		if player[currentPlayer].xpos > temp1
+			player[currentPlayer].xpos = temp1
+			player[currentPlayer].speed = 0
+			player[currentPlayer].xvel = 0
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				player[currentPlayer].yvel = 0
 			end if
 		end if
+
 	next
+
 end event
 
 
@@ -185,27 +208,36 @@ event ObjectDraw
 		DrawSprite(object.frame)
 		DrawSprite(0)
 		break
+
 	case 2
 	case 3
 	case 4
 		DrawSprite(1)
 		break
+
 	end switch
+
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Items.gif")
+
+	// Prison frames
 	SpriteFrame(-32, -32, 64, 62, 109, 166)
 	SpriteFrame(-32, -2, 64, 32, 35, 202)
 	SpriteFrame(-11, -48, 22, 16, 84, 166)
 	SpriteFrame(-11, -48, 22, 16, 35, 236)
 	SpriteFrame(-11, -40, 22, 16, 84, 166)
 	SpriteFrame(-11, -40, 22, 16, 35, 236)
+
+	// Add the Animal Prison to the debug object list
 	SetTableValue(TypeName[Animal Prison], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(AnimalPrison_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(AnimalPrison_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+
 end event
 
 event RSDKDraw
