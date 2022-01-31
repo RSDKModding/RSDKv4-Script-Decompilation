@@ -15,7 +15,7 @@ private alias object.value8 : object.originY
 reserve function CheckeredBall_DebugDraw
 reserve function CheckeredBall_DebugSpawn
 reserve function CheckeredBall_Function142
-reserve function CheckeredBall_Function143
+reserve function CheckeredBall_PlayerInteraction
 reserve function CheckeredBall_BreakBadnik
 reserve function CheckeredBall_ReflectProjectile
 reserve function CheckeredBall_SpringBounce
@@ -38,12 +38,14 @@ end function
 
 
 function CheckeredBall_DebugSpawn
+
 	CreateTempObject(TypeName[Checkered Ball], 0, object.xpos, object.ypos)
 	object[tempObjectPos].gravity = GRAVITY_AIR
 	object[tempObjectPos].originX = object.xpos
 	object[tempObjectPos].originY = object.ypos
 	object[tempObjectPos].value1 = object.xpos
 	object[tempObjectPos].value2 = object.ypos
+
 end function
 
 
@@ -81,6 +83,7 @@ function CheckeredBall_Function142
 								object[currentPlayer].speed = object.speed
 							end if
 						end if
+
 						object[currentPlayer].pushing = 2
 					end if
 				end if
@@ -117,7 +120,7 @@ function CheckeredBall_Function142
 end function
 
 
-function CheckeredBall_Function143
+function CheckeredBall_PlayerInteraction
 	temp6 = object.xpos
 	temp6 &= -0x10000
 	temp6 -= object.value1
@@ -191,14 +194,18 @@ function CheckeredBall_Function143
 		end if
 		temp2++
 	next
+
 	object.xpos = temp4
 	object.ypos = temp5
+
 end function
 
 
 function CheckeredBall_BreakBadnik
+
 	temp0 = object.xvel
 	temp0 |= object.yvel
+
 	if temp0 != 0
 		ResetObjectEntity(object[arrayPos0].entityPos, TypeName[Blank Object], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
 		Rand(checkResult, 32)
@@ -213,17 +220,21 @@ function CheckeredBall_BreakBadnik
 		CreateTempObject(TypeName[Object Score], object.value11, object[arrayPos0].xpos, object[arrayPos0].ypos)
 		object[tempObjectPos].drawOrder = 4
 		PlaySfx(SfxName[Destroy], 0)
+
 		switch object.value11
 		case 0
 			player.score += 100
 			break
+
 		case 1
 			player.score += 200
 			break
+
 		case 2
 			player.score += 500
 			break
-		case 3
+
+		case 3 // Fall through
 		case 4
 		case 5
 		case 6
@@ -237,29 +248,39 @@ function CheckeredBall_BreakBadnik
 		case 14
 			player.score += 1000
 			break
+
 		case 15
 			player.score += 0x2710
 			break
+
 		end switch
+
 		if object.value11 < 15
 			object.value11++
 		end if
+
 	end if
+
 end function
 
 
 function CheckeredBall_ReflectProjectile
+
+	// Do some maths to find where the projectile should go now
 	temp0 = object.xpos
 	temp0 -= object[arrayPos0].xpos
 	temp1 = object.ypos
 	temp1 -= object[arrayPos0].ypos
+
 	ATan2(temp2, temp0, temp1)
 	Sin256(temp0, temp2)
 	Cos256(temp1, temp2)
+
 	object[arrayPos0].xvel = temp1
 	object[arrayPos0].xvel *= -0x800
 	object[arrayPos0].yvel = temp0
 	object[arrayPos0].yvel *= -0x800
+
 end function
 
 
@@ -268,19 +289,21 @@ function CheckeredBall_SpringBounce
 	case 0
 		temp0 = object[arrayPos0].value1
 		if object.gravity == GRAVITY_AIR
-			temp0 = 1
+			temp0 = true
 		end if
+		
 		if object.collisionMode > CMODE_FLOOR
 			if object.yvel < 0
-				temp0 = 1
+				temp0 = true
 			end if
 		end if
-		if temp0 == 0
+		
+		if temp0 == false
 			BoxCollisionTest(C_BOX, object[arrayPos0].entityPos, -14, -8, 14, 8, object.entityPos, -22, -22, 22, 22)
 			BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, -14, -10, 14, -6, object.entityPos, -22, -22, 22, 22)
 			if checkResult == true
 				object[arrayPos0].value0 = 1
-				object.tileCollisions = 1
+				object.tileCollisions = true
 				object.gravity = GRAVITY_AIR
 				object.speed = object.xvel
 				object.yvel = temp7
@@ -294,7 +317,7 @@ function CheckeredBall_SpringBounce
 				BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, -14, -10, 14, -6, object.entityPos, -22, -22, 22, 22)
 				if checkResult == true
 					object[arrayPos0].value0 = 1
-					object.tileCollisions = 1
+					object.tileCollisions = true
 					object.gravity = GRAVITY_AIR
 					object.speed = object.xvel
 					object.yvel = temp7
@@ -311,7 +334,7 @@ function CheckeredBall_SpringBounce
 			BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, 6, -14, 10, 14, object.entityPos, -22, -22, 22, 22)
 			if checkResult == true
 				object[arrayPos0].value0 = 1
-				object.tileCollisions = 1
+				object.tileCollisions = true
 				object.speed = temp7
 				object.collisionMode = CMODE_FLOOR
 				object.direction = FLIP_NONE
@@ -325,7 +348,7 @@ function CheckeredBall_SpringBounce
 			BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, -10, -14, -6, 14, object.entityPos, -22, -22, 22, 22)
 			if checkResult == true
 				object[arrayPos0].value0 = 1
-				object.tileCollisions = 1
+				object.tileCollisions = true
 				object.speed = temp7
 				FlipSign(object.speed)
 				object.collisionMode = CMODE_FLOOR
@@ -343,7 +366,7 @@ function CheckeredBall_SpringBounce
 				FlipSign(object.speed)
 				FlipSign(object.xvel)
 			end if
-			object.tileCollisions = 1
+			object.tileCollisions = true
 			object.gravity = GRAVITY_AIR
 			object.speed = object.xvel
 			object.yvel = temp7
@@ -449,6 +472,7 @@ event ObjectMain
 	object.value4 = object.angle
 
 	// Cycle through all objects
+	// (GROUP_ALL)
 	foreach (0, arrayPos0, ACTIVE_ENTITIES)
 
 		// Jump to the object's type
@@ -1249,7 +1273,7 @@ event ObjectMain
 
 	next
 
-	CallFunction(CheckeredBall_Function143)
+	CallFunction(CheckeredBall_PlayerInteraction)
 	temp0 = object.value12
 	temp0 |= object.value13
 	if temp0 != 0
@@ -1267,10 +1291,14 @@ event ObjectMain
 	end if
 
 	if object.outOfBounds == true
+
+		// Store the ball's current position and move it to its origin pos
 		temp0 = object.xpos
 		temp1 = object.ypos
 		object.xpos = object.originX
 		object.ypos = object.originY
+
+		// Is it still out of bounds?
 		if object.outOfBounds == true
 			object.value1 = object.xpos
 			object.value2 = object.ypos
@@ -1341,6 +1369,8 @@ event ObjectStartup
 	// - A script-based animation and drawing system is used, instead
 	LoadAnimation("WreckingBall.ani")
 
+	// Cycle through all Checkered Ball objects and init their values
+	// Note that this never actually does anything, as no Checkered Ball objects exist in S1's levels
 	foreach (TypeName[Checkered Ball], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].gravity = GRAVITY_AIR
 		object[arrayPos0].originX = object.xpos
