@@ -1,14 +1,14 @@
-# Sonic 1/2 2013 Script Decompilation
+# Sonic 1/2 2013 Script Decompilation (WIP Cleanup Branch)
+
+## **Please don't use this branch in your mods, as it's a heavy work-in-progress and is only here for testing!**
 
 A full decompilation for the scripts in Sonic 1 & 2's 2013 mobile remakes.
 
 These scripts have been manually reverted back to what the original scripts could've looked like. This means that:
-* Function IDs have been recoverted back to function names
-* Some function names have been given proper names
+* Function IDs have been recoverted back to proper function names
 * Functions are in the proper order
 * Default aliases have been re-added where possible
-* Re-added static variables
-* Re-added tables & values
+* Re-added static variables, tables, and values
 
 To use these scripts in mods, extract the scripts folder to the exe's root directory: eg `[rootdir]/Scripts/`. Mods are only required to include the scripts that have been changed.
 
