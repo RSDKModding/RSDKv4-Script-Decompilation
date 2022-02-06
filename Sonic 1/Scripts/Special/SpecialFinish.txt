@@ -12,17 +12,36 @@ private alias object.value2 : object.rotateSpeed
 private alias object.value3 : object.scorePos
 private alias object.value4 : object.ringPos
 private alias object.value5 : object.ringBonus
-private alias object.value6 : object.emeraldPos
+private alias object.value6 : object.emeraldAlpha
 private alias object.value7 : object.continuePos
 private alias object.value8 : object.hasContinue
 private alias object.value9 : object.messageState
 
+// States
+private alias 0  : SPECIALFINISH_SETUPSPIN
+private alias 1  : SPECIALFINISH_SPINNING
+private alias 2  : SPECIALFINISH_SETUPRESULTS
+private alias 3  : SPECIALFINISH_FADEIN_DELAY
+private alias 4  : SPECIALFINISH_SETUPTEXT
+private alias 5  : SPECIALFINISH_ENTERTEXT
+private alias 6  : SPECIALFINISH_ENTERRESULTS
+private alias 7  : SPECIALFINISH_ENTEREMERALDS
+private alias 8  : SPECIALFINISH_TALLYSCORE
+private alias 9  : SPECIALFINISH_SHOWRESULTS
+private alias 10 : SPECIALFINISH_FADEOUT
+private alias 11 : SPECIALFINISH_SAVEANDRETURN
+private alias 12 : SPECIALFINISH_HASCONTINUE
+private alias 13 : SPECIALFINISH_SHOWCONTINUE
+private alias 14 : SPECIALFINISH_SETUPTATTACK
+private alias 15 : SPECIALFINISH_EXIT_TATTACK
+private alias 16 : SPECIALFINISH_SUPERMSG_DELAY
+private alias 17 : SPECIALFINISH_SHOW_SUPERMSG
+
+// Player aliases
+private alias object.value0 : player.rings
+
 // Function declarations
 reserve function SpecialFinish_DisplaySuperMessage
-
-// Static Values
-
-// Tables
 
 function SpecialFinish_DisplaySuperMessage
 	switch object.messageState
@@ -51,55 +70,56 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
-		object.rotation = PlayerObject_value1
-		PlayerObject_value2 = 2
+	case SPECIALFINISH_SETUPSPIN
+		object.rotation = PlayerObject_stageRotation
+		PlayerObject_rotateSpeed = 2
 		object.rotation <<= 2
 		object.rotateSpeed = 8
 		object.state++
 		break
 
-	case 1
+	case SPECIALFINISH_SPINNING
 		object.rotation -= object.rotateSpeed
 		if object.rotation < 0
 			object.rotation += 0x800
 		end if
+
 		object.rotateSpeed += 2
-		PlayerObject_value1 = object.rotation
-		PlayerObject_value1 >>= 2
+		PlayerObject_stageRotation = object.rotation
+		PlayerObject_stageRotation >>= 2
 		
 		if object.rotateSpeed > 248
-			if options.gameMode < 2
+			if options.gameMode < MODE_TIMEATTACK
 				object.state++
 			else
-				object.state = 14
+				object.state = SPECIALFINISH_SETUPTATTACK
 			end if
 		end if
 		break
 
-	case 2
+	case SPECIALFINISH_SETUPRESULTS
 		object.rotation -= object.rotateSpeed
 		if object.rotation < 0
 			object.rotation += 0x800
 		end if
+
 		object.rotateSpeed += 2
-		PlayerObject_value1 = object.rotation
-		PlayerObject_value1 >>= 2
+		PlayerObject_stageRotation = object.rotation
+		PlayerObject_stageRotation >>= 2
 
 		if object.timer < 256
 			object.timer += 8
 			SetScreenFade(0xE0, 0xE0, 0xE0, object.timer)
 		else
-			//TODO: PlayerObject_isWinner ?
-			if PlayerObject_value4 == true
+			if PlayerObject_isWinner == true
 				temp0 = stage.actNum
 				temp0--
 				SetBit(specialStage.emeralds, temp0, true)
 			end if
 
-			object.ringBonus = object[0].value0
+			object.ringBonus = player[0].rings
 			object.ringBonus *= 100
-			if object[0].value0 >= 50
+			if player[0].rings >= 50
 				object.hasContinue = true
 			end if
 
@@ -140,9 +160,9 @@ event ObjectMain
 					end if
 				loop
 				break
-
 			end switch
-			if PlayerObject_value4 == 0
+
+			if PlayerObject_isWinner == false
 				object.frame = 1
 			end if
 			object.timer = 0
@@ -158,6 +178,7 @@ event ObjectMain
 				ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
 				temp0++
 			loop
+
 			stage.activeLayer[0] = 9
 			stage.activeLayer[1] = 9
 			stage.activeLayer[2] = 9
@@ -167,11 +188,11 @@ event ObjectMain
 			inputDown.right = false
 			object.direction = FLIP_NONE
 
-			if options.gameMode == 1
+			if options.gameMode == MODE_NORMAL
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
-				if stage.player2Enabled == 1
-					saveRAM[arrayPos1] = 3
+				if stage.player2Enabled == true
+					saveRAM[arrayPos1] = PlayerName[SONIC AND TAILS]
 				else
 					saveRAM[arrayPos1] = stage.playerListPos
 				end if
@@ -198,21 +219,21 @@ event ObjectMain
 				WriteSaveRAM()
 			end if
 			object.state++
-			SetScreenFade(244, 244, 244, 255)
+			SetScreenFade(244, 244, 244, 0xFF)
 		end if
 		break
 
-	case 3
+	case SPECIALFINISH_FADEIN_DELAY
 		if object.timer < 45
 			object.timer++
 		else
 			object.timer = 0
 			object.state++
 		end if
-		SetScreenFade(244, 244, 244, 255)
+		SetScreenFade(244, 244, 244, 0xFF)
 		break
 
-	case 4
+	case SPECIALFINISH_SETUPTEXT
 		PlayMusic(1)
 		object.drawOrder = 6
 		object.priority = PRIORITY_ACTIVE
@@ -237,13 +258,13 @@ event ObjectMain
 
 		if stage.debugMode == false
 			if specialStage.emeralds >= 0x3F
-				CallNativeFunction2(SetAchievement, 9, 100)
+				CallNativeFunction2(SetAchievement, AchievementName[Chaos Connoisseur], 100)
 			end if
 		end if
 		object.state++
 		break
 
-	case 5
+	case SPECIALFINISH_ENTERTEXT
 		if object.xpos > 0
 			object.xpos -= 16
 			if object.xpos < 0
@@ -261,9 +282,9 @@ event ObjectMain
 		end if
 		break
 
-	case 6
-		if object.emeraldPos < 256
-			object.emeraldPos += 8
+	case SPECIALFINISH_ENTERRESULTS
+		if object.emeraldAlpha < 256
+			object.emeraldAlpha += 8
 		end if
 
 		if object.scorePos > 0
@@ -290,9 +311,9 @@ event ObjectMain
 		end if
 		break
 
-	case 7
-		if object.emeraldPos < 256
-			object.emeraldPos += 8
+	case SPECIALFINISH_ENTEREMERALDS
+		if object.emeraldAlpha < 256
+			object.emeraldAlpha += 8
 		end if
 
 		object.timer++
@@ -302,7 +323,7 @@ event ObjectMain
 		end if
 		break
 
-	case 8
+	case SPECIALFINISH_TALLYSCORE
 		if object.ringBonus > 0
 			object.ringBonus -= 100
 			player.score += 100
@@ -313,8 +334,8 @@ event ObjectMain
 			player.scoreBonus += 50000
 			PlaySfx(SfxName[Life], false)
 			PauseMusic()
-			ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
-			object[25].priority = PRIORITY_ACTIVE
+			ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+			object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
 		end if
 
 		if object.ringBonus > 0
@@ -326,20 +347,20 @@ event ObjectMain
 		else
 			if object.hasContinue == false
 				object.state++
-				if PlayerObject_value4 == 1
+				if PlayerObject_isWinner == true
 					if specialStage.emeralds == 0x7F
-						object.state = 16
+						object.state = SPECIALFINISH_SUPERMSG_DELAY
 					end if
 				end if
 			else
-				object.state = 12
+				object.state = SPECIALFINISH_HASCONTINUE
 			end if
 			object.timer = 0
 			PlaySfx(SfxName[Score Total], false)
 		end if
 		break
 
-	case 9
+	case SPECIALFINISH_SHOWRESULTS
 		object.timer++
 		if object.timer == 160
 			object.timer = 0
@@ -348,7 +369,7 @@ event ObjectMain
 		end if
 		break
 
-	case 10
+	case SPECIALFINISH_FADEOUT
 		if object.timer < 400
 			object.timer += 8
 			SetScreenFade(0xF8, 0xF8, 0xF8, object.timer)
@@ -359,25 +380,29 @@ event ObjectMain
 		end if
 		break
 
-	case 11
+	case SPECIALFINISH_SAVEANDRETURN
 		if object.timer > 0
 			object.timer -= 8
 		else
-			if options.gameMode == 1
+			if options.gameMode == MODE_NORMAL
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
 				if stage.player2Enabled == true
-					saveRAM[arrayPos1] = 3
+					saveRAM[arrayPos1] = PlayerName[SONIC AND TAILS]
 				else
 					saveRAM[arrayPos1] = stage.playerListPos
 				end if
 				arrayPos1++
+
 				saveRAM[arrayPos1] = player.lives
 				arrayPos1++
+
 				saveRAM[arrayPos1] = player.score
 				arrayPos1++
+
 				saveRAM[arrayPos1] = player.scoreBonus
 				arrayPos1++
+
 				temp0 = stage.listPos
 				temp0++
 				if temp0 > saveRAM[arrayPos1]
@@ -388,11 +413,15 @@ event ObjectMain
 					end if
 				end if
 				arrayPos1++
+
 				saveRAM[arrayPos1] = specialStage.emeralds
 				arrayPos1++
+
 				saveRAM[arrayPos1] = specialStage.listPos
+				
 				WriteSaveRAM()
 			end if
+
 			fadeColor = 0
 			if stage.listPos < stage.listSize
 				LoadStage()
@@ -402,10 +431,10 @@ event ObjectMain
 				LoadStage()
 			end if
 		end if
-		SetScreenFade(object.timer, object.timer, object.timer, 255)
+		SetScreenFade(object.timer, object.timer, object.timer, 0xFF)
 		break
 
-	case 12
+	case SPECIALFINISH_HASCONTINUE
 		object.timer++
 		if object.timer == 120
 			object.timer = 0
@@ -415,7 +444,7 @@ event ObjectMain
 		end if
 		break
 
-	case 13
+	case SPECIALFINISH_SHOWCONTINUE
 		if specialStage.emeralds == 0x7F
 			CallFunction(SpecialFinish_DisplaySuperMessage)
 		end if
@@ -423,19 +452,20 @@ event ObjectMain
 		object.timer++
 		if object.timer == 360
 			object.timer = 0
-			object.state = 10
+			object.state = SPECIALFINISH_FADEOUT
 			PlaySfx(SfxName[Warp], false)
 		end if
 		break
 
-	case 14
+	case SPECIALFINISH_SETUPTATTACK
 		object.rotation -= object.rotateSpeed
 		if object.rotation < 0
 			object.rotation += 0x800
 		end if
+
 		object.rotateSpeed += 2
-		PlayerObject_value1 = object.rotation
-		PlayerObject_value1 >>= 2
+		PlayerObject_stageRotation = object.rotation
+		PlayerObject_stageRotation >>= 2
 		if object.timer < 480
 			object.timer += 8
 			music.volume -= 2
@@ -464,11 +494,11 @@ event ObjectMain
 		SetScreenFade(0xF8, 0xF8, 0xF8, object.timer)
 		break
 
-	case 15
+	case SPECIALFINISH_EXIT_TATTACK
 		if object.timer > 0
 			object.timer -= 8
 		else
-			if PlayerObject_value4 == 1
+			if PlayerObject_isWinner == true
 				timeAttack.result = stage.seconds
 				timeAttack.result *= 100
 				temp0 = stage.minutes
@@ -478,12 +508,13 @@ event ObjectMain
 			else
 				timeAttack.result = 100000
 			end if
-			engine.state = 8
+
+			engine.state = ENGINE_RESETGAME
 		end if
-		SetScreenFade(object.timer, object.timer, object.timer, 255)
+		SetScreenFade(object.timer, object.timer, object.timer, 0xFF)
 		break
 
-	case 16
+	case SPECIALFINISH_SUPERMSG_DELAY
 		object.timer++
 		if object.timer == 120
 			object.timer = 0
@@ -491,12 +522,12 @@ event ObjectMain
 		end if
 		break
 
-	case 17
+	case SPECIALFINISH_SHOW_SUPERMSG
 		CallFunction(SpecialFinish_DisplaySuperMessage)
 		object.timer++
 		if object.timer == 480
 			object.timer = 0
-			object.state = 10
+			object.state = SPECIALFINISH_FADEOUT
 			PlaySfx(SfxName[Warp], false)
 		end if
 		break
@@ -508,20 +539,26 @@ end event
 event ObjectDraw
 	switch object.state
 	default
+	case SPECIALFINISH_SETUPSPIN
+	case SPECIALFINISH_SPINNING
+	case SPECIALFINISH_SETUPRESULTS
+	case SPECIALFINISH_FADEIN_DELAY
+	case SPECIALFINISH_SETUPTATTACK
+	case SPECIALFINISH_EXIT_TATTACK
 		break
 
-	case 4
-	case 5
-	case 6
-	case 7
-	case 8
-	case 9
-	case 10
-	case 11
-	case 12
-	case 13
-	case 16
-	case 17
+	case SPECIALFINISH_SETUPTEXT
+	case SPECIALFINISH_ENTERTEXT
+	case SPECIALFINISH_ENTERRESULTS
+	case SPECIALFINISH_ENTEREMERALDS
+	case SPECIALFINISH_TALLYSCORE
+	case SPECIALFINISH_SHOWRESULTS
+	case SPECIALFINISH_FADEOUT
+	case SPECIALFINISH_SAVEANDRETURN
+	case SPECIALFINISH_HASCONTINUE
+	case SPECIALFINISH_SHOWCONTINUE
+	case SPECIALFINISH_SUPERMSG_DELAY
+	case SPECIALFINISH_SHOW_SUPERMSG
 		// BG
 		DrawRect(0, 0, screen.xsize, screen.ysize, 0xE0, 0xE0, 0xE0, 0xFF)
 		
@@ -571,7 +608,7 @@ event ObjectDraw
 				temp0 += 151
 				GetBit(temp1, object.timer, 4)
 				temp1 += 7
-				if object.state != 13
+				if object.state != SPECIALFINISH_SHOWCONTINUE
 					temp1 = 7
 				end if
 				DrawSpriteScreenXY(temp1, temp0, 196)
@@ -584,7 +621,7 @@ event ObjectDraw
 		Sin(temp0, object.animationTimer)
 		temp0 >>= 3
 		temp0 += 190
-		temp0 *= object.emeraldPos
+		temp0 *= object.emeraldAlpha
 		temp0 >>= 8
 		object.alpha = temp0
 
@@ -614,13 +651,14 @@ event ObjectStartup
 	SpriteFrame(-32, 0, 56, 56, 63, 401)
 	SpriteFrame(-99, 0, 197, 16, 120, 401)
 	SpriteFrame(-112, 0, 223, 16, 156, 418)
+
 	switch stage.playerListPos
-	case 0
-	case 3
+	case PlayerName[SONIC]
+	case PlayerName[SONIC AND TAILS]
 		SpriteFrame(-127, 0, 254, 16, 156, 435)
 		break
 
-	case 1
+	case PlayerName[TAILS]
 		if options.region == 0
 			SpriteFrame(-127, 0, 254, 16, 156, 452)
 		else
@@ -628,32 +666,33 @@ event ObjectStartup
 		end if
 		break
 
-	case 2
+	case PlayerName[KNUCKLES]
 		SpriteFrame(-149, 0, 298, 16, 156, 486)
 		break
-
 	end switch
+
 	SpriteFrame(0, 0, 44, 16, 35, 458)
 	SpriteFrame(0, 0, 85, 16, 35, 475)
 	SpriteFrame(0, 0, 69, 16, 35, 492)
+
 	switch stage.playerListPos
-	case 0
-	case 3
+	case PlayerName[SONIC]
+	case PlayerName[SONIC AND TAILS]
 		SpriteFrame(-8, -11, 16, 23, 399, 376)
 		SpriteFrame(-8, -11, 16, 23, 416, 376)
 		break
 
-	case 1
+	case PlayerName[TAILS]
 		SpriteFrame(-8, -11, 16, 23, 433, 376)
 		SpriteFrame(-8, -11, 16, 23, 450, 376)
 		break
 
-	case 2
+	case PlayerName[KNUCKLES]
 		SpriteFrame(-8, -11, 16, 23, 467, 376)
 		SpriteFrame(-8, -11, 16, 23, 484, 376)
 		break
-
 	end switch
+
 	SpriteFrame(0, 0, 8, 11, 120, 418)
 	SpriteFrame(0, 0, 8, 11, 129, 418)
 	SpriteFrame(0, 0, 8, 11, 138, 418)
@@ -676,8 +715,8 @@ event ObjectStartup
 	SpriteFrame(44, -4, 24, 24, 301, 276)
 	SpriteFrame(-100, -4, 24, 24, 401, 276)
 	switch stage.playerListPos
-	case 0
-	case 3
+	case PlayerName[SONIC]
+	case PlayerName[SONIC AND TAILS]
 		SpriteFrame(-113, -12, 53, 16, 411, 435)
 		SpriteFrame(-51, -12, 70, 16, 156, 435)
 		SpriteFrame(28, -12, 85, 16, 411, 452)
@@ -685,7 +724,7 @@ event ObjectStartup
 		SpriteFrame(8, 12, 70, 16, 156, 435)
 		break
 
-	case 1
+	case PlayerName[TAILS]
 		if options.region == 0
 			SpriteFrame(-113, -12, 53, 16, 411, 435)
 			SpriteFrame(-51, -12, 70, 16, 156, 452)
@@ -701,14 +740,13 @@ event ObjectStartup
 		end if
 		break
 
-	case 2
+	case PlayerName[KNUCKLES]
 		SpriteFrame(-134, -12, 53, 16, 411, 435)
 		SpriteFrame(-73, -12, 113, 16, 156, 486)
 		SpriteFrame(50, -12, 85, 16, 411, 452)
 		SpriteFrame(-99, 12, 76, 16, 411, 469)
 		SpriteFrame(-14, 12, 113, 16, 156, 486)
 		break
-
 	end switch
 end event
 
@@ -719,4 +757,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

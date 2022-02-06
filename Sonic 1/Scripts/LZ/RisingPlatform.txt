@@ -6,7 +6,17 @@
 // ----------------------------------
 
 // Aliases
-private alias 67 : TYPE_RISINGPLATFORM
+private alias object.value0 : object.stood
+private alias object.value1 : object.collisionOffset.y
+private alias object.value2 : object.timer
+private alias object.value3 : object.startPos.y
+private alias object.value4 : object.stoodAngle
+
+private alias 0 : RISINGPLATFORM_IDLE
+private alias 1 : RISINGPLATFORM_MOVING
+private alias 2 : RISINGPLATFORM_RETURNTOSTART
+private alias 3 : RISINGPLATFORM_OOB
+
 
 // Function declarations
 reserve function RisingPlatform_DebugDraw
@@ -23,83 +33,92 @@ end function
 
 function RisingPlatform_DebugSpawn
 	CreateTempObject(TypeName[Rising Platform], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value3 = object.ypos
+	object[tempObjectPos].startPos.y = object.ypos
 	object[tempObjectPos].drawOrder = 4
 end function
 
 
 event ObjectMain
-	if object.value0 == 1
-		if object.value2 == 0
-			object.value2 = 30
+	if object.stood == true
+		if object.timer == 0
+			object.timer = 30
 		end if
-		if object.value4 < 64
-			object.value4 += 4
+
+		if object.stoodAngle < 64
+			object.stoodAngle += 4
 		end if
 	else
-		if object.value4 > 0
-			object.value4 -= 4
+		if object.stoodAngle > 0
+			object.stoodAngle -= 4
 		end if
 	end if
+
 	temp0 = object.ypos
 	temp0 &= -0x10000
 	switch object.state
-	case 0
-		temp1 = object.value4
+	case RISINGPLATFORM_IDLE
+		temp1 = object.stoodAngle
 		temp1 <<= 1
 		Sin(temp2, temp1)
 		temp2 <<= 9
-		object.ypos = object.value3
+		object.ypos = object.startPos.y
 		object.ypos += temp2
-		if object.value2 != 0
-			object.value2--
-			if object.value2 == 0
+
+		if object.timer != 0
+			object.timer--
+			if object.timer == 0
 				object.state++
 				object.priority = PRIORITY_ACTIVE
 			end if
 		end if
 		break
-	case 1
+
+	case RISINGPLATFORM_MOVING
 		object.ypos += object.yvel
 		object.yvel -= 0x800
 		ObjectTileCollision(CSIDE_ROOF, 0, -12, 0)
-		if checkResult == 1
+		if checkResult == true
 			object.state++
 		end if
-		if object.outOfBounds == 1
-			object.ypos = object.value3
+
+		if object.outOfBounds == true
+			object.ypos = object.startPos.y
 			object.yvel = 0
-			object.value2 = 0
-			object.state = 3
+			object.timer = 0
+			object.state = RISINGPLATFORM_OOB
 		end if
 		break
-	case 2
-		if object.outOfBounds == 1
-			object.ypos = object.value3
+
+	case RISINGPLATFORM_RETURNTOSTART
+		if object.outOfBounds == true
+			object.ypos = object.startPos.y
 			object.yvel = 0
-			object.value2 = 0
+			object.timer = 0
 			object.state++
 		end if
 		break
-	case 3
-		if object.outOfBounds == 1
-			object.state = 0
+
+	case RISINGPLATFORM_OOB
+		if object.outOfBounds == true
+			object.state = RISINGPLATFORM_IDLE
 			object.priority = PRIORITY_ACTIVE_BOUNDS
 		end if
 		break
 	end switch
-	object.value1 = object.ypos
-	object.value1 &= -0x10000
-	object.value1 -= temp0
-	object.value0 = 0
-	if object.state < 3
+
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= -0x10000
+	object.collisionOffset.y -= temp0
+	object.stood = false
+
+	if object.state < RISINGPLATFORM_OOB
 		temp1 = object.ypos
 		object.ypos = temp0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -32, -12, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object.value0 = 1
-				object[currentPlayer].ypos += object.value1
+			if checkResult == COL_TOP
+				object.stood = true
+				object[currentPlayer].ypos += object.collisionOffset.y
 			end if
 		next
 		object.ypos = temp1
@@ -108,7 +127,7 @@ end event
 
 
 event ObjectDraw
-	if object.state < 3
+	if object.state < RISINGPLATFORM_OOB
 		DrawSprite(0)
 	end if
 end event
@@ -117,10 +136,12 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("LZ/Objects.gif")
 	SpriteFrame(-32, -12, 64, 24, 126, 137)
+
 	foreach (TypeName[Rising Platform], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value3 = object[arrayPos0].ypos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
 		object[arrayPos0].drawOrder = 4
 	next
+
 	SetTableValue(TypeName[Rising Platform], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(RisingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(RisingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -132,6 +153,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 126, 137)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

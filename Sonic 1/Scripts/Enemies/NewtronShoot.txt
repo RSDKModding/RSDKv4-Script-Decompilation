@@ -6,7 +6,25 @@
 // ----------------------------------
 
 // Aliases
-private alias 63 : TYPE_NEWTRONSHOOT
+private alias object.propertyValue : object.appearFrame
+
+private alias object.value0 : object.timer
+
+private alias 0 : NEWTRONSHOOT_WAITFORPLAYER
+private alias 1 : NEWTRONSHOOT_APPEAR
+private alias 2 : NEWTRONSHOOT_SHOOT
+private alias 3 : NEWTRONSHOOT_SHOOTDELAY
+private alias 4 : NEWTRONSHOOT_DISAPPEAR
+
+private alias 0 : NEWTRONSHOOT_ANI_IDLE
+private alias 1 : NEWTRONSHOOT_ANI_SHOOT
+
+// Player aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
 
 // Function declarations
 reserve function NewtronShoot_DebugDraw
@@ -26,34 +44,36 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case NEWTRONSHOOT_WAITFORPLAYER
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -64, 128, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object.state = 1
+			if checkResult == true
+				object.state = NEWTRONSHOOT_APPEAR
 				if object[currentPlayer].xpos < object.xpos
-					object.propertyValue = 1
+					object.appearFrame = 1
 				else
-					object.propertyValue = 0
+					object.appearFrame = 0
 				end if
 			end if
 		next
 		break
-	case 1
-		if object.alpha < 248
+
+	case NEWTRONSHOOT_APPEAR
+		if object.alpha < 0xF8
 			object.alpha += 4
 		else
-			object.alpha = 255
+			object.alpha = 0xFF
 			object.state++
 		end if
 		break
-	case 2
-		if object.value0 < 29
-			object.value0++
+
+	case NEWTRONSHOOT_SHOOT
+		if object.timer < 29
+			object.timer++
 		else
-			object.value0 = 0
+			object.timer = 0
 			CreateTempObject(TypeName[Newtron Shot], 0, object.xpos, object.ypos)
-			if object.propertyValue == 1
+			if object.appearFrame == 1
 				object[tempObjectPos].xpos -= 0x140000
 				object[tempObjectPos].xvel = -0x20000
 			else
@@ -61,23 +81,25 @@ event ObjectMain
 				object[tempObjectPos].xvel = 0x20000
 			end if
 			object[tempObjectPos].ypos -= 0x80000
-			object.animation = 1
+			object.animation = NEWTRONSHOOT_ANI_SHOOT
 			object.state++
 		end if
 		break
-	case 3
-		if object.value0 < 59
-			if object.value0 == 15
-				object.animation = 0
+
+	case NEWTRONSHOOT_SHOOTDELAY
+		if object.timer < 59
+			if object.timer == 15
+				object.animation = NEWTRONSHOOT_ANI_IDLE
 			end if
-			object.value0++
+			object.timer++
 		else
-			object.value0 = 0
-			object.alpha = 248
+			object.timer = 0
+			object.alpha = 0xF8
 			object.state++
 		end if
 		break
-	case 4
+
+	case NEWTRONSHOOT_DISAPPEAR
 		if object.alpha > 0
 			object.alpha -= 4
 		else
@@ -85,12 +107,19 @@ event ObjectMain
 		end if
 		break
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		switch object.state
-		case 2
-		case 3
-			BoxCollisionTest(C_TOUCH, object.entityPos, -12, -14, 12, 14, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-			if checkResult == 1
+		default
+		case NEWTRONSHOOT_WAITFORPLAYER
+		case NEWTRONSHOOT_APPEAR
+		case NEWTRONSHOOT_DISAPPEAR
+			break
+
+		case NEWTRONSHOOT_SHOOT
+		case NEWTRONSHOOT_SHOOTDELAY
+			BoxCollisionTest(C_TOUCH, object.entityPos, -12, -14, 12, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+			if checkResult == true
 				CallFunction(PlayerObject_BadnikBreak)
 			end if
 			break
@@ -101,11 +130,12 @@ end event
 
 event ObjectDraw
 	switch object.animation
-	case 0
-		DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.ypos)
+	case NEWTRONSHOOT_ANI_IDLE
+		DrawSpriteFX(object.appearFrame, FX_INK, object.xpos, object.ypos)
 		break
-	case 1
-		temp0 = object.propertyValue
+
+	case NEWTRONSHOOT_ANI_SHOOT
+		temp0 = object.appearFrame
 		temp0 += 2
 		DrawSprite(temp0)
 		break
@@ -115,25 +145,28 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone01")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("GHZ/Objects2.gif")
 		SpriteFrame(-20, -20, 39, 39, 1, 1)
 		SpriteFrame(-19, -20, 39, 39, 81, 1)
 		SpriteFrame(-20, -20, 39, 39, 41, 1)
 		SpriteFrame(-19, -20, 39, 39, 121, 1)
 	end if
+
 	CheckCurrentStageFolder("Zone07")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-20, -20, 39, 39, 1, 164)
 		SpriteFrame(-19, -20, 39, 39, 81, 164)
 		SpriteFrame(-20, -20, 39, 39, 41, 164)
 		SpriteFrame(-19, -20, 39, 39, 121, 164)
 	end if
+
 	foreach (TypeName[Newtron Shoot], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].inkEffect = INK_ALPHA
 		object[arrayPos0].alpha = 0
 	next
+
 	SetTableValue(TypeName[Newtron Shoot], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(NewtronShoot_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(NewtronShoot_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -145,6 +178,18 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("GHZ/Objects2.gif")
+		SpriteFrame(-20, -20, 39, 39, 1, 1)
+	end if
+
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-20, -20, 39, 39, 1, 164)
+	end if
+	
+	// not used via editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

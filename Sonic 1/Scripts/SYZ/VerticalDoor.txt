@@ -6,7 +6,14 @@
 // ----------------------------------
 
 // Aliases
-private alias 61 : TYPE_VERTICALDOOR
+private alias object.value0 : object.movePos.y
+
+private alias 0 : VERTICALDOOR_IDLE
+private alias 1 : VERTICALDOOR_OPENING
+private alias 2 : VERTICALDOOR_OPENED
+
+// PushButton aliases
+private alias object.propertyValue : pushButton.stood
 
 // Function declarations
 reserve function VerticalDoor_DebugDraw
@@ -28,20 +35,25 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
-		if object[-1].propertyValue == 1
-			object.state = 1
+	case VERTICALDOOR_IDLE
+		if pushButton[-1].stood == true
+			object.state = VERTICALDOOR_OPENING
 		end if
 		break
-	case 1
-		if object.value0 < 0x400000
-			object.value0 += 0x20000
+
+	case VERTICALDOOR_OPENING
+		if object.movePos.y < 0x400000
+			object.movePos.y += 0x20000
 			object.ypos -= 0x20000
 		else
 			object.state++
 		end if
 		break
+
+	case VERTICALDOOR_OPENED
+		break
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_BOX, object.entityPos, -16, -32, 16, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 	next
@@ -56,6 +68,7 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("SYZ/Objects.gif")
 	SpriteFrame(-16, -32, 32, 64, 119, 34)
+
 	SetTableValue(TypeName[Vertical Door], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(VerticalDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(VerticalDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -67,6 +80,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-16, -32, 32, 64, 119, 34)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

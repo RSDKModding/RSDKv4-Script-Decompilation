@@ -6,7 +6,19 @@
 // ----------------------------------
 
 // Aliases
-private alias 48 : TYPE_PUSHBUTTON
+private alias object.value0 : object.stood
+private alias object.value1 : object.exitPos.y
+private alias object.value2 : object.fadeTimer
+
+private alias 0 : PUSHBUTTON_ACTIVE
+private alias 1 : PUSHBUTTON_PLAYERFELL
+
+// Cutscene Bridge Aliases
+private alias object.state  : cutBridge.state
+private alias object.value0 : cutBridge.timer
+
+private alias 0 : CUTBRIDGE_ACTIVE
+private alias 1 : CUTBRIDGE_COLLAPSE
 
 // Function declarations
 reserve function PushButton_DebugDraw
@@ -27,24 +39,25 @@ end function
 
 
 event ObjectMain
-	object.value0 = 0
+	object.stood = false
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if object.frame == 0
 			BoxCollisionTest(C_BOX, object.entityPos, -14, -4, 14, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object.value0 = 1
+			if checkResult == true
+				object.stood = true
 				object[currentPlayer].ypos += 0x60000
-				PlaySfx(SfxName[Button Press], 0)
+				PlaySfx(SfxName[Button Press], false)
 			end if
 		else
 			if object[currentPlayer].yvel >= 0
 				BoxCollisionTest(C_PLATFORM, object.entityPos, -14, -4, 14, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					object.value0 = 1
+				if checkResult == true
+					object.stood = true
 					object[currentPlayer].ypos += 0x20000
 				else
 					BoxCollisionTest(C_TOUCH, object.entityPos, -20, -12, 20, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-					if checkResult == 1
+					if checkResult == true
 						object[currentPlayer].ypos = object[currentPlayer].collisionBottom
 						FlipSign(object[currentPlayer].ypos)
 						object[currentPlayer].ypos <<= 16
@@ -56,58 +69,61 @@ event ObjectMain
 			end if
 		end if
 	next
+	
 	if object.propertyValue == 1
 		arrayPos0 = object.entityPos
 		arrayPos0++
 		if object.frame == 0
 			BoxCollisionTest(C_BOX, object.entityPos, -14, -4, 14, 8, arrayPos0, -22, -24, 16, 32)
-			if checkResult == 1
-				object.value0 = 1
+			if checkResult == COL_TOP
+				object.stood = true
 				object[arrayPos0].ypos += 0x60000
 				object[arrayPos0].xvel = 0
 				object[arrayPos0].yvel = 0
 				object[arrayPos0].state++
-				PlaySfx(SfxName[Button Press], 0)
+				PlaySfx(SfxName[Button Press], false)
 			end if
 		else
 			BoxCollisionTest(C_TOUCH, object.entityPos, -14, -4, 14, 8, arrayPos0, -22, -24, 16, 32)
-			if checkResult == 1
-				object.value0 = 1
+			if checkResult == true
+				object.stood = true
 			end if
 		end if
-		if object.value0 == 1
+
+		if object.stood == true
 			arrayPos0++
-			if object[arrayPos0].state == 0
-				object.value1 = stage.deathBoundary
-				object.value1 += 0x100000
+			if cutBridge[arrayPos0].state == CUTBRIDGE_ACTIVE
+				object.exitPos.y = stage.deathBoundary
+				object.exitPos.y += 0x100000
 				stage.deathBoundary = 0x7FFF0000
 				arrayPos1 = arrayPos0
 				arrayPos1 += 7
 				temp0 = 0
 				while arrayPos1 >= arrayPos0
-					object[arrayPos1].state = 1
-					object[arrayPos1].value0 = temp0
+					cutBridge[arrayPos1].state = CUTBRIDGE_COLLAPSE
+					cutBridge[arrayPos1].timer = temp0
 					temp0 += 20
 					arrayPos1--
 				loop
 			end if
 		end if
-		if object.state == 1
-			options.touchControls = 0
-			object.value2 += 4
+
+		if object.state == PUSHBUTTON_PLAYERFELL
+			options.touchControls = false
+			object.fadeTimer += 4
 			music.volume -= 2
-			SetScreenFade(0, 0, 0, object.value2)
-			if object.value2 == 384
+			SetScreenFade(0, 0, 0, object.fadeTimer)
+			if object.fadeTimer == 384
 				fadeColor = 0
-				object.value2 = 0
+				object.fadeTimer = 0
 				lampPostID = 0
 				object.direction = FLIP_NONE
 				stage.listPos++
-				if options.gameMode == 1
+				if options.gameMode == MODE_NORMAL
 					arrayPos1 = options.saveSlot
 					arrayPos1 <<= 3
-					if stage.player2Enabled == 1
-						saveRAM[arrayPos1] = 3
+					if stage.player2Enabled == true
+						saveRAM[arrayPos1] = PlayerName[SONIC AND TAILS]
 					else
 						saveRAM[arrayPos1] = stage.playerListPos
 					end if
@@ -126,11 +142,13 @@ event ObjectMain
 					saveRAM[arrayPos1] = specialStage.listPos
 					WriteSaveRAM()
 				end if
+
 				temp0 = engine.trialMode
 				if stage.listPos >= stage.listSize
-					temp0 = 1
+					temp0 = true
 				end if
-				if temp0 == 0
+
+				if temp0 == false
 					LoadStage()
 				else
 					stage.activeList = PRESENTATION_STAGE
@@ -139,8 +157,8 @@ event ObjectMain
 				end if
 			end if
 		else
-			if object[0].ypos > object.value1
-				object.state = 1
+			if object[0].ypos > object.exitPos.y
+				object.state = PUSHBUTTON_PLAYERFELL
 				recAnimation = 0
 				temp0 = 0
 				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -159,7 +177,7 @@ end event
 
 
 event ObjectDraw
-	object.frame = object.value0
+	object.frame = object.stood
 	DrawSprite(object.frame)
 end event
 
@@ -170,7 +188,7 @@ event ObjectStartup
 	SpriteFrame(-16, -2, 32, 10, 92, 18)
 	foreach (TypeName[Push Button], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue == 1
-			object[arrayPos0].value1 = 0x7FFF0000
+			object[arrayPos0].exitPos.y = 0x7FFF0000
 		end if
 	next
 	SetTableValue(TypeName[Push Button], DebugMode_ObjCount, DebugMode_TypesTable)
@@ -179,11 +197,40 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SBZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 92, 1)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Normal", 0)
+	AddEnumVariable("Cutscene", 1)
 end event

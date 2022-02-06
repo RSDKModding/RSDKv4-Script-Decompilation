@@ -6,22 +6,33 @@
 // ----------------------------------
 
 // Aliases
-private alias 44 : TYPE_BRIDGE
+private alias object.propertyValue : object.length
+
+private alias object.value0 : object.activePlayerCount
+private alias object.value1 : object.timer
+private alias object.value2 : object.stoodPos
+private alias object.value3 : object.depression
+private alias object.value4 : object.bridgeDepth
+private alias object.value5 : object.playerID
+private alias object.value6 : object.startPos
+private alias object.value7 : object.endPos
+
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
 reserve function Bridge_DebugDraw
 reserve function Bridge_DebugSpawn
 
 // Static Values
-public value Bridge_value32 = 0;
+public value Bridge_depression2 = 0;
 
-private alias Bridge_value32 : Bridge_debugSpawn
+private alias Bridge_depression2 : Bridge_startDebugID
 
 // Tables
 
 function Bridge_DebugDraw
-	temp0 = object[0].value17
-	temp0 -= Bridge_debugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Bridge_startDebugID
 	temp2 = temp0
 	temp0 <<= 19
 	FlipSign(temp0)
@@ -40,52 +51,53 @@ end function
 
 
 function Bridge_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= Bridge_debugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Bridge_startDebugID
 	CreateTempObject(TypeName[Bridge], temp0, object.xpos, object.ypos)
-	object[tempObjectPos].value6 = temp0
-	object[tempObjectPos].value6 <<= 19
-	object[tempObjectPos].value7 = object[tempObjectPos].value6
-	FlipSign(object[tempObjectPos].value6)
-	object[tempObjectPos].value6 += object[tempObjectPos].xpos
-	object[tempObjectPos].value7 += object[tempObjectPos].xpos
-	object[tempObjectPos].value5 = -1
+	object[tempObjectPos].startPos = temp0
+	object[tempObjectPos].startPos <<= 19
+	object[tempObjectPos].endPos = object[tempObjectPos].startPos
+	FlipSign(object[tempObjectPos].startPos)
+	object[tempObjectPos].startPos += object[tempObjectPos].xpos
+	object[tempObjectPos].endPos += object[tempObjectPos].xpos
+	object[tempObjectPos].playerID = -1
 end function
 
 
 event ObjectMain
-	if object.value0 > 0
-		if object.value1 < 128
-			object.value1 += 8
+	if object.activePlayerCount > 0
+		if object.timer < 128
+			object.timer += 8
 		end if
 	else
-		if object.value1 > 0
-			object.value1 -= 8
-			object.value5 = -1
+		if object.timer > 0
+			object.timer -= 8
+			object.playerID = -1
 		else
-			object.value3 = 0
+			object.depression = 0
 		end if
 	end if
-	object.value4 = object.value3
-	object.value4 *= object.value1
-	object.value4 >>= 7
-	object.value0 = 0
+	object.bridgeDepth = object.depression
+	object.bridgeDepth *= object.timer
+	object.bridgeDepth >>= 7
+	object.activePlayerCount = 0
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		if object[currentPlayer].xpos > object.value6
-			if object[currentPlayer].xpos < object.value7
-				if currentPlayer == object.value5
-					object.value2 = object[currentPlayer].xpos
-					object.value2 -= object.value6
-					temp0 = object.value2
+		if object[currentPlayer].xpos > object.startPos
+			if object[currentPlayer].xpos < object.endPos
+				if currentPlayer == object.playerID
+					object.stoodPos = object[currentPlayer].xpos
+					object.stoodPos -= object.startPos
+					temp0 = object.stoodPos
 					temp0 >>= 8
-					temp1 = object.value7
-					temp1 -= object.value6
+					temp1 = object.endPos
+					temp1 -= object.startPos
 					temp2 = temp1
 					temp2 >>= 16
 					temp0 /= temp2
-					Sin(object.value3, temp0)
+					Sin(object.depression, temp0)
 					temp1 >>= 13
-					object.value3 *= temp1
+					object.depression *= temp1
 					temp0 = object.ypos
 					temp0 -= 0x300000
 					if object[currentPlayer].ypos > temp0
@@ -93,40 +105,40 @@ event ObjectMain
 							temp2 = object[currentPlayer].collisionBottom
 							FlipSign(temp2)
 							temp2 <<= 16
-							temp2 += object.value4
+							temp2 += object.bridgeDepth
 							temp2 -= 0x80000
-							object.value0++
+							object.activePlayerCount++
 							object[currentPlayer].ypos = object.ypos
 							object[currentPlayer].ypos += temp2
 							object[currentPlayer].gravity = GRAVITY_GROUND
 							object[currentPlayer].yvel = 0
-							object[currentPlayer].floorSensorL = 1
-							object[currentPlayer].floorSensorC = 1
-							object[currentPlayer].floorSensorR = 1
+							object[currentPlayer].floorSensorL = true
+							object[currentPlayer].floorSensorC = true
+							object[currentPlayer].floorSensorR = true
 						else
-							object.value5 = -2
+							object.playerID = -2
 						end if
 					end if
 				else
 					if object[currentPlayer].yvel >= 0
 						temp0 = object[currentPlayer].xpos
-						temp0 -= object.value6
-						if temp0 > object.value2
-							temp0 = object.value7
+						temp0 -= object.startPos
+						if temp0 > object.stoodPos
+							temp0 = object.endPos
 							temp0 -= object[currentPlayer].xpos
-							temp3 = object.value7
-							temp3 -= object.value6
-							temp3 -= object.value2
+							temp3 = object.endPos
+							temp3 -= object.startPos
+							temp3 -= object.stoodPos
 							temp1 = temp0
 							temp1 <<= 7
 							temp1 /= temp3
 						else
 							temp1 = temp0
 							temp1 <<= 7
-							temp1 /= object.value2
+							temp1 /= object.stoodPos
 						end if
 						Sin(temp2, temp1)
-						temp2 *= object.value4
+						temp2 *= object.bridgeDepth
 						temp2 >>= 9
 						temp2 -= 0x80000
 						if object[currentPlayer].yvel < 0x8000
@@ -140,50 +152,51 @@ event ObjectMain
 							temp4 = temp3
 							temp4 += 8
 						end if
+
 						BoxCollisionTest(C_TOUCH, object.entityPos, -0x400, temp3, 0x400, temp4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-						if checkResult == 1
-							object.value0++
+						if checkResult == true
+							object.activePlayerCount++
 							object[currentPlayer].ypos = object[currentPlayer].collisionBottom
 							FlipSign(object[currentPlayer].ypos)
 							object[currentPlayer].ypos <<= 16
 							object[currentPlayer].ypos += object.ypos
 							object[currentPlayer].ypos += temp2
-							object[currentPlayer].floorSensorL = 1
-							object[currentPlayer].floorSensorC = 1
-							object[currentPlayer].floorSensorR = 1
+							object[currentPlayer].floorSensorL = true
+							object[currentPlayer].floorSensorC = true
+							object[currentPlayer].floorSensorR = true
 							if currentPlayer == 0
-								if object.value5 < 4
-									if object.value5 > 0
-										object.value2 = object[currentPlayer].xpos
-										object.value2 -= object.value6
-										temp0 = object.value2
+								if object.playerID < 4
+									if object.playerID > 0
+										object.stoodPos = object[currentPlayer].xpos
+										object.stoodPos -= object.startPos
+										temp0 = object.stoodPos
 										temp0 >>= 8
-										temp1 = object.value7
-										temp1 -= object.value6
+										temp1 = object.endPos
+										temp1 -= object.startPos
 										temp2 = temp1
 										temp2 >>= 16
 										temp0 /= temp2
-										Sin(object.value3, temp0)
+										Sin(object.depression, temp0)
 										temp1 >>= 13
-										object.value3 *= temp1
-										object.value4 = object.value3
-										object.value4 *= object.value1
-										object.value4 >>= 7
+										object.depression *= temp1
+										object.bridgeDepth = object.depression
+										object.bridgeDepth *= object.timer
+										object.bridgeDepth >>= 7
 									end if
-									object.value5 = 0
+									object.playerID = 0
 									if object[currentPlayer].yvel < 256
-										object.value1 = 128
+										object.timer = 128
 									end if
 								end if
 							else
-								if object.value5 == -1
-									object.value5 = currentPlayer
+								if object.playerID == -1
+									object.playerID = currentPlayer
 									if object[currentPlayer].yvel < 256
-										object.value1 = 128
+										object.timer = 128
 									end if
 								end if
-								if object.value5 == -2
-									object.value5 = currentPlayer
+								if object.playerID == -2
+									object.playerID = currentPlayer
 								end if
 							end if
 							object[currentPlayer].gravity = GRAVITY_GROUND
@@ -192,15 +205,15 @@ event ObjectMain
 					end if
 				end if
 			else
-				if currentPlayer == object.value5
-					object.value5 = -2
-					object.value1 = 32
+				if currentPlayer == object.playerID
+					object.playerID = -2
+					object.timer = 32
 				end if
 			end if
 		else
-			if currentPlayer == object.value5
-				object.value5 = -2
-				object.value1 = 32
+			if currentPlayer == object.playerID
+				object.playerID = -2
+				object.timer = 32
 			end if
 		end if
 	next
@@ -209,17 +222,17 @@ end event
 
 event ObjectDraw
 	temp0 = 0
-	temp1 = object.value6
+	temp1 = object.startPos
 	temp1 += 0x80000
 	temp4 = 0x80000
-	temp5 = object.value2
+	temp5 = object.stoodPos
 	temp5 >>= 20
 	while temp0 < temp5
 		temp3 = temp4
 		temp3 <<= 7
-		temp3 /= object.value2
+		temp3 /= object.stoodPos
 		Sin(temp2, temp3)
-		temp2 *= object.value4
+		temp2 *= object.bridgeDepth
 		temp2 >>= 9
 		temp2 += object.ypos
 		DrawSpriteXY(0, temp1, temp2)
@@ -227,23 +240,25 @@ event ObjectDraw
 		temp4 += 0x100000
 		temp0++
 	loop
-	temp2 = object.value4
+
+	temp2 = object.bridgeDepth
 	temp2 += object.ypos
 	DrawSpriteXY(0, temp1, temp2)
+
 	temp1 += 0x100000
 	temp0++
-	temp5 = object.value7
-	temp5 -= object.value6
-	temp5 -= object.value2
-	temp1 = object.value7
+	temp5 = object.endPos
+	temp5 -= object.startPos
+	temp5 -= object.stoodPos
+	temp1 = object.endPos
 	temp1 -= 0x80000
 	temp4 = 0x80000
-	while temp0 < object.propertyValue
+	while temp0 < object.length
 		temp3 = temp4
 		temp3 <<= 7
 		temp3 /= temp5
 		Sin(temp2, temp3)
-		temp2 *= object.value4
+		temp2 *= object.bridgeDepth
 		temp2 >>= 9
 		temp2 += object.ypos
 		DrawSpriteXY(0, temp1, temp2)
@@ -261,19 +276,19 @@ event ObjectStartup
 	SpriteFrame(-8, -8, 16, 16, 1, 1)
 
 	foreach (TypeName[Bridge], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value6 = object[arrayPos0].propertyValue
-		object[arrayPos0].value6 <<= 19
-		object[arrayPos0].value7 = object[arrayPos0].value6
-		FlipSign(object[arrayPos0].value6)
-		object[arrayPos0].value6 += object[arrayPos0].xpos
-		object[arrayPos0].value7 += object[arrayPos0].xpos
-		object[arrayPos0].value5 = -1
+		object[arrayPos0].startPos = object[arrayPos0].length
+		object[arrayPos0].startPos <<= 19
+		object[arrayPos0].endPos = object[arrayPos0].startPos
+		FlipSign(object[arrayPos0].startPos)
+		object[arrayPos0].startPos += object[arrayPos0].xpos
+		object[arrayPos0].endPos += object[arrayPos0].xpos
+		object[arrayPos0].playerID = -1
 	next
 
 	// Add bridges of varying lengths to the debug object list
 	temp0 = 0
-	Bridge_debugSpawn = DebugMode_ObjCount
-	Bridge_debugSpawn--
+	Bridge_startDebugID = DebugMode_ObjCount
+	Bridge_startDebugID--
 	while temp0 < 16
 		SetTableValue(TypeName[Bridge], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(Bridge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -284,10 +299,27 @@ event ObjectStartup
 end event
 
 event RSDKDraw
-	DrawSprite(0)
+	temp0 = object.length
+	temp2 = temp0
+	temp0 <<= 19
+	FlipSign(temp0)
+	temp0 += object.xpos
+	temp0 += 0x80000
+	temp1 = 0
+	while temp1 < temp2
+		DrawSpriteXY(0, temp0, object.ypos)
+		temp0 += 0x100000
+		temp1++
+	loop
+	if temp1 == 0
+		DrawSprite(0)
+	end if
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("GHZ/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "length")
 end event

@@ -6,7 +6,14 @@
 // ----------------------------------
 
 // Aliases
-private alias 4 : TYPE_PLAYEROBJECT
+public alias object.value0  : player.rings
+public alias object.value15 : player.worldX
+public alias object.value16 : player.worldY
+
+public alias object.value7   : player.invincibilityTimer
+private alias object.value18 : object.stateInput
+private alias object.value17 : object.playerFrame
+private alias object.value23 : object.shadowFrame
 
 // Function declarations
 reserve function PlayerObject_ProcessP1Inputs
@@ -19,29 +26,22 @@ reserve function PlayerObject_ProcessDrawing
 reserve function PlayerObject_Process2PVSPlayer
 
 // Static Values
-public value PlayerObject_value29 = 0;
-public value PlayerObject_value30 = 0;
-public value PlayerObject_value31 = 0;
-public value PlayerObject_value32 = 0;
-public value PlayerObject_value33 = 0;
-public value PlayerObject_value34 = 0;
-public value PlayerObject_value27 = 0;
-public value PlayerObject_value25 = 0;
-public value PlayerObject_value26 = 0;
-public value PlayerObject_value24 = 0;
-public value PlayerObject_value23 = 0;
-public value PlayerObject_value28 = 0;
-public value PlayerObject_value22 = 0;
-private value value0x1D19 = 0;
-private value value0x1D1A = 0;
-private value value0x1D1B = 0;
-private value value0x1D1C = 0;
-private value value0x1D1D = 0;
-private value value0x1D1E = 0;
-private value value0x1D1F = 0;
+public value PlayerObject_StateUp = 0
+public value PlayerObject_StateDown = 0
+public value PlayerObject_StateLeft = 0
+public value PlayerObject_StateRight = 0
+public value PlayerObject_StateJumpPress = 0
+public value PlayerObject_StateJumpHold = 0
+public value PlayerObject_value27 = 0
+public value PlayerObject_value25 = 0
+public value PlayerObject_value26 = 0
+public value PlayerObject_value24 = 0
+public value PlayerObject_value23 = 0
+public value PlayerObject_value28 = 0
+public value PlayerObject_value22 = 0
 
 // Tables
-public table PlayerObject_SonicSuperAltPal4
+public table PlayerObject_table4
 	-128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -127, -127, -127, -127
 	-127, -127, -127, -127, -126, -126, -126, -126, -126, -126, -125, -125, -125, -125, -124, -124
 	-124, -124, -123, -123, -123, -123, -122, -122, -122, -121, -121, -121, -120, -120, -119, -119
@@ -53,9 +53,10 @@ public table PlayerObject_SonicSuperAltPal4
 end table
 
 function PlayerObject_ProcessDrawing
-	MatrixRotateXYZ(MAT_WORLD, object[0].value17, object[0].value18, object[0].value19)
-	MatrixTranslateXYZ(MAT_TEMP, object[0].value14, object[0].value15, object[0].value16)
+	MatrixRotateXYZ(MAT_WORLD, object[0].rotateX, object[0].rotateY, object[0].rotateZ)
+	MatrixTranslateXYZ(MAT_TEMP, object[0].translateX, object[0].translateY, object[0].translateZ)
 	MatrixMultiply(MAT_WORLD, MAT_TEMP)
+
 	arrayPos0 = scene3D.vertexCount
 	arrayPos1 = scene3D.faceCount
 	faceBuffer[arrayPos1].flag = FACE_TEXTURED_D
@@ -68,6 +69,7 @@ function PlayerObject_ProcessDrawing
 	arrayPos2 = arrayPos0
 	arrayPos0++
 	TransformVertices(MAT_WORLD, arrayPos2, arrayPos0)
+
 	faceBuffer[arrayPos1].b = arrayPos0
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -80,6 +82,7 @@ function PlayerObject_ProcessDrawing
 		vertexBuffer[arrayPos0].v = 0x580
 	end if
 	arrayPos0++
+
 	faceBuffer[arrayPos1].c = arrayPos0
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -87,29 +90,34 @@ function PlayerObject_ProcessDrawing
 	vertexBuffer[arrayPos0].u = 17
 	vertexBuffer[arrayPos0].v = 16
 	arrayPos0++
+
 	faceBuffer[arrayPos1].d = arrayPos0
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 	vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
 	arrayPos0++
+
 	arrayPos1++
 	scene3D.vertexCount += 4
 	scene3D.faceCount++
-	if object.visible == 1
+
+	if object.visible == true
 		arrayPos2 = arrayPos0
 		arrayPos0++
+
 		faceBuffer[arrayPos1].flag = FACE_SPRITE_3D
 		faceBuffer[arrayPos1].a = arrayPos2
 		vertexBuffer[arrayPos2].x = object.xpos
 		vertexBuffer[arrayPos2].x >>= 1
-		object.value15 = vertexBuffer[arrayPos2].x
+		player.worldX = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos2].y = object.ypos
 		vertexBuffer[arrayPos2].y >>= 1
-		object.value16 = vertexBuffer[arrayPos2].y
+		player.worldY = vertexBuffer[arrayPos2].y
 		vertexBuffer[arrayPos2].z = object.value2
 		TransformVertices(MAT_WORLD, arrayPos2, arrayPos0)
-		vertexBuffer[arrayPos2].u = 4
-		vertexBuffer[arrayPos2].v = 1
+
+		vertexBuffer[arrayPos2].u = TypeName[Player Object]
+		vertexBuffer[arrayPos2].v = FX_ROTATE
 		faceBuffer[arrayPos1].b = arrayPos0
 		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -117,13 +125,15 @@ function PlayerObject_ProcessDrawing
 		vertexBuffer[arrayPos0].u = object.frame
 		vertexBuffer[arrayPos0].v = 0
 		arrayPos0++
+
 		faceBuffer[arrayPos1].c = arrayPos0
 		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-		vertexBuffer[arrayPos0].u = 512
+		vertexBuffer[arrayPos0].u = 0x200
 		vertexBuffer[arrayPos0].v = object.rotation
 		arrayPos0++
+
 		faceBuffer[arrayPos1].d = arrayPos0
 		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -139,25 +149,28 @@ function PlayerObject_ProcessDrawing
 				vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 				vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 				vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-				vertexBuffer[arrayPos0].u = 4
-				vertexBuffer[arrayPos0].v = 1
+				vertexBuffer[arrayPos0].u = TypeName[Player Object]
+				vertexBuffer[arrayPos0].v = FX_ROTATE
 				arrayPos0++
+
 				faceBuffer[arrayPos1].b = arrayPos0
 				vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 				vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 				vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-				vertexBuffer[arrayPos0].u = object.value17
+				vertexBuffer[arrayPos0].u = object.playerFrame
 				vertexBuffer[arrayPos0].u >>= 2
 				vertexBuffer[arrayPos0].u += 48
 				vertexBuffer[arrayPos0].v = 0
 				arrayPos0++
+
 				faceBuffer[arrayPos1].c = arrayPos0
 				vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 				vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 				vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-				vertexBuffer[arrayPos0].u = 512
+				vertexBuffer[arrayPos0].u = 0x200
 				vertexBuffer[arrayPos0].v = object.rotation
 				arrayPos0++
+
 				faceBuffer[arrayPos1].d = arrayPos0
 				vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 				vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -167,7 +180,8 @@ function PlayerObject_ProcessDrawing
 			end if
 		end if
 	end if
-	if object.value23 > 0
+
+	if object.shadowFrame > 0
 		arrayPos0++
 		arrayPos1++
 		faceBuffer[arrayPos1].flag = FACE_SPRITE_3D
@@ -175,23 +189,26 @@ function PlayerObject_ProcessDrawing
 		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-		vertexBuffer[arrayPos0].u = 4
-		vertexBuffer[arrayPos0].v = 1
+		vertexBuffer[arrayPos0].u = TypeName[Player Object]
+		vertexBuffer[arrayPos0].v = FX_ROTATE
 		arrayPos0++
+
 		faceBuffer[arrayPos1].b = arrayPos0
 		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-		vertexBuffer[arrayPos0].u = object.value23
+		vertexBuffer[arrayPos0].u = object.shadowFrame
 		vertexBuffer[arrayPos0].v = 0
 		arrayPos0++
+
 		faceBuffer[arrayPos1].c = arrayPos0
 		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-		vertexBuffer[arrayPos0].u = 512
+		vertexBuffer[arrayPos0].u = 0x200
 		vertexBuffer[arrayPos0].v = 0
 		arrayPos0++
+
 		faceBuffer[arrayPos1].d = arrayPos0
 		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -203,8 +220,8 @@ end function
 
 
 function PlayerObject_ProcessP1Inputs
-	if options.attractMode == 0
-		if options.touchControls == 1
+	if options.attractMode == false
+		if options.touchControls == true
 			if object.controlMode == 0
 				CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
 				if checkResult > -1
@@ -212,62 +229,71 @@ function PlayerObject_ProcessP1Inputs
 					temp0 = touchscreen[arrayPos0].xpos
 					temp0 -= saveRAM[39]
 					if temp0 > 0
-						inputDown.right = 1
+						inputDown.right = true
 					else
-						inputDown.left = 1
+						inputDown.left = true
 					end if
 				end if
+
 				CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
 				if checkResult > -1
-					inputDown.buttonA = 1
+					inputDown.buttonA = true
 				end if
 				if touchJump == 0
 					inputPress.buttonA |= inputDown.buttonA
 				end if
+
 				touchJump = inputDown.buttonA
-				if stage.debugMode == 1
+				if stage.debugMode == true
 					CheckTouchRect(0, 0, 112, 56)
 					if checkResult > -1
 						inputDown.buttonB = 1
 					end if
-					if touchDebug == 0
+					if touchDebug == false
 						inputPress.buttonB |= inputDown.buttonB
 					end if
 					touchDebug = inputDown.buttonB
 				end if
+
 				CheckTouchRect(240, 0, screen.xsize, 40)
 				if checkResult > -1
-					if options.vsMode == 0
-						PlaySfx(SfxName[Menu Back], 0)
+					if options.vsMode == false
+						PlaySfx(SfxName[Menu Back], false)
 						engine.state = 5
 					end if
 				end if
-				if inputPress.start == 1
-					if options.vsMode == 0
-						PlaySfx(SfxName[Menu Back], 0)
+
+				if inputPress.start == true
+					if options.vsMode == false
+						PlaySfx(SfxName[Menu Back], false)
 						engine.state = 5
 					end if
 				end if
 			end if
 		end if
+
 		ProcessObjectControl()
-		if options.vsMode == 1
+
+		if options.vsMode == true
 			object.value24 = PlayerObject_value22
 			CallNativeFunction2(SendEntity, 2, 0)
 		end if
 	else
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
-		if inputPress.start == 1
+		if inputPress.start == true
 			checkResult = 0
 		end if
+
 		if checkResult > -1
 			if PlayerObject_value23 > 1
 				PlayerObject_value23 = 1
 			end if
 		end if
-		if inputPress.start == 1
+
+		if inputPress.start == true
 			PlayerObject_value23 = 1
 		end if
+
 		PlayerObject_value24--
 		if PlayerObject_value24 < 1
 			if PlayerObject_value25 < PlayerObject_value26
@@ -283,10 +309,11 @@ function PlayerObject_ProcessP1Inputs
 				PlayerObject_value25++
 			end if
 		else
-			if object.jumpPress == 1
-				object.jumpPress = 0
+			if object.jumpPress == true
+				object.jumpPress = false
 			end if
 		end if
+
 		if PlayerObject_value23 > 0
 			PlayerObject_value23--
 			if PlayerObject_value23 < 1
@@ -298,62 +325,70 @@ function PlayerObject_ProcessP1Inputs
 			end if
 		end if
 	end if
-	if object.value7 > 0
-		object.value7--
-		GetBit(temp0, object.value7, 2)
+
+	if player.invincibilityTimer > 0
+		player.invincibilityTimer--
+		GetBit(temp0, player.invincibilityTimer, 2)
 		if temp0 == 1
-			object.visible = 0
+			object.visible = false
 		else
-			object.visible = 1
+			object.visible = true
 		end if
 	end if
 end function
 
 
 function PlayerObject_ProcessP2Inputs
-	PlayerObject_value29 <<= 1
-	PlayerObject_value29 |= object[2].up
-	PlayerObject_value29 &= 0xFFFF
-	PlayerObject_value30 <<= 1
-	PlayerObject_value30 |= object[2].down
-	PlayerObject_value30 &= 0xFFFF
-	PlayerObject_value31 <<= 1
-	PlayerObject_value31 |= object[2].left
-	PlayerObject_value31 &= 0xFFFF
-	PlayerObject_value32 <<= 1
-	PlayerObject_value32 |= object[2].right
-	PlayerObject_value32 &= 0xFFFF
-	PlayerObject_value33 <<= 1
-	PlayerObject_value33 |= object[2].jumpPress
-	PlayerObject_value33 &= 0xFFFF
-	PlayerObject_value34 <<= 1
-	PlayerObject_value34 |= object[2].jumpHold
-	PlayerObject_value34 &= 0xFFFF
-	temp0 = PlayerObject_value29
+	PlayerObject_StateUp <<= 1
+	PlayerObject_StateUp |= object[2].up
+	PlayerObject_StateUp &= 0xFFFF
+	PlayerObject_StateDown <<= 1
+	PlayerObject_StateDown |= object[2].down
+	PlayerObject_StateDown &= 0xFFFF
+	PlayerObject_StateLeft <<= 1
+	PlayerObject_StateLeft |= object[2].left
+	PlayerObject_StateLeft &= 0xFFFF
+	PlayerObject_StateRight <<= 1
+	PlayerObject_StateRight |= object[2].right
+	PlayerObject_StateRight &= 0xFFFF
+	PlayerObject_StateJumpPress <<= 1
+	PlayerObject_StateJumpPress |= object[2].jumpPress
+	PlayerObject_StateJumpPress &= 0xFFFF
+	PlayerObject_StateJumpHold <<= 1
+	PlayerObject_StateJumpHold |= object[2].jumpHold
+	PlayerObject_StateJumpHold &= 0xFFFF
+
+	temp0 = PlayerObject_StateUp
 	temp0 >>= 15
 	object.up = temp0
-	temp0 = PlayerObject_value30
+
+	temp0 = PlayerObject_StateDown
 	temp0 >>= 15
 	object.down = temp0
-	temp0 = PlayerObject_value31
+
+	temp0 = PlayerObject_StateLeft
 	temp0 >>= 15
 	object.left = temp0
-	temp0 = PlayerObject_value32
+
+	temp0 = PlayerObject_StateRight
 	temp0 >>= 15
 	object.right = temp0
-	temp0 = PlayerObject_value33
+
+	temp0 = PlayerObject_StateJumpPress
 	temp0 >>= 15
 	object.jumpPress = temp0
-	temp0 = PlayerObject_value34
+
+	temp0 = PlayerObject_StateJumpHold
 	temp0 >>= 15
 	object.jumpHold = temp0
-	if object.value7 > 0
-		object.value7--
-		GetBit(temp0, object.value7, 2)
-		if temp0 == 1
-			object.visible = 0
+
+	if player.invincibilityTimer > 0
+		player.invincibilityTimer--
+		GetBit(temp0, player.invincibilityTimer, 2)
+		if temp0 == true
+			object.visible = false
 		else
-			object.visible = 1
+			object.visible = true
 		end if
 	end if
 end function
@@ -363,25 +398,27 @@ function PlayerObject_Process2PVSPlayer
 	temp0 = object.value23
 	CallNativeFunction2(ReceiveEntity, 3, 1)
 	object.type = TypeName[Player Object]
-	object.value18 = 9
+	object.stateInput = 9
 	object.value23 = temp0
+
 	if vs.playerID == 1
 		PlayerObject_value22 = object.value24
 	end if
-	if object.value7 > 0
-		object.value7--
-		GetBit(temp0, object.value7, 2)
-		if temp0 == 1
-			object.visible = 0
+
+	if player.invincibilityTimer > 0
+		player.invincibilityTimer--
+		GetBit(temp0, player.invincibilityTimer, 2)
+		if temp0 == true
+			object.visible = false
 		else
-			object.visible = 1
+			object.visible = true
 		end if
 	end if
 end function
 
 
 function PlayerObject_HandleGround
-	if object.right == 1
+	if object.right == true
 		object.speed -= 48
 		if object.speed < -0x600
 			object.speed = -0x600
@@ -389,7 +426,7 @@ function PlayerObject_HandleGround
 		object.value26 = 0
 		object.value1 = 0
 	else
-		if object.left == 1
+		if object.left == true
 			object.speed += 48
 			if object.speed > 0x600
 				object.speed = 0x600
@@ -406,6 +443,7 @@ function PlayerObject_HandleGround
 			object.speed -= temp0
 		end if
 	end if
+
 	temp0 = object.speed
 	if object.rotation != 0
 		temp0 /= 256
@@ -413,6 +451,7 @@ function PlayerObject_HandleGround
 	else
 		temp0 >>= 1
 	end if
+
 	object.angle += temp0
 	object.angle &= 0xFFFF
 	object.rotation = object.angle
@@ -427,6 +466,7 @@ function PlayerObject_HandleGround
 		temp0 >>= 9
 		object.speed += temp0
 	end if
+
 	Sin(object.xpos, object.rotation)
 	object.xpos *= object.value9
 	object.xpos >>= 9
@@ -437,7 +477,8 @@ function PlayerObject_HandleGround
 	object.animationSpeed = 60
 	temp0 = object.rotation
 	object.value25 = 0
-	if object.jumpPress == 1
+
+	if object.jumpPress == true
 		object.speed = 0
 		Sin(object.xvel, object.rotation)
 		object.xvel *= 0x5A0
@@ -453,7 +494,7 @@ function PlayerObject_HandleGround
 		object.animationSpeed = 60
 		object.animationTimer = 0
 		object.gravity = GRAVITY_AIR
-		PlaySfx(SfxName[Jump], 0)
+		PlaySfx(SfxName[Jump], false)
 	else
 		if object.rotation > 152
 			if object.rotation < 360
@@ -475,6 +516,7 @@ function PlayerObject_HandleGround
 			temp0 &= 511
 		end if
 	end if
+
 	Sin(object.value11, temp0)
 	object.value11 *= -52
 	object.value11 >>= 1
@@ -499,9 +541,11 @@ function PlayerObject_HandleGround
 			end if
 		end if
 	end if
+
 	if object.rotation < 40
 		object.rotation = 0
 	end if
+
 	if object.rotation > 472
 		object.rotation = 0
 	end if
@@ -509,25 +553,30 @@ end function
 
 
 function PlayerObject_HandleAir
-	if options.vsMode == 1
+	if options.vsMode == true
 		if object.value25 == 0
 			PlayerObject_value22 ^= 1
 			object.value25 = 1
 		end if
 	end if
+
 	object.xpos += object.xvel
 	if object.xpos <= object.value9
 		object.xpos = object.value9
 	end if
+
 	if object.xpos >= object.value3
 		object.xpos = object.value3
 	end if
-	if object.left == 1
+
+	if object.left == true
 		object.xvel -= 32
 	end if
-	if object.right == 1
+
+	if object.right == true
 		object.xvel += 32
 	end if
+
 	object.ypos += object.yvel
 	object.yvel -= 88
 	if object.ypos < 0
@@ -544,27 +593,30 @@ function PlayerObject_HandleAir
 			object.angle <<= 8
 		end if
 	end if
-	if object.rotation < 256
+
+	if object.rotation < 0x100
 		if object.rotation > 0
 			object.rotation -= 8
 		else
 			object.rotation = 0
 		end if
 	else
-		if object.rotation < 512
+		if object.rotation < 0x200
 			object.rotation += 8
 		else
 			object.rotation = 0
 		end if
 	end if
+
 	object.value11 = object.xpos
 	object.value11 *= 144
 	object.value11 >>= 8
+
 	temp0 = object.xpos
 	temp0 *= 45
 	temp0 >>= 13
 	Abs(temp0)
-	GetTableValue(object.value12, temp0, PlayerObject_SonicSuperAltPal4)
+	GetTableValue(object.value12, temp0, PlayerObject_table4)
 	temp0 = object.value12
 	object.value12 *= 105
 	object.value13 = 116
@@ -587,7 +639,7 @@ end function
 
 
 function PlayerObject_HurtSpin
-	if options.vsMode == 1
+	if options.vsMode == true
 		if vs.playerID == 0
 			if object.value25 == 0
 				PlayerObject_value22 = object.entityPos
@@ -598,13 +650,14 @@ function PlayerObject_HurtSpin
 			end if
 		end if
 	end if
+	
 	if object.value6 < 512
 		object.value6 += 16
 		object.rotation += 16
 	else
 		object.speed = 0
 		object.value6 = 0
-		object.value7 = 60
+		player.invincibilityTimer = 60
 		if object.gravity == GRAVITY_GROUND
 			object.state = PlayerObject_HandleGround
 		else
@@ -615,13 +668,13 @@ end function
 
 
 function PlayerObject_RingLoss
-	if object[currentPlayer].value0 > 0
-		PlaySfx(SfxName[Lose Rings], 0)
-		object[currentPlayer].value0 -= 10
+	if player[currentPlayer].rings > 0
+		PlaySfx(SfxName[Lose Rings], false)
+		player[currentPlayer].rings -= 10
 		temp0 = 10
-		if object[currentPlayer].value0 < 0
-			temp0 += object[currentPlayer].value0
-			object[currentPlayer].value0 = 0
+		if player[currentPlayer].rings < 0
+			temp0 += player[currentPlayer].rings
+			player[currentPlayer].rings = 0
 		end if
 		temp2 = temp0
 		temp2 >>= 1
@@ -658,9 +711,10 @@ end function
 
 
 event ObjectMain
-	CallFunction(object.value18)
+	CallFunction(object.stateInput)
 	CallFunction(object.state)
-	if options.vsMode == 1
+
+	if options.vsMode == true
 		temp0 = object.entityPos
 		temp0 -= 2
 		temp0 ^= vs.playerID
@@ -679,6 +733,7 @@ event ObjectMain
 	object.value14 <<= 8
 	object.value14 += object[0].value13
 	object.value14 += 0xC0000
+
 	object.animationTimer += object.animationSpeed
 	if object.animationTimer >= 240
 		object.animationTimer -= 240
@@ -687,14 +742,17 @@ event ObjectMain
 		object.frame += object.animation
 		object.frame += object.value4
 	end if
+
 	CallFunction(PlayerObject_ProcessDrawing)
-	object.value17++
-	object.value17 %= 28
+	object.playerFrame++
+	object.playerFrame %= 28
 end event
 
 
 event ObjectStartup
 	LoadSpriteSheet("Special/Objects.gif")
+
+	// Running - Sonic
 	SpriteFrame(-16, -28, 32, 56, 1, 68)
 	SpriteFrame(-16, -28, 32, 56, 34, 68)
 	SpriteFrame(-16, -28, 32, 56, 67, 68)
@@ -703,6 +761,8 @@ event ObjectStartup
 	SpriteFrame(-16, -28, 32, 56, 34, 125)
 	SpriteFrame(-16, -28, 32, 56, 67, 125)
 	SpriteFrame(-16, -28, 32, 56, 100, 125)
+
+	// Jumping - Sonic
 	SpriteFrame(-16, -20, 32, 40, 133, 67)
 	SpriteFrame(-16, -20, 32, 40, 166, 67)
 	SpriteFrame(-16, -20, 32, 40, 133, 67)
@@ -711,6 +771,8 @@ event ObjectStartup
 	SpriteFrame(-16, -20, 32, 40, 166, 67)
 	SpriteFrame(-16, -20, 32, 40, 133, 67)
 	SpriteFrame(-16, -20, 32, 40, 166, 67)
+
+	// Running - Tails
 	SpriteFrame(-12, -24, 24, 48, 199, 67)
 	SpriteFrame(-16, -24, 32, 48, 224, 67)
 	SpriteFrame(-16, -24, 32, 48, 257, 67)
@@ -719,6 +781,8 @@ event ObjectStartup
 	SpriteFrame(-16, -24, 32, 48, 224, 116)
 	SpriteFrame(-16, -24, 32, 48, 257, 116)
 	SpriteFrame(-16, -24, 32, 48, 290, 116)
+
+	// Jumping - Tails
 	SpriteFrame(-16, -16, 32, 32, 133, 108)
 	SpriteFrame(-16, -16, 32, 32, 166, 108)
 	SpriteFrame(-16, -16, 32, 32, 133, 108)
@@ -727,6 +791,8 @@ event ObjectStartup
 	SpriteFrame(-16, -16, 32, 32, 166, 108)
 	SpriteFrame(-16, -16, 32, 32, 133, 108)
 	SpriteFrame(-16, -16, 32, 32, 166, 108)
+
+	// Running - Knux
 	SpriteFrame(-16, -28, 32, 56, 1, 182)
 	SpriteFrame(-16, -28, 32, 56, 34, 182)
 	SpriteFrame(-16, -28, 32, 56, 67, 182)
@@ -735,6 +801,8 @@ event ObjectStartup
 	SpriteFrame(-16, -28, 32, 56, 166, 182)
 	SpriteFrame(-16, -28, 32, 56, 199, 182)
 	SpriteFrame(-16, -28, 32, 56, 232, 182)
+
+	// Jumping - Knux
 	SpriteFrame(-16, -20, 32, 40, 133, 141)
 	SpriteFrame(-16, -20, 32, 40, 166, 141)
 	SpriteFrame(-16, -20, 32, 40, 133, 141)
@@ -743,6 +811,7 @@ event ObjectStartup
 	SpriteFrame(-16, -20, 32, 40, 166, 141)
 	SpriteFrame(-16, -20, 32, 40, 133, 141)
 	SpriteFrame(-16, -20, 32, 40, 166, 141)
+
 	SpriteFrame(-6, -6, 16, 24, 323, 58)
 	SpriteFrame(-8, 0, 24, 24, 340, 58)
 	SpriteFrame(-8, 8, 24, 16, 365, 58)
@@ -752,25 +821,30 @@ event ObjectStartup
 	SpriteFrame(-16, -9, 24, 24, 323, 83)
 	SpriteFrame(-8, -40, 16, 7, 348, 100)
 	SpriteFrame(-8, -40, 16, 7, 348, 108)
+
 	object[2].type = TypeName[Player Object]
 	object[2].priority = PRIORITY_ACTIVE
 	object[2].value2 = 0x1000
 	object[2].state = PlayerObject_HandleGround
-	object[2].value18 = PlayerObject_ProcessP1Inputs
+	object[2].stateInput = PlayerObject_ProcessP1Inputs
 	switch stage.playerListPos
-	case 0
+	case PlayerName[SONIC]
 		object[2].value3 = 88
 		object[2].value4 = 0
 		break
-	case 1
+
+	case PlayerName[TAILS]
 		object[2].value3 = 90
 		object[2].value4 = 16
 		break
-	case 2
+		
+	case PlayerName[KNUCKLES]
 		object[2].value3 = 88
 		object[2].value4 = 32
 		break
+
 	end switch
+
 	object[2].value3 <<= 8
 	object[2].value9 = object[2].value3
 	FlipSign(object[2].value9)
@@ -778,12 +852,13 @@ event ObjectStartup
 	object[2].value10 *= object[2].value3
 	object[2].value10 -= 0x10000
 	object[2].frame = object[2].value4
-	if options.vsMode == 1
+
+	if options.vsMode == true
 		object[3].type = TypeName[Player Object]
 		object[3].priority = PRIORITY_ACTIVE
-		object[3].value23 = vs.playerID
-		object[3].value23 ^= 1
-		object[3].value23 += 55
+		object[3].shadowFrame = vs.playerID
+		object[3].shadowFrame ^= 1
+		object[3].shadowFrame += 55
 		if vs.playerID == 0
 			object[2].value2 = 0x1000
 			object[3].value2 = 0x400
@@ -791,22 +866,27 @@ event ObjectStartup
 			object[2].value2 = 0x400
 			object[3].value2 = 0x1000
 		end if
+
 		object[3].state = PlayerObject_HandleGround
-		object[3].value18 = PlayerObject_Process2PVSPlayer
+		object[3].stateInput = PlayerObject_Process2PVSPlayer
 		switch vs.player2Type
-		case 0
+		case PlayerName[SONIC]
 			object[3].value3 = 88
 			object[3].value4 = 0
 			break
-		case 1
+
+		case PlayerName[TAILS]
 			object[3].value3 = 90
 			object[3].value4 = 16
 			break
-		case 2
+
+		case PlayerName[KNUCKLES]
 			object[3].value3 = 88
 			object[3].value4 = 32
 			break
+
 		end switch
+
 		object[3].value3 <<= 8
 		object[3].value9 = object[3].value3
 		FlipSign(object[3].value9)
@@ -814,17 +894,19 @@ event ObjectStartup
 		object[3].value10 *= object[3].value3
 		object[3].value10 -= 0x10000
 		object[3].frame = object[3].value4
-		stage.player2Enabled = 0
+
+		stage.player2Enabled = false
 		playerCount = 2
 		CallNativeFunction2(ReceiveEntity, 0x400, 1)
 		ResetObjectEntity(0x400, TypeName[Blank Object], 0, 0, 0)
 	end if
-	if stage.player2Enabled == 1
+
+	if stage.player2Enabled == true
 		object[3].type = TypeName[Player Object]
 		object[3].priority = PRIORITY_ACTIVE
 		object[3].value2 = 0x400
 		object[3].state = PlayerObject_HandleAir
-		object[3].value18 = PlayerObject_ProcessP2Inputs
+		object[3].stateInput = PlayerObject_ProcessP2Inputs
 		object[3].value3 = 90
 		object[3].value4 = 16
 		object[3].value3 <<= 8
@@ -844,4 +926,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

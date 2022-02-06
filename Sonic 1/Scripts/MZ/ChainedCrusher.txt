@@ -6,19 +6,44 @@
 // ----------------------------------
 
 // Aliases
-private alias 44 : TYPE_CHAINEDCRUSHER
+private alias object.value0 : object.timer
+private alias object.value1 : object.crusherType
+private alias object.value2 : object.startExtended
+private alias object.value3 : object.startPos.y
+private alias object.value4 : object.endPos.y
+private alias object.value5 : object.collisionOffset.y
+private alias object.value6 : object.currentPos.y
+private alias object.value7 : object.dontPlaySfx
+
+private alias 0 : CHAINCRUSHER_DROPPING
+private alias 1 : CHAINCRUSHER_DROPPED
+private alias 2 : CHAINCRUSHER_RISING
+private alias 3 : CHAINCRUSHER_RISEN
+private alias 4 : CHAINCRUSHER_DROPWHENACTIVE
+
+private alias 0 : CHAINCRUSHER_TYPE_LARGE
+private alias 1 : CHAINCRUSHER_TYPE_MED
+private alias 2 : CHAINCRUSHER_TYPE_SMALL
+private alias 3 : CHAINCRUSHER_TYPE_SMALL_ACTIVE
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
+
+// PushButton aliases
+private alias object.propertyValue : pushButton.stood
 
 // Function declarations
 reserve function ChainedCrusher_DebugDraw
 reserve function ChainedCrusher_DebugSpawn
-reserve function ChainedCrusher_Function104
+reserve function ChainedCrusher_CheckOnScreen
 
 // Static Values
-public value ChainedCrusher_value31 = 0;
+private value ChainedCrusher_value31 = 0;
+private alias ChainedCrusher_value31 : ChainedCrusher_startDebugID
 
 function ChainedCrusher_DebugDraw
-	temp7 = object[0].value17
-	temp7 -= ChainedCrusher_value31
+	temp7 = debugMode[0].currentSelection
+	temp7 -= ChainedCrusher_startDebugID
 	temp6 = temp7
 	temp6 /= 7
 	temp7 %= 7
@@ -76,73 +101,82 @@ end function
 
 
 function ChainedCrusher_DebugSpawn
-	temp7 = object[0].value17
-	temp7 -= ChainedCrusher_value31
+	temp7 = debugMode[0].currentSelection
+	temp7 -= ChainedCrusher_startDebugID
+
 	temp6 = temp7
 	temp6 /= 7
 	temp7 %= 7
 	CreateTempObject(TypeName[Chained Crusher], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value2 = 0
-	object[tempObjectPos].value1 = temp6
-	if object[tempObjectPos].value1 == 2
-		object[tempObjectPos].state = 4
+	object[tempObjectPos].startExtended = false
+	object[tempObjectPos].crusherType = temp6
+	if object[tempObjectPos].crusherType == CHAINCRUSHER_TYPE_SMALL
+		object[tempObjectPos].state = CHAINCRUSHER_DROPWHENACTIVE
 	end if
-	object[tempObjectPos].value3 = object.ypos
-	object[tempObjectPos].value4 = object[tempObjectPos].value3
+
+	object[tempObjectPos].startPos.y = object.ypos
+	object[tempObjectPos].endPos.y = object[tempObjectPos].startPos.y
 	switch temp7
 	case 0
-		object[tempObjectPos].value4 += 0x700000
+		object[tempObjectPos].endPos.y += 0x700000
 		break
+
 	case 1
-		object[tempObjectPos].value4 += 0xA00000
+		object[tempObjectPos].endPos.y += 0xA00000
 		break
+
 	case 2
-		object[tempObjectPos].value4 += 0x500000
+		object[tempObjectPos].endPos.y += 0x500000
 		break
+
 	case 3
-		object[tempObjectPos].value4 += 0x780000
+		object[tempObjectPos].endPos.y += 0x780000
 		break
+
 	case 4
-		object[tempObjectPos].value4 += 0x380000
+		object[tempObjectPos].endPos.y += 0x380000
 		break
+
 	case 5
-		object[tempObjectPos].value4 += 0x580000
+		object[tempObjectPos].endPos.y += 0x580000
 		break
+
 	case 6
-		object[tempObjectPos].value4 += 0xB80000
+		object[tempObjectPos].endPos.y += 0xB80000
 		break
 	end switch
 end function
 
 
-function ChainedCrusher_Function104
-	checkResult = 0
+function ChainedCrusher_CheckOnScreen
+	checkResult = false
 	temp0 = object.xpos
 	temp0 >>= 16
 	temp0 -= screen.cameraX
 	Abs(temp0)
-	switch object.value1
-	case 0
+	switch object.crusherType
+	case CHAINCRUSHER_TYPE_LARGE
 		temp0 -= 64
 		break
-	case 1
+	case CHAINCRUSHER_TYPE_MED
 		temp0 -= 56
 		break
-	case 2
+	case CHAINCRUSHER_TYPE_SMALL
 		temp0 -= 0
 		break
-	case 3
+	case CHAINCRUSHER_TYPE_SMALL_ACTIVE
 		temp0 -= 24
 		break
 	end switch
+
 	if temp0 <= screen.xcenter
-		temp1 = object.value4
-		temp1 -= object.value3
+		temp1 = object.endPos.y
+		temp1 -= object.startPos.y
 		temp1 >>= 16
 		temp1 += 8
 		temp1 >>= 1
-		temp0 = object.value3
-		temp0 += object.value4
+		temp0 = object.startPos.y
+		temp0 += object.endPos.y
 		temp0 >>= 17
 		temp0 -= 12
 		temp0 -= screen.cameraY
@@ -150,7 +184,7 @@ function ChainedCrusher_Function104
 		temp0 -= temp1
 		temp0 -= 40
 		if temp0 <= screen.ycenter
-			checkResult = 1
+			checkResult = true
 		end if
 	end if
 end function
@@ -158,35 +192,35 @@ end function
 
 event ObjectMain
 	object.priority = PRIORITY_ACTIVE
-	if object.value2 == 1
-		if object[+1].propertyValue == 0
-			object.value7 = 0
+	if object.startExtended == true
+		if pushButton[+1].stood == false
+			object.dontPlaySfx = false
 			object.yvel += 0x7000
 			object.ypos += object.yvel
-			if object.ypos >= object.value4
+			if object.ypos >= object.endPos.y
 				if object.yvel > 0x7000
-					CallFunction(ChainedCrusher_Function104)
-					if checkResult == 1
-						PlaySfx(SfxName[Crusher], 0)
+					CallFunction(ChainedCrusher_CheckOnScreen)
+					if checkResult == true
+						PlaySfx(SfxName[Crusher], false)
 					end if
 				end if
-				object.ypos = object.value4
+				object.ypos = object.endPos.y
 				object.yvel = 0
 			end if
 		else
 			object.yvel = -0x8000
 			object.ypos += object.yvel
-			if object.ypos <= object.value3
-				object.ypos = object.value3
+			if object.ypos <= object.startPos.y
+				object.ypos = object.startPos.y
 				object.yvel = 0
 			else
-				if object.value7 == 0
+				if object.dontPlaySfx == false
 					temp0 = oscillation
 					temp0 &= 15
 					if temp0 == 0
-						CallFunction(ChainedCrusher_Function104)
-						if checkResult == 1
-							PlaySfx(SfxName[Chain Pull], 0)
+						CallFunction(ChainedCrusher_CheckOnScreen)
+						if checkResult == true
+							PlaySfx(SfxName[Chain Pull], false)
 						end if
 					end if
 				end if
@@ -194,123 +228,136 @@ event ObjectMain
 		end if
 	else
 		switch object.state
-		case 0
-			object.value7 = 0
+		case CHAINCRUSHER_DROPPING
+			object.dontPlaySfx = false
 			object.yvel += 0x7000
 			object.ypos += object.yvel
-			if object.ypos >= object.value4
+			if object.ypos >= object.endPos.y
 				if object.yvel > 0x7000
-					CallFunction(ChainedCrusher_Function104)
-					if checkResult == 1
-						PlaySfx(SfxName[Crusher], 0)
+					CallFunction(ChainedCrusher_CheckOnScreen)
+					if checkResult == true
+						PlaySfx(SfxName[Crusher], false)
 					end if
 				end if
-				object.ypos = object.value4
+				object.ypos = object.endPos.y
 				object.yvel = 0
 				object.state++
 			end if
 			break
-		case 1
-			object.value0++
-			if object.value0 == 60
-				object.value0 = 0
+
+		case CHAINCRUSHER_DROPPED
+			object.timer++
+			if object.timer == 60
+				object.timer = 0
 				object.yvel = -0x8000
 				object.state++
 			end if
 			break
-		case 2
+			
+		case CHAINCRUSHER_RISING
 			object.ypos += object.yvel
-			if object.ypos <= object.value3
-				object.ypos = object.value3
+			if object.ypos <= object.startPos.y
+				object.ypos = object.startPos.y
 				object.yvel = 0
 				object.state++
 			else
-				if object.value7 == 0
+				if object.dontPlaySfx == false
 					temp0 = oscillation
 					temp0 &= 15
 					if temp0 == 0
-						CallFunction(ChainedCrusher_Function104)
-						if checkResult == 1
-							PlaySfx(SfxName[Chain Pull], 0)
+						CallFunction(ChainedCrusher_CheckOnScreen)
+						if checkResult == true
+							PlaySfx(SfxName[Chain Pull], false)
 						end if
 					end if
 				end if
 			end if
 			break
-		case 3
-			object.value0++
-			if object.value0 == 4
-				object.value0 = 0
-				object.state = 0
+
+		case CHAINCRUSHER_RISEN
+			object.timer++
+			if object.timer == 4
+				object.timer = 0
+				object.state = CHAINCRUSHER_DROPPING
 			end if
 			break
-		case 4
-			CallFunction(ChainedCrusher_Function104)
-			if checkResult == 1
-				object.state = 0
-				object.value1++
+			
+		case CHAINCRUSHER_DROPWHENACTIVE
+			CallFunction(ChainedCrusher_CheckOnScreen)
+			if checkResult == true
+				object.state = CHAINCRUSHER_DROPPING
+				object.crusherType++
 			end if
 			break
 		end switch
 	end if
-	object.value5 = object.ypos
-	object.value5 &= -0x10000
-	object.value5 -= object.value6
+
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= -0x10000
+	object.collisionOffset.y -= object.currentPos.y
+
 	temp0 = object.ypos
-	object.ypos = object.value6
+	object.ypos = object.currentPos.y
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		switch object.value1
-		case 0
+		switch object.crusherType
+		case CHAINCRUSHER_TYPE_LARGE
 			BoxCollisionTest(C_BOX, object.entityPos, -56, -12, 56, 10, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			switch checkResult
-			case 0
+			case COL_NONE
 				BoxCollisionTest(C_TOUCH, object.entityPos, -48, 12, 48, 36, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_Hit)
 				end if
 				break
-			case 1
-				object[currentPlayer].ypos += object.value5
+
+			case COL_TOP
+				object[currentPlayer].ypos += object.collisionOffset.y
 				break
-			case 4
+
+			case COL_BOTTOM
 				if object[currentPlayer].gravity == GRAVITY_GROUND
-					if object.value5 >= 0
+					if object.collisionOffset.y >= 0
 						CallFunction(PlayerObject_Kill)
 					end if
 				end if
 				break
 			end switch
 			break
-		case 1
+
+		case CHAINCRUSHER_TYPE_MED
 			BoxCollisionTest(C_BOX, object.entityPos, -48, -12, 48, 10, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			switch checkResult
-			case 0
+			case COL_NONE
 				BoxCollisionTest(C_TOUCH, object.entityPos, -47, 12, 47, 36, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_Hit)
 				end if
 				break
-			case 1
-				object[currentPlayer].ypos += object.value5
+
+			case COL_TOP
+				object[currentPlayer].ypos += object.collisionOffset.y
 				break
-			case 4
+
+			case COL_BOTTOM
 				if object[currentPlayer].gravity == GRAVITY_GROUND
-					if object.value5 >= 0
+					if object.collisionOffset.y >= 0
 						CallFunction(PlayerObject_Kill)
 					end if
 				end if
 				break
 			end switch
 			break
-		case 3
+
+		case CHAINCRUSHER_TYPE_SMALL_ACTIVE
 			BoxCollisionTest(C_BOX, object.entityPos, -16, -12, 16, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			switch checkResult
-			case 1
-				object[currentPlayer].ypos += object.value5
+			case COL_TOP
+				object[currentPlayer].ypos += object.collisionOffset.y
 				break
-			case 4
+
+			case COL_BOTTOM
 				if object[currentPlayer].gravity == GRAVITY_GROUND
-					if object.value5 >= 0
+					if object.collisionOffset.y >= 0
 						CallFunction(PlayerObject_Kill)
 					end if
 				end if
@@ -320,25 +367,27 @@ event ObjectMain
 		end switch
 	next
 	object.ypos = temp0
-	object.value6 = object.ypos
-	object.value6 &= -0x10000
+	object.currentPos.y = object.ypos
+	object.currentPos.y &= -0x10000
+
 	temp0 = object.xpos
 	temp0 >>= 16
 	temp0 -= screen.cameraX
 	Abs(temp0)
 	temp0 -= 128
 	if temp0 > screen.xcenter
-		if object.value2 == 1
-			object.ypos = object.value4
+		if object.startExtended == true
+			object.ypos = object.endPos.y
 		else
-			object.ypos = object.value3
+			object.ypos = object.startPos.y
 		end if
-		object.value0 = 0
-		if object.value1 >= 2
-			object.state = 4
-			object.value1 = 2
+		object.timer = 0
+
+		if object.crusherType >= CHAINCRUSHER_TYPE_SMALL
+			object.state = CHAINCRUSHER_DROPWHENACTIVE
+			object.crusherType = CHAINCRUSHER_TYPE_SMALL
 		else
-			object.state = 0
+			object.state = CHAINCRUSHER_DROPPING
 		end if
 		object.priority = PRIORITY_ACTIVE_BOUNDS
 	end if
@@ -347,7 +396,7 @@ end event
 
 event ObjectDraw
 	temp0 = object.ypos
-	temp0 -= object.value3
+	temp0 -= object.startPos.y
 	temp0 >>= 16
 	temp0 += 4
 	temp1 = 257
@@ -356,20 +405,22 @@ event ObjectDraw
 	temp2 += 18
 	FlipSign(temp2)
 	EditFrame(5, -4, temp2, 8, temp0, 308, temp1)
-	DrawSpriteXY(5, object.xpos, object.value6)
-	DrawSpriteXY(0, object.xpos, object.value3)
-	switch object.value1
-	case 0
-		DrawSpriteXY(1, object.xpos, object.value6)
-		DrawSpriteXY(4, object.xpos, object.value6)
+	DrawSpriteXY(5, object.xpos, object.currentPos.y)
+	DrawSpriteXY(0, object.xpos, object.startPos.y)
+	switch object.crusherType
+	case CHAINCRUSHER_TYPE_LARGE
+		DrawSpriteXY(1, object.xpos, object.currentPos.y)
+		DrawSpriteXY(4, object.xpos, object.currentPos.y)
 		break
-	case 1
-		DrawSpriteXY(2, object.xpos, object.value6)
-		DrawSpriteXY(4, object.xpos, object.value6)
+
+	case CHAINCRUSHER_TYPE_MED
+		DrawSpriteXY(2, object.xpos, object.currentPos.y)
+		DrawSpriteXY(4, object.xpos, object.currentPos.y)
 		break
-	case 2
-	case 3
-		DrawSpriteXY(3, object.xpos, object.value6)
+
+	case CHAINCRUSHER_TYPE_SMALL
+	case CHAINCRUSHER_TYPE_SMALL_ACTIVE
+		DrawSpriteXY(3, object.xpos, object.currentPos.y)
 		break
 	end switch
 end event
@@ -383,52 +434,65 @@ event ObjectStartup
 	SpriteFrame(-16, -20, 32, 32, 256, 109)
 	SpriteFrame(-44, 12, 87, 32, 199, 256)
 	SpriteFrame(-4, -206, 8, 188, 308, 69)
+
 	foreach (TypeName[Chained Crusher], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value2 = object[arrayPos0].propertyValue
-		object[arrayPos0].value2 >>= 7
-		object[arrayPos0].value1 = object[arrayPos0].propertyValue
-		object[arrayPos0].value1 &= 127
-		object[arrayPos0].value1 >>= 4
-		object[arrayPos0].value1 %= 3
-		if object[arrayPos0].value1 == 2
-			object[arrayPos0].state = 4
+		object[arrayPos0].startExtended = object[arrayPos0].propertyValue
+		object[arrayPos0].startExtended >>= 7
+
+		object[arrayPos0].crusherType = object[arrayPos0].propertyValue
+		object[arrayPos0].crusherType &= 0x7F
+		object[arrayPos0].crusherType >>= 4
+		object[arrayPos0].crusherType %= 3
+
+		if object[arrayPos0].crusherType == CHAINCRUSHER_TYPE_SMALL
+			object[arrayPos0].state = CHAINCRUSHER_DROPWHENACTIVE
 		end if
+
 		temp0 = object[arrayPos0].propertyValue
 		temp0 &= 7
 		if temp0 > 6
 			temp0 = 0
 		end if
-		object[arrayPos0].value3 = object[arrayPos0].ypos
-		object[arrayPos0].value4 = object[arrayPos0].value3
+
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		object[arrayPos0].endPos.y = object[arrayPos0].startPos.y
 		switch temp0
 		case 0
-			object[arrayPos0].value4 += 0x700000
+			object[arrayPos0].endPos.y += 0x700000
 			break
+
 		case 1
-			object[arrayPos0].value4 += 0xA00000
+			object[arrayPos0].endPos.y += 0xA00000
 			break
+
 		case 2
-			object[arrayPos0].value4 += 0x500000
+			object[arrayPos0].endPos.y += 0x500000
 			break
+
 		case 3
-			object[arrayPos0].value4 += 0x780000
+			object[arrayPos0].endPos.y += 0x780000
 			break
+
 		case 4
-			object[arrayPos0].value4 += 0x380000
+			object[arrayPos0].endPos.y += 0x380000
 			break
+
 		case 5
-			object[arrayPos0].value4 += 0x580000
+			object[arrayPos0].endPos.y += 0x580000
 			break
+
 		case 6
-			object[arrayPos0].value4 += 0xB80000
+			object[arrayPos0].endPos.y += 0xB80000
 			break
 		end switch
-		if object[arrayPos0].value2 == 1
-			object[arrayPos0].ypos = object[arrayPos0].value4
+
+		if object[arrayPos0].startExtended == true
+			object[arrayPos0].ypos = object[arrayPos0].endPos.y
 		end if
 	next
+
 	temp0 = 0
-	ChainedCrusher_value31 = DebugMode_ObjCount
+	ChainedCrusher_startDebugID = DebugMode_ObjCount
 	while temp0 < 21
 		SetTableValue(TypeName[Chained Crusher], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(ChainedCrusher_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -438,11 +502,212 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // startExtended
+			checkResult = object.propertyValue
+			checkResult >>= 7
+			checkResult &= 1
+			break
+		case 1 // type
+			checkResult = object.propertyValue
+			checkResult &= 127
+			checkResult >>= 4
+			checkResult %= 3
+			break
+		case 2 // length
+			checkResult = object.propertyValue
+			checkResult &= 7
+			if checkResult > 6
+				checkResult = 0
+			end if
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // startExtended
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+		case 1 // type
+			temp1 = 0x70
+			Not(temp1)
+			object.propertyValue &= temp1
+
+			editor.variableValue &= 3
+			editor.variableValue <<= 4
+			object.propertyValue |= editor.variableValue
+			break
+		case 2 // length
+			temp1 = 7
+			Not(temp1)
+			object.propertyValue &= temp1
+
+			temp0 = editor.variableValue
+			temp0 &= 7
+			object.propertyValue |= temp0
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	temp7 = object.ypos
+	// Get Values		
+	object.startExtended = object.propertyValue
+	object.startExtended >>= 7
+	object.crusherType = object.propertyValue
+	object.crusherType &= 127
+	object.crusherType >>= 4
+	object.crusherType %= 3
+
+	temp0 = object.propertyValue
+	temp0 &= 7
+	if temp0 > 6
+		temp0 = 0
+	end if
+
+	object.startPos.y = object.ypos
+	object.endPos.y = object.startPos.y
+	switch temp0
+	case 0
+		object.endPos.y += 0x700000
+		break
+
+	case 1
+		object.endPos.y += 0xA00000
+		break
+
+	case 2
+		object.endPos.y += 0x500000
+		break
+
+	case 3
+		object.endPos.y += 0x780000
+		break
+
+	case 4
+		object.endPos.y += 0x380000
+		break
+
+	case 5
+		object.endPos.y += 0x580000
+		break
+
+	case 6
+		object.endPos.y += 0xB80000
+		break
+	end switch
+
+	object.ypos = object.startPos.y
+	if object.startExtended == true
+		object.ypos = object.endPos.y
+	end if
+	object.inkEffect = INK_BLEND
+
+	// Drawww (Actual)
+	object.currentPos.y = object.ypos
+	object.currentPos.y &= -0x10000
+	temp0 = object.ypos
+	temp0 -= object.startPos.y
+	temp0 >>= 16
+	temp0 += 4
+	temp1 = 257
+	temp1 -= temp0
+	temp2 = temp0
+	temp2 += 18
+	FlipSign(temp2)
+	EditFrame(5, -4, temp2, 8, temp0, 308, temp1)
+	DrawSpriteXY(5, object.xpos, object.currentPos.y)
+	DrawSpriteXY(0, object.xpos, object.startPos.y)
+	switch object.crusherType
+	case CHAINCRUSHER_TYPE_LARGE
+		DrawSpriteXY(1, object.xpos, object.currentPos.y)
+		DrawSpriteXY(4, object.xpos, object.currentPos.y)
+		break
+
+	case CHAINCRUSHER_TYPE_MED
+		DrawSpriteXY(2, object.xpos, object.currentPos.y)
+		DrawSpriteXY(4, object.xpos, object.currentPos.y)
+		break
+
+	case CHAINCRUSHER_TYPE_SMALL
+		DrawSpriteXY(3, object.xpos, object.currentPos.y)
+		break
+	end switch
+
+	// Drawww (Preview)
+	object.ypos = object.endPos.y
+	if object.startExtended == true
+		object.ypos = object.startPos.y
+	end if
+	object.currentPos.y = object.ypos
+	object.currentPos.y &= -0x10000
+	temp0 = object.ypos
+	temp0 -= object.startPos.y
+	temp0 >>= 16
+	temp0 += 4
+	temp1 = 257
+	temp1 -= temp0
+	temp2 = temp0
+	temp2 += 18
+	FlipSign(temp2)
+	EditFrame(5, -4, temp2, 8, temp0, 308, temp1)
+	DrawSpriteFX(5, FX_INK, object.xpos, object.currentPos.y)
+	DrawSpriteFX(0, FX_INK, object.xpos, object.startPos.y)
+	switch object.crusherType
+	case CHAINCRUSHER_TYPE_LARGE
+		DrawSpriteFX(1, FX_INK, object.xpos, object.currentPos.y)
+		DrawSpriteFX(4, FX_INK, object.xpos, object.currentPos.y)
+		break
+
+	case CHAINCRUSHER_TYPE_MED
+		DrawSpriteFX(2, FX_INK, object.xpos, object.currentPos.y)
+		DrawSpriteFX(4, FX_INK, object.xpos, object.currentPos.y)
+		break
+
+	case CHAINCRUSHER_TYPE_SMALL
+		DrawSpriteFX(3, FX_INK, object.xpos, object.currentPos.y)
+		break
+	end switch
+
+	object.ypos = temp7
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-16, -52, 32, 32, 256, 76)
+	SpriteFrame(-56, -20, 112, 32, 143, 180)
+	SpriteFrame(-48, -20, 96, 32, 159, 147)
+	SpriteFrame(-16, -20, 32, 32, 256, 109)
+	SpriteFrame(-44, 12, 87, 32, 199, 256)
+	SpriteFrame(-4, -206, 8, 188, 308, 69)
+
+	AddEditorVariable("startExtended")
+	SetActiveVariable("startExtended")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Large", CHAINCRUSHER_TYPE_LARGE)
+	AddEnumVariable("Medium", CHAINCRUSHER_TYPE_MED)
+	AddEnumVariable("Small", CHAINCRUSHER_TYPE_SMALL)
+
+	AddEditorVariable("length")
+	SetActiveVariable("length")
+	AddEnumVariable("112 Pixels", 0)
+	AddEnumVariable("160 Pixels", 1)
+	AddEnumVariable("80 Pixels", 2)
+	AddEnumVariable("120 Pixels", 3)
+	AddEnumVariable("56 Pixels", 4)
+	AddEnumVariable("88 Pixels", 5)
+	AddEnumVariable("184 Pixels", 6)
 end event

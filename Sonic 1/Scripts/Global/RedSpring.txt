@@ -6,29 +6,40 @@
 // ----------------------------------
 
 // Aliases
-private alias 15 : TYPE_REDSPRING
+private alias object.value0 : object.timer
+private alias object.value1 : object.active
+private alias object.value7 : object.enabledInAir
+
+// Player aliases
+private alias object.value1  : player.timer
+private alias object.value10 : player.animationReserve		// Used by springs to store what animation will play after the bounce animation
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
 reserve function RedSpring_DebugDraw
 reserve function RedSpring_DebugSpawn
 
 // Static Values
-public value RedSpring_value26 = 0;
+private value RedSpring_value26 = 0;
+private alias RedSpring_value26 : RedSpring_startDebugID
 
 // Tables
 
 function RedSpring_DebugDraw
-	temp0 = object[0].value17
-	temp0 -= RedSpring_value26
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RedSpring_startDebugID
+
 	DrawSprite(temp0)
+
 	temp0 += 4
 	DrawSprite(temp0)
 end function
 
 
 function RedSpring_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= RedSpring_value26
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RedSpring_startDebugID
+	
 	CreateTempObject(TypeName[Red Spring], temp0, object.xpos, object.ypos)
 end function
 
@@ -36,68 +47,79 @@ end function
 event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		switch object.propertyValue
-		case 0
-			temp0 = object.value1
+		case 0 // Up
+			// its not used.... LOL
+			// ig it could be set via editor but..
+			temp0 = object.active
 			if object[currentPlayer].gravity == GRAVITY_AIR
-				temp0 = 1
+				temp0 = true
 			end if
+
 			if object[currentPlayer].collisionMode > CMODE_FLOOR
 				if object[currentPlayer].yvel < 0
-					temp0 = 1
+					temp0 = true
 				end if
 			end if
-			if temp0 == 0
+
+			if temp0 == false
 				BoxCollisionTest(C_BOX, object.entityPos, -14, -8, 14, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 				BoxCollisionTest(C_TOUCH, object.entityPos, -14, -10, 14, -6, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					object[currentPlayer].value10 = ANI_WALKING
+				if checkResult == true
+					player[currentPlayer].animationReserve = ANI_WALKING
 					if object[currentPlayer].animation == ANI_RUNNING
-						object[currentPlayer].value10 = ANI_RUNNING
+						player[currentPlayer].animationReserve = ANI_RUNNING
 					end if
+
 					if object[currentPlayer].animation == ANI_PEELOUT
-						object[currentPlayer].value10 = ANI_PEELOUT
+						player[currentPlayer].animationReserve = ANI_PEELOUT
 					end if
-					object.value0 = 1
+
+					object.timer = 1
 					object[currentPlayer].state = PlayerObject_HandleAir
 					object[currentPlayer].tileCollisions = 1
 					object[currentPlayer].gravity = GRAVITY_AIR
 					object[currentPlayer].speed = object[currentPlayer].xvel
 					object[currentPlayer].yvel = -0x100000
 					object[currentPlayer].animation = ANI_BOUNCING
-					object[currentPlayer].value1 = 0
-					PlaySfx(SfxName[Spring], 0)
+					player[currentPlayer].timer = 0
+					PlaySfx(SfxName[Spring], false)
 				end if
 			else
 				if object[currentPlayer].yvel >= 0
 					BoxCollisionTest(C_PLATFORM, object.entityPos, -14, -8, 14, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 					BoxCollisionTest(C_TOUCH, object.entityPos, -14, -10, 14, -6, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-					if checkResult == 1
-						object[currentPlayer].value10 = ANI_WALKING
+					if checkResult == true
+						player[currentPlayer].animationReserve = ANI_WALKING
 						if object[currentPlayer].animation == ANI_RUNNING
-							object[currentPlayer].value10 = ANI_RUNNING
+							player[currentPlayer].animationReserve = ANI_RUNNING
 						end if
+
 						if object[currentPlayer].animation == ANI_PEELOUT
-							object[currentPlayer].value10 = ANI_PEELOUT
+							player[currentPlayer].animationReserve = ANI_PEELOUT
 						end if
-						object.value0 = 1
+
+						object.timer = 1
 						object[currentPlayer].state = PlayerObject_HandleAir
 						object[currentPlayer].tileCollisions = 1
 						object[currentPlayer].gravity = GRAVITY_AIR
 						object[currentPlayer].speed = object[currentPlayer].xvel
 						object[currentPlayer].yvel = -0x100000
 						object[currentPlayer].animation = ANI_BOUNCING
-						object[currentPlayer].value1 = 0
-						PlaySfx(SfxName[Spring], 0)
+						player[currentPlayer].timer = 0
+						PlaySfx(SfxName[Spring], false)
 					end if
 				end if
 			end if
 			break
-		case 1
+
+		case 1 // Right
 			BoxCollisionTest(C_BOX, object.entityPos, -8, -14, 8, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			if object[currentPlayer].gravity == GRAVITY_GROUND
 				BoxCollisionTest(C_TOUCH, object.entityPos, 6, -14, 11, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					object.value0 = 1
+				if checkResult == true
+					object.timer = 1
 					object[currentPlayer].tileCollisions = 1
 					object[currentPlayer].angle = 0
 					object[currentPlayer].speed = 0x100000
@@ -105,18 +127,19 @@ event ObjectMain
 					object[currentPlayer].pushing = 0
 					object[currentPlayer].direction = FLIP_NONE
 					object[currentPlayer].controlLock = 12
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
+
 					if object[currentPlayer].state != PlayerObject_HandleRoll
 						object[currentPlayer].state = PlayerObject_HandleGround
 						object[currentPlayer].animation = ANI_RUNNING
 					end if
 				end if
 			else
-				if object.value7 == 1
+				if object.enabledInAir == true
 					BoxCollisionTest(C_TOUCH, object.entityPos, 6, -4, 11, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-					if checkResult == 1
-						object.value0 = 1
-						object[currentPlayer].tileCollisions = 1
+					if checkResult == true
+						object.timer = 1
+						object[currentPlayer].tileCollisions = true
 						object[currentPlayer].angle = 0
 						object[currentPlayer].speed = 0x100000
 						object[currentPlayer].yvel = 0
@@ -124,12 +147,13 @@ event ObjectMain
 						object[currentPlayer].pushing = 0
 						object[currentPlayer].direction = FLIP_NONE
 						object[currentPlayer].controlLock = 12
-						PlaySfx(SfxName[Spring], 0)
+						PlaySfx(SfxName[Spring], false)
 						if object[currentPlayer].state != PlayerObject_RollingJump
 							object[currentPlayer].animation = ANI_BOUNCING
 							if object[currentPlayer].animation != ANI_JUMPING
 								object[currentPlayer].animation = ANI_RUNNING
 							end if
+
 							object.animationSpeed = object.speed
 							object[currentPlayer].animationSpeed *= 80
 							object[currentPlayer].animationSpeed /= 0x60000
@@ -138,42 +162,44 @@ event ObjectMain
 				end if
 			end if
 			break
-		case 2
+
+		case 2 // Left
 			BoxCollisionTest(C_BOX, object.entityPos, -8, -14, 8, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			if object[currentPlayer].gravity == GRAVITY_GROUND
 				BoxCollisionTest(C_TOUCH, object.entityPos, -10, -14, -6, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					object.value0 = 1
-					object[currentPlayer].tileCollisions = 1
+				if checkResult == true
+					object.timer = 1
+					object[currentPlayer].tileCollisions = true
 					object[currentPlayer].speed = -0x100000
 					object[currentPlayer].collisionMode = CMODE_FLOOR
 					object[currentPlayer].pushing = 0
 					object[currentPlayer].direction = FLIP_X
 					object[currentPlayer].controlLock = 15
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 					if object[currentPlayer].state != PlayerObject_HandleRoll
 						object[currentPlayer].state = PlayerObject_HandleGround
 						object[currentPlayer].animation = ANI_RUNNING
 					end if
 				end if
 			else
-				if object.value7 == 1
+				if object.enabledInAir == true
 					BoxCollisionTest(C_TOUCH, object.entityPos, -10, -14, -6, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-					if checkResult == 1
-						object.value0 = 1
-						object[currentPlayer].tileCollisions = 1
+					if checkResult == true
+						object.timer = 1
+						object[currentPlayer].tileCollisions = true
 						object[currentPlayer].speed = -0x100000
 						object[currentPlayer].yvel = 0
 						object[currentPlayer].collisionMode = CMODE_FLOOR
 						object[currentPlayer].pushing = 0
 						object[currentPlayer].direction = FLIP_X
 						object[currentPlayer].controlLock = 15
-						PlaySfx(SfxName[Spring], 0)
+						PlaySfx(SfxName[Spring], false)
 						if object[currentPlayer].state != PlayerObject_RollingJump
 							object[currentPlayer].animation = ANI_BOUNCING
 							if object[currentPlayer].animation != ANI_JUMPING
 								object[currentPlayer].animation = ANI_RUNNING
 							end if
+
 							object.animationSpeed = object.speed
 							FlipSign(object[currentPlayer].animationSpeed)
 							object[currentPlayer].animationSpeed *= 80
@@ -183,23 +209,25 @@ event ObjectMain
 				end if
 			end if
 			break
-		case 3
+
+		case 3 // Down
 			BoxCollisionTest(C_BOX, object.entityPos, -14, -8, 14, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			if object[currentPlayer].yvel <= 0
 				BoxCollisionTest(C_TOUCH, object.entityPos, -14, 6, 14, 10, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					if object[currentPlayer].collisionMode == CMODE_ROOF
 						FlipSign(object[currentPlayer].speed)
 						FlipSign(object[currentPlayer].xvel)
 					end if
-					object.value0 = 1
+
+					object.timer = 1
 					object[currentPlayer].state = PlayerObject_HandleAir
-					object[currentPlayer].tileCollisions = 1
+					object[currentPlayer].tileCollisions = true
 					object[currentPlayer].gravity = GRAVITY_AIR
 					object[currentPlayer].speed = object[currentPlayer].xvel
 					object[currentPlayer].yvel = 0x100000
-					object[currentPlayer].value1 = 0
-					PlaySfx(SfxName[Spring], 0)
+					player[currentPlayer].timer = 0
+					PlaySfx(SfxName[Spring], false)
 				end if
 			end if
 			break
@@ -209,13 +237,13 @@ end event
 
 
 event ObjectDraw
-	if object.value0 == 0
+	if object.timer == 0
 		temp1 = object.propertyValue
 		DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
 		temp1 += 4
 		DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
 	else
-		switch object.value0
+		switch object.timer
 		case 2
 		case 3
 			temp1 = object.propertyValue
@@ -223,11 +251,13 @@ event ObjectDraw
 			temp1 += 4
 			DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
 			break
+
 		case 1
 			temp1 = object.propertyValue
 			temp1 += 8
 			DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
 			break
+
 		case 4
 		case 5
 		case 6
@@ -241,9 +271,10 @@ event ObjectDraw
 			DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
 			break
 		end switch
-		object.value0++
-		if object.value0 >= 10
-			object.value0 = 0
+
+		object.timer++
+		if object.timer >= 10
+			object.timer = 0
 		end if
 	end if
 end event
@@ -251,19 +282,24 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("Global/Items.gif")
-	arrayPos0 = 32
+
+	arrayPos0 = 0x20
 	while arrayPos0 < 0x420
 		if object[arrayPos0].type == TypeName[Red Spring]
 			if object[arrayPos0].propertyValue > 3
 				object[arrayPos0].propertyValue -= 4
-				object[arrayPos0].value7 = 1
+				object[arrayPos0].enabledInAir = true
 			end if
+
+			// ???
+			// states are 0-3, and if bit 3 is set its removed, so this can never be hit right?
 			if object[arrayPos0].propertyValue > 5
 				object[arrayPos0].direction = FLIP_Y
 			end if
 		end if
 		arrayPos0++
 	loop
+
 	SpriteFrame(-16, 0, 32, 8, 84, 9)
 	SpriteFrame(-8, -16, 8, 32, 141, 26)
 	SpriteFrame(0, -16, 8, 32, 141, 59)
@@ -284,8 +320,9 @@ event ObjectStartup
 	SpriteFrame(16, -16, 8, 32, 149, 26)
 	SpriteFrame(-24, -16, 8, 32, 133, 59)
 	SpriteFrame(-16, 16, 32, 8, 150, 109)
+
 	temp0 = 0
-	RedSpring_value26 = DebugMode_ObjCount
+	RedSpring_startDebugID = DebugMode_ObjCount
 	while temp0 < 4
 		SetTableValue(TypeName[Red Spring], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(RedSpring_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -295,9 +332,39 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // flipFlags
+			checkResult = object.propertyValue
+			break
+		case 1 // enabledInAir
+			GetBit(checkResult, object.propertyValue, 3)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // flipFlags
+			object.propertyValue = editor.variableValue
+			break
+		case 1 // enabledInAir
+			CheckNotEqual(editor.variableValue, false)
+			GetBit(object.propertyValue, 3, checkResult)
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
 	temp1 = object.propertyValue
 	DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
 	temp1 += 4
 	DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
 end event
@@ -324,4 +391,16 @@ event RSDKLoad
 	SpriteFrame(16, -16, 8, 32, 149, 26)
 	SpriteFrame(-24, -16, 8, 32, 133, 59)
 	SpriteFrame(-16, 16, 32, 8, 150, 109)
+
+	AddEditorVariable("flipFlags")
+	SetActiveVariable("flipFlags")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Right", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Down", 3)
+
+	AddEditorVariable("enabledInAir")
+	SetActiveVariable("enabledInAir")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
 end event

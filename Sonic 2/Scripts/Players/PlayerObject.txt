@@ -28,6 +28,12 @@ private alias 2 : SHIELD_BUBBLE
 private alias 3 : SHIELD_FIRE
 private alias 4 : SHIELD_LIGHTNING
 
+// Super States
+public alias 0 : SUPERSTATE_NONE
+public alias 1 : SUPERSTATE_SUPER
+public alias 2 : SUPERSTATE_FADEOUT
+public alias 3 : SUPERSTATE_END
+
 // Variables
 private alias object.type			 :	player.type
 private alias object.groupID		 :	player.groupID	 		// Normally GROUP_PLAYERS, unless in Debug Mode or some other strange scenario
@@ -81,12 +87,13 @@ private alias object.right		:	player.right
 
 // Object values, not all are used or documented
 public  alias object.value0  :	player.rings
+private alias object.value16 :	player.isPlayer2			// 0/false is player 1, 1/true if player 2
 private alias object.value18 :	player.sortedDrawOrder
 private alias object.value37 :	player.shield	// Current shield the player has, see above constants for what is what
-private alias object.value38 :	player.hitboxLeft
-private alias object.value39 :	player.hitboxRight
-private alias object.value40 :	player.hitboxTop
-private alias object.value41 :	player.hitboxBottom
+private alias object.value40 :	player.hitboxLeft
+private alias object.value38 :	player.hitboxTop
+private alias object.value41 :	player.hitboxRight
+private alias object.value39 :	player.hitboxBottom
 private alias object.value42 :	player.prevGravity
 
 // Death Event related values
@@ -163,7 +170,7 @@ public value PlayerObject_LeaderX = 0;
 public value PlayerObject_LeaderY = 0;
 public value PlayerObject_SidekickX = 0;
 public value PlayerObject_SidekickY = 0;
-public value PlayerObject_SuperState = 0;
+public value PlayerObject_SuperState = SUPERSTATE_NONE;
 public value PlayerObject_value1 = 0;
 public value PlayerObject_value2 = 0;
 public value PlayerObject_value3 = 0;
@@ -346,7 +353,7 @@ end function
 
 
 function PlayerObject_ProcessSuperPalS
-	if PlayerObject_SuperState == 1
+	if PlayerObject_SuperState == SUPERSTATE_SUPER
 		PlayerObject_value3++
 		if PlayerObject_value3 >= 4
 			PlayerObject_value3 = 0
@@ -362,7 +369,7 @@ function PlayerObject_ProcessSuperPalS
 			PlayerObject_value2 -= 4
 			if PlayerObject_value2 <= 0
 				PlayerObject_value2 = 0
-				PlayerObject_SuperState = 0
+				PlayerObject_SuperState = SUPERSTATE_NONE
 			end if
 			if PlayerObject_value2 >= 24
 				PlayerObject_value2 = 24
@@ -393,7 +400,7 @@ end function
 
 
 function PlayerObject_ProcessSuperPalT
-	if PlayerObject_SuperState == 1
+	if PlayerObject_SuperState == SUPERSTATE_SUPER
 		PlayerObject_value3++
 		if PlayerObject_value3 >= 12
 			PlayerObject_value3 = 0
@@ -413,7 +420,7 @@ function PlayerObject_ProcessSuperPalT
 			PlayerObject_value2 -= 4
 			if PlayerObject_value2 <= 0
 				PlayerObject_value2 = 0
-				PlayerObject_SuperState = 0
+				PlayerObject_SuperState = SUPERSTATE_NONE
 			end if
 		end if
 	end if
@@ -441,7 +448,7 @@ end function
 
 
 function PlayerObject_ProcessSuperPalK
-	if PlayerObject_SuperState == 1
+	if PlayerObject_SuperState == SUPERSTATE_SUPER
 		PlayerObject_value3++
 		if PlayerObject_value3 >= 12
 			PlayerObject_value3 = 9
@@ -462,7 +469,7 @@ function PlayerObject_ProcessSuperPalK
 			PlayerObject_value2 -= 3
 			if PlayerObject_value2 <= 0
 				PlayerObject_value2 = 0
-				PlayerObject_SuperState = 0
+				PlayerObject_SuperState = SUPERSTATE_NONE
 			end if
 		end if
 	end if
@@ -499,25 +506,25 @@ function PlayerObject_SwitchPhysicsState
 	end switch
 	temp1 = 0
 	temp2 = 0
-	if stage.state != 3
+	if stage.state != STAGE_FROZEN
 		temp3 = object[currentPlayer].ypos
 		temp3 >>= 16
 		CheckGreater(temp3, stage.waterLevel)
 		temp4 = checkResult
 		CheckNotEqual(object[currentPlayer].type, TypeName[Debug Mode])
 		temp4 &= checkResult
-		if temp4 == 1
-			SetBit(temp1, 0, 1)
+		if temp4 == true
+			SetBit(temp1, 0, true)
 			object[currentPlayer].value25 = 0x1000
 		else
 			object[currentPlayer].value25 = 0x3800
 		end if
-		if PlayerObject_SuperState == 1
-			SetBit(temp1, 1, 1)
+		if PlayerObject_SuperState == SUPERSTATE_SUPER
+			SetBit(temp1, 1, true)
 			temp2 = 2
 		end if
 		if object[currentPlayer].value6 > 0
-			SetBit(temp1, 2, 1)
+			SetBit(temp1, 2, true)
 			temp2 = 1
 		end if
 		temp1 <<= 3
@@ -543,7 +550,7 @@ end function
 
 
 function PlayerObject_ProcessSuperState
-	if PlayerObject_SuperState != 0
+	if PlayerObject_SuperState != SUPERSTATE_NONE
 		switch stage.playerListPos
 		case 0
 		case 3
@@ -557,7 +564,7 @@ function PlayerObject_ProcessSuperState
 			break
 		end switch
 	end if
-	if PlayerObject_SuperState == 1
+	if PlayerObject_SuperState == SUPERSTATE_SUPER
 		object.value7 = 60
 		PlayerObject_value1++
 		if PlayerObject_value1 == 60
@@ -565,11 +572,12 @@ function PlayerObject_ProcessSuperState
 			player.rings--
 			if player.rings <= 0
 				player.rings = 0
-				PlayerObject_SuperState = 2
+				PlayerObject_SuperState = SUPERSTATE_FADEOUT
 			end if
 		end if
 	end if
-	if PlayerObject_SuperState == 2
+
+	if PlayerObject_SuperState == SUPERSTATE_FADEOUT
 		if stage.playerListPos == 0
 			LoadAnimation("Sonic.ani")
 		end if
@@ -585,7 +593,7 @@ function PlayerObject_ProcessSuperState
 				CallFunction(PlayerObject_RestorePowerup)
 			end if
 		end if
-		PlayerObject_SuperState = 3
+		PlayerObject_SuperState = SUPERSTATE_END
 		CallFunction(PlayerObject_SwitchPhysicsState)
 	end if
 end function
@@ -672,20 +680,25 @@ function PlayerObject_BadnikBreak
 		CheckGreater(object[currentPlayer].ypos, object.ypos)
 		temp0 |= checkResult
 	end if
+
 	if temp0 == 1
 		ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, object.xpos, object.ypos)
 		Rand(checkResult, 32)
-		if checkResult > 15
-			CreateTempObject(animalType1, TypeName[Blank Object], object.xpos, object.ypos)
+		if checkResult >= 16
+			CreateTempObject(animalType1, 0, object.xpos, object.ypos)
 		else
-			CreateTempObject(animalType2, TypeName[Blank Object], object.xpos, object.ypos)
+			CreateTempObject(animalType2, 0, object.xpos, object.ypos)
 		end if
 		object[tempObjectPos].priority = PRIORITY_UNKNOWN
+
 		CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
 		object[tempObjectPos].drawOrder = 4
+
 		CreateTempObject(TypeName[Object Score], object[currentPlayer].value19, object.xpos, object.ypos)
 		object[tempObjectPos].drawOrder = 4
-		PlaySfx(SfxName[Destroy], 0)
+		
+		PlaySfx(SfxName[Destroy], false)
+
 		if object[currentPlayer].yvel > 0
 			if object[currentPlayer].ypos >= object.ypos
 				object[currentPlayer].yvel -= 0x10000
@@ -877,7 +890,7 @@ end function
 
 
 function PlayerObject_Kill
-	PlaySfx(SfxName[Hurt], 0)
+	PlaySfx(SfxName[Hurt], false)
 	object[currentPlayer].speed = 0
 	object[currentPlayer].xvel = 0
 	object[currentPlayer].yvel = -0x68000
@@ -894,12 +907,12 @@ function PlayerObject_Kill
 			if object[1].type == TypeName[Player 2 Object]
 				object[1].priority = PRIORITY_ACTIVE_PAUSED
 			end if
-			screen.cameraEnabled = 0
-			stage.state = 3
+			screen.cameraEnabled = false
+			stage.state = STAGE_FROZEN
 		end if
 	else
 		if currentPlayer == screen.cameraTarget
-			screen.cameraEnabled = 0
+			screen.cameraEnabled = false
 		end if
 	end if
 	arrayPos0 = currentPlayer
@@ -962,7 +975,7 @@ function PlayerObject_ProcessPlayer
 			CheckTouchRect(240, 0, screen.xsize, 40)
 			if checkResult > -1
 				if options.vsMode == 0
-					PlaySfx(SfxName[Menu Back], 0)
+					PlaySfx(SfxName[Menu Back], false)
 					StopSfx(SfxName[Flying])
 					StopSfx(SfxName[Tired])
 					engine.state = 5
@@ -970,7 +983,7 @@ function PlayerObject_ProcessPlayer
 			end if
 			if inputPress.start == 1
 				if options.vsMode == 0
-					PlaySfx(SfxName[Menu Back], 0)
+					PlaySfx(SfxName[Menu Back], false)
 					StopSfx(SfxName[Flying])
 					StopSfx(SfxName[Tired])
 					engine.state = 5
@@ -1561,7 +1574,7 @@ function PlayerObject_StartJump
 		else
 			object.state = PlayerObject_HandleAir
 		end if
-		PlaySfx(SfxName[Jump], 0)
+		PlaySfx(SfxName[Jump], false)
 		object.value34 = 1
 		object.value35 = 1
 	end if
@@ -1572,7 +1585,7 @@ function PlayerObject_StartSpindash
 	object.state = PlayerObject_HandleSpindash
 	object.animation = ANI_SPINDASH
 	object.value2 = 0
-	PlaySfx(SfxName[Charge], 0)
+	PlaySfx(SfxName[Charge], false)
 	CreateTempObject(TypeName[Dust Puff], object.entityPos, object.xpos, object.ypos)
 	object[tempObjectPos].iypos = object.collisionBottom
 	object[tempObjectPos].ypos += object.ypos
@@ -1598,9 +1611,9 @@ function PlayerObject_SuperTransform
 		arrayPos0 += playerCount
 		ResetObjectEntity(arrayPos0, TypeName[Super Spark], 0, object[0].xpos, object[0].ypos)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
-		PlaySfx(SfxName[Transform], 0)
+		PlaySfx(SfxName[Transform], false)
 		PlayMusic(7)
-		PlayerObject_SuperState = 1
+		PlayerObject_SuperState = SUPERSTATE_SUPER
 		object[currentPlayer].value7 = 60
 		object[currentPlayer].value8 = 0
 		object[currentPlayer].visible = 1
@@ -1622,7 +1635,7 @@ function PlayerObject_BubbleBounce
 	temp0 = checkResult
 	CheckNotEqual(object.value7, 0)
 	temp0 |= checkResult
-	CheckEqual(PlayerObject_SuperState, 1)
+	CheckEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 	temp0 |= checkResult
 	if temp0 == 1
 		object.state = PlayerObject_HandleAir
@@ -1658,7 +1671,7 @@ function PlayerObject_BubbleBounce
 			object.value1 = 1
 			CallFunction(PlayerObject_RollAnimSpd)
 			object.state = PlayerObject_HandleAir
-			PlaySfx(SfxName[Bubble Bounce], 0)
+			PlaySfx(SfxName[Bubble Bounce], false)
 			object[+playerCount].state = 4
 		end if
 	end if
@@ -1671,7 +1684,7 @@ function PlayerObject_ShieldAbilities
 		temp0 = checkResult
 		CheckGreater(player.rings, 49)
 		temp0 &= checkResult
-		CheckNotEqual(PlayerObject_SuperState, 1)
+		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
 		CheckNotEqual(object[30].type, TypeName[Act Finish])
 		temp0 &= checkResult
@@ -1681,7 +1694,7 @@ function PlayerObject_ShieldAbilities
 		else
 			CheckEqual(object.value7, 0)
 			temp0 = checkResult
-			CheckNotEqual(PlayerObject_SuperState, 1)
+			CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 			temp0 &= checkResult
 			if temp0 == 1
 				switch object.value37
@@ -1689,7 +1702,7 @@ function PlayerObject_ShieldAbilities
 					temp0 = options.shieldType
 					temp0 &= 1
 					if temp0 > 0
-						PlaySfx(SfxName[Insta Shield], 0)
+						PlaySfx(SfxName[Insta Shield], false)
 						if object[+playerCount].type == TypeName[Blank Object]
 							currentPlayer = object.entityPos
 							arrayPos0 = currentPlayer
@@ -1707,7 +1720,7 @@ function PlayerObject_ShieldAbilities
 				case 1
 					break
 				case 2
-					PlaySfx(SfxName[Bubble Bounce], 0)
+					PlaySfx(SfxName[Bubble Bounce], false)
 					object.yvel = 0x80000
 					object.xvel = 0
 					object.speed = object.xvel
@@ -1716,7 +1729,7 @@ function PlayerObject_ShieldAbilities
 					object[+playerCount].state = 2
 					break
 				case 3
-					PlaySfx(SfxName[Fire Dash], 0)
+					PlaySfx(SfxName[Fire Dash], false)
 					GetBit(temp0, object.direction, 0)
 					if temp0 == 0
 						object.xvel = 0x80000
@@ -1737,7 +1750,7 @@ function PlayerObject_ShieldAbilities
 					object[+playerCount].direction = object.direction
 					break
 				case 4
-					PlaySfx(SfxName[Lightning Jump], 0)
+					PlaySfx(SfxName[Lightning Jump], false)
 					object.yvel = -0x58000
 					object.value35 = 2
 					CreateTempObject(TypeName[Lightning Spark], 0, object.xpos, object.ypos)
@@ -1769,7 +1782,7 @@ function PlayerObject_StartTailsFlight
 		temp0 = checkResult
 		CheckGreater(player.rings, 49)
 		temp0 &= checkResult
-		CheckNotEqual(PlayerObject_SuperState, 1)
+		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
 		CheckEqual(options.superTails, 1)
 		temp0 &= checkResult
@@ -1781,7 +1794,7 @@ function PlayerObject_StartTailsFlight
 			object.state = PlayerObject_HandleTailsFlight
 			object.value26 = 0x800
 			if object.value25 == 0x3800
-				PlaySfx(SfxName[Flying], 1)
+				PlaySfx(SfxName[Flying], true)
 				object.animation = ANI_FLYING
 			else
 				object.animation = ANI_SWIMMING
@@ -1797,7 +1810,7 @@ function PlayerObject_StartKnuxGlide
 		temp0 = checkResult
 		CheckGreater(player.rings, 49)
 		temp0 &= checkResult
-		CheckNotEqual(PlayerObject_SuperState, 1)
+		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
 		if temp0 == 1
 			currentPlayer = object.entityPos
@@ -1839,7 +1852,7 @@ function PlayerObject_HandleGround
 			if object.collisionMode == CMODE_FLOOR
 				switch object.propertyValue
 				case 0
-					if PlayerObject_SuperState == 1
+					if PlayerObject_SuperState == SUPERSTATE_SUPER
 						object.animation = ANI_STOPPED
 						object.value1 = 0
 						if object.floorSensorC == 0
@@ -1992,7 +2005,7 @@ function PlayerObject_HandleGround
 		end if
 		if object.value14 > 0
 			if temp7 == 1
-				PlaySfx(SfxName[Skidding], 0)
+				PlaySfx(SfxName[Skidding], false)
 			end if
 			object.animation = ANI_SKIDDING
 			object.animationSpeed = 0
@@ -2058,7 +2071,7 @@ function PlayerObject_HandleGround
 										object.iypos -= object.value30
 									end if
 									object.value2 = 0x400
-									PlaySfx(SfxName[Rolling], 0)
+									PlaySfx(SfxName[Rolling], false)
 								end if
 							else
 								if object.speed < -0x8800
@@ -2068,7 +2081,7 @@ function PlayerObject_HandleGround
 										object.iypos -= object.value30
 									end if
 									object.value2 = 0x400
-									PlaySfx(SfxName[Rolling], 0)
+									PlaySfx(SfxName[Rolling], false)
 								end if
 							end if
 						end if
@@ -2303,7 +2316,7 @@ function PlayerObject_HandleSpindash
 			object.value2 = 0x80000
 		end if
 		object.frame = 0
-		PlaySfx(SfxName[Charge], 0)
+		PlaySfx(SfxName[Charge], false)
 	else
 		temp0 = object.value2
 		temp0 >>= 5
@@ -2321,7 +2334,7 @@ function PlayerObject_HandleSpindash
 		temp0 = object.value2
 		temp0 >>= 17
 		temp0 <<= 16
-		if PlayerObject_SuperState == 1
+		if PlayerObject_SuperState == SUPERSTATE_SUPER
 			temp0 += 0xB0000
 		else
 			temp0 += 0x80000
@@ -2333,7 +2346,7 @@ function PlayerObject_HandleSpindash
 			FlipSign(object.speed)
 		end if
 		StopSfx(SfxName[Charge])
-		PlaySfx(SfxName[Release], 0)
+		PlaySfx(SfxName[Release], false)
 		CallFunction(PlayerObject_ResetOnFloor)
 	end if
 end function
@@ -2382,7 +2395,7 @@ function PlayerObject_StartFlyCarry
 								object[0].state = PlayerObject_HandleFlyCarry
 								object[0].xpos += temp0
 								object[0].ypos += temp1
-								PlaySfx(SfxName[Catch], 0)
+								PlaySfx(SfxName[Catch], false)
 							end if
 						end if
 					end if
@@ -2557,7 +2570,7 @@ function PlayerObject_HandleTailsFlight
 					end if
 					object.animationSpeed = 120
 					StopSfx(SfxName[Flying])
-					PlaySfx(SfxName[Tired], 1)
+					PlaySfx(SfxName[Tired], true)
 				else
 					if object[0].state == PlayerObject_HandleFlyCarry
 						object.animation = ANI_SWIM_LIFT
@@ -2672,7 +2685,7 @@ function PlayerObject_KnuxGlideLeft
 					object.xvel = 0
 					object.yvel = 0
 					object.value1 = 0
-					PlaySfx(SfxName[Catch], 0)
+					PlaySfx(SfxName[Catch], false)
 				else
 					object.value1 = 0
 					object.xvel >>= 2
@@ -2792,7 +2805,7 @@ function PlayerObject_KnuxGlideRight
 					object.xvel = 0
 					object.yvel = 0
 					object.value1 = 0
-					PlaySfx(SfxName[Catch], 0)
+					PlaySfx(SfxName[Catch], false)
 				else
 					object.value1 = 0
 					object.xvel >>= 2
@@ -2845,7 +2858,7 @@ function PlayerObject_KnuxGlideDrop
 		CallFunction(PlayerObject_HandleAirMovement)
 	else
 		if object.value1 == 0
-			PlaySfx(SfxName[Landing], 0)
+			PlaySfx(SfxName[Landing], false)
 		end if
 		object.scrollTracking = 0
 		object.speed = 0
@@ -2882,7 +2895,7 @@ function PlayerObject_KnuxGlideSlide
 				object[tempObjectPos].iypos += object.collisionBottom
 				object[tempObjectPos].drawOrder = player.sortedDrawOrder
 				if object.value1 == 0
-					PlaySfx(SfxName[Sliding], 0)
+					PlaySfx(SfxName[Sliding], false)
 					object.value1 = 1
 				else
 					object.value1 = 0
@@ -2919,8 +2932,8 @@ end function
 function PlayerObject_KnuxWallClimb
 	if object.gravity == GRAVITY_AIR
 		object.animation = ANI_CLIMBING
-		if object.up == 1
-			if PlayerObject_SuperState == 1
+		if object.up == true
+			if PlayerObject_SuperState == SUPERSTATE_SUPER
 				object.yvel = -0x20000
 			else
 				object.yvel = -0x10000
@@ -2937,8 +2950,8 @@ function PlayerObject_KnuxWallClimb
 				object.frame %= 6
 			end if
 		else
-			if object.down == 1
-				if PlayerObject_SuperState == 1
+			if object.down == true
+				if PlayerObject_SuperState == SUPERSTATE_SUPER
 					object.yvel = 0x20000
 				else
 					object.yvel = 0x10000
@@ -2955,11 +2968,12 @@ function PlayerObject_KnuxWallClimb
 				object.yvel = 0
 			end if
 		end if
-		if object.jumpPress == 1
+
+		if object.jumpPress == true
 			object.animation = ANI_JUMPING
 			object.state = PlayerObject_HandleAir
 			object.value1 = 0
-			PlaySfx(SfxName[Jump], 0)
+			PlaySfx(SfxName[Jump], false)
 			if object.direction == FLIP_X
 				object.xvel = 0x40000
 				object.speed = 0x40000
@@ -3074,7 +3088,7 @@ end function
 
 
 function PlayerObject_Hurt
-	if object.value16 == 0
+	if player.isPlayer2 == 0
 		arrayPos0 = object.entityPos
 		arrayPos0 += playerCount
 		if object.value37 != 0
@@ -3086,29 +3100,29 @@ function PlayerObject_Hurt
 			CheckNotEqual(object.value8, 0)
 			temp1 &= checkResult
 			if temp1 == 1
-				PlaySfx(SfxName[Spike], 0)
+				PlaySfx(SfxName[Spike], false)
 			else
-				PlaySfx(SfxName[Hurt], 0)
+				PlaySfx(SfxName[Hurt], false)
 			end if
 		else
 			if player.rings == 0
 				if object.value8 != 0
-					PlaySfx(SfxName[Spike], 0)
+					PlaySfx(SfxName[Spike], false)
 				else
-					PlaySfx(SfxName[Hurt], 0)
+					PlaySfx(SfxName[Hurt], false)
 				end if
 				temp0 = 3
 			else
-				PlaySfx(SfxName[Lose Rings], 0)
+				PlaySfx(SfxName[Lose Rings], false)
 				temp0 = 2
 			end if
 		end if
 	else
 		temp0 = 1
 		if object.value8 != 0
-			PlaySfx(SfxName[Spike], 0)
+			PlaySfx(SfxName[Spike], false)
 		else
-			PlaySfx(SfxName[Hurt], 0)
+			PlaySfx(SfxName[Hurt], false)
 		end if
 	end if
 	object.visible = 1
@@ -3216,7 +3230,7 @@ function PlayerObject_Hurt
 			end if
 			screen.cameraEnabled = 0
 			if options.vsMode == 0
-				stage.state = 3
+				stage.state = STAGE_FROZEN
 			end if
 		end if
 		if object[+playerCount].type == invincibilityType
@@ -3248,22 +3262,26 @@ end function
 
 function PlayerObject_Death
 	if object.entityPos == 0
-		if PlayerObject_SuperState == 1
-			PlayerObject_SuperState = 2
+		if PlayerObject_SuperState == SUPERSTATE_SUPER
+			PlayerObject_SuperState = SUPERSTATE_FADEOUT
 		end if
 	end if
+
 	if object.controlMode != -1
 		object.yvel = -0x70000
 		object.controlMode = -1
 	end if
+
 	if object.value8 != 0
 		object.value8 = 0
 		object.visible = 1
 	end if
+
 	object.yvel += 0x3800
 	if object.animation != ANI_BORED
 		object.animation = ANI_DYING
 	end if
+
 	if object.entityPos == screen.cameraTarget
 		temp0 = screen.cameraY
 		temp0 += 272
@@ -3272,8 +3290,9 @@ function PlayerObject_Death
 			object.ypos = temp0
 		end if
 	end if
+
 	if object.yvel > 0x100000
-		if object.value16 == 0
+		if player.isPlayer2 == 0
 			arrayPos0 = 25
 			arrayPos0 += object.entityPos
 			player.lives--
@@ -3362,8 +3381,8 @@ end function
 
 function PlayerObject_Drown
 	if object.entityPos == 0
-		if PlayerObject_SuperState == 1
-			PlayerObject_SuperState = 2
+		if PlayerObject_SuperState == SUPERSTATE_SUPER
+			PlayerObject_SuperState = SUPERSTATE_FADEOUT
 		end if
 	end if
 	object.controlMode = -1
@@ -3378,7 +3397,7 @@ function PlayerObject_Drown
 		end if
 	end if
 	if object.yvel > 0x80000
-		if object.value16 == 0
+		if player.isPlayer2 == 0
 			arrayPos0 = 25
 			arrayPos0 += object.entityPos
 			if player.lives > 0
@@ -3631,7 +3650,7 @@ event ObjectMain
 			player.hitboxTop 	= HITBOX_AUTO
 			player.hitboxRight 	= HITBOX_AUTO
 			player.hitboxBottom = HITBOX_AUTO
-			if stage.state == 3
+			if stage.state == STAGE_FROZEN
 				stage.state = STAGE_RUNNING
 			end if
 			if object[1].type == TypeName[Player 2 Object]
@@ -3666,7 +3685,7 @@ event ObjectMain
 				player.prevGravity |= checkResult
 				player.prevGravity ^= 1
 				if temp0 == 1
-					if player.prevGravity == 0
+					if player.prevGravity == GRAVITY_GROUND
 						object.value19 = 0
 						if object.animation == ANI_JUMPING
 							if object.down == 0
@@ -3715,7 +3734,7 @@ event ObjectMain
 			player.prevGravity |= checkResult
 			player.prevGravity ^= 1
 			if temp0 == 1
-				if player.prevGravity == 0
+				if player.prevGravity == GRAVITY_GROUND
 					object.value19 = 0
 					if object.animation == ANI_JUMPING
 						if object.down == 0
@@ -3778,7 +3797,7 @@ event ObjectStartup
 		player[0].hitboxTop 	= HITBOX_AUTO
 		player[0].hitboxRight 	= HITBOX_AUTO
 		player[0].hitboxBottom 	= HITBOX_AUTO
-		PlayerObject_SuperState = 0
+		PlayerObject_SuperState = SUPERSTATE_NONE
 		PlayerObject_value1 = 0
 		PlayerObject_value2 = 0
 		PlayerObject_value3 = 0
@@ -3836,6 +3855,9 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Players/Sonic1.gif")
+	SpriteFrame(-16, -19, 27, 39, 1, 1)
+	
+	// used in-game, but shouldn't be set from the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

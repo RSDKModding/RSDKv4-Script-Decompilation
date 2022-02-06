@@ -6,8 +6,18 @@
 // ----------------------------------
 
 // Aliases
-private alias 21 : TYPE_ANIMALPRISON
+private alias object.value0 : object.timer
 
+private alias 0 : ANIMALPRISON_AWAITPLAYER
+private alias 1 : ANIMALPRISON_OPENED
+private alias 2 : ANIMALPRISON_EXPLODE
+private alias 3 : ANIMALPRISON_SETUPACTFINISH
+private alias 4 : ANIMALPRISON_FINISHED
+
+// Animal aliases
+private alias object.value1 : animal.randomizeDir
+
+// Player aliases
 private alias object.animation	 : player.animation
 private alias object.xpos		 : player.xpos
 private alias object.ypos		 : player.ypos
@@ -40,7 +50,7 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case ANIMALPRISON_AWAITPLAYER
 		temp0 = object.ixpos
 		temp0 -= screen.xcenter
 		stage.newXBoundary1 = temp0
@@ -54,7 +64,7 @@ event ObjectMain
 		object.animationTimer %= 6
 		break
 
-	case 1
+	case ANIMALPRISON_OPENED
 		if player[0].controlMode == -1
 			// Make the player start running to the right
 			player[0].left     = false
@@ -64,8 +74,8 @@ event ObjectMain
 			player[0].jumpHold = false
 		end if
 
-		object.value0++
-		temp0 = object.value0
+		object.timer++
+		temp0 = object.timer
 		temp0 &= 7
 		if temp0 == 4
 			Rand(temp0, 48)
@@ -78,10 +88,10 @@ event ObjectMain
 			temp1 += object.ypos
 			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
 			object[tempObjectPos].drawOrder = 4
-			PlaySfx(SfxName[Explosion], 0)
+			PlaySfx(SfxName[Explosion], false)
 		end if
 
-		if object.value0 == 60
+		if object.timer == 60
 			temp1 = object.ypos
 			temp1 += 0x40000
 			temp2 = 0
@@ -99,13 +109,13 @@ event ObjectMain
 				else
 					CreateTempObject(animalType2, temp3, temp0, temp1)
 				end if
-				object[tempObjectPos].value1 = 1
+				animal[tempObjectPos].randomizeDir = true
 				temp0 += 0x40000
 				temp2++
 				temp3 += 5
 			loop
 			object.drawOrder = 4
-			object.value0 = 4
+			object.timer = 4
 			object.state++
 		end if
 		object.frame = object.animationTimer
@@ -115,9 +125,9 @@ event ObjectMain
 		object.animationTimer %= 6
 		break
 
-	case 2
-		object.value0++
-		temp0 = object.value0
+	case ANIMALPRISON_EXPLODE
+		object.timer++
+		temp0 = object.timer
 		temp0 &= 7
 		if temp0 == 4
 			Rand(temp0, 48)
@@ -130,12 +140,14 @@ event ObjectMain
 			temp1 += object.ypos
 			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
 			object[tempObjectPos].drawOrder = 4
-			PlaySfx(SfxName[Explosion], 0)
+			PlaySfx(SfxName[Explosion], false)
 		end if
-		if object.value0 == 34
-			object.value0 = 0
+
+		if object.timer == 34
+			object.timer = 0
 			object.state++
 		end if
+
 		object.frame = object.animationTimer
 		object.frame /= 3
 		object.frame += 4
@@ -143,43 +155,49 @@ event ObjectMain
 		object.animationTimer %= 6
 		break
 
-	case 3
-		if object.value0 < 300
-			object.value0++
+	case ANIMALPRISON_SETUPACTFINISH
+		if object.timer < 300
+			object.timer++
 		else
-			PlayMusic(1)
+			PlayMusic(TRACK_ACTFINISH)
 			object[30].type = TypeName[Act Finish]
 			object[30].drawOrder = 6
 			object[30].priority = PRIORITY_ACTIVE
-			object.value0 = 0
+			object.timer = 0
 			object.state++
 		end if
 		break
 
+	case ANIMALPRISON_FINISHED
+		break
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		switch object.state
-		case 0
+		case ANIMALPRISON_AWAITPLAYER
 			BoxCollisionTest(C_BOX, object.entityPos, -32, -24, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 			BoxCollisionTest(C_BOX, object.entityPos, -11, -48, 11, -24, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object.state = 1
-				stage.timeEnabled = 0
+			if checkResult == true
+				object.state = ANIMALPRISON_OPENED
+				stage.timeEnabled = false
+
 				if player[currentPlayer].animation == ANI_JUMPING
 					player[currentPlayer].animation = ANI_WALKING
 				end if
-				if PlayerObject_SuperState == 1
-					PlayerObject_SuperState = 2
+
+				if PlayerObject_SuperState == SUPERSTATE_SUPER
+					PlayerObject_SuperState = SUPERSTATE_FADEOUT
 				end if
+
 				player[0].controlMode = -1
 			end if
 			break
 
-		case 1
+		case ANIMALPRISON_OPENED
 			BoxCollisionTest(C_BOX, object.entityPos, -32, -24, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			BoxCollisionTest(C_BOX, object.entityPos, -11, -40, 11, -24, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			break
-
 		end switch
 
 		temp0 = screen.xcenter
@@ -203,15 +221,15 @@ end event
 
 event ObjectDraw
 	switch object.state
-	case 0
-	case 1
+	case ANIMALPRISON_AWAITPLAYER
+	case ANIMALPRISON_OPENED
 		DrawSprite(object.frame)
 		DrawSprite(0)
 		break
 
-	case 2
-	case 3
-	case 4
+	case ANIMALPRISON_EXPLODE
+	case ANIMALPRISON_SETUPACTFINISH
+	case ANIMALPRISON_FINISHED
 		DrawSprite(1)
 		break
 
@@ -241,12 +259,14 @@ event ObjectStartup
 end event
 
 event RSDKDraw
-	DrawSprite(object.frame)
+	DrawSprite(1)
 	DrawSprite(0)
 end event
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Items.gif")
 	SpriteFrame(-32, -32, 64, 62, 109, 166)
-	SpriteFrame(-32, -2, 64, 32, 35, 202)
+	SpriteFrame(-11, -48, 22, 16, 84, 166)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

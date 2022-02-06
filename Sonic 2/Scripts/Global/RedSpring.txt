@@ -87,7 +87,7 @@ event ObjectMain
 					object[currentPlayer].speed = object[currentPlayer].xvel
 					object[currentPlayer].yvel = -0x100000
 					object[currentPlayer].yvel -= object[currentPlayer].value25
-					if object.propertyValue >= 128
+					if object.propertyValue >= 0x80
 						object[currentPlayer].animation = ANI_TWIRL
 						object[currentPlayer].prevAnimation = ANI_TWIRL
 						object[currentPlayer].frame = 0
@@ -96,7 +96,7 @@ event ObjectMain
 						object[currentPlayer].animation = ANI_BOUNCING
 					end if
 					object[currentPlayer].value1 = 0
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 				end if
 			else
 				if object[currentPlayer].yvel >= 0
@@ -125,7 +125,7 @@ event ObjectMain
 							object[currentPlayer].animation = ANI_BOUNCING
 						end if
 						object[currentPlayer].value1 = 0
-						PlaySfx(SfxName[Spring], 0)
+						PlaySfx(SfxName[Spring], false)
 					end if
 				end if
 			end if
@@ -143,7 +143,7 @@ event ObjectMain
 					object[currentPlayer].pushing = 0
 					object[currentPlayer].direction = FLIP_NONE
 					object[currentPlayer].controlLock = 12
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 					if object[currentPlayer].state != PlayerObject_HandleRolling
 						object[currentPlayer].state = PlayerObject_HandleGround
 						object[currentPlayer].animation = ANI_RUNNING
@@ -162,7 +162,7 @@ event ObjectMain
 						object[currentPlayer].pushing = 0
 						object[currentPlayer].direction = FLIP_NONE
 						object[currentPlayer].controlLock = 12
-						PlaySfx(SfxName[Spring], 0)
+						PlaySfx(SfxName[Spring], false)
 						if object[currentPlayer].state != PlayerObject_RollingJump
 							object[currentPlayer].animation = 12
 							if object[currentPlayer].animation != ANI_JUMPING
@@ -188,7 +188,7 @@ event ObjectMain
 					object[currentPlayer].pushing = 0
 					object[currentPlayer].direction = FLIP_X
 					object[currentPlayer].controlLock = 15
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 					if object[currentPlayer].state != PlayerObject_HandleRolling
 						object[currentPlayer].state = PlayerObject_HandleGround
 						object[currentPlayer].animation = ANI_RUNNING
@@ -206,7 +206,7 @@ event ObjectMain
 						object[currentPlayer].pushing = 0
 						object[currentPlayer].direction = FLIP_X
 						object[currentPlayer].controlLock = 15
-						PlaySfx(SfxName[Spring], 0)
+						PlaySfx(SfxName[Spring], false)
 						if object[currentPlayer].state != PlayerObject_RollingJump
 							object[currentPlayer].animation = 12
 							if object[currentPlayer].animation != ANI_JUMPING
@@ -237,7 +237,7 @@ event ObjectMain
 					object[currentPlayer].speed = object[currentPlayer].xvel
 					object[currentPlayer].yvel = 0x100000
 					object[currentPlayer].value1 = 0
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 				end if
 			end if
 			break
@@ -303,7 +303,7 @@ event ObjectMain
 					else
 						object[currentPlayer].animation = ANI_BOUNCING
 					end if
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 					SetBit(object.value2, temp2, 0)
 				else
 					SetBit(object.value2, temp2, 1)
@@ -376,7 +376,7 @@ event ObjectMain
 					else
 						object[currentPlayer].animation = ANI_BOUNCING
 					end if
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 					SetBit(object.value2, temp2, 0)
 				else
 					SetBit(object.value2, temp2, 1)
@@ -432,7 +432,7 @@ event ObjectMain
 					object[currentPlayer].yvel = 0x100000
 					object[currentPlayer].value1 = 0
 					object[currentPlayer].direction = FLIP_NONE
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 					SetBit(object.value2, temp2, 0)
 				else
 					SetBit(object.value2, temp2, 1)
@@ -490,7 +490,7 @@ event ObjectMain
 					object[currentPlayer].yvel = 0x100000
 					object[currentPlayer].value1 = 0
 					object[currentPlayer].direction = FLIP_X
-					PlaySfx(SfxName[Spring], 0)
+					PlaySfx(SfxName[Spring], false)
 					SetBit(object.value2, temp2, 0)
 				else
 					SetBit(object.value2, temp2, 1)
@@ -585,11 +585,100 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // flipFlags
+			checkResult = object.propertyValue
+			checkResult &= 0x7
+			break
+		case 1 // useTwirlAnim
+			checkResult = object.propertyValue
+			checkResult >>= 7
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // flipFlags
+			temp0 = editor.variableValue
+			temp0 &= 0x7
+
+			temp1 = 7
+			Not(temp1)
+
+			object.propertyValue &= temp1
+			object.propertyValue |= temp0
+			break
+		case 1 // useTwirlAnim
+			temp0 = editor.variableValue
+			temp0 &= 1
+			temp0 <<= 7
+
+			object.propertyValue &= 0x7
+			object.propertyValue |= temp0
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	object.frame = object.propertyValue
+	object.frame &= 127
+
+	GetTableValue(object.direction, object.frame, RedSpring_table16)
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	LoadSpriteSheet("Global/Items.gif")
+
+	// Spring frames
+	SpriteFrame(-16, -8, 32, 16, 52, 1)
+	SpriteFrame(-8, -16, 16, 32, 85, 1)
+	SpriteFrame(-8, -16, 16, 32, 118, 67)
+	SpriteFrame(-16, -8, 32, 16, 157, 116)
+	SpriteFrame(-16, -16, 32, 32, 118, 1)
+	SpriteFrame(-16, -16, 32, 32, 157, 50)
+	SpriteFrame(-16, -16, 32, 32, 118, 1)
+	SpriteFrame(-16, -16, 32, 32, 157, 50)
+	SpriteFrame(-16, 0, 32, 8, 52, 1)
+	SpriteFrame(-8, -16, 8, 32, 93, 1)
+	SpriteFrame(0, -16, 8, 32, 118, 67)
+	SpriteFrame(-16, -8, 32, 8, 157, 124)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-17, -10, 27, 27, 52, 186)
+	SpriteFrame(-16, -24, 32, 32, 52, 34)
+	SpriteFrame(-8, -16, 32, 32, 85, 34)
+	SpriteFrame(-8, -16, 32, 32, 85, 34)
+	SpriteFrame(-16, -24, 32, 32, 52, 34)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+	SpriteFrame(-16, -26, 43, 42, 52, 100)
+
+	AddEditorVariable("flipFlags")
+	SetActiveVariable("flipFlags")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Right", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Down", 3)
+	AddEnumVariable("Up Right", 4)
+	AddEnumVariable("Up Left", 5)
+	AddEnumVariable("Down Right", 6)
+	AddEnumVariable("Down Left", 7)
+
+	AddEditorVariable("useTwirlAnim")
+	SetActiveVariable("useTwirlAnim")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
 end event

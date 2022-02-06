@@ -6,10 +6,12 @@
 // ----------------------------------
 
 // Aliases
-private alias 54 : TYPE_INVISIBLEBLOCK
+private alias object.value0 : object.width
+private alias object.value1 : object.height
 
-private alias object.value0 : object.XSize
-private alias object.value1 : object.YSize
+private alias 0 : INVISIBLEBLOCK_SOLID		// regular invis block
+private alias 1 : INVISIBLEBLOCK_EJECT_L	// ejects the player out (to the left)
+private alias 2 : INVISIBLEBLOCK_EJECT_R	// ejects the player out (to the right)
 
 // Function declarations
 reserve function InvisibleBlock_DebugDraw
@@ -21,11 +23,14 @@ function InvisibleBlock_DebugDraw
 	temp0 -= 0x80000
 	temp1 -= 0x80000
 	DrawSpriteXY(0, temp0, temp1)
+
 	temp0 += 0x100000
 	DrawSpriteXY(0, temp0, temp1)
+
 	temp0 -= 0x100000
 	temp1 += 0x100000
 	DrawSpriteXY(0, temp0, temp1)
+
 	temp0 += 0x100000
 	DrawSpriteXY(0, temp0, temp1)
 end function
@@ -34,35 +39,39 @@ end function
 function InvisibleBlock_DebugSpawn
 	CreateTempObject(TypeName[Invisible Block], 17, object.xpos, object.ypos)
 	object[tempObjectPos].drawOrder = 5
-	object[tempObjectPos].XSize = 16
-	object[tempObjectPos].YSize = 16
+	object[tempObjectPos].width = 16
+	object[tempObjectPos].height = 16
 end function
 
 
 event ObjectMain
-	temp0 = object.XSize
+	temp0 = object.width
 	FlipSign(temp0)
-	temp1 = object.YSize
+	temp1 = object.height
 	FlipSign(temp1)
+
+	// Note: state is editable and is set via the editor
+
 	switch object.state
-	case 0
+	case INVISIBLEBLOCK_SOLID
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
-				BoxCollisionTest(C_BOX, object.entityPos, temp0, temp1, object.XSize, object.YSize, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				BoxCollisionTest(C_BOX, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				switch checkResult
-				case 0
+				case COL_NONE
 					temp0 += 2
 					temp1 += 2
-					temp2 = object.XSize
-					temp3 = object.YSize
+					temp2 = object.width
+					temp3 = object.height
 					temp2 -= 2
 					temp3 -= 2
 					BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, temp2, temp3, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-					if checkResult == 1
+					if checkResult == true
 						object[currentPlayer].gravity = GRAVITY_GROUND
 					end if
 					break
-				case 4
+
+				case COL_BOTTOM
 					if object[currentPlayer].gravity == GRAVITY_GROUND
 						CallFunction(PlayerObject_Kill)
 					end if
@@ -71,15 +80,16 @@ event ObjectMain
 			end if
 		next
 		break
-	case 1
+
+	case INVISIBLEBLOCK_EJECT_L
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
-				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.XSize, object.YSize, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == true
 					if object[currentPlayer].gravity == GRAVITY_GROUND
 						object[currentPlayer].xpos = object[currentPlayer].collisionRight
 						FlipSign(object[currentPlayer].xpos)
-						object[currentPlayer].xpos -= object.XSize
+						object[currentPlayer].xpos -= object.width
 						object[currentPlayer].xpos <<= 16
 						object[currentPlayer].xpos += object.xpos
 						if object[currentPlayer].speed > 0
@@ -90,15 +100,16 @@ event ObjectMain
 			end if
 		next
 		break
-	case 2
+
+	case INVISIBLEBLOCK_EJECT_R
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
-				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.XSize, object.YSize, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				if checkResult == true
 					if object[currentPlayer].gravity == GRAVITY_GROUND
 						object[currentPlayer].xpos = object[currentPlayer].collisionLeft
 						FlipSign(object[currentPlayer].xpos)
-						object[currentPlayer].xpos += object.XSize
+						object[currentPlayer].xpos += object.width
 						object[currentPlayer].xpos <<= 16
 						object[currentPlayer].xpos += object.xpos
 						if object[currentPlayer].speed < 0
@@ -161,15 +172,15 @@ event ObjectStartup
 	foreach (TypeName[Invisible Block], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 5
 
-		object[arrayPos0].XSize = object[arrayPos0].propertyValue
-		object[arrayPos0].XSize &= 240
-		object[arrayPos0].XSize += 16
-		object[arrayPos0].XSize >>= 1
+		object[arrayPos0].width = object[arrayPos0].propertyValue
+		object[arrayPos0].width &= 0xF0
+		object[arrayPos0].width += 16
+		object[arrayPos0].width >>= 1
 
-		object[arrayPos0].YSize = object[arrayPos0].propertyValue
-		object[arrayPos0].YSize &= 15
-		object[arrayPos0].YSize++
-		object[arrayPos0].YSize <<= 3
+		object[arrayPos0].height = object[arrayPos0].propertyValue
+		object[arrayPos0].height &= 0x0F
+		object[arrayPos0].height++
+		object[arrayPos0].height <<= 3
 	next
 
 	// Add this object to the debug object list
@@ -181,21 +192,70 @@ event ObjectStartup
 
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // width
+			checkResult = object.propertyValue
+			checkResult >>= 4
+			checkResult &= 0xF
+			break
+
+		case 1 // height
+			checkResult = object.propertyValue
+			checkResult &= 0xF
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // width
+			temp0 = editor.variableValue
+			temp0 &= 0xF
+			temp0 <<= 4
+			
+			object.propertyValue &= 0x0F
+			object.propertyValue |= temp0
+			break
+
+		case 1 // height
+			temp0 = editor.variableValue
+			temp0 &= 0xF
+
+			object.propertyValue &= 0xF0
+			object.propertyValue |= temp0
+			break
+
+		end switch
+	end if
+end event
+
 event RSDKDraw
 	temp0 = object.xpos
 	temp1 = object.ypos
 	temp2 = object.propertyValue
+
 	temp4 = temp2
-	temp4 &= 240
+	temp4 &= 0xF0
 	temp4 <<= 15
 	temp2 >>= 4
 	temp2++
 	temp6 = temp2
+	
 	temp3 = object.propertyValue
-	temp3 &= 15
+	temp3 &= 0x0F
 	temp5 = temp3
 	temp5 <<= 19
 	temp3++
+
 	temp0 -= temp4
 	temp4 = temp0
 	temp1 -= temp5
@@ -217,4 +277,7 @@ event RSDKLoad
 	SpriteFrame(-8, -7, 16, 14, 1, 176)
 	SpriteFrame(-8, -7, 16, 14, 17, 176)
 	SpriteFrame(-8, -7, 16, 14, 1, 190)
+
+	AddEditorVariable("width")
+	AddEditorVariable("height")
 end event

@@ -6,7 +6,41 @@
 // ----------------------------------
 
 // Aliases
-private alias 16 : TYPE_SPECIALFINISH
+private alias object.value0  : object.timer
+private alias object.value1  : object.textTopPos
+private alias object.value2  : object.textMidPos
+private alias object.value3  : object.textBottomPos
+private alias object.value4  : object.scorePos
+private alias object.value5  : object.p1RingPos
+private alias object.value6  : object.p2RingPos
+private alias object.value7  : object.gemPos
+private alias object.value8  : object.p1RingBonus
+private alias object.value9  : object.p2RingBonus
+private alias object.value10 : object.gemBonus
+private alias object.value11 : object.resultsTextTop
+private alias object.value12 : object.resultsTextMid
+private alias object.value13 : object.resultsTextBottom
+private alias object.value14 : object.emeraldAlpha
+
+private alias 0 : TEXT_NONE
+private alias 1 : TEXT_FAILED
+private alias 2 : TEXT_ONEEMERALD
+private alias 3 : TEXT_ALLEMERALDS_CHAOS
+private alias 4 : TEXT_CANCHANGEFORM
+private alias 5 : TEXT_TOHIDDENPALACE
+
+private alias 0  : STATE_FADEIN
+private alias 1  : STATE_FADEIDLE
+private alias 2  : STATE_ENTERTEXT
+private alias 3  : STATE_ENTEREMERALDS
+private alias 4  : STATE_TALLYSCORE
+private alias 5  : STATE_FAILED
+private alias 6  : STATE_FADEOUT
+private alias 7  : STATE_EXITRESULTS
+private alias 8  : STATE_WINSHOWREWARD
+private alias 9  : STATE_WINENTERTEXT
+private alias 10 : STATE_WINEVENT
+private alias 11 : STATE_WINIDLE
 
 
 // Static Values
@@ -22,42 +56,44 @@ end table
 
 
 event ObjectMain
-	options.touchControls = 0
+	options.touchControls = false
 	switch object.state
-	case 0
-		if object.value0 < 256
-			object.value0 += 8
-			SetScreenFade(224, 224, 224, object.value0)
+	case STATE_FADEIN
+		if object.timer < 256
+			object.timer += 8
+			SetScreenFade(224, 224, 224, object.timer)
 		else
-			if SpecialSetup_value0 == 1
+			if SpecialSetup_gotEmerald == true
 				temp0 = stage.actNum
 				temp0--
 				SetBit(specialStage.emeralds, temp0, 1)
-				if specialStage.emeralds == 127
-					object.value11 = 3
-					object.value12 = 3
+				if specialStage.emeralds == 0x7F
+					object.resultsTextTop = TEXT_ALLEMERALDS_CHAOS
+					object.resultsTextMid = TEXT_ALLEMERALDS_CHAOS
 				else
-					object.value11 = 2
-					object.value12 = 2
+					object.resultsTextTop = TEXT_ONEEMERALD
+					object.resultsTextMid = TEXT_ONEEMERALD
 				end if
-				object.value10 = 0x2710
+				object.gemBonus = 10000
 				specialStage.listPos++
 				specialStage.listPos %= 7
 			else
-				object.value11 = 0
-				object.value12 = 1
-				object.value10 = 0
+				object.resultsTextTop = TEXT_NONE
+				object.resultsTextMid = TEXT_FAILED
+				object.gemBonus = 0
 			end if
-			object.value13 = 0
-			object.value8 = object[2].value0
-			if stage.player2Enabled == 1
-				object.value9 = object[3].value0
+			object.resultsTextBottom = 0
+
+			object.p1RingBonus = player[2].rings
+			if stage.player2Enabled == true
+				object.p2RingBonus = player[3].rings
 			else
-				object.value9 = 0
+				object.p2RingBonus = 0
 			end if
+
 			stage.listPos = specialStage.nextZone
 			stage.activeList = REGULAR_STAGE
-			object.value0 = 0
+			object.timer = 0
 			temp0 = 0
 			while temp0 < 20
 				ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
@@ -68,114 +104,115 @@ event ObjectMain
 				ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
 				temp0++
 			loop
-			stage[0].activeLayer = 9
-			stage[1].activeLayer = 9
-			stage[2].activeLayer = 9
-			stage[3].activeLayer = 9
+			stage.activeLayer[0] = 9
+			stage.activeLayer[1] = 9
+			stage.activeLayer[2] = 9
+			stage.activeLayer[3] = 9
 			object.controlMode = 0
-			inputDown.left = 0
-			inputDown.right = 0
+			inputDown.left 	= false
+			inputDown.right = false
 			object.direction = FLIP_NONE
-			object.value1 = -384
-			object.value2 = 384
-			object.value4 = 640
-			object.value5 = 656
-			object.value6 = 672
-			object.value7 = 688
-			object.value4 += 128
-			object.value5 += 128
-			object.value6 += 128
-			object.value7 += 128
+			object.textTopPos = -384
+			object.textMidPos = 384
+			object.scorePos = 640
+			object.p1RingPos = 656
+			object.p2RingPos = 672
+			object.gemPos = 688
+			object.scorePos += 128
+			object.p1RingPos += 128
+			object.p2RingPos += 128
+			object.gemPos += 128
 			object.inkEffect = INK_ALPHA
 			PlayMusic(1)
 			object.state++
 			SetScreenFade(224, 224, 224, 255)
 		end if
 		break
-	case 1
-		object.value0++
-		if object.value0 > 15
-			object.value0 = 0
+	case STATE_FADEIDLE
+		object.timer++
+		if object.timer > 15
+			object.timer = 0
 			object.state++
 		end if
 		SetScreenFade(224, 224, 224, 255)
 		break
-	case 2
-		if object.value1 < 0
-			object.value1 += 16
+	case STATE_ENTERTEXT
+		if object.textTopPos < 0
+			object.textTopPos += 16
 		end if
-		if object.value2 > 0
-			object.value2 -= 16
+		if object.textMidPos > 0
+			object.textMidPos -= 16
 		end if
-		if object.value4 > 0
-			object.value4 -= 16
+		if object.scorePos > 0
+			object.scorePos -= 16
 		end if
-		if object.value5 > 0
-			object.value5 -= 16
+		if object.p1RingPos > 0
+			object.p1RingPos -= 16
 		end if
-		if object.value6 > 0
-			object.value6 -= 16
+		if object.p2RingPos > 0
+			object.p2RingPos -= 16
 		end if
-		if object.value7 > 0
-			object.value7 -= 16
+		if object.gemPos > 0
+			object.gemPos -= 16
 		else
 			object.state++
 		end if
 		break
-	case 3
-		object.value0++
-		if object.value14 < 256
-			object.value14 += 8
+	case STATE_ENTEREMERALDS
+		object.timer++
+		if object.emeraldAlpha < 256
+			object.emeraldAlpha += 8
 		end if
-		if object.value0 > 299
-			object.value0 = 0
+		if object.timer > 299
+			object.timer = 0
 			object.state++
 		end if
 		break
-	case 4
-		if object.value8 > 0
-			object.value8--
+	case STATE_TALLYSCORE
+		if object.p1RingBonus > 0
+			object.p1RingBonus--
 			player.score += 100
 		end if
-		if object.value9 > 0
-			object.value9--
+		if object.p2RingBonus > 0
+			object.p2RingBonus--
 			player.score += 100
 		end if
-		if object.value10 > 0
-			object.value10 -= 100
+		if object.gemBonus > 0
+			object.gemBonus -= 100
 			player.score += 100
 		end if
 		if player.score >= player.scoreBonus
 			player.lives++
-			player.scoreBonus += 0xC350
-			PlaySfx(SfxName[Life], 0)
+			player.scoreBonus += 50000
+			PlaySfx(SfxName[Life], false)
 		end if
-		CheckGreater(object.value8, 0)
+
+		CheckGreater(object.p1RingBonus, 0)
 		temp0 = checkResult
-		CheckGreater(object.value9, 0)
+		CheckGreater(object.p2RingBonus, 0)
 		temp0 |= checkResult
-		CheckGreater(object.value10, 0)
+		CheckGreater(object.gemBonus, 0)
 		temp0 |= checkResult
 		if temp0 == 1
-			object.value0++
-			if object.value0 == 2
-				PlaySfx(SfxName[Score Add], 0)
-				object.value0 = 0
+			object.timer++
+			if object.timer == 2
+				PlaySfx(SfxName[Score Add], false)
+				object.timer = 0
 			end if
 		else
-			if SpecialSetup_value0 == 1
+			if SpecialSetup_gotEmerald == true
 				if specialStage.emeralds == 0x3FFF
-					object.state = 8
+					object.state = STATE_WINSHOWREWARD
 				else
-					if specialStage.emeralds == 127
+					if specialStage.emeralds == 0x7F
 						switch stage.playerListPos
 						case 0
 						case 2
-							object.state = 8
+							object.state = STATE_WINSHOWREWARD
 							break
 						case 1
-							if options.superTails == 1
-								object.state = 8
+							if options.superTails == true
+								object.state = STATE_WINSHOWREWARD
 							else
 								object.state++
 							end if
@@ -188,31 +225,31 @@ event ObjectMain
 			else
 				object.state++
 			end if
-			object.value0 = 0
-			PlaySfx(SfxName[Score Total], 0)
+			object.timer = 0
+			PlaySfx(SfxName[Score Total], false)
 		end if
 		break
-	case 5
-		object.value0++
-		if object.value0 == 160
-			object.value0 = 0
+	case STATE_FAILED
+		object.timer++
+		if object.timer == 160
+			object.timer = 0
 			object.state++
-			PlaySfx(SfxName[Warp], 0)
+			PlaySfx(SfxName[Warp], false)
 		end if
 		break
-	case 6
-		if object.value0 < 400
-			object.value0 += 8
-			SetScreenFade(248, 248, 248, object.value0)
+	case STATE_FADEOUT
+		if object.timer < 400
+			object.timer += 8
+			SetScreenFade(248, 248, 248, object.timer)
 		else
-			object.value0 = 248
+			object.timer = 248
 			object.state++
 			SetScreenFade(248, 248, 248, 255)
 		end if
 		break
-	case 7
-		if object.value0 > 0
-			object.value0 -= 8
+	case STATE_EXITRESULTS
+		if object.timer > 0
+			object.timer -= 8
 		else
 			fadeColor = 0
 			if stage.listPos < stage.listSize
@@ -223,60 +260,60 @@ event ObjectMain
 				LoadStage()
 			end if
 		end if
-		SetScreenFade(object.value0, object.value0, object.value0, 255)
+		SetScreenFade(object.timer, object.timer, object.timer, 255)
 		break
-	case 8
-		object.value0++
-		if object.value0 == 90
-			object.value0 = 0
-			object.value3 = 0
+	case STATE_WINSHOWREWARD
+		object.timer++
+		if object.timer == 90
+			object.timer = 0
+			object.textBottomPos = 0
 			object.state++
 		end if
 		break
-	case 9
-		if object.value1 > -384
-			object.value1 -= 32
-			object.value3 -= 32
+	case STATE_WINENTERTEXT
+		if object.textTopPos > -384
+			object.textTopPos -= 32
+			object.textBottomPos -= 32
 		end if
-		if object.value2 < 384
-			object.value2 += 32
+		if object.textMidPos < 384
+			object.textMidPos += 32
 		else
 			if specialStage.emeralds == 0x3FFF
-				object.value11 = 4
-				object.value12 = 4
-				object.value13 = 4
+				object.resultsTextTop = TEXT_CANCHANGEFORM
+				object.resultsTextMid = TEXT_CANCHANGEFORM
+				object.resultsTextBottom = TEXT_CANCHANGEFORM
 			else
-				if options.hiddenPalace == 1
-					object.value11 = 5
-					object.value12 = 5
-					object.value13 = 5
+				if options.hiddenPalace == true
+					object.resultsTextTop = TEXT_TOHIDDENPALACE
+					object.resultsTextMid = TEXT_TOHIDDENPALACE
+					object.resultsTextBottom = TEXT_TOHIDDENPALACE
 				else
-					object.value11 = 4
-					object.value12 = 4
-					object.value13 = 4
+					object.resultsTextTop = TEXT_CANCHANGEFORM
+					object.resultsTextMid = TEXT_CANCHANGEFORM
+					object.resultsTextBottom = TEXT_CANCHANGEFORM
 				end if
 			end if
 			object.state++
 		end if
 		break
-	case 10
-		if object.value1 < 0
-			object.value1 += 16
-			object.value3 += 16
+	case STATE_WINEVENT
+		if object.textTopPos < 0
+			object.textTopPos += 16
+			object.textBottomPos += 16
 		end if
-		if object.value2 > 0
-			object.value2 -= 16
+		if object.textMidPos > 0
+			object.textMidPos -= 16
 		else
-			PlaySfx(SfxName[Event], 0)
+			PlaySfx(SfxName[Event], false)
 			object.state++
 		end if
 		break
-	case 11
-		object.value0++
-		if object.value0 == 200
-			object.value0 = 0
-			object.state = 6
-			PlaySfx(SfxName[Warp], 0)
+	case STATE_WINIDLE
+		object.timer++
+		if object.timer == 200
+			object.timer = 0
+			object.state = STATE_FADEOUT
+			PlaySfx(SfxName[Warp], false)
 		end if
 		break
 	end switch
@@ -285,22 +322,22 @@ end event
 
 event ObjectDraw
 	switch object.state
-	case 2
-	case 3
-	case 4
-	case 5
-	case 6
-	case 8
-	case 9
-	case 10
-	case 11
+	case STATE_ENTERTEXT
+	case STATE_ENTEREMERALDS
+	case STATE_TALLYSCORE
+	case STATE_FAILED
+	case STATE_FADEOUT
+	case STATE_WINSHOWREWARD
+	case STATE_WINENTERTEXT
+	case STATE_WINEVENT
+	case STATE_WINIDLE
 		ClearScreen(152)
 		object.animationTimer += 16
 		object.animationTimer &= 511
 		Sin(temp0, object.animationTimer)
 		temp0 >>= 3
 		temp0 += 190
-		temp0 *= object.value14
+		temp0 *= object.emeraldAlpha
 		temp0 >>= 8
 		object.alpha = temp0
 		temp0 = 0
@@ -315,94 +352,114 @@ event ObjectDraw
 			temp0++
 			temp1++
 		loop
-		temp7 = object.value1
+
+		temp7 = object.textTopPos
 		temp7 += screen.xcenter
-		switch object.value11
-		case 2
+		switch object.resultsTextTop
+		default
+			break
+		case TEXT_ONEEMERALD
 			DrawSpriteScreenXY(24, temp7, 0)
 			DrawSpriteScreenXY(25, temp7, 0)
 			break
-		case 3
+		case TEXT_ALLEMERALDS_CHAOS
 			DrawSpriteScreenXY(27, temp7, 0)
 			DrawSpriteScreenXY(28, temp7, 0)
 			break
-		case 4
+		case TEXT_CANCHANGEFORM
 			DrawSpriteScreenXY(30, temp7, 0)
 			DrawSpriteScreenXY(31, temp7, 0)
 			DrawSpriteScreenXY(32, temp7, 0)
 			break
-		case 5
+		case TEXT_TOHIDDENPALACE
 			DrawSpriteScreenXY(36, temp7, 0)
 			DrawSpriteScreenXY(37, temp7, 0)
 			break
 		end switch
-		temp7 = object.value2
+
+		temp7 = object.textMidPos
 		temp7 += screen.xcenter
-		switch object.value12
-		case 1
+		switch object.resultsTextMid
+		default
+			break
+		case TEXT_FAILED
 			DrawSpriteScreenXY(23, temp7, 0)
 			break
-		case 2
+		case TEXT_ONEEMERALD
 			DrawSpriteScreenXY(26, temp7, 0)
 			break
-		case 3
+		case TEXT_ALLEMERALDS_CHAOS
 			DrawSpriteScreenXY(29, temp7, 0)
 			break
-		case 4
+		case TEXT_CANCHANGEFORM
 			DrawSpriteScreenXY(33, temp7, 0)
 			break
-		case 5
+		case TEXT_TOHIDDENPALACE
 			DrawSpriteScreenXY(38, temp7, 0)
 			DrawSpriteScreenXY(39, temp7, 0)
 			DrawSpriteScreenXY(40, temp7, 0)
 			break
 		end switch
-		temp7 = object.value3
+
+		temp7 = object.textBottomPos
 		temp7 += screen.xcenter
-		switch object.value13
-		case 4
+		switch object.resultsTextBottom
+		default
+			break
+		case TEXT_CANCHANGEFORM
 			DrawSpriteScreenXY(34, temp7, 0)
 			DrawSpriteScreenXY(35, temp7, 0)
 			break
-		case 5
+		case TEXT_TOHIDDENPALACE
 			DrawSpriteScreenXY(41, temp7, 0)
 			break
 		end switch
-		temp7 = object.value4
+
+		temp7 = object.scorePos
 		temp7 += screen.xcenter
 		DrawSpriteScreenXY(17, temp7, 145)
+
 		temp7 += 88
 		DrawNumbers(7, temp7, 145, player.score, 9, 8, 0)
-		if stage.player2Enabled == 1
-			temp7 = object.value5
+
+		if stage.player2Enabled == true
+			temp7 = object.p1RingPos
 			temp7 += screen.xcenter
 			DrawSpriteScreenXY(20, temp7, 161)
+
 			temp7 += 88
-			DrawNumbers(7, temp7, 161, object.value8, 5, 8, 0)
-			temp7 = object.value6
+			DrawNumbers(7, temp7, 161, object.p1RingBonus, 5, 8, 0)
+
+			temp7 = object.p2RingPos
 			temp7 += screen.xcenter
 			DrawSpriteScreenXY(21, temp7, 177)
+
 			temp7 += 88
-			DrawNumbers(7, temp7, 177, object.value9, 5, 8, 0)
-			if SpecialSetup_value0 == 1
-				temp7 = object.value7
+			DrawNumbers(7, temp7, 177, object.p2RingBonus, 5, 8, 0)
+
+			if SpecialSetup_gotEmerald == true
+				temp7 = object.gemPos
 				temp7 += screen.xcenter
 				DrawSpriteScreenXY(22, temp7, 193)
+
 				temp7 += 88
-				DrawNumbers(7, temp7, 193, object.value10, 5, 8, 0)
+				DrawNumbers(7, temp7, 193, object.gemBonus, 5, 8, 0)
 			end if
 		else
-			temp7 = object.value5
+			temp7 = object.p1RingPos
 			temp7 += screen.xcenter
 			DrawSpriteScreenXY(18, temp7, 169)
+
 			temp7 += 88
-			DrawNumbers(7, temp7, 169, object.value8, 5, 8, 0)
-			if SpecialSetup_value0 == 1
-				temp7 = object.value6
+			DrawNumbers(7, temp7, 169, object.p1RingBonus, 5, 8, 0)
+
+			if SpecialSetup_gotEmerald == true
+				temp7 = object.p2RingPos
 				temp7 += screen.xcenter
 				DrawSpriteScreenXY(19, temp7, 193)
+
 				temp7 += 88
-				DrawNumbers(7, temp7, 193, object.value10, 5, 8, 0)
+				DrawNumbers(7, temp7, 193, object.gemBonus, 5, 8, 0)
 			end if
 		end if
 		break
@@ -412,139 +469,167 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("Special/Objects.gif")
-	SpriteFrame(-8, -8, 16, 16, 1, 260)
-	SpriteFrame(-8, -8, 16, 16, 18, 260)
-	SpriteFrame(-8, -8, 16, 16, 35, 260)
-	SpriteFrame(-8, -8, 16, 16, 52, 260)
-	SpriteFrame(-8, -8, 16, 16, 69, 260)
-	SpriteFrame(-8, -8, 16, 16, 86, 260)
-	SpriteFrame(-8, -8, 16, 16, 103, 260)
-	SpriteFrame(0, 0, 8, 11, 1, 361)
-	SpriteFrame(0, 0, 8, 11, 10, 361)
-	SpriteFrame(0, 0, 8, 11, 19, 361)
-	SpriteFrame(0, 0, 8, 11, 28, 361)
-	SpriteFrame(0, 0, 8, 11, 37, 361)
-	SpriteFrame(0, 0, 8, 11, 46, 361)
-	SpriteFrame(0, 0, 8, 11, 55, 361)
-	SpriteFrame(0, 0, 8, 11, 64, 361)
-	SpriteFrame(0, 0, 8, 11, 73, 361)
-	SpriteFrame(0, 0, 8, 11, 82, 361)
-	SpriteFrame(-96, 0, 44, 15, 1, 345)
-	SpriteFrame(-96, 0, 44, 15, 46, 345)
-	SpriteFrame(-96, 0, 84, 15, 91, 345)
-	SpriteFrame(-96, 0, 92, 15, 176, 345)
+	
+	//Chaos Emerald Frames
+	SpriteFrame(-8, -8, 16, 16, 1, 260)		// Chaos Emerald 1 #0
+	SpriteFrame(-8, -8, 16, 16, 18, 260)	// Chaos Emerald 2 #1
+	SpriteFrame(-8, -8, 16, 16, 35, 260)	// Chaos Emerald 3 #2
+	SpriteFrame(-8, -8, 16, 16, 52, 260)	// Chaos Emerald 4 #3
+	SpriteFrame(-8, -8, 16, 16, 69, 260)	// Chaos Emerald 5 #4
+	SpriteFrame(-8, -8, 16, 16, 86, 260)	// Chaos Emerald 6 #5
+	SpriteFrame(-8, -8, 16, 16, 103, 260)	// Chaos Emerald 7 #6
+
+	//Number Frames
+	SpriteFrame(0, 0, 8, 11, 1, 361) 		// 0 - #7
+	SpriteFrame(0, 0, 8, 11, 10, 361)		// 1 - #8
+	SpriteFrame(0, 0, 8, 11, 19, 361)		// 2 - #9
+	SpriteFrame(0, 0, 8, 11, 28, 361)		// 3 - #10
+	SpriteFrame(0, 0, 8, 11, 37, 361)		// 4 - #11
+	SpriteFrame(0, 0, 8, 11, 46, 361)		// 5 - #12
+	SpriteFrame(0, 0, 8, 11, 55, 361)		// 6 - #13
+	SpriteFrame(0, 0, 8, 11, 64, 361)		// 7 - #14
+	SpriteFrame(0, 0, 8, 11, 73, 361)		// 8 - #15
+	SpriteFrame(0, 0, 8, 11, 82, 361)		// 9 - #16
+
+	SpriteFrame(-96, 0, 44, 15, 1, 345) 	// score text - #17
+	SpriteFrame(-96, 0, 44, 15, 46, 345) 	// rings text - #18
+	SpriteFrame(-96, 0, 84, 15, 91, 345) 	// gems bonus text - #19
+	SpriteFrame(-96, 0, 92, 15, 176, 345) 	// sonic rings text - #20
 	if options.region == 0
-		SpriteFrame(-96, 0, 92, 15, 269, 345)
+		SpriteFrame(-96, 0, 92, 15, 269, 345) // tails rings text - #21
 	else
-		SpriteFrame(-96, 0, 92, 15, 269, 329)
+		SpriteFrame(-96, 0, 92, 15, 269, 329) // miles rings text - #21
 	end if
-	SpriteFrame(-96, 0, 92, 15, 362, 345)
-	SpriteFrame(-96, 50, 187, 16, 1, 277)
+	SpriteFrame(-96, 0, 92, 15, 362, 345) // gems bonus (again) - #22
+	SpriteFrame(-96, 50, 187, 16, 1, 277) // special stage text - #23
+
+	//"[Player] Got A Chaos Emerald" Frames
 	switch stage.playerListPos
-	case 0
-		SpriteFrame(-72, 32, 72, 16, 189, 277)
-		SpriteFrame(8, 32, 72, 16, 412, 277)
+	case PlayerName[SONIC]
+		SpriteFrame(-72, 32, 72, 16, 189, 277) 	// sonic text - #24
+		SpriteFrame(8, 32, 72, 16, 412, 277) 	// "got a" text - #25
 		break
-	case 1
+
+	case PlayerName[TAILS]
 		if options.region == 0
-			SpriteFrame(-69, 32, 69, 16, 262, 277)
+			SpriteFrame(-69, 32, 69, 16, 262, 277) 	// tails text - #24
 		else
-			SpriteFrame(-79, 32, 79, 16, 332, 277)
+			SpriteFrame(-79, 32, 79, 16, 332, 277) 	// miles text - #24
 		end if
-		SpriteFrame(8, 32, 72, 16, 412, 277)
+		SpriteFrame(8, 32, 72, 16, 412, 277) 		// "got a" text - #25
 		break
-	case 2
-		SpriteFrame(-104, 32, 128, 16, 1, 294)
-		SpriteFrame(32, 32, 72, 16, 412, 277)
+
+	case PlayerName[KNUCKLES]
+		SpriteFrame(-104, 32, 128, 16, 1, 294) 	// knuckles text - #24
+		SpriteFrame(32, 32, 72, 16, 412, 277) 	// "got a" text - #25
 		break
+
 	end switch
-	SpriteFrame(-104, 50, 208, 16, 130, 294)
+	SpriteFrame(-104, 50, 208, 16, 130, 294) // "chaos emerald" text - #26
+
+	//"[Player] Has All The Chaos Emeralds" Frames
 	switch stage.playerListPos
-	case 0
-		SpriteFrame(-120, 32, 72, 16, 189, 277)
-		SpriteFrame(-40, 32, 159, 16, 162, 311)
+	case PlayerName[SONIC]
+		SpriteFrame(-120, 32, 72, 16, 189, 277)	// sonic text - #37
+		SpriteFrame(-40, 32, 159, 16, 162, 311) // "has all the" text - #28
 		break
-	case 1
+
+	case PlayerName[TAILS]
 		if options.region == 0
-			SpriteFrame(-117, 32, 69, 16, 262, 277)
+			SpriteFrame(-117, 32, 69, 16, 262, 277) 	// tails text - #27
 		else
-			SpriteFrame(-127, 32, 79, 16, 332, 277)
+			SpriteFrame(-127, 32, 79, 16, 332, 277) 	// miles text - #27
 		end if
-		SpriteFrame(-40, 32, 159, 16, 162, 311)
+		SpriteFrame(-40, 32, 159, 16, 162, 311)			// "has all the" text - #28
 		break
-	case 2
-		SpriteFrame(-148, 32, 128, 16, 1, 294)
-		SpriteFrame(-12, 32, 159, 16, 162, 311)
+
+	case PlayerName[KNUCKLES]
+		SpriteFrame(-148, 32, 128, 16, 1, 294) 	// knuckles text - #27
+		SpriteFrame(-12, 32, 159, 16, 162, 311)	// "has all the" text - #28
 		break
+
 	end switch
-	SpriteFrame(-112, 50, 224, 16, 130, 294)
+	SpriteFrame(-112, 50, 224, 16, 130, 294) // "chaos emeralds" text - #29
+
+	//"Now [Player] Can be Super/Hyper [Player]"
 	switch stage.playerListPos
-	case 0
-		SpriteFrame(-96, 20, 55, 16, 355, 294)
-		SpriteFrame(-32, 20, 72, 16, 189, 277)
-		SpriteFrame(48, 20, 48, 16, 411, 294)
+	case PlayerName[SONIC]
+		SpriteFrame(-96, 20, 55, 16, 355, 294) 	// "now" text - #30
+		SpriteFrame(-32, 20, 72, 16, 189, 277)	// sonic text - #31
+		SpriteFrame(48, 20, 48, 16, 411, 294) 	// "can" text - #32
 		break
-	case 1
-		SpriteFrame(-96, 20, 55, 16, 355, 294)
+
+	case PlayerName[TAILS]
+		SpriteFrame(-96, 20, 55, 16, 355, 294)		// "now" text - #30
 		if options.region == 0
-			SpriteFrame(-32, 20, 69, 16, 262, 277)
+			SpriteFrame(-32, 20, 69, 16, 262, 277)	// tails text - #31
 		else
-			SpriteFrame(-32, 20, 79, 16, 332, 277)
+			SpriteFrame(-32, 20, 79, 16, 332, 277)	// miles text - #31
 		end if
-		SpriteFrame(48, 20, 48, 16, 411, 294)
+		SpriteFrame(48, 20, 48, 16, 411, 294)		// "can" text - #32
 		break
-	case 2
-		SpriteFrame(-124, 20, 55, 16, 355, 294)
-		SpriteFrame(-60, 20, 128, 16, 1, 294)
-		SpriteFrame(76, 20, 48, 16, 411, 294)
+
+	case PlayerName[KNUCKLES]
+		SpriteFrame(-124, 20, 55, 16, 355, 294)	// "now" text - #30
+		SpriteFrame(-60, 20, 128, 16, 1, 294)	// knuckles text - #31
+		SpriteFrame(76, 20, 48, 16, 411, 294)	// "can" text - #32
 		break
+
 	end switch
-	SpriteFrame(-80, 38, 160, 16, 1, 311)
-	if specialStage.emeralds <= 127
-		temp0 = 322
+	SpriteFrame(-80, 38, 160, 16, 1, 311) 	// "go" text - #33
+
+	if specialStage.emeralds <= 0x7F
+		temp0 = 322 //super
 	else
-		temp0 = 403
+		temp0 = 403 //hyper
 	end if
 	switch stage.playerListPos
-	case 0
-		SpriteFrame(-80, 56, 80, 16, temp0, 311)
-		SpriteFrame(8, 56, 72, 16, 189, 277)
+	case PlayerName[SONIC]
+		SpriteFrame(-80, 56, 80, 16, temp0, 311) 	// super/hyper text - #34
+		SpriteFrame(8, 56, 72, 16, 189, 277)		// sonic text - #35
 		break
-	case 1
-		SpriteFrame(-80, 56, 80, 16, temp0, 311)
+
+	case PlayerName[TAILS]
+		SpriteFrame(-80, 56, 80, 16, temp0, 311)	// super/hyper text - #34
 		if options.region == 0
-			SpriteFrame(8, 56, 69, 16, 262, 277)
+			SpriteFrame(8, 56, 69, 16, 262, 277)	// tails text - #35
 		else
-			SpriteFrame(8, 56, 79, 16, 332, 277)
+			SpriteFrame(8, 56, 79, 16, 332, 277)	// miles text - #35
 		end if
 		break
-	case 2
-		SpriteFrame(-108, 56, 80, 16, temp0, 311)
-		SpriteFrame(-20, 56, 128, 16, 1, 294)
+
+	case PlayerName[KNUCKLES]
+		SpriteFrame(-108, 56, 80, 16, temp0, 311)	// super/hyper text - #34
+		SpriteFrame(-20, 56, 128, 16, 1, 294)		// knuckles text - #35
 		break
+
 	end switch
+
+	//"Now [Player] Can Go To Hidden Palace" frames
 	switch stage.playerListPos
-	case 0
-		SpriteFrame(-72, 20, 55, 16, 355, 294)
-		SpriteFrame(0, 20, 72, 16, 189, 277)
+	case PlayerName[SONIC]
+		SpriteFrame(-72, 20, 55, 16, 355, 294) 	// "now" text - #36
+		SpriteFrame(0, 20, 72, 16, 189, 277) 	// sonic text - #37
 		break
-	case 1
-		SpriteFrame(-72, 20, 55, 16, 355, 294)
+
+	case PlayerName[TAILS]
+		SpriteFrame(-72, 20, 55, 16, 355, 294)		// "now" text - #36
 		if options.region == 0
-			SpriteFrame(0, 20, 69, 16, 262, 277)
+			SpriteFrame(0, 20, 69, 16, 262, 277)	// tails text - #37
 		else
-			SpriteFrame(0, 20, 79, 16, 332, 277)
+			SpriteFrame(0, 20, 79, 16, 332, 277)	// miles text - #37
 		end if
 		break
-	case 2
-		SpriteFrame(-100, 20, 55, 16, 355, 294)
-		SpriteFrame(-28, 20, 128, 16, 1, 294)
+	case PlayerName[KNUCKLES]
+
+		SpriteFrame(-100, 20, 55, 16, 355, 294)	// "now" text - #36
+		SpriteFrame(-28, 20, 128, 16, 1, 294)	// knuckles text - #37
 		break
 	end switch
-	SpriteFrame(-72, 38, 48, 16, 411, 294)
-	SpriteFrame(-8, 38, 32, 16, 1, 328)
-	SpriteFrame(40, 38, 32, 16, 34, 328)
-	SpriteFrame(-100, 56, 200, 16, 67, 328)
+	SpriteFrame(-72, 38, 48, 16, 411, 294)	// "can" - #38
+	SpriteFrame(-8, 38, 32, 16, 1, 328) 	// "go" - #39
+	SpriteFrame(40, 38, 32, 16, 34, 328) 	// "to" - #40
+	SpriteFrame(-100, 56, 200, 16, 67, 328) // "hidden palace" - #41
 end event
 
 event RSDKDraw
@@ -554,4 +639,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

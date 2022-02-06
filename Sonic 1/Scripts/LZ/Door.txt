@@ -6,7 +6,18 @@
 // ----------------------------------
 
 // Aliases
-private alias 62 : TYPE_DOOR
+private alias object.value0 : object.timer
+
+private alias 0 : DOOR_CLOSED
+private alias 1 : DOOR_OPENING
+private alias 2 : DOOR_OPENED
+private alias 3 : DOOR_AWAITCLOSE
+private alias 4 : DOOR_CLOSING
+
+// PushButton aliases
+private alias object.value0 : pushButton.stood
+
+private alias CurrentTunnel_value33 : CurrentTunnel_activateDelay
 
 // Function declarations
 reserve function Door_DebugDraw
@@ -24,27 +35,29 @@ end function
 function Door_DebugSpawn
 	CreateTempObject(TypeName[Door], 0, object.xpos, object.ypos)
 	object[tempObjectPos].priority = PRIORITY_ACTIVE
-	object[tempObjectPos].value0 = 32
+	object[tempObjectPos].timer = 32
 end function
 
 
 event ObjectMain
 	switch object.state
-	case 0
+	case DOOR_CLOSED
 		if object.propertyValue == 2
 			if object[0].xpos < object.xpos
-				CurrentTunnel_value33 = 4
+				CurrentTunnel_activateDelay = 4
 			end if
 		end if
-		if object[+1].value0 == 1
+
+		if pushButton[+1].stood == true
 			object.state++
 		end if
 		break
 		
-	case 1
+	case DOOR_OPENING
 		object.ypos -= 0x20000
-		object.value0--
-		if object.value0 < 0
+
+		object.timer--
+		if object.timer < 0
 			object.state++
 			if object.propertyValue == 1
 				object.state++
@@ -52,20 +65,21 @@ event ObjectMain
 		end if
 		break
 	
-	case 2
+	case DOOR_OPENED
 		break
 
-	case 3
+	case DOOR_AWAITCLOSE
 		if object[0].xpos > 0x11200000
 			object.state++
 		end if
 		break
 
-	case 4
+	case DOOR_CLOSING
 		object.ypos += 0x20000
-		object.value0++
-		if object.value0 >= 32
-			object.state = 0
+
+		object.timer++
+		if object.timer >= 32
+			object.state = DOOR_CLOSED
 		end if
 		break
 
@@ -91,7 +105,7 @@ event ObjectStartup
 
 	foreach (TypeName[Door], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
-		object[arrayPos0].value0 = 32
+		object[arrayPos0].timer = 32
 	next
 	
 	// Add this object to the debug item list
@@ -102,11 +116,41 @@ event ObjectStartup
 
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+
+	// Door frame
+	SpriteFrame(-8, -32, 16, 64, 206, 142)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Stay Opened", 0)
+	AddEnumVariable("Open Then Close", 1)
+	AddEnumVariable("Current", 2)
 end event

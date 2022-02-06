@@ -6,8 +6,9 @@
 // ----------------------------------
 
 // Aliases
-private alias 48 : TYPE_SPIRALPATH
+private alias object.value1 : object.activePlayers
 
+private alias object.value42 : player.prevGravity
 
 // Static Values
 
@@ -55,21 +56,18 @@ event ObjectMain
 	object.priority = PRIORITY_ACTIVE
 
 	temp2 = 0
-
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 
 		temp0 = object[currentPlayer].xpos
 		temp0 -= object.xpos
 
-		GetBit(temp3, object.value1, temp2)
-
+		GetBit(temp3, object.activePlayers, temp2)
 		if temp3 == false
-			if object[currentPlayer].value42 == 0
-
+			if player[currentPlayer].prevGravity == GRAVITY_GROUND
 				BoxCollisionTest(C_TOUCH, object.entityPos, -192, 8, 192, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 
 				if checkResult == true
-					SetBit(object.value1, temp2, 1)
+					SetBit(object.activePlayers, temp2, true)
 					object[currentPlayer].yvel = 0
 				end if
 
@@ -91,16 +89,13 @@ event ObjectMain
 
 			if temp3 == true
 
-				SetBit(object.value1, temp2, 0)
-
-				if object[currentPlayer].value42 == 1
+				SetBit(object.activePlayers, temp2, false)
+				if player[currentPlayer].prevGravity == GRAVITY_AIR
 					if object[currentPlayer].yvel >= 0
 						if object[currentPlayer].state != PlayerObject_HandleFlyCarry
 							if object[currentPlayer].animation != ANI_SKIDDING
-
 								object[currentPlayer].animation = ANI_TWIRL
 								object[currentPlayer].angle = 0
-
 							end if
 						end if
 					end if
@@ -139,7 +134,7 @@ event ObjectMain
 							object[currentPlayer].rotation = 0
 						else
 							GetTableValue(object[currentPlayer].frame, temp0, SpiralPath_spriteTable)
-							object[currentPlayer].rotation = 256
+							object[currentPlayer].rotation = 256 // flipY
 						end if
 
 					end if
@@ -151,22 +146,19 @@ event ObjectMain
 		end if
 
 		temp2++
-
 	next
 
 	if object.outOfBounds == true
-
 		object.priority = PRIORITY_ACTIVE_BOUNDS
 
 		temp0 = 0
-
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -192, 8, 192, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			temp0 |= checkResult
 		next
 
 		if temp0 == false
-			object.value1 = 0
+			object.activePlayers = 0
 		end if
 
 	end if
@@ -180,4 +172,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

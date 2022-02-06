@@ -8,6 +8,11 @@
 // Aliases
 private alias 54 : TYPE_BUZZER
 
+private alias object.value40 :	player.hitboxLeft
+private alias object.value38 :	player.hitboxTop
+private alias object.value41 :	player.hitboxRight
+private alias object.value39 :	player.hitboxBottom
+
 // Function declarations
 reserve function Buzzer_DebugDraw
 reserve function Buzzer_DebugSpawn
@@ -124,9 +129,10 @@ event ObjectMain
 				end if
 			end if
 		end if
+
 		if object.state < 3
-			BoxCollisionTest(C_TOUCH, object.entityPos, -24, -12, 24, 12, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-			if checkResult == 1
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 12, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+			if checkResult == true
 				CallFunction(PlayerObject_BadnikBreak)
 			end if
 		end if
@@ -159,7 +165,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone01")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("EHZ/Objects.gif")
 		SpriteFrame(-24, -8, 48, 16, 1, 1)
 		SpriteFrame(-24, -8, 42, 31, 1, 18)
@@ -174,6 +180,7 @@ event ObjectStartup
 		SpriteFrame(5, -8, 6, 5, 137, 331)
 		SpriteFrame(5, -8, 7, 5, 137, 337)
 	end if
+
 	foreach (TypeName[Buzzer], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].value1 = object[arrayPos0].xpos
 		GetBit(temp0, object[arrayPos0].propertyValue, 0)
@@ -185,17 +192,67 @@ event ObjectStartup
 			object[arrayPos0].xvel = 0x10000
 		end if
 	next
+
 	SetTableValue(TypeName[Buzzer], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Buzzer_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Buzzer_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // direction
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // direction
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	GetBit(temp0, object.propertyValue, 0)
+	if temp0 == false
+		object.direction = FLIP_NONE
+	else
+		object.direction = FLIP_X
+	end if
+
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 1, 1)
+		SpriteFrame(-24, -8, 42, 31, 1, 18)
+		SpriteFrame(1, 6, 17, 17, 50, 1)
+		SpriteFrame(5, -8, 6, 5, 19, 50)
+		SpriteFrame(5, -8, 7, 5, 19, 56)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -8, 48, 16, 1, 256)
+		SpriteFrame(-24, -8, 42, 31, 1, 273)
+		SpriteFrame(1, 6, 17, 17, 268, 501)
+		SpriteFrame(5, -8, 6, 5, 137, 331)
+		SpriteFrame(5, -8, 7, 5, 137, 337)
+	end if
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
 end event

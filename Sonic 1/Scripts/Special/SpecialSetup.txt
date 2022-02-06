@@ -6,25 +6,76 @@
 // ----------------------------------
 
 // Aliases
-private alias 2 : TYPE_SPECIALSETUP
+private alias object.value0 : object.timer
+private alias object.value1 : object.bgClr.r
+private alias object.value2 : object.bgClr.g
+private alias object.value3 : object.bgClr.b
+private alias object.value4 : object.bgClr.a
+
+// States
+private alias 0  : SPECIALSETUP_0
+private alias 1  : SPECIALSETUP_1
+private alias 2  : SPECIALSETUP_2
+private alias 3  : SPECIALSETUP_3
+private alias 4  : SPECIALSETUP_4
+private alias 5  : SPECIALSETUP_5
+private alias 6  : SPECIALSETUP_6
+private alias 7  : SPECIALSETUP_7
+private alias 8  : SPECIALSETUP_8
+private alias 9  : SPECIALSETUP_9
+private alias 10 : SPECIALSETUP_10
+private alias 11 : SPECIALSETUP_11
+private alias 12 : SPECIALSETUP_12
+private alias 13 : SPECIALSETUP_13
+private alias 14 : SPECIALSETUP_14
+private alias 15 : SPECIALSETUP_15
+private alias 16 : SPECIALSETUP_16
+private alias 17 : SPECIALSETUP_17
+private alias 18 : SPECIALSETUP_18
+private alias 19 : SPECIALSETUP_19
+private alias 20 : SPECIALSETUP_20
+private alias 21 : SPECIALSETUP_21
+private alias 22 : SPECIALSETUP_22
+private alias 23 : SPECIALSETUP_23
+private alias 24 : SPECIALSETUP_24
+private alias 25 : SPECIALSETUP_25
+private alias 26 : SPECIALSETUP_26
+private alias 27 : SPECIALSETUP_27
+
+// Game Modes
+public alias 1 : MODE_NORMAL
+public alias 2 : MODE_TIMEATTACK
+
+// Music Events
+public alias 25 : SLOT_MUSICEVENT_CHANGE
+public alias 26 : SLOT_MUSICEVENT_BOSS
+
+public alias 2 : MUSICEVENT_TRANSITION
+
+public alias 0 : MUSICEVENT_FLAG_NOCHANGE
+public alias 1 : MUSICEVENT_FLAG_SPEEDUP
+public alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+// Player Aliases
+private alias object.value11 : player.collisionFlags
 
 // Function declarations
-reserve function SpecialSetup_Function7
-reserve function SpecialSetup_Function8
-reserve function SpecialSetup_Function9
-reserve function SpecialSetup_Function10
+reserve function SpecialSetup_CopyAniTiles
+reserve function SpecialSetup_ProcessHScroll
+reserve function SpecialSetup_GetBlockPos
+reserve function SpecialSetup_PlayerBlockCol
 
 // Static Values
-public value SpecialSetup_value10 = 0;
-public value SpecialSetup_value11 = 0;
-public value SpecialSetup_value12 = 0;
+public value SpecialSetup_gemBlockTimer = 0
+public value SpecialSetup_gemBlockBusy = false
+public value SpecialSetup_blockTimer = 0
 
 // Tables
-public table SpecialSetup_table0
+public table SpecialSetup_replay_attract
 	0xF00000, 0x340000, 0, 68, 48, 1, 32, 2, 36, 25, 4, 12, 0, 8, 8, 28, 0, 53, 48, 1, 32, 30, 40, 8, 8, 2, 0, 3, 4, 35, 0, 85, 4, 21, 0, 66, 4, 19, 0, 68, 56, 1, 40, 24, 8, 20, 56, 1, 40, 12, 8, 124, 0, 73, 8, 12, 56, 1, 40, 7, 8, 6, 0, 7, 4, 31, 0, 31, 48, 1, 32, 5, 0, 30, 8, 24, 0, 21, 56, 1, 40, 8, 8, 6, 0, 17, 8, 43, 56, 1, 40, 12, 8, 27, 
 end table
 
-function SpecialSetup_Function7
+function SpecialSetup_CopyAniTiles
 	temp0 = 0
 	while temp0 < 16
 		Copy16x16Tile(temp1, temp2)
@@ -35,20 +86,23 @@ function SpecialSetup_Function7
 end function
 
 
-function SpecialSetup_Function8
+function SpecialSetup_ProcessHScroll
 	temp0 = oscillation
 	temp0 <<= 1
 	Sin(hParallax[8].scrollPos, temp0)
 	hParallax[8].scrollPos <<= 10
+
 	temp0 = oscillation
 	temp0 <<= 2
 	Sin(hParallax[9].scrollPos, temp0)
 	hParallax[9].scrollPos <<= 9
+
 	temp0 = oscillation
 	temp0 <<= 1
 	temp0 += 256
 	Sin(hParallax[10].scrollPos, temp0)
 	hParallax[10].scrollPos <<= 11
+
 	temp0 = oscillation
 	temp0 <<= 2
 	temp0 += 128
@@ -57,70 +111,76 @@ function SpecialSetup_Function8
 end function
 
 
-function SpecialSetup_Function9
+function SpecialSetup_GetBlockPos
 	temp2 = object.xpos
 	temp2 -= object[0].xpos
 	temp2 >>= 8
 	temp3 = object.ypos
 	temp3 -= object[0].ypos
 	temp3 >>= 8
-	Sin(temp4, PlayerObject_value1)
+
+	Sin(temp4, PlayerObject_stageRotation)
 	temp4 *= temp3
-	Cos(temp5, PlayerObject_value1)
+	Cos(temp5, PlayerObject_stageRotation)
 	temp5 *= temp2
 	temp0 = temp4
 	temp0 += temp5
 	temp0 >>= 1
 	temp0 += object[0].xpos
-	Cos(temp4, PlayerObject_value1)
+
+	Cos(temp4, PlayerObject_stageRotation)
 	temp4 *= temp3
-	Sin(temp5, PlayerObject_value1)
+	Sin(temp5, PlayerObject_stageRotation)
 	temp5 *= temp2
 	temp1 = temp4
 	temp1 -= temp5
 	temp1 >>= 1
 	temp1 += object[0].ypos
-	object.rotation = 512
-	object.rotation -= PlayerObject_value1
+	
+	object.rotation = 0x200
+	object.rotation -= PlayerObject_stageRotation
 end function
 
 
-function SpecialSetup_Function10
+function SpecialSetup_PlayerBlockCol
 	BoxCollisionTest(C_BOX2, object.entityPos, -12, -12, 12, 12, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 	if checkResult != 0
-		SetBit(object[0].value11, checkResult, 1)
+		SetBit(player[0].collisionFlags, checkResult, true)
 	else
 		BoxCollisionTest(C_TOUCH, object.entityPos, -10, -10, 10, 10, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
+		if checkResult == true
 			temp0 = object[0].xvel
 			temp1 = object[0].yvel
 			Abs(temp0)
 			Abs(temp1)
+
 			if temp0 > temp1
 				if object[0].xvel > 0
-					SetBit(object[0].value11, 2, 1)
+					SetBit(player[0].collisionFlags, COL_LEFT, true)
 					object[0].xpos = object[0].collisionLeft
 					object[0].xpos -= 12
 					object[0].xpos <<= 16
 				else
-					SetBit(object[0].value11, 3, 1)
+					SetBit(player[0].collisionFlags, COL_RIGHT, true)
 					object[0].xpos = object[0].collisionRight
 					object[0].xpos += 12
 					object[0].xpos <<= 16
 				end if
+
 				object[0].xpos += object.xpos
 			else
 				if object[0].yvel > 0
-					SetBit(object[0].value11, 1, 1)
+					SetBit(player[0].collisionFlags, COL_TOP, true)
 					object[0].ypos = object[0].collisionTop
 					object[0].ypos -= 12
 					object[0].ypos <<= 16
 				else
-					SetBit(object[0].value11, 4, 1)
+					SetBit(player[0].collisionFlags, COL_BOTTOM, true)
 					object[0].ypos = object[0].collisionBottom
 					object[0].ypos += 12
 					object[0].ypos <<= 16
 				end if
+
 				object[0].ypos += object.ypos
 			end if
 		end if
@@ -129,390 +189,436 @@ end function
 
 
 event ObjectMain
-	if PlayerObject_value3 == 0
-		switch PlayerObject_value2
+	if PlayerObject_rotateDir == 0
+		switch PlayerObject_rotateSpeed
 		case 0
 			temp0 = oscillation
 			temp0 &= 1
-			PlayerObject_value1 -= temp0
-			if PlayerObject_value1 < 0
-				PlayerObject_value1 += 512
+			PlayerObject_stageRotation -= temp0
+			if PlayerObject_stageRotation < 0
+				PlayerObject_stageRotation += 0x200
 			end if
 			break
+
 		case 1
-			PlayerObject_value1--
-			if PlayerObject_value1 < 0
-				PlayerObject_value1 += 512
+			PlayerObject_stageRotation--
+			if PlayerObject_stageRotation < 0
+				PlayerObject_stageRotation += 0x200
 			end if
 			break
 		end switch
 	else
-		switch PlayerObject_value2
+		switch PlayerObject_rotateSpeed
 		case 0
 			temp0 = oscillation
 			temp0 &= 1
-			PlayerObject_value1 += temp0
-			PlayerObject_value1 &= 511
+			PlayerObject_stageRotation += temp0
+			PlayerObject_stageRotation &= 0x1FF
 			break
+
 		case 1
-			PlayerObject_value1++
-			PlayerObject_value1 &= 511
+			PlayerObject_stageRotation++
+			PlayerObject_stageRotation &= 0x1FF
 			break
 		end switch
 	end if
+
 	oscillation++
-	oscillation &= 511
-	SpecialSetup_value10++
-	SpecialSetup_value10 %= 20
-	SpecialSetup_value12++
-	SpecialSetup_value12 &= 63
+	oscillation &= 0x1FF
+	SpecialSetup_gemBlockTimer++
+	SpecialSetup_gemBlockTimer %= 20
+	SpecialSetup_blockTimer++
+	SpecialSetup_blockTimer &= 0x3F
+	
 	switch object.state
-	case 0
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 160
-			object.value3 = 160
-			object.value4 = 255
+	case SPECIALSETUP_0
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0xA0
+			object.bgClr.b = 0xA0
+			object.bgClr.a = 0xFF
 			temp1 = 184
 			temp2 = 264
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 1
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 96
-			object.value3 = 128
-			object.value4 = 255
+
+	case SPECIALSETUP_1
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x60
+			object.bgClr.b = 0x80
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 2
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 64
-			object.value3 = 96
-			object.value4 = 255
+
+	case SPECIALSETUP_2
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x40
+			object.bgClr.b = 0x60
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 3
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 0
-			object.value3 = 64
-			object.value4 = 255
+
+	case SPECIALSETUP_3
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x00
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 4
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			stage[0].activeLayer = 1
-			object.value1 = 0
-			object.value2 = 0
-			object.value3 = 64
-			object.value4 = 224
+
+	case SPECIALSETUP_4
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			stage.activeLayer[0] = 1
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x00
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xE0
 			temp1 = 104
 			temp2 = 136
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 5
-		if object.value4 > 0
-			object.value4 -= 16
+
+	case SPECIALSETUP_5
+		if object.bgClr.a > 0x00
+			object.bgClr.a -= 0x10
 		end if
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
+
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
 			temp1 = 104
 			temp2 = 152
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 6
-		if object.value4 > 0
-			object.value4 -= 16
+
+	case SPECIALSETUP_6
+		if object.bgClr.a > 0x00
+			object.bgClr.a -= 0x10
 		end if
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
-			stage[1].activeLayer = 4
+
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+			stage.activeLayer[1] = 4
 			hParallax[0].scrollSpeed = -0x10000
 			object.state++
 		end if
 		break
-	case 7
-		object.value0++
-		if object.value0 == 1020
-			object.value0 = 0
-			stage[1].activeLayer = 3
+
+	case SPECIALSETUP_7
+		object.timer++
+		if object.timer == 1020
+			object.timer = 0
+			stage.activeLayer[1] = 3
 			hParallax[0].scrollSpeed = 0
 			object.state++
 		end if
 		break
-	case 8
-		if object.value4 < 0
-			object.value4 += 16
+
+	case SPECIALSETUP_8
+		if object.bgClr.a < 0x00
+			object.bgClr.a += 0x10
 		end if
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
+
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+
 			temp1 = 104
 			temp2 = 136
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 9
-		if object.value4 < 0
-			object.value4 += 16
+
+	case SPECIALSETUP_9
+		if object.bgClr.a < 0x00
+			object.bgClr.a += 0x10
 		end if
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 0
-			object.value3 = 64
-			object.value4 = 255
+
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x00
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			temp1 = 104
 			temp2 = 120
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 10
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 64
-			object.value3 = 96
-			object.value4 = 255
+
+	case SPECIALSETUP_10
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x40
+			object.bgClr.b = 0x60
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 11
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 96
-			object.value3 = 128
-			object.value4 = 255
+
+	case SPECIALSETUP_11
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x60
+			object.bgClr.b = 0x80
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 12
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 160
-			object.value3 = 160
-			object.value4 = 255
+
+	case SPECIALSETUP_12
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0xA0
+			object.bgClr.b = 0xA0
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 13
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value4 = 0
+
+	case SPECIALSETUP_13
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.a = 0x00
+
 			temp1 = 184
 			temp2 = 200
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 14
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
-			object.value1 = 96
-			object.value2 = 192
-			object.value3 = 64
-			object.value4 = 255
+
+	case SPECIALSETUP_14
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+			object.bgClr.r = 0x60
+			object.bgClr.g = 0xC0
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			temp1 = 104
 			temp2 = 264
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 15
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 64
-			object.value2 = 128
-			object.value3 = 64
-			object.value4 = 255
+
+	case SPECIALSETUP_15
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x40
+			object.bgClr.g = 0x80
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 16
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 32
-			object.value2 = 64
-			object.value3 = 64
-			object.value4 = 255
+
+	case SPECIALSETUP_16
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x20
+			object.bgClr.g = 0x40
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 17
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 0
-			object.value3 = 64
-			object.value4 = 255
+
+	case SPECIALSETUP_17
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x00
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 18
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			stage[0].activeLayer = 2
-			object.value1 = 0
-			object.value2 = 0
-			object.value3 = 64
-			object.value4 = 224
+
+	case SPECIALSETUP_18
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			stage.activeLayer[0] = 2
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x00
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xE0
+
 			temp1 = 184
 			temp2 = 216
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 19
-		CallFunction(SpecialSetup_Function8)
-		if object.value4 > 0
-			object.value4 -= 16
+
+	case SPECIALSETUP_19
+		CallFunction(SpecialSetup_ProcessHScroll)
+		if object.bgClr.a > 0x00
+			object.bgClr.a -= 0x10
 		end if
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
+
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+
 			temp1 = 184
 			temp2 = 232
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 20
-		CallFunction(SpecialSetup_Function8)
-		if object.value4 > 0
-			object.value4 -= 16
+
+	case SPECIALSETUP_20
+		CallFunction(SpecialSetup_ProcessHScroll)
+		if object.bgClr.a > 0x00
+			object.bgClr.a -= 0x10
 		end if
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
-			stage[1].activeLayer = 5
+
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+			stage.activeLayer[1] = 5
 			hParallax[0].scrollSpeed = 0x10000
 			object.state++
 		end if
 		break
-	case 21
-		CallFunction(SpecialSetup_Function8)
-		object.value0++
-		if object.value0 == 1020
-			object.value0 = 0
-			stage[1].activeLayer = 3
+
+	case SPECIALSETUP_21
+		CallFunction(SpecialSetup_ProcessHScroll)
+		object.timer++
+		if object.timer == 1020
+			object.timer = 0
+			stage.activeLayer[1] = 3
 			hParallax[0].scrollSpeed = 0
 			object.state++
 		end if
 		break
-	case 22
-		CallFunction(SpecialSetup_Function8)
-		if object.value4 < 0
-			object.value4 += 16
+
+	case SPECIALSETUP_22
+		CallFunction(SpecialSetup_ProcessHScroll)
+		if object.bgClr.a < 0x00
+			object.bgClr.a += 0x10
 		end if
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
+
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+
 			temp1 = 184
 			temp2 = 216
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 23
-		CallFunction(SpecialSetup_Function8)
-		if object.value4 < 0
-			object.value4 += 16
+
+	case SPECIALSETUP_23
+		CallFunction(SpecialSetup_ProcessHScroll)
+		if object.bgClr.a < 0x00
+			object.bgClr.a += 0x10
 		end if
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
-			object.value1 = 0
-			object.value2 = 0
-			object.value3 = 64
-			object.value4 = 255
+
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+			object.bgClr.r = 0x00
+			object.bgClr.g = 0x00
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
+
 			temp1 = 184
 			temp2 = 200
-			CallFunction(SpecialSetup_Function7)
+			CallFunction(SpecialSetup_CopyAniTiles)
 			object.state++
 		end if
 		break
-	case 24
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 32
-			object.value2 = 64
-			object.value3 = 64
-			object.value4 = 255
+
+	case SPECIALSETUP_24
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x20
+			object.bgClr.g = 0x40
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 25
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 64
-			object.value2 = 128
-			object.value3 = 64
-			object.value4 = 255
+
+	case SPECIALSETUP_25
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x40
+			object.bgClr.g = 0x80
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 26
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value1 = 96
-			object.value2 = 192
-			object.value3 = 64
-			object.value4 = 255
+
+	case SPECIALSETUP_26
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.r = 0x60
+			object.bgClr.g = 0xC0
+			object.bgClr.b = 0x40
+			object.bgClr.a = 0xFF
 			object.state++
 		end if
 		break
-	case 27
-		object.value0++
-		if object.value0 == 4
-			object.value0 = 0
-			object.value4 = 0
+
+	case SPECIALSETUP_27
+		object.timer++
+		if object.timer == 4
+			object.timer = 0
+			object.bgClr.a = 0x00
 			temp1 = 104
 			temp2 = 120
-			CallFunction(SpecialSetup_Function7)
-			object.state = 0
+			CallFunction(SpecialSetup_CopyAniTiles)
+			object.state = SPECIALSETUP_0
 		end if
 		break
 	end switch
+
 	ringTimer++
 	if ringTimer == 4
 		ringTimer = 0
@@ -529,44 +635,50 @@ event ObjectDraw
 	screen.yoffset = object[0].ypos
 	screen.yoffset >>= 16
 	screen.yoffset -= 104
-	DrawRect(0, 0, screen.xsize, screen.ysize, object.value1, object.value2, object.value3, object.value4)
+	DrawRect(0, 0, screen.xsize, screen.ysize, object.bgClr.r, object.bgClr.g, object.bgClr.b, object.bgClr.a)
 end event
 
 
 event ObjectStartup
-	SetMusicTrack("Specialstage.ogg", 0, 1)
-	SetMusicTrack("ActComplete.ogg", 1, 0)
-	if options.gameMode == 2
+	SetMusicTrack("Specialstage.ogg", 0, true)
+	SetMusicTrack("ActComplete.ogg", 1, false)
+
+	if options.gameMode == MODE_TIMEATTACK
 		object[9].type = TypeName[HUD]
 		object[9].priority = PRIORITY_ACTIVE
 		object[9].drawOrder = 6
 		object[9].propertyValue = object[arrayPos0].propertyValue
-		stage.timeEnabled = 1
+		stage.timeEnabled = true
 	end if
+
 	object[19].type = TypeName[Special Setup]
 	object[19].priority = PRIORITY_ACTIVE
 	object[19].drawOrder = 1
 	object[20].type = TypeName[Fade In]
 	object[20].priority = PRIORITY_ACTIVE
-	stage[0].activeLayer = 9
-	stage[1].activeLayer = 3
-	stage[2].activeLayer = 9
-	stage[3].activeLayer = 9
-	if options.attractMode == 0
+	stage.activeLayer[0] = 9
+	stage.activeLayer[1] = 3
+	stage.activeLayer[2] = 9
+	stage.activeLayer[3] = 9
+	
+	if options.attractMode == false
+		// some code... probably
 	else
-		stage.pauseEnabled = 0
-		options.touchControls = 0
+		stage.pauseEnabled = false
+		options.touchControls = false
 	end if
+
 	ringExtraLife = 100
-	SpecialSetup_value10 = 0
-	SpecialSetup_value11 = 0
-	SpecialSetup_value12 = 0
-	PlayerObject_value2 = 0
-	PlayerObject_value3 = 0
-	if options.attractMode == 1
-		PlayerObject_ReplayData = SpecialSetup_table0
-		PlayerObject_ReplaySize = 94
-		PlayerObject_ReplayLength = 0x4B0
+	SpecialSetup_gemBlockTimer 	= 0
+	SpecialSetup_gemBlockBusy 	= false
+	SpecialSetup_blockTimer 	= 0
+	PlayerObject_rotateSpeed 	= 0
+	PlayerObject_rotateDir 		= 0
+
+	if options.attractMode == true
+		PlayerObject_replayData = SpecialSetup_replay_attract
+		PlayerObject_replaySize = 94
+		PlayerObject_replayLength = 1200
 		CallFunction(PlayerObject_InitReplay)
 	end if
 end event
@@ -578,4 +690,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

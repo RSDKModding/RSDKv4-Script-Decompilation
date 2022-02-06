@@ -5,6 +5,8 @@
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// Looks like this is one of the objects that was programmed during the "S1 proto" phase, since it only uses values0-7 and doesn't use v4 syntax much at all
+
 // Aliases
 private alias object.xpos   : object.decorPos
 private alias object.ypos   : object.actPos
@@ -33,10 +35,6 @@ private alias 9  : ACTFINISH_EXITUISPRITES
 private alias 10 : ACTFINISH_EXITTEXT
 private alias 11 : ACTFINISH_EXITSCORES
 
-// Static Values
-
-// Tables
-
 event ObjectMain
 	switch object.state
 	case ACTFINISH_INIT
@@ -59,8 +57,8 @@ event ObjectMain
 		object.ringPos = object.timePos
 		object.ringPos += 32
 
-		if PlayerObject_SuperState == 1
-			PlayerObject_SuperState = 2
+		if PlayerObject_SuperState == SUPERSTATE_SUPER
+			PlayerObject_SuperState = SUPERSTATE_FADEOUT
 		end if
 
 		switch stage.minutes
@@ -101,8 +99,8 @@ event ObjectMain
 			break
 
 		case 9
-			if stage.debugMode == 0
-				if options.gameMode < 2
+			if stage.debugMode == false
+				if options.gameMode < MODE_TIMEATTACK
 					if stage.seconds == 59
 						object.timeBonus = 100000
 					end if
@@ -222,7 +220,8 @@ event ObjectMain
 		object.timer++
 		if object.timer == 160
 			object.timer = 0
-			if options.gameMode != 2
+
+			if options.gameMode != MODE_TIMEATTACK
 				CheckCurrentStageFolder("Zone06")
 				temp0 = checkResult
 				CheckEqual(stage.actNum, 2)
@@ -261,11 +260,12 @@ event ObjectMain
 				object.timer = 0
 				lampPostID = 0
 				stage.listPos++
-				if options.gameMode == 1
+
+				if options.gameMode == MODE_NORMAL
 					arrayPos1 = options.saveSlot
 					arrayPos1 <<= 3
 					if stage.player2Enabled == true
-						saveRAM[arrayPos1] = 3
+						saveRAM[arrayPos1] = PlayerName[SONIC AND TAILS]
 					else
 						saveRAM[arrayPos1] = stage.playerListPos
 					end if
@@ -314,11 +314,12 @@ event ObjectMain
 				lampPostID = 0
 				object.direction = FLIP_NONE
 				stage.listPos++
-				if options.gameMode == 1
+
+				if options.gameMode == MODE_NORMAL
 					arrayPos1 = options.saveSlot
 					arrayPos1 <<= 3
 					if stage.player2Enabled == true
-						saveRAM[arrayPos1] = 3
+						saveRAM[arrayPos1] = PlayerName[SONIC AND TAILS]
 					else
 						saveRAM[arrayPos1] = stage.playerListPos
 					end if
@@ -341,7 +342,7 @@ event ObjectMain
 					WriteSaveRAM()
 				end if
 
-				if options.gameMode == 2
+				if options.gameMode == MODE_TIMEATTACK
 					timeAttack.result = stage.seconds
 					timeAttack.result *= 100
 					temp0 = stage.minutes
@@ -350,7 +351,7 @@ event ObjectMain
 					timeAttack.result += stage.milliSeconds
 					stage.listPos--
 					CallNativeFunction2(SetLeaderboard, stage.listPos, timeAttack.result)
-					engine.state = 8
+					engine.state = ENGINE_RESETGAME
 				else
 					temp0 = engine.trialMode
 					if stage.listPos >= stage.listSize
@@ -554,4 +555,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

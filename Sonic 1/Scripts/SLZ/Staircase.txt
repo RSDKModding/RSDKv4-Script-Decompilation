@@ -6,7 +6,15 @@
 // ----------------------------------
 
 // Aliases
-private alias 51 : TYPE_STAIRCASE
+private alias object.value0 : object.timer
+private alias object.value1 : object.stairPos
+
+private alias 0 : STAIRCASE_ACTIVATE_TOP
+private alias 1 : STAIRCASE_ACTIVATING_TOP
+private alias 2 : STAIRCASE_LOWERING
+private alias 3 : STAIRCASE_LOWERED
+private alias 4 : STAIRCASE_ACTIVATE_BOTTOM
+private alias 5 : STAIRCASE_ACTIVATING_BOTTOM
 
 // Function declarations
 reserve function Staircase_DebugDraw
@@ -35,26 +43,29 @@ end function
 event ObjectMain
 	object.priority = PRIORITY_ACTIVE
 	switch object.state
-	case 0
+	case STAIRCASE_ACTIVATE_TOP
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 112, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object.value0 = 32
+			if checkResult == COL_TOP
+				object.timer = 32
 				object.state++
 			end if
 		next
 		break
-	case 1
+
+	case STAIRCASE_ACTIVATING_TOP
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 112, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
-		object.value0--
-		if object.value0 < 0
-			object.value0 = 128
+
+		object.timer--
+		if object.timer < 0
+			object.timer = 128
 			object.state++
 		end if
 		break
-	case 2
+
+	case STAIRCASE_LOWERING
 		temp0 = object.xpos
 		temp1 = object.ypos
 		if object.direction == FLIP_NONE
@@ -63,13 +74,14 @@ event ObjectMain
 		else
 			temp4 = 0x200000
 		end if
-		temp5 = object.value1
+
+		temp5 = object.stairPos
 		temp2 = 1
 		while temp2 < 5
 			object.ypos += temp5
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == COL_TOP
 					temp6 = object.ypos
 					temp6 &= -0x10000
 					temp7 = 0x4000
@@ -79,8 +91,9 @@ event ObjectMain
 					temp7 -= temp6
 					object[currentPlayer].ypos += temp7
 				end if
+
 				if object[currentPlayer].gravity == GRAVITY_GROUND
-					if checkResult == 4
+					if checkResult == COL_BOTTOM
 						CallFunction(PlayerObject_Kill)
 					end if
 				end if
@@ -88,15 +101,17 @@ event ObjectMain
 			object.xpos += temp4
 			temp2++
 		loop
-		object.value1 += 0x4000
+		object.stairPos += 0x4000
 		object.xpos = temp0
 		object.ypos = temp1
-		object.value0--
-		if object.value0 <= 0
+
+		object.timer--
+		if object.timer <= 0
 			object.state++
 		end if
 		break
-	case 3
+
+	case STAIRCASE_LOWERED
 		temp0 = object.xpos
 		temp1 = object.ypos
 		if object.direction == FLIP_NONE
@@ -105,14 +120,15 @@ event ObjectMain
 		else
 			temp4 = 0x200000
 		end if
-		temp5 = object.value1
+
+		temp5 = object.stairPos
 		temp2 = 1
 		while temp2 < 5
 			object.ypos += temp5
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if object[currentPlayer].gravity == GRAVITY_GROUND
-					if checkResult == 4
+					if checkResult == COL_BOTTOM
 						CallFunction(PlayerObject_Kill)
 					end if
 				end if
@@ -123,32 +139,37 @@ event ObjectMain
 		object.xpos = temp0
 		object.ypos = temp1
 		break
-	case 4
+
+	case STAIRCASE_ACTIVATE_BOTTOM
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 112, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 4
-				object.value0 = 59
+			if checkResult == COL_BOTTOM
+				object.timer = 59
 				object.state++
 			end if
 		next
 		break
-	case 5
+
+	case STAIRCASE_ACTIVATING_BOTTOM
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 112, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
-		object.value0--
-		if object.value0 < 0
-			object.value0 = 128
-			object.state = 2
+
+		object.timer--
+		if object.timer < 0
+			object.timer = 128
+			object.state = STAIRCASE_LOWERING
 		end if
 		break
+
 	end switch
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		object.priority = PRIORITY_ACTIVE_BOUNDS
-		object.state = 0
-		object.value1 = 0
+		object.state = STAIRCASE_ACTIVATE_TOP
+		object.stairPos = 0
 		if object.propertyValue == 2
-			object.state = 4
+			object.state = STAIRCASE_ACTIVATE_BOTTOM
 		end if
 	end if
 end event
@@ -156,13 +177,14 @@ end event
 
 event ObjectDraw
 	switch object.state
-	case 0
-	case 1
-	case 4
+	case STAIRCASE_ACTIVATE_TOP
+	case STAIRCASE_ACTIVATING_TOP
+	case STAIRCASE_ACTIVATE_BOTTOM
 		DrawSprite(0)
 		break
-	case 2
-	case 3
+
+	case STAIRCASE_LOWERING
+	case STAIRCASE_LOWERED
 		temp2 = object.xpos
 		temp3 = object.ypos
 		if object.direction == FLIP_NONE
@@ -171,7 +193,7 @@ event ObjectDraw
 		else
 			temp4 = 0x200000
 		end if
-		temp5 = object.value1
+		temp5 = object.stairPos
 		temp3 += temp5
 		DrawSpriteXY(1, temp2, temp3)
 		temp2 += temp4
@@ -184,7 +206,8 @@ event ObjectDraw
 		temp3 += temp5
 		DrawSpriteXY(1, temp2, temp3)
 		break
-	case 5
+
+	case STAIRCASE_ACTIVATING_BOTTOM
 		temp2 = object.xpos
 		if object.direction == FLIP_NONE
 			temp2 += 0x600000
@@ -192,7 +215,8 @@ event ObjectDraw
 		else
 			temp4 = 0x200000
 		end if
-		GetBit(temp5, object.value0, 2)
+
+		GetBit(temp5, object.timer, 2)
 		temp5 <<= 16
 		temp6 = 0
 		while temp6 < 4
@@ -214,7 +238,7 @@ event ObjectStartup
 	SpriteFrame(-16, -16, 32, 32, 67, 26)
 	foreach (TypeName[Staircase], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue == 2
-			object[arrayPos0].state = 4
+			object[arrayPos0].state = STAIRCASE_ACTIVATE_BOTTOM
 		end if
 	next
 	SetTableValue(TypeName[Staircase], DebugMode_ObjCount, DebugMode_TypesTable)
@@ -223,11 +247,67 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
+	// Staircase (Activated)
+	object.inkEffect = INK_BLEND
+	temp2 = object.xpos
+	temp3 = object.ypos
+	if object.direction == FLIP_NONE
+		temp2 += 0x600000
+		temp4 = -0x200000
+	else
+		temp4 = 0x200000
+	end if
+
+	temp5 = 0x200000
+	temp3 += temp5
+	DrawSpriteFX(1, FX_INK, temp2, temp3)
+	temp2 += temp4
+	temp3 += temp5
+	DrawSpriteFX(1, FX_INK, temp2, temp3)
+	temp2 += temp4
+	temp3 += temp5
+	DrawSpriteFX(1, FX_INK, temp2, temp3)
+	temp2 += temp4
+	temp3 += temp5
+	DrawSpriteFX(1, FX_INK, temp2, temp3)
+	
+	// Staircase (Not Activated)
+	object.inkEffect = INK_NONE
 	DrawSprite(0)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SLZ/Objects.gif")
+	SpriteFrame(-16, -16, 128, 32, 67, 26)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Activate From Top", 0)
+	// 1 goes unused, it was prolly for directions before it was migrated to just object.direction directly
+	AddEnumVariable("Activate From Bottom", 2)
 end event

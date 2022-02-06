@@ -6,8 +6,6 @@
 // ----------------------------------
 
 // Aliases
-private alias 75 : TYPE_FZINTRO
-
 private alias object.value0 : object.targetPlayer
 
 private alias object.state 		: player.state
@@ -20,13 +18,17 @@ private alias object.direction 	: player.direction
 private alias object.animation 	: player.animation
 private alias object.value26 	: player.flightVelocity
 
+private alias 0 : FZINTRO_MANAGER
+private alias 1 : FZINTRO_INTRO
+private alias 2 : FZINTRO_DESTROY
+
 event ObjectMain
 
 	switch object.state
-	case 0
+	case FZINTRO_MANAGER
 		tileLayer[2].scrollPos = 0x800000
 		hParallax[0].scrollPos = -0x800000
-		if recAnimation != 0
+		if recAnimation != ANI_STOPPED
 			temp0 = recAnimation
 			currentPlayer = 0
 
@@ -35,13 +37,13 @@ event ObjectMain
 				player[currentPlayer].xpos = object.xpos
 				player[currentPlayer].ypos = object.ypos
 				CreateTempObject(TypeName[FZ Intro], 0, object.xpos, object.ypos)
-				object[tempObjectPos].state = 1
+				object[tempObjectPos].state = FZINTRO_INTRO
 				object[tempObjectPos].targetPlayer = currentPlayer
 				object[tempObjectPos].direction = temp0
-				object[tempObjectPos].direction &= 255
+				object[tempObjectPos].direction &= 0xFF
 				temp0 >>= 8
 				object[tempObjectPos].animation = temp0
-				object[tempObjectPos].animation &= 255
+				object[tempObjectPos].animation &= 0xFF
 				temp0 >>= 8
 				player[currentPlayer].yvel = -0x80000
 				player[currentPlayer].gravity = GRAVITY_AIR
@@ -57,7 +59,7 @@ event ObjectMain
 		stage.newYBoundary1 = temp0
 		break
 
-	case 1
+	case FZINTRO_INTRO
 		currentPlayer = object.targetPlayer
 	
 		player[currentPlayer].direction = object.direction
@@ -65,14 +67,14 @@ event ObjectMain
 
 		if player[currentPlayer].animation == ANI_JUMPING
 			player[currentPlayer].state = PlayerObject_HandleAir
-			object.state = 2
+			object.state = FZINTRO_DESTROY
 		end if
 	
 		if player[currentPlayer].animation == ANI_FLYING
 			player[currentPlayer].state = PlayerObject_HandleTailsFlight
 			player[currentPlayer].flightVelocity = 0x800
 			player[currentPlayer].yvel >>= 2
-			object.state = 2
+			object.state = FZINTRO_DESTROY
 		end if
 	
 		if player[currentPlayer].animation == ANI_GLIDING
@@ -81,23 +83,24 @@ event ObjectMain
 			else
 				player[currentPlayer].state = PlayerObject_KnuxGlideRight
 			end if
-			object.state = 2
+
+			object.state = FZINTRO_DESTROY
 		end if
 	
 		if player[currentPlayer].animation == ANI_GLIDING_DROP
 			player[currentPlayer].state = PlayerObject_KnuxGlideDrop
-			object.state = 2
+			object.state = FZINTRO_DESTROY
 		end if
 	
-		if object.state != 2
+		if object.state != FZINTRO_DESTROY
 			player[currentPlayer].state = PlayerObject_HandleAir
 			player[currentPlayer].direction = FLIP_NONE
 			player[currentPlayer].animation = ANI_BOUNCING
-			object.state = 2
+			object.state = FZINTRO_DESTROY
 		end if
 		break
 
-	case 2
+	case FZINTRO_DESTROY
 		object.type = TypeName[Blank Object]
 		break
 		
@@ -111,4 +114,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

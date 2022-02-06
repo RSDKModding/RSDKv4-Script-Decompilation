@@ -6,7 +6,9 @@
 // ----------------------------------
 
 // Aliases
-private alias 84 : TYPE_TAILSSTUCK
+private alias object.value0 : object.width
+private alias object.value1 : object.height
+private alias object.value2 : object.timer
 
 private alias object.type			 : player.type
 private alias object.state			 : player.state
@@ -23,16 +25,16 @@ private alias object.value4			 : player.drownLevel
 
 
 event ObjectMain
-	temp0 = object.value0
+	temp0 = object.width
 	FlipSign(temp0)
-	temp1 = object.value1
+	temp1 = object.height
 	FlipSign(temp1)
 	if player[1].type == TypeName[Player 2 Object]
-		BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.value0, object.value1, 1, 4, 4, 4, 4)
+		BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, 1, 4, 4, 4, 4)
 		if checkResult == true
-			object.value2++
-			if object.value2 >= 240
-				player[1].state = Player2Object_Function66
+			object.timer++
+			if object.timer >= 240
+				player[1].state = Player2Object_FlyIn
 				player[1].xpos = object[0].xpos
 				player[1].ypos = screen.yoffset
 				player[1].ypos -= 128
@@ -40,14 +42,14 @@ event ObjectMain
 				player[1].xvel = 0
 				player[1].yvel = 0
 				player[1].speed = 0
-				player[1].tileCollisions = 0
-				player[1].interaction = 0
+				player[1].tileCollisions = false
+				player[1].interaction = false
 				player[1].controlMode = 1
 				player[1].drownCounter = 0
 				player[1].drownLevel = 0
 			end if
 		else
-			object.value2 = 0
+			object.timer = 0
 		end if
 	end if
 end event
@@ -59,13 +61,13 @@ event ObjectDraw
 		temp1 = object.ypos
 		temp2 = object.propertyValue
 		temp4 = temp2
-		temp4 &= 240
+		temp4 &= 0xF0
 		temp4 <<= 15
 		temp2 >>= 4
 		temp2++
 		temp6 = temp2
 		temp3 = object.propertyValue
-		temp3 &= 15
+		temp3 &= 0x0F
 		temp5 = temp3
 		temp5 <<= 19
 		temp3++
@@ -97,24 +99,100 @@ event ObjectStartup
 	foreach (TypeName[Tails Stuck], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 5
 	
-		object[arrayPos0].value0 = object[arrayPos0].propertyValue
-		object[arrayPos0].value0 &= 240
-		object[arrayPos0].value0 += 16
-		object[arrayPos0].value0 >>= 1
+		object[arrayPos0].width = object[arrayPos0].propertyValue
+		object[arrayPos0].width &= 0xF0
+		object[arrayPos0].width += 16
+		object[arrayPos0].width >>= 1
 	
-		object[arrayPos0].value1 = object[arrayPos0].propertyValue
-		object[arrayPos0].value1 &= 15
-		object[arrayPos0].value1++
-		object[arrayPos0].value1 <<= 3
+		object[arrayPos0].height = object[arrayPos0].propertyValue
+		object[arrayPos0].height &= 0x0F
+		object[arrayPos0].height++
+		object[arrayPos0].height <<= 3
 	next
 
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // width
+			checkResult = object.propertyValue
+			checkResult >>= 4
+			checkResult &= 0xF
+			break
+
+		case 1 // height
+			checkResult = object.propertyValue
+			checkResult &= 0xF
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // width
+			temp0 = editor.variableValue
+			temp0 &= 0xF
+			temp0 <<= 4
+			
+			object.propertyValue &= 0x0F
+			object.propertyValue |= temp0
+			break
+
+		case 1 // height
+			temp0 = editor.variableValue
+			temp0 &= 0xF
+
+			object.propertyValue &= 0xF0
+			object.propertyValue |= temp0
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp2 = object.propertyValue
+	temp4 = temp2
+	temp4 &= 240
+	temp4 <<= 15
+	temp2 >>= 4
+	temp2++
+	temp6 = temp2
+	temp3 = object.propertyValue
+	temp3 &= 15
+	temp5 = temp3
+	temp5 <<= 19
+	temp3++
+	temp0 -= temp4
+	temp4 = temp0
+	temp1 -= temp5
+	while temp3 > 0
+		while temp2 > 0
+			DrawSpriteXY(0, temp0, temp1)
+			temp0 += 0x100000
+			temp2--
+		loop
+		temp2 = temp6
+		temp0 = temp4
+		temp1 += 0x100000
+		temp3--
+	loop
 end event
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	// Tails life icon
+	SpriteFrame(-8, -7, 16, 14, 60, 108)
+
+	AddEditorVariable("width")
+	AddEditorVariable("height")
 end event

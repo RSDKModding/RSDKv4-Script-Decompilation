@@ -12,28 +12,31 @@ public alias 65536 : HITBOX_AUTO
 public alias arrayPos6 : currentPlayer
 public alias arrayPos7 : playerCount
 
+private alias object.value1 : object.palTimer
+private alias object.value2 : object.palID1
+private alias object.value3 : object.palID2
 
 // Static Values
-public value SpecialSetup_value0 = 0;
-public value SpecialSetup_value1 = 0;
-public value SpecialSetup_value2 = 0;
-public value SpecialSetup_value3 = 0;
-public value SpecialSetup_value4 = 0;
+public value SpecialSetup_gotEmerald = 0
+public value SpecialSetup_StageColour1 = 0
+public value SpecialSetup_StageColour2 = 0
+public value SpecialSetup_checkpointID = 0
+public value SpecialSetup_ringCountTable = 0
 
 // Tables
-public table SpecialSetup_table0
+public table SpecialSetup_ringCount2P
 	0, 0, 0
 end table
 
-public table SpecialSetup_table1
+public table SpecialSetup_ringCountSonic
 	0, 0, 0
 end table
 
-public table SpecialSetup_table2
+public table SpecialSetup_ringCountKnux
 	0, 0, 0
 end table
 
-public table SpecialSetup_table3
+public table SpecialSetup_starPalCycle
 	0xE0E0E0, 0xD0D0D0, 0xC0C0C0, 0xB0B0B0, 0xA0A0A0, 0x909090, 0x808080, 0x707070, 0x606060, 0x707070, 0x808080, 0x909090, 0xA0A0A0, 0xB0B0B0, 0xC0C0C0, 0xD0D0D0
 end table
 
@@ -45,54 +48,62 @@ event ObjectMain
 		ringFrame++
 		ringFrame &= 7
 	end if
-	object.value1++
-	if object.value1 == 4
-		object.value1 = 0
-		object.value2++
-		object.value2 &= 15
-		GetTableValue(temp0, object.value2, SpecialSetup_table3)
+
+	object.palTimer++
+	if object.palTimer == 4
+		object.palTimer = 0
+
+		object.palID1++
+		object.palID1 &= 15
+		GetTableValue(temp0, object.palID1, SpecialSetup_starPalCycle)
 		SetPaletteEntry(0, 142, temp0)
-		object.value3++
-		object.value3 &= 15
-		GetTableValue(temp0, object.value3, SpecialSetup_table3)
+
+		object.palID2++
+		object.palID2 &= 15
+		GetTableValue(temp0, object.palID2, SpecialSetup_starPalCycle)
 		SetPaletteEntry(0, 143, temp0)
 	end if
-	if options.attractMode == 0
+
+	if options.attractMode == false
 		if object[2].controlMode > -1
-			options.touchControls = 1
+			options.touchControls = true
 		else
-			options.touchControls = 0
+			options.touchControls = false
 		end if
 	else
-		options.touchControls = 0
+		options.touchControls = false
 	end if
 end event
 
 
 event ObjectStartup
-	SetMusicTrack("SpecialStage.ogg", 0, 0x79404)
-	SetMusicTrack("ActComplete.ogg", 1, 0)
-	SpecialSetup_value0 = 0
+	SetMusicTrack("SpecialStage.ogg", 0, 496644)
+	SetMusicTrack("ActComplete.ogg", 1, false)
+	SpecialSetup_gotEmerald = false
+
 	object[9].type = TypeName[Special Setup]
 	object[9].priority = PRIORITY_ACTIVE
 	object[9].drawOrder = 1
-	object[9].value3 = 8
+	object[9].palID2 = 8
+
 	object[10].type = TypeName[HUD]
 	object[10].priority = PRIORITY_ACTIVE
 	object[10].drawOrder = 6
-	if stage.playerListPos > 2
-		stage.playerListPos = 0
-		stage.player2Enabled = 1
+
+	if stage.playerListPos > PlayerName[KNUCKLES]
+		stage.playerListPos = PlayerName[SONIC]
+		stage.player2Enabled = true
 	end if
-	if options.vsMode == 0
+
+	if options.vsMode == false
 		temp1 = stage.actNum
 	else
-		if vs.activeList == 3
+		if vs.activeList == SPECIAL_STAGE
 			temp1 = stage.actNum
 			temp1 += 3
 		else
-			vs.randomValue *= 0x41C64E6D
-			vs.randomValue += 0x3039
+			vs.randomValue *= 1103515245
+			vs.randomValue += 12345
 			vs.randomValue &= 0x7FFFFFFF
 			temp1 = vs.randomValue
 			temp1 >>= 16
@@ -100,48 +111,55 @@ event ObjectStartup
 			temp1++
 		end if
 	end if
+
 	temp1 <<= 3
 	temp0 = temp1
 	temp0 -= 8
 	LoadPalette("SpecialStage.act", 0, 192, temp0, temp1)
-	GetPaletteEntry(0, 197, SpecialSetup_value1)
-	SpecialSetup_value1 |= -0x1000000
-	GetPaletteEntry(0, 192, SpecialSetup_value2)
-	SpecialSetup_value2 |= -0x1000000
-	if options.attractMode == 0
+	GetPaletteEntry(0, 197, SpecialSetup_StageColour1)
+	SpecialSetup_StageColour1 |= 0xFF000000
+	GetPaletteEntry(0, 192, SpecialSetup_StageColour2)
+	SpecialSetup_StageColour2 |= 0xFF000000
+
+	if options.attractMode == false
+		// Some native PC code here prolly, same deal as the one in Global/StageSetup
 	end if
+	
 	temp0 = 1
 	foreach (TypeName[Start Message], arrayPos0, ALL_ENTITIES)
 		object[11].type = TypeName[Start Message]
 		object[11].priority = PRIORITY_ACTIVE_PAUSED
 		object[11].drawOrder = 5
-		SetTableValue(object[arrayPos0].value0, 0, SpecialSetup_table0)
-		SetTableValue(object[arrayPos0].value1, 0, SpecialSetup_table1)
-		SetTableValue(object[arrayPos0].value2, 0, SpecialSetup_table2)
+		SetTableValue(object[arrayPos0].value0, 0, SpecialSetup_ringCount2P)
+		SetTableValue(object[arrayPos0].value1, 0, SpecialSetup_ringCountSonic)
+		SetTableValue(object[arrayPos0].value2, 0, SpecialSetup_ringCountKnux)
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
+
 	temp0 = 1
 	foreach (TypeName[Checkpoint], arrayPos0, ALL_ENTITIES)
 		if temp0 < 3
-			SetTableValue(object[arrayPos0].value0, temp0, SpecialSetup_table0)
-			SetTableValue(object[arrayPos0].value1, temp0, SpecialSetup_table1)
-			SetTableValue(object[arrayPos0].value2, temp0, SpecialSetup_table2)
+			SetTableValue(object[arrayPos0].value0, temp0, SpecialSetup_ringCount2P)
+			SetTableValue(object[arrayPos0].value1, temp0, SpecialSetup_ringCountSonic)
+			SetTableValue(object[arrayPos0].value2, temp0, SpecialSetup_ringCountKnux)
 			temp0++
 		end if
 		object[arrayPos0].value0 = 0
 		object[arrayPos0].value1 = 0
 		object[arrayPos0].value2 = 0
 	next
-	SpecialSetup_value3 = 0
+
+	SpecialSetup_checkpointID = 0
 	if stage.player2Enabled == true
-		SpecialSetup_value4 = 5
+		SpecialSetup_ringCountTable = SpecialSetup_ringCount2P
 	else
-		if stage.playerListPos == 2
-			SpecialSetup_value4 = 13
+		if stage.playerListPos == PlayerName[KNUCKLES]
+			SpecialSetup_ringCountTable = SpecialSetup_ringCountKnux
 		else
-			SpecialSetup_value4 = 9
+			SpecialSetup_ringCountTable = SpecialSetup_ringCountSonic
 		end if
 	end if
+
 	arrayPos0 = 32
 	while arrayPos0 < 0x420
 		if object[arrayPos0].type == TypeName[Blank Object]
@@ -151,6 +169,7 @@ event ObjectStartup
 		end if
 		arrayPos0++
 	loop
+
 	arrayPos0 = 32
 	while arrayPos0 < 768
 		arrayPos1 = 767
@@ -184,4 +203,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

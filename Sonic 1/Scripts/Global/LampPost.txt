@@ -6,7 +6,13 @@
 // ----------------------------------
 
 // Aliases
-private alias 17 : TYPE_LAMPPOST
+private alias object.value0 : object.ballAngle
+private alias object.value1 : object.ballPos.x
+private alias object.value2 : object.ballPos.y
+
+private alias 0 : LAMPPOST_INACTIVE
+private alias 1 : LAMPPOST_SPINNING
+private alias 2 : LAMPPOST_ACTIVE
 
 // Function declarations
 reserve function LampPost_DebugDraw
@@ -25,7 +31,7 @@ end function
 
 event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		if object.state == 0
+		if object.state == LAMPPOST_INACTIVE
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -44, 8, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			if checkResult == true
 				lampPostID = object.entityPos
@@ -34,28 +40,31 @@ event ObjectMain
 				recMinutes = stage.minutes
 				recWaterState = stage.waterState
 				recWaterLevel = stage.waterLevel
-				object.state = 1
-				object.value0 = 384
+				object.state = LAMPPOST_SPINNING
+				object.ballAngle = 0x180
 				if object.priority != PRIORITY_XBOUNDS_DESTROY
 					object.priority = PRIORITY_ACTIVE
 				end if
-				PlaySfx(SfxName[Lamp Post], 0)
+				PlaySfx(SfxName[Lamp Post], false)
 			end if
 		end if
 	next
 
-	if object.state == 1
-		Cos(object.value1, object.value0)
-		object.value1 *= -0x500
-		Sin(object.value2, object.value0)
-		object.value2 *= 0x500
-		object.value1 += object.xpos
-		object.value2 += object.ypos
-		object.value2 -= 0x1A0000
-		object.value0 += 32
-		if object.value0 > 0x580
-			object.value0 = 0
-			object.state = 2
+	if object.state == LAMPPOST_SPINNING
+		Cos(object.ballPos.x, object.ballAngle)
+		object.ballPos.x *= -0x500
+
+		Sin(object.ballPos.y, object.ballAngle)
+		object.ballPos.y *= 0x500
+
+		object.ballPos.x += object.xpos
+		object.ballPos.y += object.ypos
+		object.ballPos.y -= 0x1A0000
+
+		object.ballAngle += 0x20
+		if object.ballAngle > 0x580
+			object.ballAngle = 0
+			object.state = LAMPPOST_ACTIVE
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.priority = PRIORITY_ACTIVE_BOUNDS
 			end if
@@ -66,21 +75,22 @@ end event
 
 event ObjectDraw
 	switch object.state
-	case 0
+	case LAMPPOST_INACTIVE
 		DrawSprite(0)
 		break
 
-	case 1
+	case LAMPPOST_SPINNING
 		DrawSprite(1)
-		DrawSpriteXY(3, object.value1, object.value2)
+		DrawSpriteXY(3, object.ballPos.x, object.ballPos.y)
 		break
 
-	case 2
+	case LAMPPOST_ACTIVE
 		DrawSprite(1)
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
+		object.ballAngle++
+		if object.ballAngle == 8
+			object.ballAngle = 0
 		end if
+
 		temp0 = object.ypos
 		temp0 -= 0x240000
 		DrawSpriteXY(3, object.xpos, temp0)
@@ -92,7 +102,6 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Items.gif")
 
 	SpriteFrame(-8, -44, 16, 64, 1, 137)
@@ -107,20 +116,21 @@ event ObjectStartup
 
 	if lampPostID > 31
 		arrayPos0 = lampPostID
+
 		currentPlayer = 0
 		while currentPlayer < playerCount
 			object[currentPlayer].xpos = object[arrayPos0].xpos
 			object[currentPlayer].ypos = object[arrayPos0].ypos
 			currentPlayer++
 		loop
+
 		screen.cameraX = object[0].ixpos
 		screen.cameraY = object[0].iypos
-		object[arrayPos0].state = 2
+		object[arrayPos0].state = LAMPPOST_ACTIVE
 		stage.milliSeconds = recMilliSeconds
 		stage.seconds = recSeconds
 		stage.minutes = recMinutes
 	end if
-
 end event
 
 event RSDKDraw
@@ -130,4 +140,7 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Items.gif")
 	SpriteFrame(-8, -44, 16, 64, 1, 137)
+	
+	// unused, BUT there are values in the editor which suggest it's "lampPostID"
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

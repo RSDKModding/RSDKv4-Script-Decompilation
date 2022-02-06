@@ -6,21 +6,41 @@
 // ----------------------------------
 
 // Aliases
-private alias 70 : TYPE_HORIZCRUSHER
+private alias object.value0 : object.timer
+private alias object.value1 : object.crusherType
+private alias object.value2 : object.startExtended
+private alias object.value3 : object.startPos.x
+private alias object.value4 : object.endPos.x
+private alias object.value5 : object.collisionOffset.x
+private alias object.value6 : object.currentPos.x
+private alias object.value7 : object.dontPlaySfx
+private alias object.value8 : object.moveVel
+
+// States
+private alias 0 : HORIZCRUSHER_DROPPING
+private alias 1 : HORIZCRUSHER_DROPPED
+private alias 2 : HORIZCRUSHER_RISING
+private alias 3 : HORIZCRUSHER_RISEN
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
+
+// PushButton aliases
+private alias object.propertyValue : pushButton.stood
 
 // Function declarations
 reserve function HorizCrusher_DebugDraw
 reserve function HorizCrusher_DebugSpawn
-reserve function HorizCrusher_Function156
+reserve function HorizCrusher_CheckOnScreen
 
 // Static Values
-public value HorizCrusher_value36 = 0;
-
-// Tables
+private value HorizCrusher_value36 = 0;
+private alias HorizCrusher_value36 : HorizCrusher_startDebugID
 
 function HorizCrusher_DebugDraw
-	temp7 = object[0].value17
-	temp7 -= HorizCrusher_value36
+	temp7 = debugMode[0].currentSelection
+	temp7 -= HorizCrusher_startDebugID
+
 	temp5 = object.xpos
 	switch temp7
 	case 0
@@ -36,9 +56,11 @@ function HorizCrusher_DebugDraw
 		temp6 = 0x380000
 		break
 	end switch
+
 	if object.direction == FLIP_NONE
 		FlipSign(temp6)
 	end if
+
 	temp5 += temp6
 	if temp5 > object.xpos
 		temp0 = temp5
@@ -47,6 +69,7 @@ function HorizCrusher_DebugDraw
 		temp0 = object.xpos
 		temp0 -= temp5
 	end if
+
 	temp0 >>= 16
 	temp0 += 4
 	temp1 = 299
@@ -60,6 +83,7 @@ function HorizCrusher_DebugDraw
 	end if
 	temp0 += 17
 	EditFrame(3, temp2, -8, temp0, 16, temp1, 388)
+
 	DrawSpriteXY(3, temp5, object.ypos)
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 	DrawSpriteFX(1, FX_FLIP, temp5, object.ypos)
@@ -68,56 +92,65 @@ end function
 
 
 function HorizCrusher_DebugSpawn
-	temp7 = object[0].value17
-	temp7 -= HorizCrusher_value36
+	temp7 = debugMode[0].currentSelection
+	temp7 -= HorizCrusher_startDebugID
+
 	CreateTempObject(TypeName[Horiz Crusher], 0, object.xpos, object.ypos)
 	object[tempObjectPos].direction = object.direction
-	object[tempObjectPos].value2 = 0
+	object[tempObjectPos].startExtended = 0
 	if object.direction == FLIP_NONE
-		object[tempObjectPos].value8 = -0x7000
+		object[tempObjectPos].moveVel = -0x7000
 	else
-		object[tempObjectPos].value8 = 0x7000
+		object[tempObjectPos].moveVel = 0x7000
 	end if
-	object[tempObjectPos].value3 = object.xpos
-	object[tempObjectPos].value4 = object[tempObjectPos].value3
+
+	object[tempObjectPos].startPos.x = object.xpos
+	object[tempObjectPos].endPos.x = object[tempObjectPos].startPos.x
+
 	switch temp7
 	case 0
 		temp6 = 0x380000
 		break
+
 	case 1
 		temp6 = 0x9F0000
 		break
+
 	case 2
 		temp6 = 0x500000
 		break
+
 	case 3
 		temp6 = 0x380000
 		break
 	end switch
+
 	if object.direction == FLIP_NONE
 		FlipSign(temp6)
 	end if
-	object[tempObjectPos].value4 += temp6
-	if object[tempObjectPos].value2 == 1
-		object[tempObjectPos].xpos = object[tempObjectPos].value4
+
+	object[tempObjectPos].endPos.x += temp6
+
+	if object[tempObjectPos].startExtended == true
+		object[tempObjectPos].xpos = object[tempObjectPos].endPos.x
 	end if
 end function
 
 
-function HorizCrusher_Function156
-	checkResult = 0
+function HorizCrusher_CheckOnScreen
+	checkResult = false
 	temp0 = object.ypos
 	temp0 >>= 16
 	temp0 -= screen.cameraY
 	Abs(temp0)
 	if 64 <= screen.ycenter
-		temp1 = object.value4
-		temp1 -= object.value3
+		temp1 = object.endPos.x
+		temp1 -= object.startPos.x
 		temp1 >>= 16
 		temp1 += 8
 		temp1 >>= 1
-		temp0 = object.value3
-		temp0 += object.value4
+		temp0 = object.startPos.x
+		temp0 += object.endPos.x
 		temp0 >>= 17
 		temp0 -= 12
 		temp0 -= screen.cameraX
@@ -125,80 +158,86 @@ function HorizCrusher_Function156
 		temp0 -= temp1
 		temp0 -= 40
 		if temp0 <= screen.xcenter
-			checkResult = 1
+			checkResult = true
 		end if
 	end if
 end function
 
 
 event ObjectMain
-	if object.value2 == 1
-		if object[+1].propertyValue == 0
-			object.value7 = 0
-			object.xvel += object.value8
+	if object.startExtended == true
+		if pushButton[+1].stood == false
+			object.dontPlaySfx = false
+			object.xvel += object.moveVel
 			object.xpos += object.xvel
-			temp0 = 0
+
+			temp0 = false
 			if object.direction == FLIP_NONE
-				if object.xpos <= object.value4
-					temp0 = 1
+				if object.xpos <= object.endPos.x
+					temp0 = true
 				end if
 			else
-				if object.xpos >= object.value4
-					temp0 = 1
+				if object.xpos >= object.endPos.x
+					temp0 = true
 				end if
 			end if
-			if temp0 == 1
-				object.xpos = object.value4
+
+			if temp0 == true
+				object.xpos = object.endPos.x
 				object.xvel = 0
 			end if
 		else
-			if object.value8 > 0
+			if object.moveVel > 0
 				object.xpos -= 0x8000
 			else
 				object.xpos += 0x8000
 			end if
-			temp0 = 0
+
+			temp0 = false
 			if object.direction == FLIP_NONE
-				if object.xpos >= object.value3
-					temp0 = 1
+				if object.xpos >= object.startPos.x
+					temp0 = true
 				end if
 			else
-				if object.xpos <= object.value3
-					temp0 = 1
+				if object.xpos <= object.startPos.x
+					temp0 = true
 				end if
 			end if
-			if temp0 == 1
-				object.xpos = object.value3
+
+			if temp0 == true
+				object.xpos = object.startPos.x
 				object.xvel = 0
 			end if
 		end if
 	else
 		switch object.state
-		case 0
-			object.value7 = 0
-			object.xvel += object.value8
+		case HORIZCRUSHER_DROPPING
+			object.dontPlaySfx = false
+			object.xvel += object.moveVel
 			object.xpos += object.xvel
-			temp0 = 0
+			temp0 = false
 			if object.direction == FLIP_NONE
-				if object.xpos <= object.value4
-					temp0 = 1
+				if object.xpos <= object.endPos.x
+					temp0 = true
 				end if
 			else
-				if object.xpos >= object.value4
-					temp0 = 1
+				if object.xpos >= object.endPos.x
+					temp0 = true
 				end if
 			end if
-			if temp0 == 1
-				object.xpos = object.value4
+
+			if temp0 == true
+				object.xpos = object.endPos.x
 				object.xvel = 0
 				object.state++
 			end if
 			break
-		case 1
-			object.value0++
-			if object.value0 == 60
-				object.value0 = 0
-				if object.value8 > 0
+
+		case HORIZCRUSHER_DROPPED
+			object.timer++
+			if object.timer == 60
+				object.timer = 0
+				if object.moveVel > 0
 					object.xvel = -0x8000
 				else
 					object.xvel = 0x8000
@@ -206,39 +245,44 @@ event ObjectMain
 				object.state++
 			end if
 			break
-		case 2
+
+		case HORIZCRUSHER_RISING
 			object.xpos += object.xvel
-			temp0 = 0
+			temp0 = false
 			if object.direction == FLIP_NONE
-				if object.xpos >= object.value3
-					temp0 = 1
+				if object.xpos >= object.startPos.x
+					temp0 = true
 				end if
 			else
-				if object.xpos <= object.value3
-					temp0 = 1
+				if object.xpos <= object.startPos.x
+					temp0 = true
 				end if
 			end if
-			if temp0 == 1
-				object.xpos = object.value3
+
+			if temp0 == true
+				object.xpos = object.startPos.x
 				object.xvel = 0
 				object.state++
 			end if
 			break
-		case 3
-			object.value0++
-			if object.value0 == 4
-				object.value0 = 0
-				object.state = 0
+
+		case HORIZCRUSHER_RISEN
+			object.timer++
+			if object.timer == 4
+				object.timer = 0
+				object.state = HORIZCRUSHER_DROPPING
 			end if
 			break
 		end switch
 	end if
-	object.value5 = object.xpos
-	object.value5 &= -0x10000
-	object.value5 -= object.value6
+
+	object.collisionOffset.x = object.xpos
+	object.collisionOffset.x &= -0x10000
+	object.collisionOffset.x -= object.currentPos.x
+
 	temp0 = object.xpos
-	object.xpos = object.value6
-	temp5 = object.value5
+	object.xpos = object.currentPos.x
+	temp5 = object.collisionOffset.x
 	temp5 >>= 16
 	if object.direction == FLIP_NONE
 		temp6 = -42
@@ -251,51 +295,58 @@ event ObjectMain
 		temp7 = 42
 		temp7 += temp5
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_BOX, object.entityPos, -12, -32, 12, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		switch checkResult
-		case 1
-			object[currentPlayer].xpos += object.value5
+		case COL_TOP
+			object[currentPlayer].xpos += object.collisionOffset.x
 			break
-		case 2
-			if object.value5 < 0
-				object[currentPlayer].xpos += object.value5
+
+		case COL_LEFT
+			if object.collisionOffset.x < 0
+				object[currentPlayer].xpos += object.collisionOffset.x
 			end if
 			break
-		case 3
-			if object.value5 > 0
-				object[currentPlayer].xpos += object.value5
+
+		case COL_RIGHT
+			if object.collisionOffset.x > 0
+				object[currentPlayer].xpos += object.collisionOffset.x
 			end if
 			break
-		case 4
+
+		case COL_BOTTOM
 			if object[currentPlayer].gravity == GRAVITY_GROUND
 				CallFunction(PlayerObject_Kill)
 			end if
 			break
 		end switch
+
 		BoxCollisionTest(C_TOUCH, object.entityPos, temp6, -24, temp7, 24, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
+		if checkResult == true
 			CallFunction(PlayerObject_Hit)
 		end if
 	next
+
 	object.xpos = temp0
-	object.value6 = object.xpos
-	object.value6 &= -0x10000
+	object.currentPos.x = object.xpos
+	object.currentPos.x &= -0x10000
 end event
 
 
 event ObjectDraw
-	if object.xpos > object.value3
+	if object.xpos > object.startPos.x
 		temp0 = object.xpos
-		temp0 -= object.value3
+		temp0 -= object.startPos.x
 	else
-		temp0 = object.value3
+		temp0 = object.startPos.x
 		temp0 -= object.xpos
 	end if
 	temp0 >>= 16
 	temp0 += 4
 	temp1 = 299
 	temp1 -= temp0
+
 	if object.direction == FLIP_X
 		temp2 = temp0
 		temp2 += 34
@@ -305,10 +356,11 @@ event ObjectDraw
 	end if
 	temp0 += 17
 	EditFrame(3, temp2, -8, temp0, 16, temp1, 388)
-	DrawSpriteXY(3, object.value6, object.ypos)
-	DrawSpriteFX(0, FX_FLIP, object.value3, object.ypos)
-	DrawSpriteFX(1, FX_FLIP, object.value6, object.ypos)
-	DrawSpriteFX(2, FX_FLIP, object.value6, object.ypos)
+
+	DrawSpriteXY(3, object.currentPos.x, object.ypos)
+	DrawSpriteFX(0, FX_FLIP, object.startPos.x, object.ypos)
+	DrawSpriteFX(1, FX_FLIP, object.currentPos.x, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.currentPos.x, object.ypos)
 end event
 
 
@@ -318,39 +370,51 @@ event ObjectStartup
 	SpriteFrame(-12, -32, 32, 64, 256, 142)
 	SpriteFrame(-43, -24, 31, 48, 256, 207)
 	SpriteFrame(-92, -8, 184, 16, 132, 388)
+
 	foreach (TypeName[Horiz Crusher], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value2 = object[arrayPos0].propertyValue
-		object[arrayPos0].value2 >>= 7
+		object[arrayPos0].startExtended = object[arrayPos0].propertyValue
+		object[arrayPos0].startExtended >>= 7
+
 		GetBit(object[arrayPos0].direction, object[arrayPos0].propertyValue, 6)
-		object[arrayPos0].value8 = -0x7000
+
+		object[arrayPos0].moveVel = -0x7000
+
 		object[arrayPos0].state = object[arrayPos0].propertyValue
 		object[arrayPos0].state &= 3
-		object[arrayPos0].value3 = object[arrayPos0].xpos
-		object[arrayPos0].value4 = object[arrayPos0].value3
+
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].endPos.x 	 = object[arrayPos0].startPos.x
 		switch object[arrayPos0].state
-		case 0
+		case HORIZCRUSHER_DROPPING
 			temp0 = 0x380000
 			break
-		case 1
+
+		case HORIZCRUSHER_DROPPED
 			temp0 = 0x9F0000
 			break
-		case 2
+
+		case HORIZCRUSHER_RISING
 			temp0 = 0x500000
 			break
-		case 3
+
+		case HORIZCRUSHER_RISEN
 			temp0 = 0x380000
 			break
 		end switch
+
 		if object[arrayPos0].direction == FLIP_NONE
 			FlipSign(temp0)
 		end if
-		object[arrayPos0].value4 += temp0
-		if object[arrayPos0].value2 == 1
-			object[arrayPos0].xpos = object[arrayPos0].value4
+
+		object[arrayPos0].endPos.x += temp0
+
+		if object[arrayPos0].startExtended == true
+			object[arrayPos0].xpos = object[arrayPos0].endPos.x
 		end if
 	next
+	
 	temp0 = 0
-	HorizCrusher_value36 = DebugMode_ObjCount
+	HorizCrusher_startDebugID = DebugMode_ObjCount
 	while temp0 < 4
 		SetTableValue(TypeName[Horiz Crusher], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(HorizCrusher_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -360,11 +424,129 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // startExtended
+			checkResult = object.propertyValue
+			checkResult >>= 7
+			checkResult &= 1
+			break
+		case 1 // direction
+			GetBit(checkResult, object.propertyValue, 6)
+			break
+		case 2 // type
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // startExtended
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+		case 1 // direction
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 6, checkResult)
+			break
+		case 2 // type
+			temp1 = 3
+			Not(temp1)
+			object.propertyValue &= temp1
+
+			temp0 = editor.variableValue
+			temp0 &= 3
+			object.propertyValue |= temp0
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	object.startExtended = object.propertyValue
+	object.startExtended >>= 7
+
+	GetBit(object.direction, object.propertyValue, 6)
+
+	object.startPos.x 	= object.xpos
+	object.endPos.x	  	= object.startPos.x
+
+	object.state = object.propertyValue
+	object.state &= 3
+
+	switch object.state
+	case HORIZCRUSHER_DROPPING
+	case HORIZCRUSHER_RISEN
+		object.endPos.x += 0x380000
+		break
+
+	case HORIZCRUSHER_DROPPED
+		object.endPos.x += 0x9F0000
+		break
+
+	case HORIZCRUSHER_RISING
+		object.endPos.x += 0x500000
+		break
+	end switch
+	object.currentPos.x = object.xpos
+	object.currentPos.x &= -0x10000
+
+	if object.xpos > object.startPos.x
+		temp0 = object.xpos
+		temp0 -= object.startPos.x
+	else
+		temp0 = object.startPos.x
+		temp0 -= object.xpos
+	end if
+	temp0 >>= 16
+	temp0 += 4
+	temp1 = 299
+	temp1 -= temp0
+
+	if object.direction == FLIP_X
+		temp2 = temp0
+		temp2 += 34
+		FlipSign(temp2)
+	else
+		temp2 = 16
+	end if
+	temp0 += 17
+	EditFrame(3, temp2, -8, temp0, 16, temp1, 388)
+
+	DrawSpriteXY(3, object.currentPos.x, object.ypos)
+	DrawSpriteFX(0, FX_FLIP, object.startPos.x, object.ypos)
+	DrawSpriteFX(1, FX_FLIP, object.currentPos.x, object.ypos)
+	DrawSpriteFX(2, FX_FLIP, object.currentPos.x, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(36, -16, 8, 32, 289, 158)
+	SpriteFrame(-12, -32, 32, 64, 256, 142)
+	SpriteFrame(-43, -24, 31, 48, 256, 207)
+	SpriteFrame(-92, -8, 184, 16, 132, 388)
+
+	AddEditorVariable("startExtended")
+	SetActiveVariable("startExtended")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", FLIP_NONE)
+	AddEnumVariable("Right", FLIP_X)
+
+	AddEditorVariable("length")
+	SetActiveVariable("length")
+	AddEnumVariable("56 Pixels (Start Retracted)", 0)
+	AddEnumVariable("159 Pixels", 1)
+	AddEnumVariable("80 Pixels", 2)
+	AddEnumVariable("56 Pixels (Start Extended)", 3)
 end event

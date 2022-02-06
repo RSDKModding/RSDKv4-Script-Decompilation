@@ -6,9 +6,7 @@
 // ----------------------------------
 
 // Aliases
-private alias 40 : TYPE_MBZSETUP
-
-private alias object.value10 : MBZSetup.fadeValue // Slight misnomer - more like a bool flag instead
+private alias object.value10 : MBZSetup.isDimming
 
 private alias 3 : SHIELD_FIRE
 
@@ -113,7 +111,7 @@ function MBZSetup_HandleGround
 
 		if object.value14 > 0
 			if temp7 == 1
-				PlaySfx(SfxName[Skidding], 0)
+				PlaySfx(SfxName[Skidding], false)
 			end if
 			object.animation = ANI_SKIDDING
 			object.animationSpeed = 0
@@ -146,11 +144,11 @@ end function
 // Interestingly, it calls for "MarathonBase_F.ogg" - a song that isn't in the RSDK
 // Could this have been the stage's original name..?
 function MBZSetup_SpeedUpMusic
-	CheckEqual(object[25].type, TypeName[Music Event])
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, 2)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
 	if temp0 == false
 		switch music.currentTrack
@@ -168,20 +166,19 @@ function MBZSetup_SpeedUpMusic
 			break
 		end switch
 	else
-		stage.musicFlag = 1
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
 	end if
 end function
 
 
 // Unused - would've been used to slow down stage music
 // Interestingly, it calls for "MarathonBase.ogg" - a song that isn't in the RSDK
-// Could this have been the stage's original name..?
 function MBZSetup_SlowDownMusic
-	CheckEqual(object[25].type, TypeName[Music Event])
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, 2)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
 	if temp0 == false
 		switch music.currentTrack
@@ -199,7 +196,7 @@ function MBZSetup_SlowDownMusic
 			break
 		end switch
 	else
-		stage.musicFlag = 2
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
 	end if
 end function
 
@@ -323,7 +320,7 @@ event ObjectMain
 		end switch
 	next
 
-	if MBZSetup.fadeValue == true
+	if MBZSetup.isDimming == true
 		if object.alpha < 128
 			object.alpha += 4
 		end if
@@ -333,7 +330,7 @@ event ObjectMain
 		end if
 	end if
 
-	MBZSetup.fadeValue = false
+	MBZSetup.isDimming = false
 end event
 
 
@@ -356,7 +353,7 @@ event ObjectStartup
 	while arrayPos0 < 576
 		temp0 = arrayPos0
 		temp0 &= 63
-		GetTableValue(stage[arrayPos0].deformationData2, temp0, MBZSetup_DeformationTable)
+		GetTableValue(stage.deformationData2[arrayPos0], temp0, MBZSetup_DeformationTable)
 		arrayPos0++
 	loop
 	ZoneSetup_value33 = 0
@@ -376,4 +373,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

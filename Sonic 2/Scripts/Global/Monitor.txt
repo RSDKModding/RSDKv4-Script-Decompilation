@@ -100,13 +100,14 @@ event ObjectMain
 						object.value0 = object.ypos
 						object.value1 = -0x30000
 						if object.propertyValue == 14
-							vs.randomValue *= 0x41C64E6D
-							vs.randomValue += 0x3039
+							vs.randomValue *= 1103515245
+							vs.randomValue += 12345
 							vs.randomValue &= 0x7FFFFFFF
 							temp0 = vs.randomValue
 							temp0 >>= 16
 							temp0 %= 10
-							if options.vsMode == 1
+
+							if options.vsMode == true
 								if object[currentPlayer].propertyValue == 0
 									GetTableValue(object.propertyValue, temp0, Monitor_table14)
 								else
@@ -152,7 +153,7 @@ event ObjectMain
 								end if
 							end if
 						end if
-						PlaySfx(SfxName[Destroy], 0)
+						PlaySfx(SfxName[Destroy], false)
 					end if
 				else
 					BoxCollisionTest(C_BOX, object.entityPos, -15, -14, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
@@ -213,6 +214,7 @@ event ObjectStartup
 	SpriteFrame(-8, -9, 16, 14, 35, 156)
 	SpriteFrame(-8, -9, 16, 14, 18, 171)
 	SpriteFrame(-8, -9, 16, 14, 35, 171)
+
 	temp0 = 0
 	Monitor_value26 = DebugMode_ObjCount
 	Monitor_value26--
@@ -235,11 +237,13 @@ event ObjectStartup
 		end if
 		temp0++
 	loop
+	
 	foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].value31 = object[arrayPos0].propertyValue
 		object[arrayPos0].value31 >>= 4
 		object[arrayPos0].propertyValue &= 15
 	next
+
 	if stage.playerListPos == 1
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 			if object[arrayPos0].propertyValue == 5
@@ -247,6 +251,7 @@ event ObjectStartup
 			end if
 		next
 	end if
+
 	if stage.playerListPos == 2
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 			if object[arrayPos0].propertyValue == 5
@@ -254,6 +259,7 @@ event ObjectStartup
 			end if
 		next
 	end if
+
 	if options.gameMode == 2
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 			if object[arrayPos0].propertyValue == 5
@@ -261,7 +267,8 @@ event ObjectStartup
 			end if
 		next
 	end if
-	if options.vsMode == 1
+
+	if options.vsMode == true
 		switch vs.itemMode
 		case 1
 			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
@@ -295,17 +302,114 @@ event ObjectStartup
 			end if
 		end if
 	end if
+
 	foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].frame = object[arrayPos0].propertyValue
 		object[arrayPos0].frame += 2
 	next
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // contents
+			checkResult = object.propertyValue
+			checkResult &= 0xF
+			break
+		case 1 // altContents
+			checkResult = object.propertyValue
+			checkResult >>= 4
+			checkResult &= 0xF
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // contents
+			temp0 = editor.variableValue
+			temp0 &= 0xF
+			object.propertyValue &= 0xF0
+			object.propertyValue |= temp0
+			break
+		case 1 // altContents
+			temp0 = editor.variableValue
+			temp0 &= 0xF
+			temp0 <<= 4
+			object.propertyValue &= 0xF
+			object.propertyValue |= temp0
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
+	object.frame = object.propertyValue
+	object.frame &= 0xF
+
 	DrawSprite(0)
+	DrawSprite(object.frame)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-16, -16, 32, 32, 18, 1)
+	SpriteFrame(-8, -9, 16, 14, 18, 66)
+	SpriteFrame(-8, -9, 16, 14, 35, 66)
+	SpriteFrame(-8, -9, 16, 14, 18, 81)
+	SpriteFrame(-8, -9, 16, 14, 35, 81)
+	SpriteFrame(-8, -9, 16, 14, 18, 96)
+	SpriteFrame(-8, -9, 16, 14, 35, 96)
+	SpriteFrame(-8, -9, 16, 14, 18, 111)
+	SpriteFrame(-8, -9, 16, 14, 35, 111)
+	SpriteFrame(-8, -9, 16, 14, 18, 141)
+	SpriteFrame(-8, -9, 16, 14, 35, 126)
+	SpriteFrame(-8, -9, 16, 14, 18, 126)
+	SpriteFrame(-8, -9, 16, 14, 35, 141)
+	SpriteFrame(-8, -9, 16, 14, 18, 156)
+	SpriteFrame(-8, -9, 16, 14, 35, 156)
+	SpriteFrame(-8, -9, 16, 14, 18, 171)
+	SpriteFrame(-8, -9, 16, 14, 35, 171)
+
+	AddEditorVariable("contents")
+	SetActiveVariable("contents")
+	AddEnumVariable("None", 0)
+	AddEnumVariable("10 Rings", 1)
+	AddEnumVariable("Blue Shield", 2)
+	AddEnumVariable("Invincibility", 3)
+	AddEnumVariable("Speed Shoes", 4)
+	AddEnumVariable("1UP (Sonic)", 5)
+	AddEnumVariable("1UP (Tails)", 6)
+	AddEnumVariable("1UP (Knux)", 7)
+	AddEnumVariable("Super", 8)
+	AddEnumVariable("Bubble Shield", 9)
+	AddEnumVariable("Fire Shield", 10)
+	AddEnumVariable("Lightning Shield", 11)
+	AddEnumVariable("Eggman", 12)
+	AddEnumVariable("Swap", 13)
+	AddEnumVariable("Random", 14)
+	AddEnumVariable("Shields Toggle", 15)
+
+	AddEditorVariable("altContents")
+	SetActiveVariable("altContents")
+	AddEnumVariable("None", 0)
+	AddEnumVariable("10 Rings", 1)
+	AddEnumVariable("Blue Shield", 2)
+	AddEnumVariable("Invincibility", 3)
+	AddEnumVariable("Speed Shoes", 4)
+	AddEnumVariable("1UP (Sonic)", 5)
+	AddEnumVariable("1UP (Tails)", 6)
+	AddEnumVariable("1UP (Knux)", 7)
+	AddEnumVariable("Super", 8)
+	AddEnumVariable("Bubble Shield", 9)
+	AddEnumVariable("Fire Shield", 10)
+	AddEnumVariable("Lightning Shield", 11)
+	AddEnumVariable("Eggman", 12)
+	AddEnumVariable("Swap", 13)
+	AddEnumVariable("Random", 14)
+	AddEnumVariable("Shields Toggle", 15)
 end event

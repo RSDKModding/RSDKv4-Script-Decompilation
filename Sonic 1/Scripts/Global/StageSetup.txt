@@ -6,7 +6,32 @@
 // ----------------------------------
 
 // Aliases
-private alias 4 : TYPE_STAGESETUP
+
+// Game Modes
+public alias 0 : MODE_NOSAVE
+public alias 1 : MODE_NORMAL
+public alias 2 : MODE_TIMEATTACK
+
+// Tracks
+public alias 0 : TRACK_STAGE
+public alias 1 : TRACK_ACTFINISH
+public alias 2 : TRACK_INVINCIBLE
+public alias 3 : TRACK_CONTINUE
+public alias 4 : TRACK_BOSS
+public alias 5 : TRACK_GAMEOVER
+public alias 6 : TRACK_DROWNING
+
+// Music Events
+public alias 25 : SLOT_MUSICEVENT_CHANGE
+public alias 26 : SLOT_MUSICEVENT_BOSS
+
+public alias 0 : MUSICEVENT_FADETOBOSS
+public alias 1 : MUSICEVENT_FADETOSTAGE
+public alias 2 : MUSICEVENT_TRANSITION
+
+public alias 0 : MUSICEVENT_FLAG_NOCHANGE
+public alias 1 : MUSICEVENT_FLAG_SPEEDUP
+public alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 
 private alias object.type 			: player.type
 private alias object.controlMode 	: player.controlMode
@@ -30,7 +55,6 @@ public value StageSetup_value21 = 0;
 
 // Used by monitors to determine whether to show static or not and what frame of it to show
 private alias StageSetup_value22 : StageSetup_monitorOverlayFrame
-
 private alias StageSetup_value21 : StageSetup_oscillateFlipFlags
 
 // Tables
@@ -112,15 +136,15 @@ event ObjectMain
 		end if
 
 		// Not in time attack
-		if options.gameMode != 2
+		if options.gameMode != MODE_TIMEATTACK
 			if player.score >= player.scoreBonus
 				// Player achieved a high enough score, give them an extra life
 				player.lives++
-				player.scoreBonus += 0xC350
-				PlaySfx(SfxName[Life], 0)
+				player.scoreBonus += 50000
+				PlaySfx(SfxName[Life], false)
 				PauseMusic()
-				ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
-				object[25].priority = PRIORITY_ACTIVE
+				ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+				object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
 			end if
 		end if
 
@@ -135,7 +159,7 @@ event ObjectMain
 			if stage.minutes == 10 // At 10 minutes?
 				CheckEqual(stage.debugMode, true)
 				temp0 = checkResult
-				CheckEqual(options.gameMode, 2)
+				CheckEqual(options.gameMode, MODE_TIMEATTACK)
 				temp0 |= checkResult
 				if temp0 == false
 					currentPlayer = 0
@@ -214,7 +238,6 @@ event ObjectMain
 			currentPlayer += playerCount
 
 			if player[currentPlayer].sortedDrawOrder == 0
-
 				currentPlayer -= playerCount
 				arrayPos0 = player[currentPlayer].sortedDrawOrder
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
@@ -246,12 +269,12 @@ end event
 event ObjectStartup
 
 	// Setup the common music tracks used in every level
-	SetMusicTrack("ActComplete.ogg", 1, false)
-	SetMusicTrack("Invincibility.ogg", 2, 39528)
-	SetMusicTrack("Continue.ogg", 3, false)
-	SetMusicTrack("Boss.ogg", 4, true)
-	SetMusicTrack("GameOver.ogg", 5, false)
-	SetMusicTrack("Drowning.ogg", 6, false)
+	SetMusicTrack("ActComplete.ogg", TRACK_ACTFINISH, false)
+	SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
+	SetMusicTrack("Continue.ogg", TRACK_CONTINUE, false)
+	SetMusicTrack("Boss.ogg", TRACK_BOSS, true)
+	SetMusicTrack("GameOver.ogg", TRACK_GAMEOVER, false)
+	SetMusicTrack("Drowning.ogg", TRACK_DROWNING, false)
 
 	// Setup object range
 	if options.attractMode == false
@@ -266,7 +289,7 @@ event ObjectStartup
 	// They should later get their proper music functions assigned by object 39 (stage-specific setup) but this doesn't hurt
 	SpeedUpMusic    = 0
 	SlowDownMusic   = 0
-	stage.musicFlag = 0
+	stage.musicFlag = MUSICEVENT_FLAG_NOCHANGE
 
 	// Set stage death bounds
 	stage.deathBoundary = stage.curYBoundary2
@@ -311,7 +334,7 @@ event ObjectStartup
 	// Bonus options can only be used in no save mode
 	if options.saveSlot > 0
 		options.shieldType  = 0
-		options.superStates = 0
+		options.superStates = false
 	end if
 
 	// Set the effects based on shield prefrence
@@ -339,4 +362,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -6,7 +6,19 @@
 // ----------------------------------
 
 // Aliases
-private alias 64 : TYPE_DOORHORIZONTAL
+private alias object.value0 : object.timer
+private alias object.value1 : object.collisionOffset.y
+
+private alias 0 : HORIZONTALDOOR_AWAITBUTTON
+private alias 1 : HORIZONTALDOOR_MOVING
+private alias 2 : HORIZONTALDOOR_MOVED
+private alias 3 : HORIZONTALDOOR_AWAITWATER
+
+// PushButton aliases
+private alias object.value0 : pushButton.stood
+
+// Water aliases
+private alias Water_value32 : Water_activateFlag
 
 // Function declarations
 reserve function DoorHorizontal_DebugDraw
@@ -25,26 +37,29 @@ function DoorHorizontal_DebugSpawn
 	CreateTempObject(TypeName[Door Horizontal], 0, object.xpos, object.ypos)
 	object[tempObjectPos].direction = object.direction
 	object[tempObjectPos].priority = PRIORITY_ACTIVE
-	object[tempObjectPos].value0 = 64
+	object[tempObjectPos].timer = 64
 end function
 
 
 event ObjectMain
 	switch object.state
-	case 3
-		if Water_value32 == 1
-			object.state = 1
+	case HORIZONTALDOOR_AWAITWATER
+		if Water_activateFlag == true
+			object.state = HORIZONTALDOOR_MOVING
 		end if
-	case 0
-		if object[+1].value0 == 1
+
+	case HORIZONTALDOOR_AWAITBUTTON
+		if pushButton[+1].stood == true
 			object.state++
 		end if
-	case 2
+
+	case HORIZONTALDOOR_MOVED
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -64, -16, 64, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
 		break
-	case 1
+
+	case HORIZONTALDOOR_MOVING
 		temp0 = object.xpos
 		temp0 &= -0x10000
 		if object.direction == FLIP_NONE
@@ -52,21 +67,25 @@ event ObjectMain
 		else
 			object.xpos += 0x20000
 		end if
-		object.value0--
-		if object.value0 < 0
+
+		object.timer--
+		if object.timer < 0
 			object.state++
 		end if
-		object.value1 = object.xpos
-		object.value1 &= -0x10000
-		object.value1 -= temp0
+
+		object.collisionOffset.y = object.xpos
+		object.collisionOffset.y &= -0x10000
+		object.collisionOffset.y -= temp0
 		temp1 = object.xpos
+
 		object.xpos = temp0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -64, -16, 64, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object[currentPlayer].xpos += object.value1
+			if checkResult == COL_TOP
+				object[currentPlayer].xpos += object.collisionOffset.y
 			end if
 		next
+
 		object.xpos = temp1
 		break
 	end switch
@@ -81,17 +100,46 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("LZ/Objects.gif")
 	SpriteFrame(-64, -16, 128, 32, 84, 223)
+
 	foreach (TypeName[Door Horizontal], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
-		object[arrayPos0].value0 = 64
+		object[arrayPos0].timer = 64
 		if object[arrayPos0].propertyValue == 1
-			object[arrayPos0].state = 3
+			object[arrayPos0].state = HORIZONTALDOOR_AWAITWATER
 		end if
 	next
+
+	// Add this object to the debug item list
 	SetTableValue(TypeName[Door Horizontal], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(DoorHorizontal_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(DoorHorizontal_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		case 0 // isEnd
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		case 0 // isEnd
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -99,6 +147,11 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-64, -16, 128, 32, 84, 223)
+
+	AddEditorVariable("activationType")
+	SetActiveVariable("activationType")
+	AddEnumVariable("Button", 0)
+	AddEnumVariable("Water", 1)
 end event

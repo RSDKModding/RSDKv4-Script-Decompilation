@@ -6,21 +6,23 @@
 // ----------------------------------
 
 // Aliases
-private alias 15 : TYPE_CHAOSEMERALD
+private alias object.value0 : object.timer
+private alias object.value9 : object.notEnoughRings
 
 // Function declarations
-reserve function ChaosEmerald_Function14
+reserve function ChaosEmerald_HandleDrawing
 
 // Static Values
 
 // Tables
 
-function ChaosEmerald_Function14
-	MatrixRotateXYZ(MAT_WORLD, object[0].value17, object[0].value18, object[0].value19)
-	MatrixTranslateXYZ(MAT_TEMP, object[0].value14, object[0].value15, object[0].value16)
+function ChaosEmerald_HandleDrawing
+	MatrixRotateXYZ(MAT_WORLD, object[0].rotateX, object[0].rotateY, object[0].rotateZ)
+	MatrixTranslateXYZ(MAT_TEMP, object[0].translateX, object[0].translateY, object[0].translateZ)
 	MatrixMultiply(MAT_WORLD, MAT_TEMP)
 	arrayPos0 = scene3D.vertexCount
 	arrayPos1 = scene3D.faceCount
+
 	faceBuffer[arrayPos1].flag = FACE_TEXTURED_D
 	faceBuffer[arrayPos1].a = arrayPos0
 	vertexBuffer[arrayPos0].x = 0
@@ -31,6 +33,7 @@ function ChaosEmerald_Function14
 	arrayPos2 = arrayPos0
 	arrayPos0++
 	TransformVertices(MAT_WORLD, arrayPos2, arrayPos0)
+
 	faceBuffer[arrayPos1].b = arrayPos0
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -38,6 +41,7 @@ function ChaosEmerald_Function14
 	vertexBuffer[arrayPos0].u = 0x600
 	vertexBuffer[arrayPos0].v = 0x600
 	arrayPos0++
+
 	faceBuffer[arrayPos1].c = arrayPos0
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -45,31 +49,36 @@ function ChaosEmerald_Function14
 	vertexBuffer[arrayPos0].u = 17
 	vertexBuffer[arrayPos0].v = 16
 	arrayPos0++
+
 	faceBuffer[arrayPos1].d = arrayPos0
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 	vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
 	arrayPos0++
+
 	arrayPos1++
 	scene3D.vertexCount += 4
 	scene3D.faceCount++
 	arrayPos2 = arrayPos0
 	arrayPos0++
+
 	faceBuffer[arrayPos1].flag = FACE_SPRITE_3D
 	faceBuffer[arrayPos1].a = arrayPos2
 	vertexBuffer[arrayPos2].x = 0
 	vertexBuffer[arrayPos2].y = object.value7
 	vertexBuffer[arrayPos2].z = object.value8
 	TransformVertices(MAT_WORLD, arrayPos2, arrayPos0)
-	vertexBuffer[arrayPos2].u = 15
-	vertexBuffer[arrayPos2].v = 0
+	vertexBuffer[arrayPos2].u = TypeName[Chaos Emerald]
+	vertexBuffer[arrayPos2].v = FX_SCALE
 	faceBuffer[arrayPos1].b = arrayPos0
+
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 	vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
 	vertexBuffer[arrayPos0].u = object.frame
 	vertexBuffer[arrayPos0].v = 0
 	arrayPos0++
+
 	faceBuffer[arrayPos1].c = arrayPos0
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -77,6 +86,7 @@ function ChaosEmerald_Function14
 	vertexBuffer[arrayPos0].u = object.scale
 	vertexBuffer[arrayPos0].v = 0
 	arrayPos0++
+
 	faceBuffer[arrayPos1].d = arrayPos0
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
@@ -102,37 +112,40 @@ event ObjectMain
 					object.drawOrder = 5
 					object.frame = stage.actNum
 					object.state++
-					if stage.player2Enabled == 1
-						temp0 = object[2].value0
-						temp0 += object[3].value0
-						object[2].controlMode = -1
-						object[2].left = 0
-						object[2].right = 0
-						object[3].controlMode = -1
-						object[3].left = 0
-						object[3].right = 0
+					if stage.player2Enabled == true
+						temp0 = player[2].rings
+						temp0 += player[3].rings
+
+						object[2].controlMode 	= -1
+						object[2].left 			= false
+						object[2].right 		= false
+
+						object[3].controlMode 	= -1
+						object[3].left 			= false
+						object[3].right 		= false
 					else
-						temp0 = object[2].value0
+						temp0 = player[2].rings
 						object[2].controlMode = -1
 						object[2].left = 0
 						object[2].right = 0
 					end if
-					GetTableValue(temp1, SpecialSetup_value3, SpecialSetup_value4)
+
+					GetTableValue(temp1, SpecialSetup_checkpointID, SpecialSetup_ringCountTable)
 					if temp0 >= temp1
-						object.value9 = 0
+						object.notEnoughRings = false
 					else
-						object.value9 = 1
+						object.notEnoughRings = true
 					end if
 					object.value8 = 0x14000
 				end if
 			end if
 		next
 		if stage.actNum == 7
-			GetTableValue(temp0, SpecialSetup_value3, SpecialSetup_value4)
+			GetTableValue(temp0, SpecialSetup_checkpointID, SpecialSetup_ringCountTable)
 			if object[10].value1 > temp0
-				object.value0++
-				object.value0 &= 1
-				if object.value0 == 0
+				object.timer++
+				object.timer &= 1
+				if object.timer == 0
 					RotatePalette(0, 129, 141, 0)
 				end if
 			end if
@@ -144,21 +157,22 @@ event ObjectMain
 		object.angle += 12
 		object.angle &= 511
 		music.volume--
-		if object.value9 == 0
+		if object.notEnoughRings == false
 			if stage.actNum == 7
-				object.value0++
-				object.value0 &= 1
-				if object.value0 == 0
+				object.timer++
+				object.timer &= 1
+				if object.timer == 0
 					RotatePalette(0, 129, 141, 0)
 				end if
 			end if
+			
 			if object.scale < 512
 				object.scale += 4
 				object.value8 -= 512
 			else
 				StopMusic()
-				PlaySfx(SfxName[Emerald], 0)
-				SpecialSetup_value0 = 1
+				PlaySfx(SfxName[Emerald], false)
+				SpecialSetup_gotEmerald = true
 				object.state++
 			end if
 		else
@@ -171,6 +185,7 @@ event ObjectMain
 				object[tempObjectPos].drawOrder = 5
 				object.state++
 			end if
+
 			if object[0].value23 > 4
 				if object.animationTimer == 0
 					object[0].value23--
@@ -179,15 +194,17 @@ event ObjectMain
 				object.animationTimer &= 7
 			end if
 		end if
-		CallFunction(ChaosEmerald_Function14)
+		CallFunction(ChaosEmerald_HandleDrawing)
 		break
+
 	case 2
 		Sin(object.value7, object.angle)
 		object.value7 -= 0x1C00
 		object.angle += 12
 		object.angle &= 511
-		CallFunction(ChaosEmerald_Function14)
-		if object.value9 == 1
+		CallFunction(ChaosEmerald_HandleDrawing)
+
+		if object.notEnoughRings == true
 			if object[0].value23 > 4
 				if object.animationTimer == 0
 					object[0].value23--
@@ -201,19 +218,21 @@ event ObjectMain
 			end if
 		else
 			if stage.actNum == 7
-				temp0 = object.value0
+				temp0 = object.timer
 				temp0 &= 1
 				if temp0 == 0
 					RotatePalette(0, 129, 141, 0)
 				end if
 			end if
 		end if
-		object.value0++
-		if object.value0 == 180
+
+		object.timer++
+		if object.timer == 180
 			ResetObjectEntity(20, TypeName[Special Finish], 0, 0, 0)
 			object[20].priority = PRIORITY_ACTIVE
 		end if
 		break
+
 	end switch
 end event
 
@@ -231,10 +250,19 @@ event ObjectStartup
 end event
 
 event RSDKDraw
+	//TODO: use stage.actNum?
 	DrawSprite(0)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 260)
+	SpriteFrame(-8, -8, 16, 16, 18, 260)
+	SpriteFrame(-8, -8, 16, 16, 35, 260)
+	SpriteFrame(-8, -8, 16, 16, 52, 260)
+	SpriteFrame(-8, -8, 16, 16, 69, 260)
+	SpriteFrame(-8, -8, 16, 16, 86, 260)
+	SpriteFrame(-8, -8, 16, 16, 103, 260)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

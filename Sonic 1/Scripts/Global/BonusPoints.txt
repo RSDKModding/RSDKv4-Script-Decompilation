@@ -6,38 +6,29 @@
 // ----------------------------------
 
 // Aliases
-private alias 37 : TYPE_BONUSPOINTS
-
 private alias object.value0 : object.timer
-private alias object.value1 : object.pointBonus
+private alias object.value1 : object.scoreBonus
 
-private alias 0 : STATE_HIDDEN
-private alias 1 : STATE_VISIBLE
+private alias 0 : BONUSPOINTS_HIDDEN
+private alias 1 : BONUSPOINTS_VISIBLE
 
 event ObjectMain
 
-	if object.state == STATE_HIDDEN
-
+	if object.state == BONUSPOINTS_HIDDEN
 		// Interact with player(s)
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			if checkResult == true
-
 				// Show the object
-				object.state = STATE_VISIBLE
-				object.drawOrder = 5
-				object.inkEffect = INK_ALPHA
-				object.alpha = 256
-				PlaySfx(SfxName[Bonus Points], 0)
-				player.score += object.pointBonus
-
+				object.state 		= BONUSPOINTS_VISIBLE
+				object.drawOrder 	= 5
+				object.inkEffect 	= INK_ALPHA
+				object.alpha 		= 0x100
+				PlaySfx(SfxName[Bonus Points], false)
+				player.score += object.scoreBonus
 			end if
-
 		next
-
 	else
-
 		object.timer++
 
 		if object.timer > 105
@@ -47,7 +38,6 @@ event ObjectMain
 		if object.timer == 120
 			object.type = TypeName[Blank Object]
 		end if
-
 	end if
 
 end event
@@ -56,7 +46,7 @@ end event
 event ObjectDraw
 
 	// Only show after the player has touched it
-	if object.state == STATE_VISIBLE
+	if object.state == BONUSPOINTS_VISIBLE
 		DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.ypos)
 	end if
 
@@ -64,34 +54,62 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Display.gif")
 
 	foreach (TypeName[Bonus Points], arrayPos0, ALL_ENTITIES)
 		// Choose point based on property value
 		object[arrayPos0].propertyValue &= 3
 		switch object[arrayPos0].propertyValue
+		default
+		case 0
+			break
+
 		case 1
-			object[arrayPos0].pointBonus = 10000
+			object[arrayPos0].scoreBonus = 10000
 			break
 
 		case 2
-			object[arrayPos0].pointBonus = 1000
+			object[arrayPos0].scoreBonus = 1000
 			break
 
 		case 3
-			object[arrayPos0].pointBonus = 100
+			object[arrayPos0].scoreBonus = 100
 			break
-
 		end switch
 	next
 
 	// Sprite frames
-	SpriteFrame(-16, -12, 31, 23, 225, 49) // 0 - "10000" icon (unused sprite frame)
-	SpriteFrame(-16, -12, 31, 23, 225, 49) // 1 - "10000" icon
-	SpriteFrame(-16, -12, 31, 23, 225, 25) // 2 - "1000" icon
-	SpriteFrame(-16, -12, 31, 23, 225, 1)  // 3 - "100" icon
+	SpriteFrame(-16, -12, 31, 23, 225, 49) // 10000 Points (No ScoreBonus) - #0
+	SpriteFrame(-16, -12, 31, 23, 225, 49) // 10000 Points - #1
+	SpriteFrame(-16, -12, 31, 23, 225, 25) // 1000  Points - #2
+	SpriteFrame(-16, -12, 31, 23, 225, 1)  // 100   Points - #3
 
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+		case 0 // scoreBonus
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+		case 0 // scoreBonus
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -104,4 +122,11 @@ event RSDKLoad
 	SpriteFrame(-16, -12, 31, 23, 225, 49)
 	SpriteFrame(-16, -12, 31, 23, 225, 25)
 	SpriteFrame(-16, -12, 31, 23, 225, 1)
+
+	AddEditorVariable("scoreBonus")
+	SetActiveVariable("scoreBonus")
+	AddEnumVariable("No Points", 0)
+	AddEnumVariable("10,000 Points", 1)
+	AddEnumVariable("1,000 Points", 2)
+	AddEnumVariable("100 Points", 3)
 end event

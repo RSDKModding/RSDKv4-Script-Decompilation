@@ -6,34 +6,28 @@
 // ----------------------------------
 
 // Aliases
-private alias 22 : TYPE_SPECIALRING
+private alias 0 : SPECIALRING_FLOATING
+private alias 1 : SPECIALRING_DISAPPEARING
 
-private alias 0 : STATE_FLOATING
-private alias 1 : STATE_DISAPPEARING
-
-private alias object.type : player.type
-private alias object.direction : player.direction
-private alias object.controlMode : player.controlMode
-private alias object.jumpPress : player.jumpPress
-private alias object.jumpHold : player.jumpHold
-private alias object.up : player.up
-private alias object.down : player.down
-private alias object.left : player.left
-private alias object.right : player.right
-private alias object.value0 : player.rings
-private alias object.value16 : player.isPlayer2
+private alias object.type 			: player.type
+private alias object.direction 		: player.direction
+private alias object.controlMode 	: player.controlMode
+private alias object.jumpPress 		: player.jumpPress
+private alias object.jumpHold 		: player.jumpHold
+private alias object.up 			: player.up
+private alias object.down 			: player.down
+private alias object.left 			: player.left
+private alias object.right 			: player.right
+private alias object.value0 		: player.rings
+private alias object.value16 		: player.isSidekick
 
 event ObjectMain
-
-	// Normal state?
-	if object.state == STATE_FLOATING
-
+	if object.state == SPECIALRING_FLOATING
 		// Are 50 or more rings collected?
 		if player[0].rings > 49
 
 			// Did P1 collide with the special ring?
 			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-
 			if checkResult == true
 
 				// Make P1 and its shield "disappear"
@@ -44,15 +38,15 @@ event ObjectMain
 
 				ResetObjectEntity(4, TypeName[Blank Object], 0, 0, 0)
 				object.drawOrder = 4
-				object.state = STATE_DISAPPEARING
+				object.state = SPECIALRING_DISAPPEARING
 				object.frame = 32
 				StopSfx(SfxName[Flying])
 				StopSfx(SfxName[Tired])
-				PlaySfx(SfxName[Special Ring], 0)
+				PlaySfx(SfxName[Special Ring], false)
 				player[0].left = false
 				player[0].right = false
 				if stage.player2Enabled == true
-					if player[1].isPlayer2 == true
+					if player[1].isSidekick == true
 						player[1].controlMode = -1
 						player[1].up = false
 						player[1].down = false
@@ -62,17 +56,14 @@ event ObjectMain
 						player[1].jumpHold = false
 					end if
 				end if
-
 			end if
-
 		end if
-
 	end if
 
 	// If the player is Super, don't show up
 	// -> This should only happen in Debug Mode, since special rings are unloaded
 	//    if the player has max emeralds during startup
-	if PlayerObject_SuperState == 1
+	if PlayerObject_SuperState == SUPERSTATE_SUPER
 		ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 	end if
 
@@ -82,10 +73,9 @@ end event
 event ObjectDraw
 
 	switch object.state
-	case STATE_FLOATING
+	case SPECIALRING_FLOATING
 		// Only show up if there are 50 or more rings collected
-		if player[0].rings > 49
-
+		if player[0].rings >= 50
 			temp0 = object.frame
 			temp0 >>= 2
 			if temp0 > 3
@@ -100,11 +90,10 @@ event ObjectDraw
 			if object.frame > 31
 				object.frame = 0
 			end if
-
 		end if
 		break
 
-	case STATE_DISAPPEARING
+	case SPECIALRING_DISAPPEARING
 		// Determine whether to flip the sprite or not based on current frame
 		temp0 = object.frame
 		temp0 >>= 2
@@ -133,9 +122,7 @@ event ObjectDraw
 			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 		end if
 		break
-
 	end switch
-
 end event
 
 
@@ -163,14 +150,13 @@ event ObjectStartup
 
 	// Find max emerald count
 	if options.superStates == false
-		temp0 = 63
+		temp0 = 0x3F
 	else
-		temp0 = 127
+		temp0 = 0x7F
 	end if
 
 	// Are all emeralds already gathered?
 	if specialStage.emeralds >= temp0
-
 		// Big rings aren't needed anymore, delete them
 		foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
 			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
@@ -178,9 +164,7 @@ event ObjectStartup
 
 	end if
 
-	// Is the game in time attack?
-	if options.gameMode == 2
-	
+	if options.gameMode == MODE_TIMEATTACK
 		// Delete every big ring, they shouldn't be in time attack
 		foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
 			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
@@ -197,4 +181,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Items2.gif")
 	SpriteFrame(-32, -32, 64, 64, 83, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -1,6 +1,6 @@
 // ----------------------------------
 // RSDK Project: Sonic 1/Sonic 2
-// Script Description: Eggman Object
+// Script Description: GHZ Eggman Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
@@ -44,13 +44,13 @@ private alias 1 : WRECKINGBALL_ACTIVE
 private alias 2 : WRECKINGBALL_EXPLODE
 
 // Eggman Animations
-private alias 0 : EGGANI_INVISIBLE
-private alias 1 : EGGANI_IDLE
-private alias 2 : EGGANI_LAUGH
-private alias 3 : EGGANI_HIT
-private alias 4 : EGGANI_DEFEATED
-private alias 5 : EGGANI_DESTROYED
-private alias 6 : EGGANI_PANIC
+private alias 0 : GHZEGGANI_INVISIBLE
+private alias 1 : GHZEGGANI_IDLE
+private alias 2 : GHZEGGANI_LAUGH
+private alias 3 : GHZEGGANI_HIT
+private alias 4 : GHZEGGANI_DEFEATED
+private alias 5 : GHZEGGANI_DESTROYED
+private alias 6 : GHZEGGANI_PANIC
 
 // Flame Animations
 private alias 0 : FLAME_INACTIVE
@@ -177,10 +177,10 @@ event ObjectMain
 		temp0 += 64
 		if screen.yoffset > temp0
 			if object[0].xpos > object[-1].xpos
-				object.animation = EGGANI_IDLE
+				object.animation = GHZEGGANI_IDLE
 				object.health = 8
-				ResetObjectEntity(26, TypeName[Music Event], 0, 0, 0)
-				object[26].priority = PRIORITY_ACTIVE
+				ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
+				object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
 				object.state++
 			end if
 		end if
@@ -218,7 +218,7 @@ event ObjectMain
 			object[-1].ypos = object.ypos
 			object[-6].type = TypeName[Boss Lights]
 			object[-6].ypos = object.ypos
-			object.animation = EGGANI_LAUGH
+			object.animation = GHZEGGANI_LAUGH
 			object[-1].flameAnim = FLAME_INACTIVE
 		end if
 		break
@@ -280,7 +280,7 @@ event ObjectMain
 			temp0 >>= 1
 			object.arenaBorder -= temp0
 			object.state++
-			object.animation = EGGANI_IDLE
+			object.animation = GHZEGGANI_IDLE
 			object[-1].flameAnim = FLAME_ACTIVE
 			object[-1].state = WRECKINGBALL_ACTIVE
 		end if
@@ -355,12 +355,12 @@ event ObjectMain
 		end if
 
 		if object.timer == 180
-			object.animation = EGGANI_DESTROYED
+			object.animation = GHZEGGANI_DESTROYED
 			object.animationTimer = 0
 			object.timer = 0
 			object.direction = FLIP_X
-			ResetObjectEntity(26, TypeName[Music Event], 1, 0, 0)
-			object[26].priority = PRIORITY_ACTIVE
+			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
 			object.state++
 		end if
 		break
@@ -368,6 +368,7 @@ event ObjectMain
 	case GHZEGGMAN_DEFEATFALL
 		object.ypos += object[-1].gravityStrength
 		object[-1].gravityStrength += 0x1800
+		
 		object.timer++
 		if object.timer == 38
 			object[-1].gravityStrength = 0
@@ -398,7 +399,7 @@ event ObjectMain
 			object.timer++
 		else
 			object.timer = 0
-			object.animation = EGGANI_PANIC
+			object.animation = GHZEGGANI_PANIC
 			object.animationTimer = 0
 			object[-1].flameAnim = FLAME_EXPLODE
 			object[-1].flameAnimTimer = 0
@@ -436,8 +437,8 @@ event ObjectMain
 			CheckEqual(object[currentPlayer].animation, ANI_DROWNING)
 			temp0 |= checkResult
 			if temp0 != 0
-				if object.animation != EGGANI_LAUGH
-					object.animation = EGGANI_LAUGH
+				if object.animation != GHZEGGANI_LAUGH
+					object.animation = GHZEGGANI_LAUGH
 					object.animationTimer = 0
 				end if
 			end if
@@ -456,7 +457,7 @@ event ObjectMain
 						if object.health == 0
 							player.score += 1000
 							object.animationTimer = 0
-							object.animation = EGGANI_DEFEATED
+							object.animation = GHZEGGANI_DEFEATED
 							temp0 = object.entityPos
 							temp0 -= 2
 							ResetObjectEntity(temp0, TypeName[Explosion], 0, object[-2].xpos, object[-2].ypos)
@@ -474,7 +475,7 @@ event ObjectMain
 							object.state = GHZEGGMAN_EXPLODE
 						else
 							object.animationTimer = 0
-							object.animation = EGGANI_HIT
+							object.animation = GHZEGGANI_HIT
 							object[-1].invincibilityTimer = 32
 							PlaySfx(SfxName[Boss Hit], false)
 						end if
@@ -505,11 +506,12 @@ end event
 
 event ObjectDraw
 	switch object.animation
-	case EGGANI_INVISIBLE
+	case GHZEGGANI_INVISIBLE
 	default
+	case GHZEGGANI_INVISIBLE
 		break
 
-	case EGGANI_IDLE
+	case GHZEGGANI_IDLE
 		temp0 = object.animationTimer
 		temp0 /= 6
 		object.animationTimer++
@@ -517,7 +519,7 @@ event ObjectDraw
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case EGGANI_LAUGH
+	case GHZEGGANI_LAUGH
 		temp0 = object.animationTimer
 		temp0 %= 10
 		temp0 /= 5
@@ -526,25 +528,25 @@ event ObjectDraw
 		if object.animationTimer == 50
 			object.animationTimer = 0
 			if object[0].animation != ANI_DYING
-				object.animation = 1
+				object.animation = GHZEGGANI_IDLE
 			end if
 		end if
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case EGGANI_HIT
+	case GHZEGGANI_HIT
 		temp0 = object.animationTimer
 		temp0 &= 1
 		temp0 += 2
 		object.animationTimer++
 		if object.animationTimer == 30
 			object.animationTimer = 0
-			object.animation = 1
+			object.animation = GHZEGGANI_IDLE
 		end if
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case EGGANI_DEFEATED
+	case GHZEGGANI_DEFEATED
 		temp0 = object.animationTimer
 		temp0 >>= 5
 		temp0 += 4
@@ -553,11 +555,11 @@ event ObjectDraw
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case EGGANI_DESTROYED
+	case GHZEGGANI_DESTROYED
 		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case EGGANI_PANIC
+	case GHZEGGANI_PANIC
 		temp0 = object.animationTimer
 		temp0 >>= 2
 		temp0 += 7
@@ -666,6 +668,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Global/Eggman.gif")
+	SpriteFrame(-28, -32, 64, 56, 1, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

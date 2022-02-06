@@ -6,7 +6,9 @@
 // ----------------------------------
 
 // Aliases
-private alias 59 : TYPE_PUSHBUTTON
+private alias object.value0 : object.stood
+
+private alias LZSetup_value30 : LZSetup_beltDirection
 
 // Function declarations
 reserve function PushButton_DebugDraw
@@ -27,39 +29,46 @@ end function
 
 
 event ObjectMain
-	object.value0 = 0
+	object.stood = false
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if object.frame == 0
 			BoxCollisionTest(C_BOX, object.entityPos, -14, -4, 14, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object.value0 = 1
-				object[currentPlayer].ypos += 0x9C40
-				PlaySfx(SfxName[Button Press], 0)
+			if checkResult == COL_TOP
+				object.stood = true
+				object[currentPlayer].ypos += 400000
+				PlaySfx(SfxName[Button Press], false)
+
 				switch object.propertyValue
-				case 1
+				default
+				case 0 // Generic
+					break
+
+				case 1 // Open LZ3 Path
 					GetTileLayerEntry(temp0, 0, 12, 5)
 					if temp0 == 302
-						PlaySfx(SfxName[Large Wall], 0)
+						PlaySfx(SfxName[Large Wall], false)
 						SetTileLayerEntry(30, 0, 12, 5)
 						SetTileLayerEntry(31, 0, 13, 5)
 					end if
 					break
-				case 2
+
+				case 2 // unused
 					break
-				case 3
-					LZSetup_value30 = 1
+
+				case 3 // Set Belt Dir
+					LZSetup_beltDirection = FLIP_X
 					break
 				end switch
 			end if
 		else
 			if object[currentPlayer].yvel >= 0
 				BoxCollisionTest(C_PLATFORM, object.entityPos, -14, -4, 14, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					object.value0 = 1
+				if checkResult == true
+					object.stood = true
 					object[currentPlayer].ypos += 0x20000
 				else
 					BoxCollisionTest(C_TOUCH, object.entityPos, -20, -12, 20, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-					if checkResult == 1
+					if checkResult == true
 						object[currentPlayer].ypos = object[currentPlayer].collisionBottom
 						FlipSign(object[currentPlayer].ypos)
 						object[currentPlayer].ypos <<= 16
@@ -71,12 +80,14 @@ event ObjectMain
 			end if
 		end if
 	next
+
 	foreach (TypeName[Push Block], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 8, arrayPos0, -16, -16, 16, 16)
-		if checkResult == 1
+		if checkResult == true
+			// I think this is a leftover from MZ/SYZ, this should probably set object.stood instead of object.propertyValue (which was object.stood in MZ/SYZ)
 			object.propertyValue = 1
 			if object.frame == 0
-				PlaySfx(SfxName[Button Press], 0)
+				PlaySfx(SfxName[Button Press], false)
 			end if
 		end if
 	next
@@ -84,7 +95,7 @@ end event
 
 
 event ObjectDraw
-	object.frame = object.value0
+	object.frame = object.stood
 	DrawSprite(object.frame)
 end event
 
@@ -93,10 +104,37 @@ event ObjectStartup
 	LoadSpriteSheet("LZ/Objects.gif")
 	SpriteFrame(-16, -8, 32, 16, 1, 84)
 	SpriteFrame(-16, -4, 32, 12, 85, 160)
+
 	SetTableValue(TypeName[Push Button], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(PushButton_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(PushButton_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 3
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -104,6 +142,13 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 1, 84)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Generic", 0)
+	AddEnumVariable("Open LZ3 Path", 1)
+	// AddEnumVariable("unused?", 2) // as far as I know this does nothing special so...
+	AddEnumVariable("Swap Belt Platform Dir", 3)
 end event

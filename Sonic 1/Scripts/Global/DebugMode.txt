@@ -6,11 +6,9 @@
 // ----------------------------------
 
 // Aliases
-private alias 9 : TYPE_DEBUGMODE
-
 private alias object.value3  : player.drownCounter
 private alias object.value4  : player.drownLevel
-private alias object.value17 : debugMode.currentSelection
+private alias object.value17 : object.currentSelection
 private alias object.value18 : player.currentPlane
 
 // Function declarations
@@ -68,12 +66,9 @@ end function
 
 
 event ObjectMain
-
 	if options.touchControls == true
-
 		CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
 		if checkResult > -1
-
 			arrayPos0 = checkResult
 			temp0 = touchscreen[arrayPos0].xpos
 			temp0 -= saveRAM[39]
@@ -120,7 +115,6 @@ event ObjectMain
 				inputDown.up = true
 				inputDown.right = true
 				break
-
 			end switch
 		end if
 
@@ -131,35 +125,26 @@ event ObjectMain
 		CheckTouchRect(temp0, 0, temp1, 56)
 
 		if checkResult > -1
-
 			arrayPos0 = checkResult
 			if touchscreen[arrayPos0].xpos > screen.xcenter
-
-				if touchJump == 0
-
-					debugMode.currentSelection++
-					if debugMode.currentSelection >= DebugMode_ObjCount
-						debugMode.currentSelection = 0
+				if touchJump == false
+					object.currentSelection++
+					if object.currentSelection >= DebugMode_ObjCount
+						object.currentSelection = 0
 					end if
-
 				end if
 
 				touchJump = true
 			else
-
-				if touchJump == 0
-
-					debugMode.currentSelection--
-					if debugMode.currentSelection < 0
-						debugMode.currentSelection += DebugMode_ObjCount
+				if touchJump == false
+					object.currentSelection--
+					if object.currentSelection < 0
+						object.currentSelection += DebugMode_ObjCount
 					end if
-
 				end if
 
 				touchJump = true
-
 			end if
-
 		else
 
 			CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
@@ -175,9 +160,7 @@ event ObjectMain
 				end if
 				touchJump = inputDown.buttonC
 				break
-
 			end switch
-
 		end if
 
 		temp0 = screen.xsize
@@ -185,13 +168,13 @@ event ObjectMain
 
 		CheckTouchRect(temp0, 0, screen.xsize, 40)
 		if checkResult > -1
-			PlaySfx(SfxName[Menu Back], 0)
-			engine.state = 5
+			PlaySfx(SfxName[Menu Back], false)
+			engine.state = ENGINE_INITPAUSE
 		end if
 
 		if inputPress.start == true
-			PlaySfx(SfxName[Menu Back], 0)
-			engine.state = 5
+			PlaySfx(SfxName[Menu Back], false)
+			engine.state = ENGINE_INITPAUSE
 		end if
 
 	end if
@@ -207,8 +190,7 @@ event ObjectMain
 
 	touchDebug = inputDown.buttonB
 
-	temp0 = 0
-
+	temp0 = false
 	if inputDown.left == true
 		object.xpos -= object.yvel
 		temp0 = true
@@ -263,21 +245,22 @@ event ObjectMain
 		object.visible = true
 	else
 		if inputPress.buttonA == true
-			debugMode.currentSelection++
-			if debugMode.currentSelection >= DebugMode_ObjCount
-				debugMode.currentSelection = 0
+			object.currentSelection++
+			if object.currentSelection >= DebugMode_ObjCount
+				object.currentSelection = 0
 			end if
 		end if
+
 		if inputDown.buttonA == true
 			if inputPress.buttonC == true
-				debugMode.currentSelection--
-				if debugMode.currentSelection < 0
-					debugMode.currentSelection += DebugMode_ObjCount
+				object.currentSelection--
+				if object.currentSelection < 0
+					object.currentSelection += DebugMode_ObjCount
 				end if
 			end if
 		else
 			if inputPress.buttonC == true
-				GetTableValue(temp0, debugMode.currentSelection, DebugMode_SpawnTable)
+				GetTableValue(temp0, object.currentSelection, DebugMode_SpawnTable)
 				CallFunction(temp0)
 				object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
 			end if
@@ -287,20 +270,17 @@ end event
 
 
 event ObjectDraw
-
 	// Temporarily switch to the selected object in order to draw it
-	GetTableValue(object.type, debugMode.currentSelection, DebugMode_TypesTable)
-	GetTableValue(temp0, debugMode.currentSelection, DebugMode_DrawTable)
+	GetTableValue(object.type, object.currentSelection, DebugMode_TypesTable)
+	GetTableValue(temp0, object.currentSelection, DebugMode_DrawTable)
 	CallFunction(temp0)
 
 	// Switch back to the Debug Mode object
 	object.type = TypeName[Debug Mode]
-
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Display.gif")
 
 	// Placeholder frame, otherwise unused
@@ -317,7 +297,6 @@ event ObjectStartup
 		SetTableValue(DebugMode_SpawnBlank, temp0, DebugMode_SpawnTable)
 		temp0++
 	loop
-
 end event
 
 event RSDKDraw
@@ -326,5 +305,10 @@ end event
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	// Placeholder frame, otherwise unused
+	// It's the Sonic CD life icon, in case you were wondering
+	SpriteFrame(-8, -8, 16, 16, 188, 239)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

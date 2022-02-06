@@ -6,35 +6,36 @@
 // ----------------------------------
 
 // Aliases
-private alias 47 : TYPE_ENDINGCONTROL
+private alias object.value0 : object.timer
 
-
-// Static Values
-
-// Tables
+// Player Aliases
+private alias object.value1 : player.timer
 
 event ObjectMain
 	switch object.state
 	case 0
 		PlayMusic(0)
 		object.state++
+		// [Fallthrough]
 	case 1
 		object[0].controlMode = -1
-		object[0].up = 0
-		object[0].down = 0
-		object[0].left = 1
-		object[0].right = 0
-		object[0].jumpHold = 0
-		object[0].jumpPress = 0
-		if options.superStates == 0
-			temp0 = 63
+		object[0].up = false
+		object[0].down = false
+		object[0].left = true
+		object[0].right = false
+		object[0].jumpHold = false
+		object[0].jumpPress = false
+		if options.superStates == false
+			temp0 = 0x3F
 		else
-			temp0 = 127
+			temp0 = 0x7F
 		end if
+
 		if specialStage.emeralds >= temp0
 			object[0].xpos = object[+1].xpos
 			object[0].ypos = object[+1].ypos
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if currentPlayer == 0
 				object[currentPlayer].speed = -0x60000
@@ -46,16 +47,19 @@ event ObjectMain
 				StopSfx(SfxName[Skidding])
 			end if
 		next
-		if object.value0 > 0
-			object.value0 -= 16
+
+		if object.timer > 0
+			object.timer -= 16
 		else
 			temp0 = 424
 			temp0 += screen.xcenter
 			stage.newXBoundary2 = temp0
 			object.state++
 		end if
-		SetScreenFade(0, 0, 0, object.value0)
+
+		SetScreenFade(0, 0, 0, object.timer)
 		break
+
 	case 2
 		temp0 = object.xpos
 		temp0 -= 0x180000
@@ -63,13 +67,15 @@ event ObjectMain
 			if object[currentPlayer].speed < -0x60000
 				object[currentPlayer].speed = -0x60000
 			end if
+
 			if object[currentPlayer].xpos < temp0
-				object[currentPlayer].left = 0
-				object[currentPlayer].right = 1
+				object[currentPlayer].left = false
+				object[currentPlayer].right = true
 			end if
+
 			if object[currentPlayer].xpos > object.xpos
-				if object[currentPlayer].right == 1
-					object[currentPlayer].right = 0
+				if object[currentPlayer].right == true
+					object[currentPlayer].right = false
 					object[currentPlayer].speed = 0
 					if currentPlayer == playerCount
 						object.state++
@@ -78,40 +84,47 @@ event ObjectMain
 							ResetObjectEntity(currentPlayer, TypeName[Ending Pose], 0, object.xpos, object.ypos)
 							object[currentPlayer].controlMode = -1
 							object[currentPlayer].drawOrder = 6
+
 							if options.superStates == 0
-								temp0 = 63
+								temp0 = 0x3F
 							else
-								temp0 = 127
+								temp0 = 0x7F
 							end if
+
 							if specialStage.emeralds < temp0
 								switch stage.playerListPos
-								case 0
-								case 3
+								case PlayerName[SONIC]
+								case PlayerName[SONIC AND TAILS]
 									object[currentPlayer].frame = 0
 									break
-								case 1
+
+								case PlayerName[TAILS]
 									object[currentPlayer].frame = 13
 									break
-								case 2
+
+								case PlayerName[KNUCKLES]
 									object[currentPlayer].frame = 24
 									break
 								end switch
 							else
 								switch stage.playerListPos
-								case 0
-								case 3
+								case PlayerName[SONIC]
+								case PlayerName[SONIC AND TAILS]
 									object[currentPlayer].frame = 4
 									break
-								case 1
+
+								case PlayerName[TAILS]
 									object[currentPlayer].frame = 16
 									break
-								case 2
+
+								case PlayerName[KNUCKLES]
 									object[currentPlayer].frame = 27
 									break
 								end switch
 								object[currentPlayer].state = 5
 							end if
-							object[currentPlayer].value1 = 224
+
+							player[currentPlayer].timer = 224
 						end if
 					end if
 				end if
@@ -125,7 +138,7 @@ end event
 event ObjectStartup
 	foreach (TypeName[Ending Control], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
-		object[arrayPos0].value0 = 272
+		object[arrayPos0].timer = 272
 	next
 end event
 
@@ -136,4 +149,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

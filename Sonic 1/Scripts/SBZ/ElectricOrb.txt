@@ -6,19 +6,25 @@
 // ----------------------------------
 
 // Aliases
-private alias 50 : TYPE_ELECTRICORB
+private alias object.value1 : object.interval
+
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
 reserve function ElectricOrb_DebugDraw
 reserve function ElectricOrb_DebugSpawn
 
 // Static Values
-public value ElectricOrb_value33 = 0;
+private value ElectricOrb_value33 = 0;
+private alias ElectricOrb_value33 : ElectricOrb_startDebugID
+
+private alias SBZSetup_value29 : SBZSetup_electricOrbFrame
+private alias SBZSetup_value30 : SBZSetup_electricOrbTimer
 
 function ElectricOrb_DebugDraw
 	temp0 = object.direction
-	object.direction = object.value17
-	object.direction -= ElectricOrb_value33
+	object.direction = debugMode.currentSelection
+	object.direction -= ElectricOrb_startDebugID
 	object.direction--
 	object.direction <<= FLIP_X
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
@@ -27,8 +33,8 @@ end function
 
 
 function ElectricOrb_DebugSpawn
-	temp0 = object.value17
-	temp0 -= ElectricOrb_value33
+	temp0 = debugMode.currentSelection
+	temp0 -= ElectricOrb_startDebugID
 	temp0--
 	temp0 <<= 1
 	CreateTempObject(TypeName[Electric Orb], 0, object.xpos, object.ypos)
@@ -38,26 +44,30 @@ end function
 
 
 event ObjectMain
-	switch object.value1
+	switch object.interval
 	default
-		temp0 = SBZSetup_value29
+		temp0 = SBZSetup_electricOrbFrame
+		// every 24 frames
 		break
 
 	case 2
-		temp0 = SBZSetup_value29
+		temp0 = SBZSetup_electricOrbFrame
 		temp0 %= 12
+		// every 12 frames
 		break
 
 	case 4
-		temp0 = SBZSetup_value29
+		temp0 = SBZSetup_electricOrbFrame
 		temp0 %= 6
+		// every 6 frames
 		break
 
 	end switch
 
+	// temp0 = timer
 	switch temp0
 	case 0
-		if SBZSetup_value30 == 1
+		if SBZSetup_electricOrbTimer == 1
 			temp0 = object.ixpos
 			temp0 -= screen.cameraX
 			Abs(temp0)
@@ -66,7 +76,7 @@ event ObjectMain
 				temp0 -= screen.cameraY
 				Abs(temp0)
 				if temp0 < screen.ycenter
-					PlaySfx(SfxName[Electric Arc], 0)
+					PlaySfx(SfxName[Electric Arc], false)
 				end if
 			end if
 		end if
@@ -114,17 +124,19 @@ end event
 
 
 event ObjectDraw
-	switch object.value1
+	switch object.interval
 	default
-		DrawSpriteFX(SBZSetup_value29, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(SBZSetup_electricOrbFrame, FX_FLIP, object.xpos, object.ypos)
 		break
+
 	case 2
-		temp0 = SBZSetup_value29
+		temp0 = SBZSetup_electricOrbFrame
 		temp0 %= 12
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
+		
 	case 4
-		temp0 = SBZSetup_value29
+		temp0 = SBZSetup_electricOrbFrame
 		temp0 %= 6
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
@@ -163,10 +175,10 @@ event ObjectStartup
 	SpriteFrame(-8, -8, 16, 32, 58, 479)
 
 	foreach (TypeName[Electric Orb], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].propertyValue
-		object[arrayPos0].value1 >>= 1
-		object[arrayPos0].value1 &= 3
-		object[arrayPos0].value1 <<= 1
+		object[arrayPos0].interval = object[arrayPos0].propertyValue
+		object[arrayPos0].interval >>= 1
+		object[arrayPos0].interval &= 3
+		object[arrayPos0].interval <<= 1
 		object[arrayPos0].propertyValue &= 1
 		if object[arrayPos0].propertyValue == 1
 			object[arrayPos0].direction = FLIP_Y
@@ -177,8 +189,8 @@ event ObjectStartup
 	next
 
 	temp0 = 0
-	ElectricOrb_value33 = DebugMode_ObjCount
-	ElectricOrb_value33--
+	ElectricOrb_startDebugID = DebugMode_ObjCount
+	ElectricOrb_startDebugID--
 	while temp0 < 2
 		SetTableValue(TypeName[Electric Orb], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(ElectricOrb_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -188,11 +200,73 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // direction
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		case 1 // interval
+			checkResult = object.propertyValue
+			checkResult >>= 1
+			checkResult &= 3
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // direction
+			temp0 = editor.variableValue
+			temp0 &= 1
+
+			object.propertyValue &= 0xFE
+			object.propertyValue |= temp0
+			break
+		case 1 // interval
+			temp0 = editor.variableValue
+			temp0 &= 3
+
+			object.propertyValue &= 0xF1
+			object.propertyValue |= temp0
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	temp0 = object.propertyValue
+	temp0 &= 1
+	
+	if temp0 == true
+		object.direction = FLIP_Y
+	else
+		object.direction = FLIP_NONE
+	end if
+
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SBZ/Objects.gif")
+
+	// Orb frames
+	SpriteFrame(-8, -8, 16, 32, 58, 479)
+	
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+	
+	AddEditorVariable("interval")
+	SetActiveVariable("interval")
+	AddEnumVariable("Every 24 Frames", 0)
+	AddEnumVariable("Every 12 Frames", 1)
+	AddEnumVariable("Every 6 Frames", 2)
 end event

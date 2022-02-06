@@ -6,14 +6,17 @@
 // ----------------------------------
 
 // Aliases
-private alias 72 : TYPE_SBZ3FALL
+private alias object.value0 : object.playerID
 
-private alias 0 : STATE_STAGE	// Version of the object placed in a stage
-private alias 1 : STATE_PLAYER	// Version of the object spawned for a player
+private alias 0 : SBZ3FALL_SETUP	
+private alias 1 : SBZ3FALL_HANDLEFALL
+
+// Player Aliases
+private alias object.value26 : player.flightVelocity		// Used by Tails only
 
 event ObjectMain
 
-	if object.state == 0
+	if object.state == SBZ3FALL_SETUP
 		if recAnimation != 0
 			temp0 = recAnimation
 		else
@@ -27,13 +30,13 @@ event ObjectMain
 		currentPlayer = 0
 		while currentPlayer < playerCount
 			CreateTempObject(TypeName[SBZ3 Fall], 0, object.xpos, object.ypos)
-			object[tempObjectPos].state = 1
-			object[tempObjectPos].value0 = currentPlayer
+			object[tempObjectPos].state = SBZ3FALL_HANDLEFALL
+			object[tempObjectPos].playerID = currentPlayer
 			object[tempObjectPos].direction = temp0
-			object[tempObjectPos].direction &= 255
+			object[tempObjectPos].direction &= 0xFF
 			temp0 >>= 8
 			object[tempObjectPos].animation = temp0
-			object[tempObjectPos].animation &= 255
+			object[tempObjectPos].animation &= 0xFF
 			temp0 >>= 8
 
 			currentPlayer++
@@ -41,7 +44,7 @@ event ObjectMain
 
 		object.type = TypeName[Blank Object]
 	else
-		currentPlayer = object.value0
+		currentPlayer = object.playerID
 
 		if object[currentPlayer].gravity == GRAVITY_GROUND
 			object.type = TypeName[Blank Object]
@@ -56,7 +59,7 @@ event ObjectMain
 
 			if object[currentPlayer].animation == ANI_FLYING
 				object[currentPlayer].state = PlayerObject_HandleTailsFlight
-				object[currentPlayer].value26 = 0x800
+				player[currentPlayer].flightVelocity = 0x800
 				object.type = TypeName[Blank Object]
 			end if
 
@@ -84,5 +87,7 @@ end event
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	SpriteFrame(-8, -8, 16, 16, 239, 239) // "Trigger" - #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

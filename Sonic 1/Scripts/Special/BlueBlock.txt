@@ -6,15 +6,11 @@
 // ----------------------------------
 
 // Aliases
-private alias 4 : TYPE_BLUEBLOCK
+private alias object.propertyValue : object.colorChangeOffset
 
 // Function declarations
 reserve function BlueBlock_DebugDraw
 reserve function BlueBlock_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function BlueBlock_DebugDraw
 	DrawSprite(0)
@@ -24,9 +20,9 @@ end function
 
 
 function BlueBlock_DebugSpawn
-	temp5 = 4
+	temp5 = TypeName[Blue Block]
 	temp4 = 0
-	CallFunction(DebugMode_Function11)
+	CallFunction(DebugMode_PlaceBlock)
 	object[arrayPos0].drawOrder = 4
 	object[arrayPos0].groupID = GROUP_BLOCKS
 end function
@@ -34,30 +30,37 @@ end function
 
 event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		CallFunction(SpecialSetup_Function10)
+		CallFunction(SpecialSetup_PlayerBlockCol)
 	next
 end event
 
 
 event ObjectDraw
-	if object.propertyValue > 0
-		temp0 = SpecialSetup_value12
+	if object.colorChangeOffset > 0
+		temp0 = SpecialSetup_blockTimer
 		temp0 >>= 3
-		temp1 = object.propertyValue
+		temp1 = object.colorChangeOffset
 		temp1 -= temp0
 		switch temp1
 		case 1
 		case 3
 			object.type = TypeName[Yellow Block]
+			break
+
+		default
+			break
 		end switch
 	end if
-	CallFunction(SpecialSetup_Function9)
+	CallFunction(SpecialSetup_GetBlockPos)
+	
 	DrawSpriteFX(0, FX_ROTATE, temp0, temp1)
 	DrawSpriteXY(1, temp0, temp1)
+
 	temp2 = object.rotation
 	temp2 >>= 3
 	temp2 += 2
 	DrawSpriteFX(temp2, FX_ROTATE, temp0, temp1)
+
 	object.type = TypeName[Blue Block]
 end event
 
@@ -92,6 +95,32 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+		case 0 // colorChangeOffset
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 7
+			break
+		case 0 // colorChangeOffset
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 7
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
 	DrawSprite(0)
 	DrawSprite(1)
@@ -103,4 +132,15 @@ event RSDKLoad
 	SpriteFrame(-12, -12, 24, 24, 126, 76)
 	SpriteFrame(-10, -8, 20, 16, 151, 76)
 	SpriteFrame(-12, -12, 24, 24, 1, 1)
+	
+	AddEditorVariable("colorChangeOffset")
+	SetActiveVariable("colorChangeOffset")
+	AddEnumVariable("Frame 0", 0)
+	AddEnumVariable("Frame 1", 1)
+	AddEnumVariable("Frame 2", 2)
+	AddEnumVariable("Frame 3", 3)
+	AddEnumVariable("Frame 4", 4)
+	AddEnumVariable("Frame 5", 5)
+	AddEnumVariable("Frame 6", 6)
+	AddEnumVariable("Frame 7", 7)
 end event

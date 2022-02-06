@@ -6,15 +6,19 @@
 // ----------------------------------
 
 // Aliases
-private alias 60 : TYPE_LAVAFLOW
+private alias object.value1 : object.startPos.x
+private alias object.value2 : object.spriteSprX
+
+private alias 0 : LAVAFLOW_AWAITPLAYER
+private alias 1 : LAVAFLOW_FLOWING
+private alias 2 : LAVAFLOW_FINISHEDFLOWING
+
+// MZSetup aliases
+private alias object.value3 : mzSetup.lavaAnimTimer
 
 // Function declarations
 reserve function LavaFlow_DebugDraw
 reserve function LavaFlow_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function LavaFlow_DebugDraw
 	DrawSprite(0)
@@ -28,21 +32,24 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case LAVAFLOW_AWAITPLAYER
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -33, 160, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				CallFunction(PlayerObject_FireHit)
 			end if
+
 			BoxCollisionTest(C_BOX, object.entityPos, -128, -31, 128, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 			BoxCollisionTest(C_TOUCH, object.entityPos, 256, -32, 288, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				object.state++
 				object.priority = PRIORITY_ACTIVE
 			end if
 		next
 		break
-	case 1
+
+	case LAVAFLOW_FLOWING
 		if object[0].state != PlayerObject_Death
 			if object[0].state != PlayerObject_Knockback
 				object.xpos += 0x18000
@@ -52,14 +59,17 @@ event ObjectMain
 				end if
 			end if
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -32, 160, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				CallFunction(PlayerObject_FireHit)
 			end if
+
 			BoxCollisionTest(C_BOX, object.entityPos, -128, -31, 128, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -23, 128, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				object[currentPlayer].ixpos = object[currentPlayer].collisionLeft
 				FlipSign(object[currentPlayer].xpos)
 				if object.xpos < 0x5800000
@@ -67,64 +77,75 @@ event ObjectMain
 				else
 					object[currentPlayer].xpos += 0x600000
 				end if
+
 				object[currentPlayer].xpos += object.xpos
 			end if
 		next
 		break
-	case 2
+
+	case LAVAFLOW_FINISHEDFLOWING
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -32, 160, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				CallFunction(PlayerObject_FireHit)
 			end if
+
 			BoxCollisionTest(C_BOX, object.entityPos, -128, -24, 160, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -23, 128, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				object[currentPlayer].ixpos = object[currentPlayer].collisionLeft
 				FlipSign(object[currentPlayer].xpos)
 				object[currentPlayer].xpos += 0x600000
 				object[currentPlayer].xpos += object.xpos
 			end if
 		next
-		if object.outOfBounds == 1
+
+		if object.outOfBounds == true
 			temp0 = object.xpos
-			object.xpos = object.value1
-			if object.outOfBounds == 1
-				object.state = 0
+			object.xpos = object.startPos.x
+			if object.outOfBounds == true
+				object.state = LAVAFLOW_AWAITPLAYER
 			else
 				object.xpos = temp0
 			end if
 		end if
+
 		break
 	end switch
-	Sin(object.value2, object[10].value3)
-	object.value2 += 512
-	object.value2 >>= 2
-	object.value2 &= 31
-	object.value2++
+
+	Sin(object.spriteSprX, mzSetup[10].lavaAnimTimer)
+	object.spriteSprX += 512
+	object.spriteSprX >>= 2
+	object.spriteSprX &= 31
+	object.spriteSprX++
+
 	object.frame = object.animationTimer
 	object.frame /= 10
 	object.frame += 4
 	object.animationTimer++
 	object.animationTimer %= 40
+
 	switch object[10].frame
 	case 0
-		EditFrame(0, -160, -32, 160, 32, object.value2, 405)
-		EditFrame(1, 0, -32, 124, 32, object.value2, 405)
-		EditFrame(2, -160, 0, 160, 32, object.value2, 405)
-		EditFrame(3, 0, 0, 156, 32, object.value2, 405)
+		EditFrame(0, -160, -32, 160, 32, object.spriteSprX, 405)
+		EditFrame(1, 0, -32, 124, 32, object.spriteSprX, 405)
+		EditFrame(2, -160, 0, 160, 32, object.spriteSprX, 405)
+		EditFrame(3, 0, 0, 156, 32, object.spriteSprX, 405)
 		break
+
 	case 1
-		EditFrame(0, -160, -32, 160, 32, object.value2, 438)
-		EditFrame(1, 0, -32, 124, 32, object.value2, 438)
-		EditFrame(2, -160, 0, 160, 32, object.value2, 438)
-		EditFrame(3, 0, 0, 156, 32, object.value2, 438)
+		EditFrame(0, -160, -32, 160, 32, object.spriteSprX, 438)
+		EditFrame(1, 0, -32, 124, 32, object.spriteSprX, 438)
+		EditFrame(2, -160, 0, 160, 32, object.spriteSprX, 438)
+		EditFrame(3, 0, 0, 156, 32, object.spriteSprX, 438)
 		break
+
 	case 2
-		EditFrame(0, -160, -32, 160, 32, object.value2, 471)
-		EditFrame(1, 0, -32, 124, 32, object.value2, 471)
-		EditFrame(2, -160, 0, 160, 32, object.value2, 471)
-		EditFrame(3, 0, 0, 156, 32, object.value2, 471)
+		EditFrame(0, -160, -32, 160, 32, object.spriteSprX, 471)
+		EditFrame(1, 0, -32, 124, 32, object.spriteSprX, 471)
+		EditFrame(2, -160, 0, 160, 32, object.spriteSprX, 471)
+		EditFrame(3, 0, 0, 156, 32, object.spriteSprX, 471)
 		break
 	end switch
 end event
@@ -149,10 +170,12 @@ event ObjectStartup
 	SpriteFrame(124, -32, 60, 64, 62, 194)
 	SpriteFrame(124, -32, 60, 64, 1, 259)
 	SpriteFrame(124, -32, 60, 64, 62, 259)
+
 	foreach (TypeName[Lava Flow], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].xpos
-		object[arrayPos0].drawOrder = 4
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].drawOrder  = 4
 	next
+
 	SetTableValue(TypeName[Lava Flow], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(LavaFlow_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(LavaFlow_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -161,9 +184,22 @@ end event
 
 event RSDKDraw
 	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+	DrawSprite(3)
+	DrawSprite(object.frame)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-128, -32, 128, 32, 1, 405)
+	SpriteFrame(0, -32, 128, 32, 1, 405)
+	SpriteFrame(-128, 0, 256, 32, 1, 405)
+	SpriteFrame(0, 0, 256, 32, 1, 405)
+	SpriteFrame(124, -32, 60, 64, 1, 194)
+	SpriteFrame(124, -32, 60, 64, 62, 194)
+	SpriteFrame(124, -32, 60, 64, 1, 259)
+	SpriteFrame(124, -32, 60, 64, 62, 259)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -6,26 +6,31 @@
 // ----------------------------------
 
 // Aliases
-private alias 40 : TYPE_CONTINUESCREEN
+private alias object.value0 : object.countdown	// The time you see in big numbers (seconds)
+private alias object.value1 : object.timer		// The hidden in-between timer (frames)
 
-private alias object.value0 : continue.countdown	// The time you see in big numbers (seconds)
-private alias object.value1 : continue.timer		// The hidden in-between timer (frames)
+// states
+private alias 0 : CONTINUE_IDLE
+private alias 1 : CONTINUE_COUNTDOWN
+
+// ContinueSetup states
+private alias 3 : CONTINUESETUP_WAITING
+private alias 5 : CONTINUESETUP_RUNOFFSCREEN
+private alias 7 : CONTINUESETUP_FADETOMENU
 
 event ObjectMain
-
-	if object.state == 1
-		continue.timer--
-		if continue.timer <= 0
-			if continue.countdown == 0
+	if object.state == CONTINUE_COUNTDOWN
+		object.timer--
+		if object.timer <= 0
+			if object.countdown == 0
 				object.state++
-				object[-2].state = 7
+				object[-2].state = CONTINUESETUP_FADETOMENU
 			else
-				continue.countdown--
-				continue.timer = 60
+				object.countdown--
+				object.timer = 60
 			end if
 		end if
 	end if
-
 end event
 
 
@@ -36,7 +41,7 @@ event ObjectDraw
 
 	temp0 = object.xpos
 	temp0 >>= 16
-	DrawNumbers(2, temp0, 126, continue.countdown, 2, 8, 1)
+	DrawNumbers(2, temp0, 126, object.countdown, 2, 8, 1)
 
 	temp0 = player.continues
 	temp1 = temp0
@@ -49,22 +54,24 @@ event ObjectDraw
 	object.frame += 12
 	temp3 = 1
 	while temp1 > 1
-		temp2 = 1
+		temp2 = true
 		if temp3 == 1
 			temp3 = 0
-			if object[-2].state >= 5
-				if object[-2].state != 7
-					temp2 = 0
+			if object[-2].state >= CONTINUESETUP_RUNOFFSCREEN
+				if object[-2].state != CONTINUESETUP_FADETOMENU
+					temp2 = false
 				end if
 			else
-				if object[-2].state > 3
+				if object[-2].state > CONTINUESETUP_WAITING
 					GetBit(temp2, oscillation, 0)
 				end if
 			end if
 		end if
-		if temp2 == 1
+
+		if temp2 == true
 			DrawSpriteScreenXY(object.frame, temp0, 100)
 		end if
+
 		temp0 += 21
 		temp1--
 	loop
@@ -106,7 +113,6 @@ event ObjectStartup
 		SpriteFrame(-8, -11, 16, 23, 467, 376)
 		SpriteFrame(-8, -11, 16, 23, 484, 376)
 		break
-
 	end switch
 
 	foreach (TypeName[Continue Screen], arrayPos0, ALL_ENTITIES)
@@ -114,7 +120,7 @@ event ObjectStartup
 		object[arrayPos0].xpos = screen.xcenter
 		object[arrayPos0].xpos <<= 16
 		object[arrayPos0].ypos = 0
-		object[arrayPos0].value0 = 10
+		object[arrayPos0].countdown = 10
 	next
 end event
 
@@ -123,6 +129,10 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// Sprite frames
+	SpriteFrame(-59, -8, 118, 16, 382, 400)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

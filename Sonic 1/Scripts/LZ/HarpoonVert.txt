@@ -6,7 +6,9 @@
 // ----------------------------------
 
 // Aliases
-private alias 52 : TYPE_HARPOONV
+private alias object.value0 : object.timer
+private alias object.value1 : object.hitboxT
+private alias object.value2 : object.hitboxB
 
 // Function declarations
 reserve function HarpoonV_DebugDraw
@@ -15,15 +17,15 @@ reserve function HarpoonV_DebugSpawn
 // Static Values
 
 // Tables
-public table HarpoonV_table32
+public table HarpoonV_frameTable
 	0, 1, 2, 1
 end table
 
-public table HarpoonV_table31
+public table HarpoonV_delayTable
 	66, 4, 66, 4
 end table
 
-public table HarpoonV_table33
+public table HarpoonV_sizeTable
 	-8, -24, -40, -24
 end table
 
@@ -47,31 +49,31 @@ end function
 
 event ObjectMain
 	if object.animationTimer == 0
-		object.value0++
-		if object.value0 >= 4
-			object.value0 = 0
+		object.timer++
+		if object.timer >= 4
+			object.timer = 0
 		end if
-		GetTableValue(object.animationTimer, object.value0, HarpoonV_table31)
-		GetTableValue(object.frame, object.value0, HarpoonV_table32)
+		GetTableValue(object.animationTimer, object.timer, HarpoonV_delayTable)
+		GetTableValue(object.frame, object.timer, HarpoonV_frameTable)
 	else
 		object.animationTimer--
 	end if
 
-	GetTableValue(object.value1, object.value0, HarpoonV_table33)
-	object.value2 = 8
+	GetTableValue(object.hitboxT, object.timer, HarpoonV_sizeTable)
+	object.hitboxB = 8
 	GetBit(temp2, object.direction, 1)
 
 	if temp2 == true
-		FlipSign(object.value1)
-		FlipSign(object.value2)
-		temp0 = object.value2
-		object.value2 = object.value1
-		object.value1 = temp0
+		FlipSign(object.hitboxT)
+		FlipSign(object.hitboxB)
+		temp0 = object.hitboxB
+		object.hitboxB = object.hitboxT
+		object.hitboxT = temp0
 	end if
 
 	// Check interaction with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -4, object.value1, 4, object.value2, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -4, object.hitboxT, 4, object.hitboxB, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		if checkResult == true
 			CallFunction(PlayerObject_Hit)
 		end if
@@ -101,10 +103,16 @@ event ObjectStartup
 end event
 
 event RSDKDraw
-	DrawSprite(0)
+	DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+	
+	// Harpoon frames
+	SpriteFrame(-4, -8, 8, 16, 231, 239)
+	SpriteFrame(-4, -24, 8, 32, 222, 223)
+	SpriteFrame(-4, -40, 8, 48, 213, 207)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

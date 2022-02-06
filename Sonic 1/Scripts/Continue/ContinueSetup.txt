@@ -6,33 +6,43 @@
 // ----------------------------------
 
 // Aliases
-private alias 39 : TYPE_CONTINUESETUP
+private alias object.value0 : object.timer
 
-private alias object.value0 : continueSetup.fadeValue
+private alias 0 : CONTINUESETUP_SETUP
+private alias 1 : CONTINUESETUP_FADEIN
+private alias 2 : CONTINUESETUP_PLAYERFALL
+private alias 3 : CONTINUESETUP_WAITING
+private alias 4 : CONTINUESETUP_CHARGEUP
+private alias 5 : CONTINUESETUP_RUNOFFSCREEN
+private alias 6 : CONTINUESETUP_RETURNTOSTAGE
+private alias 7 : CONTINUESETUP_FADETOMENU
 
 // Player aliases
-private alias object.state			:	player.state
-private alias object.type			:	player.type
-private alias object.speed			:	player.speed
-private alias object.xpos			:	player.xpos
-private alias object.ypos			:	player.ypos
-private alias object.yvel			:	player.yvel
-private alias object.xvel			:	player.xvel
-private alias object.animation		:	player.animation
-private alias object.animationSpeed :	player.animationSpeed
+private alias object.state			: player.state
+private alias object.type			: player.type
+private alias object.speed			: player.speed
+private alias object.xpos			: player.xpos
+private alias object.ypos			: player.ypos
+private alias object.yvel			: player.yvel
+private alias object.xvel			: player.xvel
+private alias object.animation		: player.animation
+private alias object.animationSpeed : player.animationSpeed
+
+// states
+private alias 1 : CONTINUE_COUNTDOWN
 
 event ObjectMain
 
 	switch object.state
-	case 0
-		continueSetup.fadeValue = 320
-		SetScreenFade(0, 0, 0, continueSetup.fadeValue)
+	case CONTINUESETUP_SETUP
+		object.timer = 320
+		SetScreenFade(0, 0, 0, object.timer)
 		object.state++
 		break
 
-	case 1
-		if continueSetup.fadeValue > 0
-			continueSetup.fadeValue -= 8
+	case CONTINUESETUP_FADEIN
+		if object.timer > 0
+			object.timer -= 8
 		else
 			player[0].yvel = 0x30000
 			if player[1].type != TypeName[Blank Object]
@@ -42,10 +52,10 @@ event ObjectMain
 			PlayMusic(0)
 			object.state++
 		end if
-		SetScreenFade(0, 0, 0, continueSetup.fadeValue)
+		SetScreenFade(0, 0, 0, object.timer)
 		break
 
-	case 2
+	case CONTINUESETUP_PLAYERFALL
 		temp0 = 0
 		switch stage.playerListPos
 		case PlayerName[SONIC]
@@ -60,7 +70,6 @@ event ObjectMain
 		case PlayerName[KNUCKLES]
 			temp1 = 0xA80000
 			break
-
 		end switch
 
 		temp2 = temp1
@@ -89,31 +98,35 @@ event ObjectMain
 
 		if temp0 == 2
 			object.state++
-			object[+2].state++
+			object[+2].state++ // state will be CONTINUE_COUNTDOWN
 		end if
 		break
-	case 3
+
+	case CONTINUESETUP_WAITING
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 		if checkResult > -1
-			inputPress.start = 1
+			inputPress.start = true
 		end if
-		if inputPress.start == 1
+
+		if inputPress.start == true
 			player[0].animation = ANI_CONTINUE_UP
 			player[0].speed = 0
-			if stage.playerListPos == 2
+			if stage.playerListPos == PlayerName[KNUCKLES]
 				player[0].ypos -= 0x20000
 			else
 				player[0].ypos -= 0x60000
 			end if
-			PlaySfx(SfxName[Charge], 0)
+			PlaySfx(SfxName[Charge], false)
 			object.state++
-			object[+2].state++
+			object[+2].state++ // state will be CONTINUE_COUNTDOWN
 		end if
 		break
-	case 4
+
+	case CONTINUESETUP_CHARGEUP
 		if music.volume > 0
 			music.volume--
 		end if
+
 		player[0].speed += 0x2000
 		if player[0].speed == 0x90000
 			player[0].xvel = 0x100000
@@ -121,13 +134,15 @@ event ObjectMain
 				object.state++
 			end if
 		end if
+
 		if player[1].type != TypeName[Blank Object]
 			if player[0].speed == 0x20000
 				player[1].animation = ANI_CONTINUE_UP
 				player[1].speed = 0
 				player[1].ypos -= 0x60000
-				PlaySfx(SfxName[Charge], 0)
+				PlaySfx(SfxName[Charge], false)
 			end if
+
 			if player[0].speed > 0x20000
 				player[1].speed += 0x2000
 				if player[1].speed == 0x90000
@@ -137,10 +152,12 @@ event ObjectMain
 			end if
 		end if
 		break
-	case 5
+
+	case CONTINUESETUP_RUNOFFSCREEN
 		if music.volume > 0
 			music.volume--
 		end if
+
 		temp0 = screen.xsize
 		temp0 += 32
 		if player[1].type == TypeName[Blank Object]
@@ -148,22 +165,26 @@ event ObjectMain
 		else
 			temp1 = player[1].xpos
 		end if
+
 		temp1 >>= 16
 		if temp1 >= temp0
 			object.state++
 		end if
 		break
-	case 6
+
+	case CONTINUESETUP_RETURNTOSTAGE
 		if music.volume > 0
 			music.volume--
 		end if
-		continueSetup.fadeValue += 4
-		SetScreenFade(0, 0, 0, continueSetup.fadeValue)
-		if continueSetup.fadeValue == 384
+
+		object.timer += 4
+		SetScreenFade(0, 0, 0, object.timer)
+
+		if object.timer == 384
 			player.continues--
 			player.lives = 3
 			fadeColor = 0
-			continueSetup.fadeValue = 0
+			object.timer = 0
 			lampPostID = 0
 			object.direction = FLIP_NONE
 			stage.activeList = recStageList
@@ -171,18 +192,21 @@ event ObjectMain
 			LoadStage()
 		end if
 		break
-	case 7
-		continueSetup.fadeValue += 4
-		SetScreenFade(0, 0, 0, continueSetup.fadeValue)
-		if continueSetup.fadeValue == 384
+
+	case CONTINUESETUP_FADETOMENU
+		object.timer += 4
+		SetScreenFade(0, 0, 0, object.timer)
+
+		if object.timer == 384
 			fadeColor = 0
-			continueSetup.fadeValue = 0
+			object.timer = 0
 			lampPostID = 0
 			object.direction = FLIP_NONE
-			engine.state = 8
+			engine.state = ENGINE_RESETGAME
 		end if
 		break
 	end switch
+
 	options.touchControls = false
 end event
 
@@ -193,7 +217,6 @@ end event
 
 
 event ObjectStartup
-
 	foreach (TypeName[Continue Setup], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 0
 	next
@@ -201,7 +224,7 @@ event ObjectStartup
 	player[0].xpos = screen.xcenter
 	player[0].xpos <<= 16
 	player[0].animation = ANI_FANROTATE
-	player[0].state = PlayerObject_HandleRunSpd2
+	player[0].state = PlayerObject_HandleContinueRun
 	player[0].yvel = 0x30000
 
 	// Is P2 there?
@@ -210,7 +233,7 @@ event ObjectStartup
 		player[1].xpos = screen.xcenter
 		player[1].xpos <<= 16
 		player[1].animation = ANI_FANROTATE
-		player[1].state = PlayerObject_HandleRunSpd2
+		player[1].state = PlayerObject_HandleContinueRun
 		player[1].yvel = 0x30000
 		player[0].xpos += 0x200000
 		player[1].xpos -= 0x200000
@@ -232,15 +255,17 @@ event ObjectStartup
 	stage.newXBoundary2 = screen.xsize
 	stage.newYBoundary2 = screen.ysize
 
-	SetMusicTrack("Continue.ogg", 0, 0)
+	SetMusicTrack("Continue.ogg", 0, false)
 
-	stage.pauseEnabled = 0
+	// player doesn't check if pause is enabled, and start is the only button you can press, so it pauses when you want to continue
+	// the assumption is that the proper PC version had a proper fix for this, given that the game is always on the mobile version
+	stage.pauseEnabled = false
 
 	if player.continues == 0
 		player.continues = 3
 	end if
 
-	options.touchControls = 0
+	options.touchControls = false
 
 end event
 

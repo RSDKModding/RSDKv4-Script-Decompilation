@@ -6,12 +6,30 @@
 // ----------------------------------
 
 // Aliases
-private alias 1 : TYPE_PLAYEROBJECT
-public alias 256 : GROUP_PLAYERS
-public alias 257 : GROUP_BLOCKS
-public alias 65536 : HITBOX_AUTO
-public alias arrayPos6 : currentPlayer
-public alias arrayPos7 : playerCount
+public alias 0x100 		: GROUP_PLAYERS
+public alias 0x101 		: GROUP_BLOCKS
+public alias 0x10000 	: HITBOX_AUTO
+public alias arrayPos6 	: currentPlayer
+public alias arrayPos7 	: playerCount
+
+private alias object.value0  : object.rings
+private alias object.value1  : object.timer
+private alias object.value2  : object.moveSpeed
+private alias object.value3  : object.acceleration
+private alias object.value5  : object.rollSpeed
+// value6 is unused
+private alias object.value7  : object.jumpStrength
+private alias object.value8  : object.moveVelocity.x
+private alias object.value9  : object.moveVelocity.y
+private alias object.value10 : debugMode.currentSelection
+private alias object.value11 : object.collisionFlags
+private alias object.value12 : object.worldVelocity.x
+private alias object.value13 : object.worldVelocity.y
+private alias object.value14 : object.rotateBlockTimer
+private alias object.value15 : object.upDownBlockTimer
+
+// TitleCard aliases
+private alias 8 : TITLECARD_FADETOTITLE
 
 // Function declarations
 reserve function PlayerObject_ProcessPlayer
@@ -23,40 +41,40 @@ reserve function PlayerObject_HandleGroundCol
 reserve function PlayerObject_HandleAirCol
 
 // Static Values
-public value PlayerObject_value1 = 0;
-public value PlayerObject_value2 = 0;
-public value PlayerObject_value3 = 0;
-public value PlayerObject_value4 = 0;
-public value PlayerObject_ReplayData = 0;
-public value PlayerObject_ReplayPos = 0;
-public value PlayerObject_ReplaySize = 0;
-public value PlayerObject_ReplayFrameCnt = 0;
-public value PlayerObject_ReplayLength = 0;
-public value PlayerObject_value0 = 0;
+public value PlayerObject_stageRotation = 0
+public value PlayerObject_rotateSpeed = 0
+public value PlayerObject_rotateDir = 0
+public value PlayerObject_isWinner = 0
+public value PlayerObject_replayData = 0
+public value PlayerObject_replayPos = 0
+public value PlayerObject_replaySize = 0
+public value PlayerObject_replayFrameCnt = 0
+public value PlayerObject_replayLength = 0
+public value PlayerObject_playerSlot = 0
 
-private value PlayerObject_value9 = 0;
-private value PlayerObject_value10 = 0;
-private value PlayerObject_value11 = 0;
-private value PlayerObject_value12 = 0;
-private value PlayerObject_value13 = 0;
-private value PlayerObject_value14 = 0;
-private value PlayerObject_value15 = 0;
+private value PlayerObject_unused1 = 0
+private value PlayerObject_unused2 = 0
+private value PlayerObject_unused3 = 0
+private value PlayerObject_unused4 = 0
+private value PlayerObject_unused5 = 0
+private value PlayerObject_unused6 = 0
+private value PlayerObject_unused7 = 0
 
 function PlayerObject_InitReplay
-	PlayerObject_ReplayPos = 2
-	PlayerObject_ReplayFrameCnt = 1
+	PlayerObject_replayPos = 2
+	PlayerObject_replayFrameCnt = 1
 	currentPlayer = 0
 	while currentPlayer < playerCount
-		GetTableValue(object[currentPlayer].xpos, 0, PlayerObject_ReplayData)
-		GetTableValue(object[currentPlayer].ypos, 1, PlayerObject_ReplayData)
+		GetTableValue(object[currentPlayer].xpos, 0, PlayerObject_replayData)
+		GetTableValue(object[currentPlayer].ypos, 1, PlayerObject_replayData)
 		object[currentPlayer].controlMode = -1
-		object[currentPlayer].up = 0
-		object[currentPlayer].down = 0
-		object[currentPlayer].left = 0
-		object[currentPlayer].right = 0
-		object[currentPlayer].jumpPress = 0
-		object[currentPlayer].jumpHold = 0
-		object[currentPlayer].value1 = 0
+		object[currentPlayer].up 		= false
+		object[currentPlayer].down 		= false
+		object[currentPlayer].left 		= false
+		object[currentPlayer].right		= false
+		object[currentPlayer].jumpPress = false
+		object[currentPlayer].jumpHold 	= false
+		object[currentPlayer].timer 	= 0
 		currentPlayer++
 	loop
 	screen.cameraX = object[0].ixpos
@@ -65,8 +83,8 @@ end function
 
 
 function PlayerObject_ProcessPlayer
-	if options.attractMode == 0
-		if options.touchControls == 1
+	if options.attractMode == false
+		if options.touchControls == true
 			if object.controlMode == 0
 				CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
 				if checkResult > -1
@@ -81,87 +99,100 @@ function PlayerObject_ProcessPlayer
 					temp2 >>= 6
 					switch temp2
 					case 0
-						inputDown.right = 1
+						inputDown.right = true
 						break
+
 					case 1
-						inputDown.down = 1
+						inputDown.down = true
 						break
+
 					case 2
-						inputDown.left = 1
+						inputDown.left = true
 						break
+
 					case 3
-						inputDown.up = 1
+						inputDown.up = true
 						break
 					end switch
 				end if
+
 				CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
 				if checkResult > -1
-					inputDown.buttonA = 1
+					inputDown.buttonA = true
 				end if
-				if touchJump == 0
+
+				if touchJump == false
 					inputPress.buttonA |= inputDown.buttonA
 				end if
 				touchJump = inputDown.buttonA
-				if stage.debugMode == 1
+
+				if stage.debugMode == true
 					CheckTouchRect(0, 0, 112, 56)
 					if checkResult > -1
-						inputDown.buttonB = 1
+						inputDown.buttonB = true
 					end if
-					if touchDebug == 0
+
+					if touchDebug == false
 						inputPress.buttonB |= inputDown.buttonB
 					end if
 					touchDebug = inputDown.buttonB
 				end if
+
 				CheckTouchRect(240, 0, screen.xsize, 40)
 				if checkResult > -1
-					PlaySfx(SfxName[Menu Back], 0)
-					engine.state = 5
+					PlaySfx(SfxName[Menu Back], false)
+					engine.state = ENGINE_INITPAUSE
 				end if
-				if inputPress.start == 1
-					PlaySfx(SfxName[Menu Back], 0)
-					engine.state = 5
+
+				if inputPress.start == true
+					PlaySfx(SfxName[Menu Back], false)
+					engine.state = ENGINE_INITPAUSE
 				end if
 			end if
 		end if
 		ProcessObjectControl()
 	else
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
-		if inputPress.start == 1
-			checkResult = 0
+		if inputPress.start == true
+			checkResult = false
 		end if
+
 		if checkResult > -1
-			if PlayerObject_ReplayLength > 1
-				PlayerObject_ReplayLength = 1
+			if PlayerObject_replayLength > 1
+				PlayerObject_replayLength = 1
 			end if
 		end if
-		if inputPress.start == 1
-			PlayerObject_ReplayLength = 1
+
+		if inputPress.start == true
+			PlayerObject_replayLength = 1
 		end if
-		PlayerObject_ReplayFrameCnt--
-		if PlayerObject_ReplayFrameCnt < 1
-			if PlayerObject_ReplayPos < PlayerObject_ReplaySize
-				GetTableValue(temp0, PlayerObject_ReplayPos, PlayerObject_ReplayData)
+
+		PlayerObject_replayFrameCnt--
+		if PlayerObject_replayFrameCnt < 1
+			if PlayerObject_replayPos < PlayerObject_replaySize
+				GetTableValue(temp0, PlayerObject_replayPos, PlayerObject_replayData)
 				GetBit(object.up, temp0, 0)
 				GetBit(object.down, temp0, 1)
 				GetBit(object.left, temp0, 2)
 				GetBit(object.right, temp0, 3)
 				GetBit(object.jumpPress, temp0, 4)
 				GetBit(object.jumpHold, temp0, 5)
-				PlayerObject_ReplayPos++
-				GetTableValue(PlayerObject_ReplayFrameCnt, PlayerObject_ReplayPos, PlayerObject_ReplayData)
-				PlayerObject_ReplayPos++
+				PlayerObject_replayPos++
+				GetTableValue(PlayerObject_replayFrameCnt, PlayerObject_replayPos, PlayerObject_replayData)
+				PlayerObject_replayPos++
 			end if
 		else
-			if object.jumpPress == 1
-				object.jumpPress = 0
+			if object.jumpPress == true
+				object.jumpPress = false
 			end if
 		end if
-		if PlayerObject_ReplayLength > 0
-			PlayerObject_ReplayLength--
-			if PlayerObject_ReplayLength < 1
-				arrayPos0 = PlayerObject_value0
+
+		if PlayerObject_replayLength > 0
+			PlayerObject_replayLength--
+			if PlayerObject_replayLength < 1
+				arrayPos0 = PlayerObject_playerSlot
 				object[arrayPos0].type = TypeName[Title Card]
-				object[arrayPos0].state = 8
+				object[arrayPos0].state = TITLECARD_FADETOTITLE
 				object[arrayPos0].priority = PRIORITY_ACTIVE
 				object[arrayPos0].drawOrder = 6
 			end if
@@ -171,15 +202,15 @@ end function
 
 
 function PlayerObject_Blank
-	checkResult = 0
+	checkResult = false
 end function
 
 
 function PlayerObject_HandleAniSpeed
-	if stage.playerListPos == 1
+	if stage.playerListPos == PlayerName[TAILS]
 		object.animationSpeed = 120
 	else
-		object.animationSpeed = object.value2
+		object.animationSpeed = object.moveSpeed
 		Abs(object.animationSpeed)
 		object.animationSpeed *= 240
 		object.animationSpeed /= 0x60000
@@ -189,192 +220,221 @@ end function
 
 
 function PlayerObject_HandleGroundCol
-	if object.value12 > 0
-		GetBit(temp0, object.value11, 2)
+	if object.worldVelocity.x > 0
+		GetBit(temp0, object.collisionFlags, COL_LEFT)
 	else
-		GetBit(temp0, object.value11, 3)
+		GetBit(temp0, object.collisionFlags, COL_RIGHT)
 	end if
+
 	if temp0 != 0
-		object.value12 = 0
+		object.worldVelocity.x = 0
 		object.gravity = GRAVITY_GROUND
 	end if
-	if object.value13 > 0
-		GetBit(temp0, object.value11, 1)
+
+	if object.worldVelocity.y > 0
+		GetBit(temp0, object.collisionFlags, COL_TOP)
 	else
-		GetBit(temp0, object.value11, 4)
+		GetBit(temp0, object.collisionFlags, COL_BOTTOM)
 	end if
+
 	if temp0 != 0
-		object.value13 = 0
+		object.worldVelocity.y = 0
 		object.gravity = GRAVITY_GROUND
 	end if
 end function
 
 
 function PlayerObject_HandleAirCol
-	temp0 = PlayerObject_value1
+	temp0 = PlayerObject_stageRotation
 	temp0 >>= 1
-	temp0 -= 224
-	temp0 &= 192
+	temp0 -= 0xE0
+	temp0 &= 0xC0
 	switch temp0
-	case 0
-		if object.value2 > 0
-			GetBit(temp0, object.value11, 2)
+	case 0x00
+		if object.moveSpeed > 0
+			GetBit(temp0, object.collisionFlags, COL_LEFT)
 		else
-			GetBit(temp0, object.value11, 3)
+			GetBit(temp0, object.collisionFlags, COL_RIGHT)
 		end if
 		break
-	case 64
-		if object.value2 > 0
-			GetBit(temp0, object.value11, 1)
+
+	case 0x40
+		if object.moveSpeed > 0
+			GetBit(temp0, object.collisionFlags, COL_TOP)
 		else
-			GetBit(temp0, object.value11, 4)
+			GetBit(temp0, object.collisionFlags, COL_BOTTOM)
 		end if
 		break
-	case 128
-		if object.value2 > 0
-			GetBit(temp0, object.value11, 3)
+
+	case 0x80
+		if object.moveSpeed > 0
+			GetBit(temp0, object.collisionFlags, COL_RIGHT)
 		else
-			GetBit(temp0, object.value11, 2)
+			GetBit(temp0, object.collisionFlags, COL_LEFT)
 		end if
 		break
-	case 192
-		if object.value2 > 0
-			GetBit(temp0, object.value11, 4)
+
+	case 0xC0
+		if object.moveSpeed > 0
+			GetBit(temp0, object.collisionFlags, COL_BOTTOM)
 		else
-			GetBit(temp0, object.value11, 1)
+			GetBit(temp0, object.collisionFlags, COL_TOP)
 		end if
 		break
 	end switch
-	if temp0 == 1
-		object.value2 = 0
+
+	if temp0 == true
+		object.moveSpeed = 0
 	end if
-	object.value11 = 0
+
+	object.collisionFlags = 0
 end function
 
 
 function PlayerObject_HandleMovement
 	CallFunction(PlayerObject_HandleGroundCol)
 	if object.gravity == GRAVITY_AIR
-		if object.value14 != 0
-			object.value14--
+		if object.rotateBlockTimer != 0
+			object.rotateBlockTimer--
 		end if
-		if object.value15 != 0
-			object.value15--
+
+		if object.upDownBlockTimer != 0
+			object.upDownBlockTimer--
 		end if
 	end if
-	temp2 = PlayerObject_value1
+
+	temp2 = PlayerObject_stageRotation
 	temp2 &= 504
 	if object.gravity == GRAVITY_GROUND
-		if object.jumpPress == 1
-			checkResult = 1
+		if object.jumpPress == true
+			checkResult = true
 		else
-			checkResult = 0
+			checkResult = false
 		end if
 	else
-		checkResult = 0
+		checkResult = false
 	end if
-	if checkResult == 1
+
+	if checkResult == true
 		Sin(temp0, temp2)
-		temp0 *= object.value7
+		temp0 *= object.jumpStrength
 		temp0 >>= 9
+
 		Cos(temp1, temp2)
-		temp1 *= object.value7
+		temp1 *= object.jumpStrength
 		temp1 >>= 9
-		object.value12 = 0
-		object.value12 += temp0
-		object.value13 = 0
-		object.value13 -= temp1
-		PlaySfx(SfxName[Jump], 0)
+
+		object.worldVelocity.x = 0
+		object.worldVelocity.x += temp0
+		object.worldVelocity.y = 0
+		object.worldVelocity.y -= temp1
+		PlaySfx(SfxName[Jump], false)
 	else
 		Sin(temp0, temp2)
-		temp0 *= object.value5
+		temp0 *= object.rollSpeed
 		temp0 >>= 9
+
 		Cos(temp1, temp2)
-		temp1 *= object.value5
+		temp1 *= object.rollSpeed
 		temp1 >>= 9
-		object.value12 -= temp0
-		object.value13 += temp1
+
+		object.worldVelocity.x -= temp0
+		object.worldVelocity.y += temp1
 	end if
+
 	CallFunction(PlayerObject_HandleAirCol)
+
 	temp0 = 0
-	if object.left == 1
-		object.value2 -= object.value3
-		if object.value2 < -0x80000
-			object.value2 = -0x80000
+	if object.left == true
+		object.moveSpeed -= object.acceleration
+		if object.moveSpeed < -0x80000
+			object.moveSpeed = -0x80000
 		end if
+
 		object.direction = FLIP_X
-		temp0 = 1
+		temp0 = true
 	end if
-	if object.right == 1
-		object.value2 += object.value3
-		if object.value2 > 0x80000
-			object.value2 = 0x80000
+
+	if object.right == true
+		object.moveSpeed += object.acceleration
+		if object.moveSpeed > 0x80000
+			object.moveSpeed = 0x80000
 		end if
+
 		object.direction = FLIP_NONE
-		temp0 = 1
+		temp0 = true
 	end if
-	if temp0 == 0
-		if object.value2 != 0
-			if object.value2 > 0
-				object.value2 -= object.value3
-				if object.value2 < 0
-					object.value2 = 0
+
+	if temp0 == false
+		if object.moveSpeed != 0
+			if object.moveSpeed > 0
+				object.moveSpeed -= object.acceleration
+				if object.moveSpeed < 0
+					object.moveSpeed = 0
 				end if
 			else
-				object.value2 += object.value3
-				if object.value2 > 0
-					object.value2 = 0
+				object.moveSpeed += object.acceleration
+				if object.moveSpeed > 0
+					object.moveSpeed = 0
 				end if
 			end if
 		end if
 	end if
-	temp0 = PlayerObject_value1
-	temp0 += 64
-	temp0 &= 384
-	Cos(object.value8, temp0)
-	object.value8 *= object.value2
-	object.value8 >>= 9
-	Sin(object.value9, temp0)
-	object.value9 *= object.value2
-	object.value9 >>= 9
-	object.xvel = object.value12
-	object.xvel += object.value8
-	object.yvel = object.value13
-	object.yvel += object.value9
+
+	temp0 = PlayerObject_stageRotation
+	temp0 += 0x40
+	temp0 &= 0x180
+
+	Cos(object.moveVelocity.x, temp0)
+	object.moveVelocity.x *= object.moveSpeed
+	object.moveVelocity.x >>= 9
+
+	Sin(object.moveVelocity.y, temp0)
+	object.moveVelocity.y *= object.moveSpeed
+	object.moveVelocity.y >>= 9
+
+	object.xvel = object.worldVelocity.x
+	object.xvel += object.moveVelocity.x
+	object.yvel = object.worldVelocity.y
+	object.yvel += object.moveVelocity.y
 	CallFunction(PlayerObject_HandleAniSpeed)
 end function
 
 
 event ObjectMain
-	if stage.debugMode == 1
+	if stage.debugMode == true
 		CallFunction(PlayerObject_ProcessPlayer)
-		if inputPress.buttonB == 1
+		if inputPress.buttonB == true
 			object.type = TypeName[Debug Mode]
-			if stage.playerListPos == 1
+			if stage.playerListPos == PlayerName[TAILS]
 				object[+1].type = TypeName[Blank Object]
 			end if
-			object.value2 = 0
+			object.moveSpeed = 0
 			object.rotation = 0
 			object.frame = 0
-			PlayerObject_value1 = 0
-			PlayerObject_value2 = 2
-			object.frame = object.value10
-			object.interaction = 0
+			PlayerObject_stageRotation = 0
+			PlayerObject_rotateSpeed = 2
+			object.frame = debugMode.currentSelection
+			object.interaction = false
 		else
 			CallFunction(object.state)
 			ProcessAnimation()
-			if object.state != 1
+
+			if object.state != PlayerObject_Blank
 				ProcessObjectMovement()
 			end if
+
 			object.gravity = GRAVITY_AIR
 		end if
 	else
 		CallFunction(PlayerObject_ProcessPlayer)
 		CallFunction(object.state)
 		ProcessAnimation()
-		if object.state != 1
+
+		if object.state != PlayerObject_Blank
 			ProcessObjectMovement()
 		end if
+
 		object.gravity = GRAVITY_AIR
 	end if
 end event
@@ -388,10 +448,11 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("Global/Display.gif")
 	foreach (TypeName[Player Object], arrayPos0, ALL_ENTITIES)
-		if stage.playerListPos > 2
-			stage.playerListPos = 0
-			stage.player2Enabled = 1
+		if stage.playerListPos >= PlayerName[SONIC AND TAILS]
+			stage.playerListPos = PlayerName[SONIC]
+			stage.player2Enabled = true
 		end if
+
 		ResetObjectEntity(0, TypeName[Player Object], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
 		screen.cameraX = object[0].ixpos
 		screen.cameraY = object[0].iypos
@@ -399,36 +460,40 @@ event ObjectStartup
 		object[0].xvel = 0
 		object[0].yvel = 0
 		object[0].speed = 0
-		PlayerObject_value0 = object.entityPos
+		PlayerObject_playerSlot = object.entityPos
+
 		switch stage.playerListPos
 		case 0
 			LoadAnimation("SonicSS.ani")
 			object[0].animationSpeed = 48
 			break
+
 		case 1
 			LoadAnimation("TailsSS.ani")
 			object[0].animationSpeed = 120
 			break
+
 		case 2
 			LoadAnimation("KnucklesSS.ani")
 			object[0].animationSpeed = 48
 			break
 		end switch
+
 		object[0].state = PlayerObject_HandleMovement
 		object[0].priority = PRIORITY_ACTIVE
 		object[0].drawOrder = 4
-		object[0].value3 = 0xC00
-		object[0].value7 = 0x68000
-		object[0].value5 = 0x2A00
+		object[0].acceleration = 0xC00
+		object[0].jumpStrength = 0x68000
+		object[0].rollSpeed = 0x2A00
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
-		object[0].tileCollisions = 0
+		object[0].tileCollisions = false
 		object[0].gravity = GRAVITY_AIR
-		PlayerObject_value1 = 0
-		PlayerObject_value2 = 0
-		PlayerObject_value3 = 0
-		PlayerObject_value4 = 0
+		PlayerObject_stageRotation = 0
+		PlayerObject_rotateSpeed = 0
+		PlayerObject_rotateDir = 0
+		PlayerObject_isWinner = false
 	next
-	options.touchControls = 1
+	options.touchControls = true
 end event
 
 event RSDKDraw
@@ -438,4 +503,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Players/Sonic1.gif")
 	SpriteFrame(-16, -16, 32, 32, 42, 118)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

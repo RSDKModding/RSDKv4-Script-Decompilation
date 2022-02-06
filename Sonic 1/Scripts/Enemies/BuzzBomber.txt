@@ -6,15 +6,16 @@
 // ----------------------------------
 
 // Aliases
-private alias object.value0 : buzzBomber.timer
-private alias object.value1 : buzzBomber.startX
-private alias object.value2 : buzzBomber.hasShot
-private alias object.value3 : buzzBomber.hideOnOffScreen // idk if this is ever actually used
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.x
+private alias object.value2 : object.hasShot
+private alias object.value3 : object.hideOnOffScreen // idk if this is ever actually used
 
-private alias object.value38 : player.hitboxLeft
-private alias object.value39 : player.hitboxRight
-private alias object.value40 : player.hitboxTop
-private alias object.value41 : player.hitboxBottom
+// Player aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 private alias 0 : BUZZBOMBER_BUZZAROUND
 private alias 1 : BUZZBOMBER_IDLEDELAY
@@ -60,11 +61,11 @@ event ObjectMain
 	switch object.state
 	case BUZZBOMBER_BUZZAROUND
 		object.priority = PRIORITY_ACTIVE
-		if buzzBomber.timer < 127
-			buzzBomber.timer++
+		if object.timer < 127
+			object.timer++
 			object.xpos += object.xvel
 		else
-			buzzBomber.timer 	= 0
+			object.timer 	= 0
 			object.state 		= BUZZBOMBER_IDLEDELAY
 			object.animation 	= BUZZBOMBER_ANI_FLY_IDLE
 			object.direction 	^= FLIP_X
@@ -73,30 +74,30 @@ event ObjectMain
 		break
 
 	case BUZZBOMBER_IDLEDELAY
-		if buzzBomber.timer < 59
-			buzzBomber.timer++
+		if object.timer < 59
+			object.timer++
 		else
-			buzzBomber.timer 	= 0
+			object.timer 	= 0
 			object.state 		= BUZZBOMBER_BUZZAROUND
 			object.animation 	= BUZZBOMBER_ANI_FLY
-			buzzBomber.hasShot	= false
+			object.hasShot	= false
 		end if
 		break
 
 	case BUZZBOMBER_FOUNDPLAYER
-		if buzzBomber.timer < 29
-			buzzBomber.timer++
+		if object.timer < 29
+			object.timer++
 		else
-			buzzBomber.timer = 0
+			object.timer = 0
 			object.state++
 			object.animation = BUZZBOMBER_ANI_SHOOT
 		end if
 		break
 
 	case BUZZBOMBER_SHOOTING
-		if buzzBomber.timer < 59
-			buzzBomber.timer++
-			if buzzBomber.timer == 15
+		if object.timer < 59
+			object.timer++
+			if object.timer == 15
 				CreateTempObject(TypeName[Buzz Bomber Shot], 0, object.xpos, object.ypos)
 				object[tempObjectPos].direction = object.direction
 				if object.direction == FLIP_NONE
@@ -110,10 +111,10 @@ event ObjectMain
 				object[tempObjectPos].yvel = 0x20000
 			end if
 		else
-			buzzBomber.timer	= 0
+			object.timer	= 0
 			object.state 		= BUZZBOMBER_BUZZAROUND
 			object.animation 	= BUZZBOMBER_ANI_FLY
-			buzzBomber.hasShot	= true
+			object.hasShot	= true
 		end if
 		break
 
@@ -124,13 +125,13 @@ event ObjectMain
 
 	if object.outOfBounds == true
 		temp0 		= object.xpos
-		object.xpos = buzzBomber.startX
-		if buzzBomber.hideOnOffScreen == true
+		object.xpos = object.startPos.x
+		if object.hideOnOffScreen == true
 			object.state = BUZZBOMBER_HIDDEN
 		end if
 
 		if object.outOfBounds == true
-			object.xpos = buzzBomber.startX
+			object.xpos = object.startPos.x
 
 			GetBit(temp0, object.propertyValue, 0)
 			if temp0 == 0
@@ -140,7 +141,7 @@ event ObjectMain
 				object.direction = FLIP_X
 				object.xvel 	 = 0x40000
 			end if
-			buzzBomber.timer	= 0
+			object.timer	= 0
 			object.animation 	= BUZZBOMBER_ANI_FLY
 			object.priority 	= PRIORITY_ACTIVE_BOUNDS
 			object.state 		= BUZZBOMBER_BUZZAROUND
@@ -152,19 +153,21 @@ event ObjectMain
 	//Player Collisons
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if object.state == BUZZBOMBER_BUZZAROUND
-			if buzzBomber.hasShot == false
+			if object.hasShot == false
 				if object.propertyValue < 2
 					BoxCollisionTest(C_TOUCH, object.entityPos, -96, -256, 96, 256, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				else
 					BoxCollisionTest(C_TOUCH, object.entityPos, -48, -256, 48, 256, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				end if
+
 				if checkResult == true
 					object.state 		= BUZZBOMBER_FOUNDPLAYER
-					buzzBomber.timer 	= 0
+					object.timer 	= 0
 					object.animation 	= BUZZBOMBER_ANI_FLY_IDLE
 				end if
 			end if
 		end if
+
 		if object.state < BUZZBOMBER_HIDDEN
 			BoxCollisionTest(C_TOUCH, object.entityPos, -24, -12, 24, 12, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
 			if checkResult == true
@@ -272,9 +275,9 @@ event ObjectStartup
 	// bit 1 = range type (large/small)
 
 	foreach (TypeName[Buzz Bomber], arrayPos0, ALL_ENTITIES)
-		buzzBomber[arrayPos0].startX	= object[arrayPos0].xpos
-		object[arrayPos0].inkEffect 	= INK_ALPHA
-		object[arrayPos0].alpha 		= 0xC0
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].inkEffect  = INK_ALPHA
+		object[arrayPos0].alpha 	 = 0xC0
 		GetBit(temp0, object[arrayPos0].propertyValue, 0)
 		if temp0 == 0
 			object[arrayPos0].direction = FLIP_NONE
@@ -291,11 +294,84 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // direction
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+		case 1 // rangeSize
+			GetBit(checkResult, object.propertyValue, 1)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // direction
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+		case 1 // rangeSize
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 1, checkResult)
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	GetBit(temp0, object.propertyValue, 0)
+	if temp0 == 0
+		object.direction = FLIP_NONE
+	else
+		object.direction = FLIP_X
+	end if
+
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("GHZ/Objects.gif")
+		SpriteFrame(-23, -9, 45, 19, 98, 74)
+		SpriteFrame(-17, -15, 35, 8, 144, 79)
+	end if
+
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("MZ/Objects.gif")
+		SpriteFrame(-23, -9, 45, 19, 1, 127)
+		SpriteFrame(-17, -15, 35, 8, 38, 147)
+	end if
+
+	CheckCurrentStageFolder("Zone03")
+	if checkResult == true
+		LoadSpriteSheet("SYZ/Objects.gif")
+		SpriteFrame(-23, -9, 45, 19, 1, 81)
+		SpriteFrame(-17, -15, 35, 8, 38, 101)
+	end if
+
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-23, -9, 45, 19, 1, 1)
+		SpriteFrame(-17, -15, 35, 8, 38, 21)
+	end if
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+
+	AddEditorVariable("rangeSize")
+	SetActiveVariable("rangeSize")
+	AddEnumVariable("Large", 0)
+	AddEnumVariable("Small", 1)
 end event

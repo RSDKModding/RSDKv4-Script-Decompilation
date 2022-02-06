@@ -6,8 +6,33 @@
 // ----------------------------------
 
 // Aliases
-private alias 81 : TYPE_EGGMOBILE
+private alias object.value0 : object.legAnim
+private alias object.value1 : object.legAnimTimer
+private alias object.value2 : object.flameAnim
+private alias object.value3 : object.flameAnimTimer
+private alias object.value4 : object.timer
+private alias object.value5 : object.explosionTimer
+private alias object.value6 : object.playerStopPos
+private alias object.value7 : object.fadeTimer
 
+private alias 0 : EGGMOBILE_WAITING
+private alias 1 : EGGMOBILE_ACTIVATE
+private alias 2 : EGGMOBILE_RISE
+private alias 3 : EGGMOBILE_FLEE
+private alias 4 : EGGMOBILE_HIT
+private alias 5 : EGGMOBILE_SEAT
+
+private alias 0 : EGGMOBILE_ANI_IDLE
+private alias 1 : EGGMOBILE_ANI_SEAT
+private alias 2 : EGGMOBILE_ANI_FLYING
+private alias 3 : EGGMOBILE_ANI_WASHIT
+
+private alias 0 : LEGS_IDLE
+private alias 1 : LEGS_RETRACT
+private alias 2 : LEGS_NONE
+
+private alias 0 : FLAME_INACTIVE
+private alias 1 : FLAME_ACTIVE
 
 // Static Values
 
@@ -15,31 +40,34 @@ private alias 81 : TYPE_EGGMOBILE
 
 event ObjectMain
 	switch object.state
-	case 0
+	case EGGMOBILE_WAITING
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -24, -96, 24, 96, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
 		break
-	case 1
+
+	case EGGMOBILE_ACTIVATE
 		object.priority = PRIORITY_ACTIVE
-		object.animation = 2
-		object.value0 = 1
+		object.animation = EGGMOBILE_ANI_FLYING
+		object.legAnim = LEGS_RETRACT
 		object.yvel = -0x18000
 		object.state++
 		break
-	case 2
+
+	case EGGMOBILE_RISE
 		object.ypos += object.yvel
-		object.value4++
-		if object.value4 >= 52
-			object.value2 = 1
+		object.timer++
+		if object.timer >= 52
+			object.flameAnim = FLAME_ACTIVE
 			object.xvel = 0x18000
 			object.yvel = -0x1800
 			object.state++
 		end if
 		break
-	case 4
-		object.value5++
-		temp0 = object.value5
+
+	case EGGMOBILE_HIT
+		object.explosionTimer++
+		temp0 = object.explosionTimer
 		temp0 &= 7
 		if temp0 == 4
 			Rand(temp0, 96)
@@ -52,57 +80,62 @@ event ObjectMain
 			temp1 += object.ypos
 			CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
 			object[tempObjectPos].drawOrder = 4
-			if object.value7 < 256
-				PlaySfx(SfxName[Explosion], 0)
+			if object.fadeTimer < 256
+				PlaySfx(SfxName[Explosion], false)
 			end if
 		end if
-		if object.value7 < 256
-			object.value4++
-			if object.value4 >= 30
-				PlaySfx(SfxName[Boss Hit], 0)
+
+		if object.fadeTimer < 256
+			object.timer++
+			if object.timer >= 30
+				PlaySfx(SfxName[Boss Hit], false)
 				object.yvel = 0x6000
-				object.value4 = 0
+				object.timer = 0
 			end if
 		end if
-	case 3
+		// fallthrough
+	case EGGMOBILE_FLEE
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		temp0 = stage.newXBoundary2
 		temp0 += 212
 		temp0 <<= 16
 		if object.xpos >= temp0
-			if options.gameMode == 2
+			if options.gameMode == MODE_TIMEATTACK
 				object.type = TypeName[Blank Object]
 				ResetObjectEntity(30, TypeName[Act Finish], 0, 0, 0)
 				object[30].drawOrder = 6
 				object[30].priority = PRIORITY_ACTIVE
-				stage.timeEnabled = 0
-				PlayMusic(1)
+				stage.timeEnabled = false
+				PlayMusic(TRACK_ACTFINISH)
 			else
-				object.value7 += 4
+				object.fadeTimer += 4
 				music.volume -= 2
-				SetScreenFade(0, 0, 0, object.value7)
-				if object.value7 == 384
-					if stage.debugMode == 0
-						if options.stageSelectFlag == 0
+				SetScreenFade(0, 0, 0, object.fadeTimer)
+				if object.fadeTimer == 384
+					if stage.debugMode == false
+						if options.stageSelectFlag == false
 							CallNativeFunction2(SetLeaderboard, 19, player.score)
 						end if
 					end if
-					if options.gameMode == 1
+
+					if options.gameMode == MODE_NORMAL
 						arrayPos1 = options.saveSlot
 						arrayPos1 <<= 3
 						arrayPos1 += 4
 						saveRAM[arrayPos1] = 20
 						WriteSaveRAM()
 					end if
+
 					stage.activeList = PRESENTATION_STAGE
 					stage.listPos = 1
 					LoadStage()
 				end if
 			end if
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].xpos >= object.value6
+			if object[currentPlayer].xpos >= object.playerStopPos
 				CheckEqual(object[currentPlayer].state, PlayerObject_HandleGround)
 				temp0 = checkResult
 				CheckEqual(object[currentPlayer].state, PlayerObject_HandleAir)
@@ -113,14 +146,15 @@ event ObjectMain
 				temp0 |= checkResult
 				CheckEqual(object[currentPlayer].state, PlayerObject_Blank)
 				temp0 |= checkResult
-				if temp0 == 1
+
+				if temp0 == true
 					object[currentPlayer].state = PlayerObject_Blank
 					object[currentPlayer].direction = FLIP_NONE
 					object[currentPlayer].controlMode = -1
 					if object[currentPlayer].gravity == GRAVITY_GROUND
 						object[currentPlayer].xvel = 0
 						object[currentPlayer].speed = 0
-						if object.state == 3
+						if object.state == EGGMOBILE_FLEE
 							object[currentPlayer].animation = ANI_LOOKINGUP
 						else
 							object[currentPlayer].animation = ANI_STOPPED
@@ -137,7 +171,9 @@ event ObjectMain
 			end if
 		next
 		break
-	case 5
+
+	case EGGMOBILE_SEAT
+		// position == eggmobile.position
 		object.xpos = object[+10].xpos
 		object.ypos = object[+10].ypos
 		if object[+1].type == TypeName[Blank Object]
@@ -145,19 +181,20 @@ event ObjectMain
 		end if
 		break
 	end switch
-	if object.state == 3
+
+	if object.state == EGGMOBILE_FLEE
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				CallFunction(PlayerObject_CheckHit)
-				if checkResult == 1
-					object.state = 4
-					object.animation = 3
-					PlaySfx(SfxName[Boss Hit], 0)
-					object.value4 = 0
-					if stage.debugMode == 0
+				if checkResult == true
+					object.state 	 = EGGMOBILE_HIT
+					object.animation = EGGMOBILE_ANI_WASHIT
+					PlaySfx(SfxName[Boss Hit], false)
+					object.timer = 0
+					if stage.debugMode == false
 						if currentPlayer == 0
-							CallNativeFunction2(SetAchievement, 10, 100)
+							CallNativeFunction2(SetAchievement, AchievementName[One For the Road], 100)
 						end if
 					end if
 				end if
@@ -169,14 +206,16 @@ end event
 
 event ObjectDraw
 	switch object.animation
-	case 0
+	case EGGMOBILE_ANI_IDLE
 		DrawSpriteFX(16, FX_FLIP, object.xpos, object.ypos)
 		DrawSpriteFX(17, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 1
+
+	case EGGMOBILE_ANI_SEAT
 		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 2
+
+	case EGGMOBILE_ANI_FLYING
 		temp0 = object.animationTimer
 		temp0 >>= 2
 		temp0 += 1
@@ -184,7 +223,8 @@ event ObjectDraw
 		object.animationTimer &= 7
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 3
+
+	case EGGMOBILE_ANI_WASHIT
 		temp0 = object.animationTimer
 		temp0 >>= 2
 		temp0 += 3
@@ -193,31 +233,35 @@ event ObjectDraw
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 	end switch
-	switch object.value0
-	case 0
+
+	switch object.legAnim
+	case LEGS_IDLE
 		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 1
-		object.value1++
-		if object.value1 >= 60
-			object.value0 = 2
+		
+	case LEGS_RETRACT
+		object.legAnimTimer++
+		if object.legAnimTimer >= 60
+			object.legAnim = LEGS_NONE
 		else
-			temp0 = object.value1
+			temp0 = object.legAnimTimer
 			temp0 /= 20
 			temp0 += 5
 			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		end if
 		break
-	case 2
+	case LEGS_NONE
 		break
+
 	end switch
-	if object.value2 != 0
-		temp0 = object.value3
+
+	if object.flameAnim != FLAME_INACTIVE
+		temp0 = object.flameAnimTimer
 		temp0 /= 3
 		temp0 += 8
-		object.value3++
-		if object.value3 > 21
-			object.value3 = 18
+		object.flameAnimTimer++
+		if object.flameAnimTimer > 21
+			object.flameAnimTimer = 18
 		end if
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 	end if
@@ -244,21 +288,75 @@ event ObjectStartup
 	SpriteFrame(33, 0, 15, 11, 196, 12)
 	SpriteFrame(-28, -32, 27, 21, 131, 172)
 	SpriteFrame(-28, -11, 64, 35, 131, 193)
+
 	foreach (TypeName[Eggmobile], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].direction = FLIP_X
 		if object[arrayPos0].propertyValue == 1
-			object[arrayPos0].state = 5
-			object[arrayPos0].animation = 1
-			object[arrayPos0].value0 = 2
+			object[arrayPos0].state 	= EGGMOBILE_SEAT
+			object[arrayPos0].animation = EGGMOBILE_ANI_SEAT
+			object[arrayPos0].legAnim 	= LEGS_NONE
 		end if
 	next
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	object.direction = FLIP_X
+
+	if object.propertyValue == 1
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	else
+		DrawSpriteFX(16, FX_FLIP, object.xpos, object.ypos)
+		DrawSpriteFX(17, FX_FLIP, object.xpos, object.ypos)
+	end if
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Global/Eggman.gif")
+	SpriteFrame(-28, -32, 64, 21, 131, 172)
+	SpriteFrame(-28, -32, 64, 56, 131, 58)
+	SpriteFrame(-28, -32, 64, 56, 66, 1)
+	SpriteFrame(-28, -32, 64, 56, 1, 172)
+	SpriteFrame(-28, -32, 64, 56, 66, 172)
+	SpriteFrame(-20, 16, 40, 21, 131, 115)
+	SpriteFrame(-20, 8, 48, 19, 172, 115)
+	SpriteFrame(-20, 8, 40, 16, 172, 135)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, -1, 22, 14, 213, 1)
+	SpriteFrame(34, -8, 32, 26, 213, 16)
+	SpriteFrame(34, 1, 10, 9, 196, 2)
+	SpriteFrame(33, 0, 15, 11, 196, 12)
+	SpriteFrame(-28, -32, 27, 21, 131, 172)
+	SpriteFrame(-28, -11, 64, 35, 131, 193)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("EggMobile", 0)
+	AddEnumVariable("Seat", 1)
 end event

@@ -6,7 +6,8 @@
 // ----------------------------------
 
 // Aliases
-private alias 53 : TYPE_GARGOYLE
+private alias object.value0 : object.timer
+private alias object.value1 : object.interval
 
 // Function declarations
 reserve function Gargoyle_DebugDraw
@@ -24,8 +25,8 @@ end function
 function Gargoyle_DebugSpawn
 	CreateTempObject(TypeName[Gargoyle], 0, object.xpos, object.ypos)
 	object[tempObjectPos].direction = object.direction
-	object[tempObjectPos].value1 = 60
-	object[tempObjectPos].value0 = 60
+	object[tempObjectPos].interval = 60
+	object[tempObjectPos].timer = 60
 end function
 
 
@@ -38,9 +39,10 @@ event ObjectMain
 		temp0 -= screen.cameraY
 		Abs(temp0)
 		if temp0 < screen.ycenter
-			object.value0--
-			if object.value0 <= 0
-				PlaySfx(SfxName[Small Fireball], 0)
+		
+			object.timer--
+			if object.timer <= 0
+				PlaySfx(SfxName[Small Fireball], false)
 				CreateTempObject(TypeName[Gargoyle Shot], 0, object.xpos, object.ypos)
 				object[tempObjectPos].drawOrder = 2
 				if object.direction == FLIP_NONE
@@ -50,7 +52,7 @@ event ObjectMain
 				end if
 				object[tempObjectPos].ypos += 0x80000
 				object[tempObjectPos].direction = object.direction
-				object.value0 = object.value1
+				object.timer = object.interval
 			end if
 		end if
 	end if
@@ -65,23 +67,50 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("LZ/Objects.gif")
 	SpriteFrame(-16, -15, 32, 31, 93, 128)
+
 	foreach (TypeName[Gargoyle], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].propertyValue
-		object[arrayPos0].value1++
-		object[arrayPos0].value1 *= 30
-		object[arrayPos0].value0 = object[arrayPos0].value1
+		object[arrayPos0].interval = object[arrayPos0].propertyValue
+		object[arrayPos0].interval++
+		object[arrayPos0].interval *= 30
+		object[arrayPos0].timer = object[arrayPos0].interval
 	next
+
 	SetTableValue(TypeName[Gargoyle], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Gargoyle_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Gargoyle_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // interval
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // interval
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -15, 32, 31, 93, 128)
+
+	AddEditorVariable("interval")
+	SetActiveVariable("interval")
 end event

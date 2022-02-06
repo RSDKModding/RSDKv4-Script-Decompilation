@@ -6,38 +6,46 @@
 // ----------------------------------
 
 // Aliases
-private alias 73 : TYPE_SPLATS
+private alias object.value0 : object.flipDir
+private alias object.value1 : object.startPos.x
+private alias object.value2 : object.startPos.y
 
 private alias object.value17 : debugMode.currentSelection
+
+// Player aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
 
 // Function declarations
 reserve function Splats_DebugDraw
 reserve function Splats_DebugSpawn
 
 // Static Values
-public value Splats_value35 = 0;
-
-private alias Splats_value35 : Splats_debugStart
+private value Splats_value35 = 0;
+private alias Splats_value35 : Splats_startDebugID
 
 // Tables
 
 function Splats_DebugDraw
 	temp0 = debugMode[0].currentSelection
-	temp0 -= Splats_debugStart
+	temp0 -= Splats_startDebugID
 	DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 end function
 
 
 function Splats_DebugSpawn
 	temp0 = debugMode[0].currentSelection
-	temp0 -= Splats_debugStart
+	temp0 -= Splats_startDebugID
 	temp0 <<= 1
 
 	CreateTempObject(TypeName[Splats], temp0, object.xpos, object.ypos)
 
 	object[tempObjectPos].direction = object.direction
-	object[tempObjectPos].value1 = object.xpos
-	object[tempObjectPos].value2 = object.ypos
+	object[tempObjectPos].startPos.x = object.xpos
+	object[tempObjectPos].startPos.y = object.ypos
 
 	if object[tempObjectPos].direction == FLIP_NONE
 		object[tempObjectPos].xvel = -0x10000
@@ -53,6 +61,7 @@ event ObjectMain
 	object.xpos += object.xvel
 	object.ypos += object.yvel
 	object.yvel += 0x3800
+
 	if object.yvel > 0
 		ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
 		temp0 = checkResult
@@ -67,12 +76,13 @@ event ObjectMain
 		if temp0 == true
 			GetBit(temp0, object.propertyValue, 1)
 			if temp0 == true
-				if object.value0 == 1
+				if object.flipDir == true
 					FlipSign(object.xvel)
 					object.direction ^= FLIP_X
 				end if
-				object.value0 ^= 1
+				object.flipDir ^= 1
 			end if
+
 			object.yvel = -0x40000
 		end if
 	end if
@@ -80,9 +90,10 @@ event ObjectMain
 	if object.outOfBounds == true
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.value1
-		object.ypos = object.value2
-		if object.outOfBounds == 1
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+
+		if object.outOfBounds == true
 			GetBit(temp0, object.propertyValue, 0)
 			if temp0 == 0
 				object.direction = FLIP_NONE
@@ -100,8 +111,8 @@ event ObjectMain
 	end if
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -10, -20, 6, 20, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
+		BoxCollisionTest(C_TOUCH, object.entityPos, -10, -20, 6, 20, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
 			CallFunction(PlayerObject_BadnikBreak)
 		end if
 	next
@@ -118,24 +129,26 @@ end event
 
 
 event ObjectStartup
-
 	CheckCurrentStageFolder("Zone01")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("GHZ/Objects.gif")
 		SpriteFrame(-11, -15, 21, 40, 214, 211)
 		SpriteFrame(-11, -19, 21, 40, 192, 211)
 	end if
+
 	CheckCurrentStageFolder("Zone07")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-11, -15, 21, 40, 220, 254)
 		SpriteFrame(-11, -19, 21, 40, 198, 254)
 	end if
+
 	foreach (TypeName[Splats], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].xpos
-		object[arrayPos0].value2 = object[arrayPos0].ypos
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+
 		GetBit(temp0, object[arrayPos0].propertyValue, 0)
-		if temp0 == 0
+		if temp0 == false
 			object[arrayPos0].direction = FLIP_NONE
 			object[arrayPos0].xvel = -0x10000
 		else
@@ -145,7 +158,7 @@ event ObjectStartup
 	next
 
 	temp0 = 0
-	Splats_debugStart = DebugMode_ObjCount
+	Splats_startDebugID = DebugMode_ObjCount
 	while temp0 < 2
 		SetTableValue(TypeName[Splats], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(Splats_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -155,11 +168,70 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 3
+			break
+		case 0 // direction
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+		case 1 // behaviour
+			GetBit(checkResult, object.propertyValue, 1)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // direction
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+		case 1 // behaviour
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 1, checkResult)
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	GetBit(temp0, object.propertyValue, 0)
+	if temp0 == false
+		object.direction = FLIP_NONE
+	else
+		object.direction = FLIP_X
+	end if
+
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("GHZ/Objects.gif")
+		SpriteFrame(-11, -15, 21, 40, 214, 211)
+		SpriteFrame(-11, -19, 21, 40, 192, 211)
+	end if
+
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-11, -15, 21, 40, 220, 254)
+		SpriteFrame(-11, -19, 21, 40, 198, 254)
+	end if
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+
+	AddEditorVariable("behaviour")
+	SetActiveVariable("behaviour")
+	AddEnumVariable("Never Change Directions", 0)
+	AddEnumVariable("Change Direction On Each Bounce", 1)
 end event

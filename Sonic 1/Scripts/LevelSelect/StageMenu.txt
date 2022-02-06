@@ -6,23 +6,36 @@
 // ----------------------------------
 
 // Aliases
-private alias 7 : TYPE_STAGEMENU
+private alias object.value0 : object.timer
+private alias object.value3 : object.selectedIcon
+private alias object.value4 : object.zoneTimer
+
+private alias 0 : STAGEMENU_SETUP
+private alias 1 : STAGEMENU_FADEIN
+private alias 2 : STAGEMENU_UNUSED
+private alias 3 : STAGEMENU_SELECTING
+private alias 4 : STAGEMENU_EXITZONES
+private alias 5 : STAGEMENU_SHOWZONENAME
+private alias 6 : STAGEMENU_FADETOSTAGE
+private alias 7 : STAGEMENU_FADETOMENU
+
+// ZoneButton aliases
+private alias object.value1 : zoneButton.zoneDetailsWidth
+private alias object.value2 : zoneButton.disabled
 
 // Function declarations
-reserve function StageMenu_Function2
+reserve function StageMenu_HandleIconMovement
 
 // Static Values
-public value StageMenu_value3 = 0;
-
+private value StageMenu_value3 = 0;
 private alias StageMenu_value3 : StageMenu_livesHolder
 
 // Tables
-public table StageMenu_table3
+public table StageMenu_zoneListPosTable
 	0, 3, 6, 9, 12, 15, 18
 end table
 
-
-function StageMenu_Function2
+function StageMenu_HandleIconMovement
 
 	object[10].xpos = -108
 	object[10].xpos *= object.scale
@@ -74,12 +87,13 @@ end function
 event ObjectMain
 
 	switch object.state
-	case 0
+	case STAGEMENU_SETUP
 		if engine.deviceType == RETRO_STANDARD
-			options.physicalControls = 1
-			object.value3 = 1
+			options.physicalControls = true
+			object.selectedIcon = 1
 		end if
-		object.scale = 256
+
+		object.scale = 0x100
 		arrayPos0 = 10
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 1, -108, -48)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
@@ -102,123 +116,143 @@ event ObjectMain
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 7, 36, 8)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		SetScreenFade(0, 0, 0, 255)
-		object.value0 = 384
-		options.stageSelectFlag = 0
-		object.state = 1
+
+		object.timer = 384
+		options.stageSelectFlag = false
+		object.state = STAGEMENU_FADEIN
 		break
-	case 1
-		if object.value0 > 0
-			object.value0 -= 16
-			SetScreenFade(0, 0, 0, object.value0)
+
+	case STAGEMENU_FADEIN
+		if object.timer > 0
+			object.timer -= 16
+			SetScreenFade(0, 0, 0, object.timer)
 		else
-			object.state = 3
+			object.state = STAGEMENU_SELECTING
 		end if
 		break
-	case 3
-		if options.physicalControls == 0
+
+	case STAGEMENU_UNUSED
+		break
+
+	case STAGEMENU_SELECTING
+		if options.physicalControls == false
 			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 			if checkResult == -1
-				if object.value3 > 0
-					arrayPos0 = object.value3
+				if object.selectedIcon > 0
+					arrayPos0 = object.selectedIcon
 					arrayPos0 += 9
-					if object[arrayPos0].value2 == 0
-						object.state = 4
-						PlaySfx(SfxName[Menu Select], 0)
+					if zoneButton[arrayPos0].disabled == false
+						object.state = STAGEMENU_EXITZONES
+						PlaySfx(SfxName[Menu Select], false)
 					else
-						PlaySfx(SfxName[Jump], 0)
+						PlaySfx(SfxName[Jump], false) // this should prolly be the Fail sfx
 					end if
 				end if
 			end if
-			if object.state != 4
-				object.value3 = 0
-				if inputPress.left == 1
-					options.physicalControls = 1
-					object.value3 = 12
+
+			if object.state != STAGEMENU_EXITZONES
+				object.selectedIcon = 0
+				if inputPress.left == true
+					options.physicalControls = true
+					object.selectedIcon = 12
 				end if
-				if inputPress.right == 1
-					options.physicalControls = 1
-					object.value3 = 1
+
+				if inputPress.right == true
+					options.physicalControls = true
+					object.selectedIcon = 1
 				end if
-				if inputPress.up == 1
-					options.physicalControls = 1
-					object.value3 = 9
+
+				if inputPress.up == true
+					options.physicalControls = true
+					object.selectedIcon = 9
 				end if
-				if inputPress.down == 1
-					options.physicalControls = 1
-					object.value3 = 1
+
+				if inputPress.down == true
+					options.physicalControls = true
+					object.selectedIcon = 1
 				end if
 			end if
 		else
-			if inputPress.left == 1
-				object.value3--
-				if object.value3 < 1
-					object.value3 = 7
+			if inputPress.left == true
+				object.selectedIcon--
+				if object.selectedIcon < 1
+					object.selectedIcon = 7
 				end if
-				PlaySfx(SfxName[Menu Move], 0)
+				PlaySfx(SfxName[Menu Move], false)
 			end if
-			if inputPress.right == 1
-				object.value3++
-				if object.value3 > 7
-					object.value3 = 1
+
+			if inputPress.right == true
+				object.selectedIcon++
+				if object.selectedIcon > 7
+					object.selectedIcon = 1
 				end if
-				PlaySfx(SfxName[Menu Move], 0)
+				PlaySfx(SfxName[Menu Move], false)
 			end if
-			if inputPress.up == 1
-				object.value3 -= 4
-				if object.value3 < 1
-					object.value3 += 8
-					if object.value3 == 8
-						object.value3 = 4
+
+			if inputPress.up == true
+				object.selectedIcon -= 4
+				if object.selectedIcon < 1
+					object.selectedIcon += 8
+					if object.selectedIcon == 8
+						object.selectedIcon = 4
 					end if
 				end if
-				PlaySfx(SfxName[Menu Move], 0)
+				PlaySfx(SfxName[Menu Move], false)
 			end if
-			if inputPress.down == 1
-				object.value3 += 4
-				if object.value3 > 7
-					object.value3 -= 8
-					if object.value3 == 8
-						object.value3 = 4
+
+			if inputPress.down == true
+				object.selectedIcon += 4
+				if object.selectedIcon > 7
+					object.selectedIcon -= 8
+
+					if object.selectedIcon == 8
+						object.selectedIcon = 4
 					end if
-					if object.value3 == 0
-						object.value3 = 4
+
+					if object.selectedIcon == 0
+						object.selectedIcon = 4
 					end if
 				end if
-				PlaySfx(SfxName[Menu Move], 0)
+				PlaySfx(SfxName[Menu Move], false)
 			end if
-			if inputPress.start == 1
-				arrayPos0 = object.value3
+
+			if inputPress.start == true
+				arrayPos0 = object.selectedIcon
 				arrayPos0 += 9
-				if object[arrayPos0].value2 == 0
-					object.state = 4
-					PlaySfx(SfxName[Menu Select], 0)
+				if zoneButton[arrayPos0].disabled == false
+					object.state = STAGEMENU_EXITZONES
+					PlaySfx(SfxName[Menu Select], false)
 				else
-					PlaySfx(SfxName[Jump], 0)
+					PlaySfx(SfxName[Jump], false)
 				end if
 			end if
-			if inputPress.buttonA == 1
-				arrayPos0 = object.value3
+
+			if inputPress.buttonA == true
+				arrayPos0 = object.selectedIcon
 				arrayPos0 += 9
-				if object[arrayPos0].value2 == 0
-					object.state = 4
-					PlaySfx(SfxName[Menu Select], 0)
+				if zoneButton[arrayPos0].disabled == false
+					object.state = STAGEMENU_EXITZONES
+					PlaySfx(SfxName[Menu Select], false)
 				else
-					PlaySfx(SfxName[Jump], 0)
+					PlaySfx(SfxName[Jump], false)
 				end if
 			end if
-			if object.state != 4
+
+			if object.state != STAGEMENU_EXITZONES
 				CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 				if checkResult > -1
 					options.physicalControls = 0
-					object.value3 = 0
+					object.selectedIcon = 0
 				end if
 			end if
 		end if
 		break
-	case 4
+
+	case STAGEMENU_EXITZONES
 		if object.scale > 0
 			object.scale -= 8
 		end if
+
 		object[10].alpha = object.scale
 		object[11].alpha = object.scale
 		object[12].alpha = object.scale
@@ -233,60 +267,62 @@ event ObjectMain
 		object[14].drawOrder = 3
 		object[15].drawOrder = 3
 		object[16].drawOrder = 3
-		arrayPos0 = object.value3
+
+		arrayPos0 = object.selectedIcon
 		arrayPos0 += 9
 		object[arrayPos0].alpha = 256
 		object[arrayPos0].drawOrder = 4
-		arrayPos0 = object.value3
+		arrayPos0 = object.selectedIcon
 		arrayPos0 += 9
-		CallFunction(StageMenu_Function2)
-		if object.value4 < 32
-			object.value4++
+		CallFunction(StageMenu_HandleIconMovement)
+		if object.zoneTimer < 32
+			object.zoneTimer++
 		else
-			object.value4 = 0
-			object.state = 5
+			object.zoneTimer = 0
+			object.state = STAGEMENU_SHOWZONENAME
 		end if
 		break
 
-	case 5
-		arrayPos0 = object.value3
+	case STAGEMENU_SHOWZONENAME
+		arrayPos0 = object.selectedIcon
 		arrayPos0 += 9
-		if object[arrayPos0].value1 < 224
-			object[arrayPos0].value1 += 8
+		if zoneButton[arrayPos0].zoneDetailsWidth < 224
+			zoneButton[arrayPos0].zoneDetailsWidth += 8
 		else
-			object.value0 = -640
-			object.state = 6
+			object.timer = -640
+			object.state = STAGEMENU_FADETOSTAGE
 		end if
 		break
 
-	case 6
-		if object.value0 < 256
+	case STAGEMENU_FADETOSTAGE
+		if object.timer < 256
 			music.volume -= 10
-			object.value0 += 16
-			if object.value0 > 0
-				SetScreenFade(0, 0, 0, object.value0)
+			object.timer += 16
+			if object.timer > 0
+				SetScreenFade(0, 0, 0, object.timer)
 			end if
 		else
 			StopMusic()
 			player.score = 0
-			player.scoreBonus = 0xC350
+			player.scoreBonus = 50000
 			stage.activeList = REGULAR_STAGE
-			temp0 = object.value3
+			temp0 = object.selectedIcon
 			temp0--
-			GetTableValue(stage.listPos, temp0, StageMenu_table3)
+			GetTableValue(stage.listPos, temp0, StageMenu_zoneListPosTable)
 			player.lives = StageMenu_livesHolder
 			LoadStage()
 			SetScreenFade(0, 0, 0, 255)
 		end if
 		break
-	case 7
-		if object.value0 < 256
+
+	case STAGEMENU_FADETOMENU
+		if object.timer < 256
 			music.volume -= 10
-			object.value0 += 16
-			SetScreenFade(0, 0, 0, object.value0)
+			object.timer += 16
+			SetScreenFade(0, 0, 0, object.timer)
 		else
 			StopMusic()
-			engine.state = 8
+			engine.state = ENGINE_RESETGAME
 			SetScreenFade(0, 0, 0, 255)
 		end if
 		break
@@ -304,6 +340,7 @@ event ObjectStartup
 	LoadSpriteSheet("LevelSelect/Icons.gif")
 	SpriteFrame(-96, 0, 80, 14, 1, 208)
 	SpriteFrame(0, 0, 96, 14, 82, 208)
+
 	foreach (TypeName[Stage Menu], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].type = TypeName[Blank Object]
 		object[1].type = TypeName[Stage Menu]
@@ -314,10 +351,14 @@ event ObjectStartup
 end event
 
 event RSDKDraw
-	DrawSprite(0)
+	DrawSpriteXY(0, object.xpos, object.ypos)
+	DrawSpriteXY(1, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(-96, 0, 80, 14, 1, 208)
+	SpriteFrame(0, 0, 96, 14, 82, 208)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

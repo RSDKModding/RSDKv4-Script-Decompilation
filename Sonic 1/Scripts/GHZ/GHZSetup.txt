@@ -6,7 +6,13 @@
 // ----------------------------------
 
 // Aliases
-private alias 39 : TYPE_GHZSETUP
+private alias object.frame : object.sunFlowerFrame
+private alias object.value0 : object.sunFlowerTimer
+private alias object.value1 : object.extendFlowerTimer
+private alias object.value2 : object.extendFlowerFrame
+private alias object.value3 : object.paletteTimer
+private alias object.value4 : object.waterfallLoopTimer
+private alias object.value5 : object.playingWaterfallLoop
 
 // Function declarations
 reserve function GHZSetup_SpeedUpMusic
@@ -298,73 +304,77 @@ end table
 
 
 function GHZSetup_SpeedUpMusic
-	CheckEqual(object[25].type, TypeName[Music Event])
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
 	if temp0 == 0
 		switch music.currentTrack
 		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 30436)
-			SwapMusicTrack("GreenHill_F.ogg", 0, 502294, 7920)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436)
+			SwapMusicTrack("GreenHill_F.ogg", TRACK_STAGE, 502294, 7920)
 			break
+
 		case 2
-			SetMusicTrack("GreenHill_F.ogg", 0, 502294)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 30436, 8000)
+			SetMusicTrack("GreenHill_F.ogg", TRACK_STAGE, 502294)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436, 8000)
 			break
+
 		case 4
-			SetMusicTrack("GreenHill_F.ogg", 0, 502294)
-			SetMusicTrack("Invincibility_F.ogg", 2, 30436)
+			SetMusicTrack("GreenHill_F.ogg", TRACK_STAGE, 502294)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436)
 			break
 		end switch
 	else
-		stage.musicFlag = 1
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
 	end if
 end function
 
 
 function GHZSetup_SlowDownMusic
-	CheckEqual(object[25].type, TypeName[Music Event])
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
 	if temp0 == 0
 		switch music.currentTrack
 		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
-			SwapMusicTrack("GreenHill.ogg", 0, 0x9B0AA, 0x316A)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
+			SwapMusicTrack("GreenHill.ogg", TRACK_STAGE, 635050, 12650)
 			break
+
 		case 2
-			SetMusicTrack("GreenHill.ogg", 0, 0x9B0AA)
-			SwapMusicTrack("Invincibility.ogg", 2, 0x9A68, 0x30D4)
+			SetMusicTrack("GreenHill.ogg", TRACK_STAGE, 635050)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528, 12650)
 			break
+
 		case 4
-			SetMusicTrack("GreenHill.ogg", 0, 0x9B0AA)
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
+			SetMusicTrack("GreenHill.ogg", TRACK_STAGE, 635050)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
 			break
 		end switch
 	else
-		stage.musicFlag = 2
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
 	end if
 end function
 
 
 event ObjectMain
-	if GHZSetup_waterfallFlag != 0
-		GHZSetup_waterfallFlag = 0
-		object.value4--
-		if object.value4 <= 0
-			object.value4 = 31
-			if object.value5 == 0
+	if GHZSetup_waterfallFlag != false
+		GHZSetup_waterfallFlag = false
+		object.waterfallLoopTimer--
+		if object.waterfallLoopTimer <= 0
+			object.waterfallLoopTimer = 31
+			if object.playingWaterfallLoop == false
 				if credits.screen == 0
 					PlaySfx(SfxName[Waterfall], false)
 					StopSfx(SfxName[Waterfall Loop])
 				end if
-				object.value5 = 1
+				object.playingWaterfallLoop = true
 			else
 				if credits.screen == 0
 					StopSfx(SfxName[Waterfall])
@@ -375,24 +385,24 @@ event ObjectMain
 		SetSfxAttributes(SfxName[Waterfall], -1, GHZSetup_waterfallPan)
 		SetSfxAttributes(SfxName[Waterfall Loop], -1, GHZSetup_waterfallPan)
 	else
-		object.value5 = 0
-		object.value4 = 0
+		object.playingWaterfallLoop = false
+		object.waterfallLoopTimer   = 0
 	end if
 
 	if object.state < 5
-		object.value3++
-		if object.value3 == 6
-			object.value3 = 0
-			RotatePalette(0, 168, 171, 1)
+		object.paletteTimer++
+		if object.paletteTimer == 6
+			object.paletteTimer = 0
+			RotatePalette(0, 168, 171, true)
 			GHZSetup_spikeLogsCounter++
 			GHZSetup_spikeLogsCounter &= 15
 		end if
 	end if
 
-	if object.value0 == 0
-		object.value0 = 20
+	if object.sunFlowerTimer == 0
+		object.sunFlowerTimer = 20
 		temp0 = 768
-		temp0 += object.frame
+		temp0 += object.sunFlowerFrame
 		Copy16x16Tile(427, temp0)
 		temp0++
 		Copy16x16Tile(428, temp0)
@@ -400,28 +410,28 @@ event ObjectMain
 		Copy16x16Tile(429, temp0)
 		temp0++
 		Copy16x16Tile(430, temp0)
-		object.frame += 4
-		object.frame &= 7
+		object.sunFlowerFrame += 4
+		object.sunFlowerFrame &= 7
 	else
-		object.value0--
+		object.sunFlowerTimer--
 	end if
 
-	if object.value1 == 0
-		switch object.value2
+	if object.extendFlowerTimer == 0
+		switch object.extendFlowerFrame
 		case 0
-			object.value1 = 160
+			object.extendFlowerTimer = 160
 			temp0 = 0
 			break
 		case 1
-			object.value1 = 10
+			object.extendFlowerTimer = 10
 			temp0 = 6
 			break
 		case 2
-			object.value1 = 160
+			object.extendFlowerTimer = 160
 			temp0 = 12
 			break
 		case 3
-			object.value1 = 10
+			object.extendFlowerTimer = 10
 			temp0 = 6
 			break
 		end switch
@@ -437,16 +447,16 @@ event ObjectMain
 		Copy16x16Tile(435, temp0)
 		temp0++
 		Copy16x16Tile(436, temp0)
-		object.value2++
-		object.value2 &= 3
+		object.extendFlowerFrame++
+		object.extendFlowerFrame &= 3
 	else
-		object.value1--
+		object.extendFlowerTimer--
 	end if
 end event
 
 
 event ObjectStartup
-	SetMusicTrack("GreenHill.ogg", 0, 635050)
+	SetMusicTrack("GreenHill.ogg", TRACK_STAGE, 635050)
 	SpeedUpMusic = GHZSetup_SpeedUpMusic
 	SlowDownMusic = GHZSetup_SlowDownMusic
 	animalType1 = TypeName[Pocky]
@@ -460,18 +470,20 @@ event ObjectStartup
 
 	if options.attractMode == true
 		switch stage.playerListPos
-		case 0
+		case PlayerName[SONIC]
 			switch credits.screen
 			case 0
 				PlayerObject_ReplayTable = GHZSetup_replay_GHZS_1
 				PlayerObject_ReplaySize = 102
 				PlayerObject_ReplayLength = 1800
 				break
+
 			case 1
 				PlayerObject_ReplayTable = GHZSetup_replay_GHZ_2
 				PlayerObject_ReplaySize = 58
 				PlayerObject_ReplayLength = 540
 				break
+
 			case 8
 				PlayerObject_ReplayTable = GHZSetup_replay_GHZ_3
 				PlayerObject_ReplaySize = 10
@@ -479,18 +491,21 @@ event ObjectStartup
 				break
 			end switch
 			break
-		case 1
+
+		case PlayerName[TAILS]
 			switch credits.screen
 			case 0
 				PlayerObject_ReplayTable 	= GHZSetup_replay_GHZT_1
 				PlayerObject_ReplaySize 	= 198
 				PlayerObject_ReplayLength 	= 1800
 				break
+
 			case 1
 				PlayerObject_ReplayTable 	= GHZSetup_replay_GHZ_2
 				PlayerObject_ReplaySize 	= 58
 				PlayerObject_ReplayLength 	= 540
 				break
+
 			case 8
 				PlayerObject_ReplayTable 	= GHZSetup_replay_GHZ_3
 				PlayerObject_ReplaySize 	= 10
@@ -498,18 +513,21 @@ event ObjectStartup
 				break
 			end switch
 			break
-		case 2
+
+		case PlayerName[KNUCKLES]
 			switch credits.screen
 			case 0
 				PlayerObject_ReplayTable 	= GHZSetup_replay_GHZK_1
 				PlayerObject_ReplaySize 	= 150
 				PlayerObject_ReplayLength 	= 1800
 				break
+
 			case 1
 				PlayerObject_ReplayTable 	= GHZSetup_replay_GHZ_2
 				PlayerObject_ReplaySize 	= 58
 				PlayerObject_ReplayLength 	= 540
 				break
+
 			case 8
 				PlayerObject_ReplayTable 	= GHZSetup_replay_GHZ_3
 				PlayerObject_ReplaySize 	= 10
@@ -518,6 +536,7 @@ event ObjectStartup
 			end switch
 			break
 		end switch
+		
 		CallFunction(PlayerObject_InitReplay)
 	end if
 end event
@@ -529,4 +548,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
