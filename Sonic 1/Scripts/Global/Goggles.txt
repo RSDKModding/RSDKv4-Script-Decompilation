@@ -18,6 +18,8 @@ private alias object.xpos 		: player.xpos
 private alias object.ypos 		: player.ypos
 private alias object.frame 		: player.frame
 
+private alias -1 : DRAWORDER_PLAYER
+
 // Tables
 private table Goggles_frameTableSonic
 	1 		// ANI_STOPPED
@@ -28,7 +30,7 @@ private table Goggles_frameTableSonic
 	14 		// ANI_WALKING
 	20 		// ANI_RUNNING
 	24 		// ANI_SKIDDING
-	0 		// ANI_PEELOUT - even if there's logid for it in other places, it's blank here
+	0 		// ANI_PEELOUT - even if there's logic for it in other places, it's blank here
 	0 		// ANI_SPINDASH
 	26 		// ANI_JUMPING
 	31 		// ANI_BOUNCING
@@ -40,7 +42,7 @@ private table Goggles_frameTableSonic
 	40 		// ANI_PUSHING
 	44 		// ANI_FLAILING1
 	44 		// ANI_FLAILING2
-	0		// Sliding - blank and unused
+	0		// "Sliding" - blank and unused
 	46 		// ANI_HANGING
 	0 		// ANI_DROPPING
 	48 		// ANI_CLINGING
@@ -53,8 +55,8 @@ private table Goggles_frameTableSonic
 	0 		// ANI_GLIDING_STOP
 	0 		// ANI_CLIMBING
 	0 		// ANI_LEDGEPULLUP
-	0 		// Corkscrew H - blank and unused
-	0 		// Corkscrew V - blank and unused
+	0 		// "Corkscrew H" - blank and unused
+	0 		// "Corkscrew V" - blank and unused
 	32 		// ANI_WATERSLIDE
 	0 		// ANI_CONTINUE
 	0 		// ANI_CONTINUE_UP
@@ -86,12 +88,12 @@ private table Goggles_frameTableTails
 	80 		// ANI_PUSHING
 	84 		// ANI_FLAILING1
 	84 		// ANI_FLAILING2
-	0 		// Sliding - blank and unused
+	0 		// "Sliding" - blank and unused
 	0 		// ANI_HANGING
 	0 		// ANI_DROPPING
 	86 		// ANI_CLINGING
-	88 		// ANI_FLYING - unused because Tails is always swimming underwater
-	90 		// ANI_FLYINGTIRED - unused for the same reason as above
+	88 		// ANI_FLYING - unused because Tails is always swimming underwater. This data for it is still correct though
+	90 		// ANI_FLYINGTIRED - unused for the same reason as above, this one also works fine
 	92 		// ANI_SWIMMING
 	97 		// ANI_SWIMMINGTIRED
 	0 		// ANI_GLIDING
@@ -99,8 +101,8 @@ private table Goggles_frameTableTails
 	0 		// ANI_GLIDING_STOP
 	0 		// ANI_CLIMBING
 	0 		// ANI_LEDGEPULLUP
-	0 		// Corkscrew H - blank and unused
-	0 		// Corkscrew V - blank and unused
+	0 		// "Corkscrew H" - blank and unused
+	0 		// "Corkscrew V" - blank and unused
 	72 		// ANI_WATERSLIDE
 	0 		// ANI_CONTINUE
 	0 		// ANI_CONTINUE_UP
@@ -132,7 +134,7 @@ private table Goggles_frameTableKnuckles
 	156 	// ANI_PUSHING
 	160 	// ANI_FLAILING1
 	160 	// ANI_FLAILING2
-	0 		// Sliding - blank and unused
+	0 		// "Sliding" - blank and unused
 	0 		// ANI_HANGING
 	0 		// ANI_DROPPING
 	172 	// ANI_CLINGING
@@ -145,8 +147,8 @@ private table Goggles_frameTableKnuckles
 	179 	// ANI_GLIDING_STOP
 	181 	// ANI_CLIMBING
 	187 	// ANI_LEDGEPULLUP
-	0 		// Corkscrew H - blank and unused
-	0 		// Corkscrew V - blank and unused
+	0 		// "Corkscrew H" - blank and unused
+	0 		// "Corkscrew V" - blank and unused
 	144  	// ANI_WATERSLIDE
 	0 		// ANI_CONTINUE
 	0 		// ANI_CONTINUE_UP
@@ -198,11 +200,11 @@ event ObjectDraw
 		temp0 = checkResult
 		CheckEqual(player[currentPlayer].animation, ANI_RUNNING)
 		temp0 |= checkResult
-		CheckEqual(player[currentPlayer].animation, ANI_PEELOUT)
+		CheckEqual(player[currentPlayer].animation, ANI_PEELOUT) // ?
 		temp0 |= checkResult
 
 		if temp0 == true
-			// Player is in a rotatable animation, so make the goggles match the player's rotation
+			// Player is in a rotatable animation, so make the goggles match the player's quarter rotation
 			object.rotation = player[currentPlayer].rotation
 
 			if object.rotation >= 256
@@ -222,9 +224,12 @@ event ObjectDraw
 		GetTableValue(temp0, player[currentPlayer].animation, object.frameTable)
 
 		if temp0 == 0
+			// Animation is one that shouldn't have goggles shown
 			object.frame = 0
 		else
 			object.frame += temp0
+
+			// Special exceptions for stuff
 
 			if object.frameTable == Goggles_frameTableTails
 				if player[currentPlayer].animation == ANI_WAITING
@@ -325,62 +330,123 @@ event ObjectStartup
 
 	// Goggle frames
 	// There are only a couple of actual goggle sprites, most of these are the same thing but with different offsets
-	SpriteFrame(0, 0, 1, 1, 1, 1)
+	// Some frames are labelled, but given that there are ~200 frames, there's probably some mistakes here
+
+	SpriteFrame(0, 0, 1, 1, 1, 1) // Empty
+
+	// #1 - Sonic's ANI_STOPPED
 	SpriteFrame(-4, -12, 12, 9, 118, 71)
+	
+	// #2 - #7 - Sonic's ANI_WAITING
 	SpriteFrame(-7, -11, 15, 9, 118, 81)
 	SpriteFrame(-7, -11, 15, 9, 118, 81)
 	SpriteFrame(-7, -11, 15, 9, 118, 81)
 	SpriteFrame(-7, -11, 15, 9, 118, 81)
 	SpriteFrame(-7, -11, 15, 9, 118, 81)
 	SpriteFrame(-7, -11, 15, 9, 118, 81)
+	
+	// ANI_BORED has no goggle data
+	
+	// #8 - #10 - Sonic's ANI_LOOKINGUP
 	SpriteFrame(-4, -12, 12, 9, 118, 71)
 	SpriteFrame(-5, -12, 12, 10, 127, 102)
 	SpriteFrame(-6, -13, 12, 10, 127, 102)
+
+	// #11 - #13 - Sonic's ANI_LOOKINGDOWN
 	SpriteFrame(-4, -12, 12, 9, 118, 71)
 	SpriteFrame(-1, -4, 14, 11, 150, 118)
 	SpriteFrame(-1, 10, 9, 8, 140, 102)
+	
+	// #14 - #19 - Sonic's ANI_WALKING
 	SpriteFrame(0, -11, 12, 9, 118, 71)
 	SpriteFrame(0, -12, 12, 9, 118, 71)
 	SpriteFrame(0, -11, 12, 9, 118, 71)
 	SpriteFrame(3, -11, 8, 9, 118, 102)
 	SpriteFrame(3, -12, 8, 9, 118, 102)
 	SpriteFrame(3, -11, 8, 9, 118, 102)
+	
+	// #20 - #23 - Sonic's ANI_RUNNING
 	SpriteFrame(3, -9, 12, 9, 118, 71)
 	SpriteFrame(3, -9, 12, 9, 118, 71)
 	SpriteFrame(3, -9, 12, 9, 118, 71)
 	SpriteFrame(3, -9, 12, 9, 118, 71)
+	
+	// #24 - #25 - Sonic's ANI_SKIDDING
 	SpriteFrame(-9, -9, 15, 9, 118, 81)
 	SpriteFrame(-9, -9, 15, 9, 118, 81)
+	
+	// Sonic's ANI_PEELOUT has no goggle data
+	// There is still some code for it, see ObjectDraw
+	
+	// Sonic's ANI_SPINDASH is blank as well
+	
+	// #26 - #30 - Sonic's ANI_JUMPING
 	SpriteFrame(0, 0, 1, 1, 1, 1)
 	SpriteFrame(3, -7, 8, 9, 118, 102)
 	SpriteFrame(-1, 3, 9, 8, 140, 102)
 	SpriteFrame(-11, -2, 8, 9, 142, 92)
 	SpriteFrame(-8, -11, 9, 8, 118, 123)
+	
+	// #31 - Sonic's ANI_BOUNCING
 	SpriteFrame(-4, -17, 12, 10, 127, 102)
+	
+	// #32 - #33 - Sonic's ANI_HURT and ANI_WATERSLIDE
 	SpriteFrame(-8, -10, 15, 9, 118, 81)
 	SpriteFrame(-8, -10, 15, 9, 118, 81)
+	
+	// Sonic's ANI_DYING and ANI_DROWNING are blank too
+	
+	// #34 - #38 - Sonic's ANI_FANROTATE
 	SpriteFrame(9, -5, 12, 9, 118, 71)
 	SpriteFrame(-8, -5, 16, 8, 118, 113)
 	SpriteFrame(-21, -5, 12, 9, 130, 92)
 	SpriteFrame(0, 0, 1, 1, 1, 1)
 	SpriteFrame(0, 0, 1, 1, 1, 1)
+	
+	// #39 - Sonic's ANI_BREATHING
 	SpriteFrame(-4, -18, 12, 10, 127, 102)
+	
+	// #40 - #43 - Sonic's ANI_PUSHING
 	SpriteFrame(-5, -7, 15, 9, 118, 81)
 	SpriteFrame(-5, -8, 15, 9, 118, 81)
 	SpriteFrame(-5, -7, 15, 9, 118, 81)
 	SpriteFrame(-5, -8, 15, 9, 118, 81)
+	
+	// #44 - #45 - Sonic's ANI_FLAILING1 and ANI_FLAILING2
 	SpriteFrame(-10, -13, 15, 9, 118, 81)
 	SpriteFrame(-8, -12, 15, 9, 118, 81)
+	
+	// "Sliding" anim doesn't have any data
+	
+	// #46 - #47 - Sonic's ANI_HANGING
 	SpriteFrame(-3, -9, 12, 9, 118, 71)
 	SpriteFrame(-3, -9, 12, 9, 118, 71)
+	
+	// Sonic's ANI_DROPPING doesn't have any goggle data either
+	
+	// #48 - #49 - Sonic's ANI_CLINGING
 	SpriteFrame(-13, -10, 14, 13, 135, 113)
 	SpriteFrame(-12, -10, 14, 13, 135, 113)
+	
+	// #50 - Tails's ANI_STOPPED
 	SpriteFrame(-6, -10, 12, 9, 118, 71)
+	
+	// #51 - #53 - Tails's ANI_WAITING
+	// Note that there's a special exception for this,
+	// go see ObjectDraw for more info
 	SpriteFrame(-9, -10, 16, 9, 118, 113)
 	SpriteFrame(-9, -10, 16, 9, 118, 113)
 	SpriteFrame(-8, -11, 16, 9, 118, 113)
+	
+	// Tails's ANI_BORED is empty
+	
+	// #54 - Tails's ANI_LOOKINGUP
 	SpriteFrame(-5, -12, 12, 9, 118, 71)
+	
+	// #55 - Tails's ANI_LOOKINGDOWN
 	SpriteFrame(-2, 1, 12, 9, 118, 71)
+	
+	// #56 - #63 - Tails's ANI_WALKING
 	SpriteFrame(1, -11, 8, 9, 118, 102)
 	SpriteFrame(-1, -13, 8, 9, 118, 102)
 	SpriteFrame(-1, -13, 8, 9, 118, 102)
@@ -389,43 +455,80 @@ event ObjectStartup
 	SpriteFrame(0, -13, 8, 9, 118, 102)
 	SpriteFrame(-1, -13, 8, 9, 118, 102)
 	SpriteFrame(-1, -11, 8, 9, 118, 102)
+	
+	// #64 - #67 - Tails's ANI_RUNNING and ANI_PEELOUT
+	// Note that Tails's ANI_PEELOUT is his fastest run anim
 	SpriteFrame(3, -11, 8, 9, 118, 102)
 	SpriteFrame(3, -11, 8, 9, 118, 102)
 	SpriteFrame(3, -11, 8, 9, 118, 102)
 	SpriteFrame(3, -11, 8, 9, 118, 102)
+	
+	// #68 - #69 - Tails's ANI_SKIDDING
 	SpriteFrame(-5, -11, 12, 9, 118, 71)
 	SpriteFrame(-5, -11, 12, 9, 118, 71)
+	
+	// #70 - #71 - Tails's ANI_BOUNCING
 	SpriteFrame(-2, -15, 9, 8, 118, 123)
 	SpriteFrame(-2, -15, 9, 8, 118, 123)
+	
+	// #72 - Tails's ANI_HURT and ANI_WATERSLIDE
 	SpriteFrame(-5, -10, 12, 9, 118, 71)
+	
+	// #73 - Appears to be unused..?
 	SpriteFrame(-5, -10, 12, 9, 118, 71)
+	
+	// #74 - #78 - Tails's ANI_FANROTATE
 	SpriteFrame(4, -5, 12, 9, 118, 71)
 	SpriteFrame(-8, -5, 16, 8, 118, 113)
 	SpriteFrame(-15, -5, 12, 9, 130, 92)
 	SpriteFrame(0, 0, 1, 1, 1, 1)
 	SpriteFrame(0, 0, 1, 1, 1, 1)
+	
+	// #79 - Tails's ANI_BREATHING
 	SpriteFrame(-2, -15, 12, 10, 127, 102)
+	
+	// #80 - #83 - Tails's ANI_PUSHING
 	SpriteFrame(-5, -8, 15, 9, 118, 81)
 	SpriteFrame(-5, -8, 15, 9, 118, 81)
 	SpriteFrame(-5, -8, 15, 9, 118, 81)
 	SpriteFrame(-5, -8, 15, 9, 118, 81)
+	
+	// #84 - #85 - Tails's ANI_FLAILING1 and ANI_FLAILING2
 	SpriteFrame(-9, -10, 16, 9, 118, 113)
 	SpriteFrame(-9, -10, 16, 9, 118, 113)
+	
+	// #86 - #87 - Tails's ANI_CLINGING
 	SpriteFrame(-14, -9, 14, 13, 135, 113)
 	SpriteFrame(-13, -9, 14, 13, 135, 113)
+	
+	// #88 - #89 - Tails's ANI_FLYING
 	SpriteFrame(-1, -4, 12, 9, 118, 71)
 	SpriteFrame(-1, -4, 12, 9, 118, 71)
+	
+	// #90 - #91 - Tails's ANI_FLYINGTIRED
+	// This animation has a special exceptions as well,
+	// go see ObjectDraw for more info
 	SpriteFrame(-1, -4, 12, 9, 118, 71)
 	SpriteFrame(-1, -5, 12, 9, 118, 71)
+	
+	// #92 - #96 - Tails's ANI_SWIMMING
 	SpriteFrame(-1, -7, 12, 9, 118, 71)
 	SpriteFrame(-1, -7, 12, 9, 118, 71)
 	SpriteFrame(-1, -7, 12, 9, 118, 71)
 	SpriteFrame(-1, -7, 12, 9, 118, 71)
 	SpriteFrame(-1, -7, 12, 9, 118, 71)
+	
+	// #97 - #99 - Tails's ANI_SWIMMINGTIRED
 	SpriteFrame(1, -5, 12, 9, 118, 71)
 	SpriteFrame(1, -5, 12, 9, 118, 71)
 	SpriteFrame(1, -5, 12, 9, 118, 71)
+	
+	// #100 - Knuckles's ANI_STOPPED
 	SpriteFrame(-5, -17, 15, 9, 118, 81)
+	
+	// #101 - #113 - Knuckles's ANI_WAITING
+	// Note that there's also a special exception for this,
+	// go see ObjectDraw for more info
 	SpriteFrame(-6, -16, 15, 9, 118, 81)
 	SpriteFrame(-4, -17, 15, 9, 118, 81)
 	SpriteFrame(-5, -16, 15, 9, 118, 81)
@@ -439,12 +542,18 @@ event ObjectStartup
 	SpriteFrame(7, -15, 8, 9, 118, 102)
 	SpriteFrame(-5, -16, 15, 9, 118, 81)
 	SpriteFrame(-4, -17, 15, 9, 118, 81)
+	
+	// #114 - #116 - Knuckles's ANI_LEDGEPULLUP
 	SpriteFrame(-5, -17, 15, 9, 118, 81)
 	SpriteFrame(-5, -19, 12, 10, 127, 102)
 	SpriteFrame(-7, -20, 12, 10, 127, 102)
+	
+	// #117 - #119 - Knuckles's ANI_LOOKINGDOWN
 	SpriteFrame(-5, -17, 15, 9, 118, 81)
 	SpriteFrame(-3, -9, 12, 9, 118, 71)
 	SpriteFrame(-2, -1, 12, 9, 118, 71)
+	
+	// #120 - #127 - Knuckles's ANI_WALKING
 	SpriteFrame(-1, -11, 12, 9, 118, 71)
 	SpriteFrame(3, -12, 8, 9, 118, 102)
 	SpriteFrame(3, -14, 8, 9, 118, 102)
@@ -453,14 +562,19 @@ event ObjectStartup
 	SpriteFrame(-3, -13, 15, 9, 118, 81)
 	SpriteFrame(-4, -14, 15, 9, 118, 81)
 	SpriteFrame(-2, -13, 12, 9, 118, 71)
+	
+	// #128 - #131 - Knuckles's ANI_RUNNING
 	SpriteFrame(-3, -12, 12, 9, 118, 71)
 	SpriteFrame(-3, -12, 12, 9, 118, 71)
 	SpriteFrame(-3, -12, 12, 9, 118, 71)
 	SpriteFrame(-3, -12, 12, 9, 118, 71)
+	
+	// #132 - #133 - Knuckles's ANI_SKIDDING
+	// The last frames in it appear to be missing?
 	SpriteFrame(-5, -13, 15, 9, 118, 81)
 	SpriteFrame(-10, -12, 15, 9, 118, 81)
-	SpriteFrame(0, 0, 1, 1, 1, 1)
-	SpriteFrame(2, -11, 8, 9, 118, 102)
+	
+	// #134 - #141 - Knuckles's ANI_JUMPING
 	SpriteFrame(0, 0, 1, 1, 1, 1)
 	SpriteFrame(2, 1, 9, 8, 140, 102)
 	SpriteFrame(0, 0, 1, 1, 1, 1)
@@ -469,9 +583,17 @@ event ObjectStartup
 	SpriteFrame(-11, -10, 9, 8, 118, 123)
 	SpriteFrame(-6, -17, 9, 8, 118, 123)
 	SpriteFrame(-8, -16, 15, 9, 118, 81)
+	
+	// #142 - Knuckles's ANI_BOUNCING
 	SpriteFrame(-10, -13, 15, 9, 118, 81)
+	
+	// #143 - Knuckles's ANI_HURT and ANI_WATERSLIDE
 	SpriteFrame(2, -8, 12, 9, 118, 71)
+	
+	// #144 - Unused?
 	SpriteFrame(-2, -7, 15, 9, 118, 81)
+	
+	// #145 - #154 - Knuckles's ANI_FANROTATE
 	SpriteFrame(-7, -5, 16, 9, 118, 113)
 	SpriteFrame(-13, -7, 15, 9, 69, 106)
 	SpriteFrame(-14, -8, 12, 9, 130, 92)
@@ -482,11 +604,19 @@ event ObjectStartup
 	SpriteFrame(6, -9, 8, 9, 118, 102)
 	SpriteFrame(-3, -17, 15, 9, 118, 81)
 	SpriteFrame(1, -13, 12, 9, 118, 71)
+	
+	// #155 - Knuckles's ANI_BREATHING
 	SpriteFrame(-4, -14, 15, 9, 118, 81)
+	
+	// #156 - #159 - Knuckles's ANI_PUSHING
 	SpriteFrame(1, -13, 12, 9, 118, 71)
 	SpriteFrame(4, -14, 8, 9, 118, 102)
 	SpriteFrame(1, -10, 12, 9, 118, 71)
 	SpriteFrame(2, -15, 15, 9, 118, 81)
+	
+	// #160 - #171 - Knuckles's ANI_FLAILING1 and ANI_FLAILING2
+	// This animation is also one with special exceptions,
+	// go see ObjectDraw for more info
 	SpriteFrame(5, -12, 16, 9, 118, 113)
 	SpriteFrame(3, -26, 14, 13, 135, 113)
 	SpriteFrame(7, -16, 6, 7, 128, 123)
@@ -499,21 +629,34 @@ event ObjectStartup
 	SpriteFrame(3, -20, 14, 13, 135, 113)
 	SpriteFrame(-13, -11, 11, 10, 118, 91)
 	SpriteFrame(-12, -11, 11, 10, 118, 91)
+	
+	// #172 - #173 - Knuckles's ANI_CLINGING
 	SpriteFrame(-7, -5, 16, 9, 118, 113)
 	SpriteFrame(-2, -7, 15, 9, 118, 81)
+	
+	// #174 - #176 - Knuckles's ANI_GLIDING
 	SpriteFrame(2, -8, 12, 9, 118, 71)
 	SpriteFrame(2, -13, 12, 9, 118, 71)
 	SpriteFrame(0, -17, 12, 9, 118, 71)
+	
+	// #177 - #178 - Knuckles's ANI_GLIDING_DROP
 	SpriteFrame(3, -3, 12, 9, 118, 71)
 	SpriteFrame(-4, -6, 15, 9, 118, 81)
+	
+	// #179 - #180 - Knuckles's ANI_GLIDING_STOP
 	SpriteFrame(-12, -15, 12, 9, 118, 71)
 	SpriteFrame(-13, -15, 12, 9, 118, 71)
+	
+	// #181 - #186 - Knuckles's ANI_CLIMBING
 	SpriteFrame(-12, -16, 12, 9, 118, 71)
 	SpriteFrame(-12, -15, 12, 9, 118, 71)
 	SpriteFrame(-13, -15, 12, 9, 118, 71)
 	SpriteFrame(-12, -16, 12, 9, 118, 71)
 	SpriteFrame(-4, -20, 8, 9, 118, 102)
 	SpriteFrame(-3, -21, 8, 9, 118, 102)
+	
+	// #187 - Knuckles's ANI_LEDGEPULLUP
+	// This one seems to be incomplete, with only one frame
 	SpriteFrame(-8, -23, 15, 9, 118, 81)
 
 	// Look for goggle objects placed in the current scene
@@ -522,27 +665,27 @@ event ObjectStartup
 		//   but they won't function like normal goggles.
 		//   Instead, they'll be purely cosmetic, which means that Sonic can still get hit and stuff
 		//   However, even if he does get hit, he'll still keep the goggles on
-		//   This feature is another unused part of this already unused object, but to utilise it,
+		//   This feature is another unused part of this already unused object, to utilise it,
 		//   just place goggles anywhere in a scene
 
 		// Move to the shield object slot
 		arrayPos1 = playerCount
 
-		// Reset currentPlayer/move to P1 slot
+		// Move currentPlayer to P1 slot (?)
 		currentPlayer = 0
 
 		// Place some goggles in the shield slot and init its values
 		ResetObjectEntity(arrayPos1, TypeName[Goggles], 0, 0, 0)
 		object[arrayPos1].priority = PRIORITY_ACTIVE
 		object[arrayPos1].targetPlayer = 0
-		object[arrayPos1].drawOrder = -1
+		object[arrayPos1].drawOrder = DRAWORDER_PLAYER
 
-		// Blank out the placed goggle object
+		// Remove the placed goggle object
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
 
 	// Set goggle type to the goggles
-	// (Despite being in the global folder, this script only gets called in LZ so it's safe to do it here)
+	// (Despite being in the global folder, this script is only in LZ's object list so it's safe to do it here)
 	goggleType = TypeName[Goggles]
 
 end event
@@ -553,7 +696,7 @@ end event
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	SpriteFrame(-4, -12, 12, 9, 118, 71)
 	
 	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
