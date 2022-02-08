@@ -8,8 +8,18 @@
 // Aliases
 private alias object.value0 : object.timer
 
+private alias 0 : BUBBLESHIELD_IDLE_SETUP
+private alias 1 : BUBBLESHIELD_IDLE
+private alias 2 : BUBBLESHIELD_BOUNCE_SETUP
+private alias 3 : BUBBLESHIELD_BOUNCE
+private alias 4 : BUBBLESHIELD_RECOIL_SETUP
+private alias 5 : BUBBLESHIELD_RECOIL
 
-// Static Values
+private alias -1 : DRAWORDER_PLAYER
+
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
 
 // Tables
 public table BubbleShield_frameTable
@@ -19,26 +29,27 @@ public table BubbleShield_frameTable
 	2, 0, 2, 0, 2, 0
 end table
 
-
 event ObjectMain
-	if object[-playerCount].state == PlayerObject_Death
+	// Remove the shield if the player shouldn't have it
+	if player[-playerCount].state == PlayerObject_Death
 		object.type = TypeName[Blank Object]
 	end if
 
-	if object[-playerCount].state == PlayerObject_Drown
+	if player[-playerCount].state == PlayerObject_Drown
 		object.type = TypeName[Blank Object]
 	end if
 
-	object.drawOrder = -1
+	object.drawOrder = DRAWORDER_PLAYER
 
+	
 	switch object.state
-	case 0
+	case BUBBLESHIELD_IDLE_SETUP
 		object.animationTimer = 0
 		object.timer = 0
 		GetTableValue(object.frame, object.timer, BubbleShield_frameTable)
 		object.state++
-		// fall through
-	case 1
+		// [FallThrough]
+	case BUBBLESHIELD_IDLE
 		object.animationTimer++
 		if object.animationTimer >= 2
 			object.animationTimer = 0
@@ -49,13 +60,14 @@ event ObjectMain
 			GetTableValue(object.frame, object.timer, BubbleShield_frameTable)
 		end if
 		break
-	case 2
+
+	case BUBBLESHIELD_BOUNCE_SETUP
 		object.animationTimer = 0
 		object.timer = 0
 		object.frame = 0
 		object.state++
-		// fall through
-	case 3
+		// [FallThrough]
+	case BUBBLESHIELD_BOUNCE
 		if object.timer == 0
 			object.animationTimer++
 			if object.animationTimer >= 5
@@ -66,17 +78,18 @@ event ObjectMain
 		else
 			object.animationTimer++
 			if object.animationTimer >= 19
-				object.state = 0
+				object.state = BUBBLESHIELD_IDLE_SETUP
 			end if
 		end if
 		break
-	case 4
+
+	case BUBBLESHIELD_RECOIL_SETUP
 		object.animationTimer = 0
 		object.timer = 0
 		object.frame = 7
 		object.state++
-		// fall through
-	case 5
+		// [FallThrough]
+	case BUBBLESHIELD_RECOIL
 		if object.timer == 0
 			object.animationTimer++
 			if object.animationTimer >= 13
@@ -87,29 +100,35 @@ event ObjectMain
 		else
 			object.animationTimer++
 			if object.animationTimer >= 7
-				object.state = 0
+				object.state = BUBBLESHIELD_IDLE_SETUP
 			end if
 		end if
 		break
+
 	end switch
 end event
 
 
 event ObjectDraw
-	if PlayerObject_SuperState != 1
+	if PlayerObject_SuperState != SUPERSTATE_SUPER
 		object.direction = FLIP_NONE
 		if object.timer >= 30
 			if object.frame > 1
 				object.direction = FLIP_Y
 			end if
 		end if
-		DrawSpriteFX(object.frame, FX_FLIP, object[-playerCount].xpos, object[-playerCount].ypos)
+
+		// Draw at the player's position
+		DrawSpriteFX(object.frame, FX_FLIP, player[-playerCount].xpos, player[-playerCount].ypos)
 	end if
 end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Global/Items3.gif")
+
+	// Bubble shield frames
 	SpriteFrame(-24, -24, 48, 48, 1, 1)
 	SpriteFrame(-24, -24, 48, 48, 50, 1)
 	SpriteFrame(-16, -23, 32, 7, 99, 1)
@@ -119,7 +138,8 @@ event ObjectStartup
 	SpriteFrame(-23, -15, 46, 30, 144, 21)
 	SpriteFrame(-36, -16, 72, 32, 1, 50)
 	SpriteFrame(-28, -20, 56, 40, 74, 50)
-	SpriteFrame(0, 0, 1, 1, 1, 1)
+	SpriteFrame(0, 0, 1, 1, 1, 1) // (Empty)
+
 end event
 
 event RSDKDraw
@@ -127,8 +147,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Items3.gif")
-	SpriteFrame(-24, -24, 48, 48, 1, 1)
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
 	
 	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

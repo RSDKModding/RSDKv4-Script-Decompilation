@@ -34,6 +34,12 @@ public alias 1 : SUPERSTATE_SUPER
 public alias 2 : SUPERSTATE_FADEOUT
 public alias 3 : SUPERSTATE_END
 
+// Modes
+private alias 2 : MODE_TIMEATTACK
+
+// Tracks
+private alias 5 : TRACK_GAMEOVER
+
 // Variables
 private alias object.type			 :	player.type
 private alias object.groupID		 :	player.groupID	 		// Normally GROUP_PLAYERS, unless in Debug Mode or some other strange scenario
@@ -53,7 +59,7 @@ private alias object.speed			 :	player.speed			// Based on world-space (see abov
 private alias object.rotation		 :	player.rotation			// Note: Because this is stored as a byte, it goes from 0-255, not 0-360!
 private alias object.angle			 :	player.angle			// See above
 private alias object.direction		 :	player.direction
-private alias object.gravity		 :	player.gravity			// 1 if falling, 0 otherwise. Not to be confused with player.gravityValue, see there for more info
+private alias object.gravity		 :	player.gravity			// 1 if falling, 0 otherwise. Not to be confused with player.gravityStrength, see there for more info
 private alias object.frame			 :	player.frame
 private alias object.animation		 :	player.animation
 private alias object.prevAnimation	 :	player.prevAnimation
@@ -85,16 +91,56 @@ private alias object.down		:	player.down
 private alias object.left		:	player.left
 private alias object.right		:	player.right
 
-// Object values, not all are used or documented
-public  alias object.value0  :	player.rings
-private alias object.value16 :	player.isPlayer2			// 0/false is player 1, 1/true if player 2
-private alias object.value18 :	player.sortedDrawOrder
-private alias object.value37 :	player.shield	// Current shield the player has, see above constants for what is what
-private alias object.value40 :	player.hitboxLeft
-private alias object.value38 :	player.hitboxTop
-private alias object.value41 :	player.hitboxRight
-private alias object.value39 :	player.hitboxBottom
-private alias object.value42 :	player.prevGravity
+// Object values
+private alias object.value0  : player.rings
+private alias object.value1  : player.timer
+private alias object.value2  : player.abilityTimer			// Note: Also used by death/drowning state
+private alias object.value3  : player.drownCounter			// Countdown before player moves to next drown "level"
+private alias object.value4  : player.drownLevel
+private alias object.value5  : player.customRollAnimSpeed
+private alias object.value6  : player.speedShoes
+private alias object.value7  : player.invincible
+private alias object.value8  : player.blinkTimer
+private alias object.value9  : player.skidSpeed
+private alias object.value10 : player.animationReserve		// Used by springs to store what animation will play after the bounce animation
+private alias object.value11 : player.scrollDelay			// A timer of how long the camera will stay locked for
+private alias object.value12 : player.tailFrame
+private alias object.value13 : player.tailAnim
+private alias object.value14 : player.skidding
+// value15 isn't used
+private alias object.value16 : player.isSidekick			// 0/false is player 1, 1/true if player 2
+private alias object.value17 : debugMode.currentSelection
+private alias object.value18 : player.sortedDrawOrder
+private alias object.value19 : player.scoreBonus	// How many enemies the player has bounced on in a row
+private alias object.value20 : player.topSpeed 			
+private alias object.value21 : player.acceleration
+private alias object.value22 : player.deceleration
+private alias object.value23 : player.airAcceleration
+private alias object.value24 : player.airDeceleration
+private alias object.value25 : player.gravityStrength 		// Also used in underwater checks, 0x1000 if underwater, otherwise 0x3800. Not to be confused with player.gravity
+private alias object.value26 : player.flightVelocity		// Used by Tails only
+private alias object.value27 : player.jumpStrength
+private alias object.value28 : player.jumpCap
+private alias object.value29 : player.rollingFriction		// Active rolling deceleration - With the player holding the opposite direction
+private alias object.value30 : player.jumpOffset			// Added to the player's position when jumping/rolling. Normally -5 for S&K, and -1 for Tails
+private alias object.value31 : player.rollingDeceleration	// Passive rolling deceleration - Without the player holding the opposite direction
+private alias object.value32 : player.jumpAbility			// Used to store whatever function this player has for its jump ability
+private alias object.value33 : player.spindashFunction		// Used to store whatever function this player has for its spindash ability
+private alias object.value34 : player.collisionDisabled
+private alias object.value35 : player.doubleJumpState
+private alias object.value36 : player.flyCarryTimer		// Tails assist lockout timer
+private alias object.value37 : player.shield				// Current shield the player has, see above constants for what is what
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+private alias object.value42 : player.prevGravity
+// P2 values
+private alias object.value43 : player.jumpInDelay
+private alias object.value44 : player.p2InputFunction
+private alias object.value45 : player.p2JumpActionDelay
+private alias object.value46 : player.curFlyCarryPos.x
+private alias object.value47 : player.curFlyCarryPos.y
 
 // Death Event related values
 private alias object.drawOrder : deathEvent.drawOrder
@@ -713,24 +759,30 @@ function PlayerObject_BadnikBreak
 			object[currentPlayer].yvel += 0x10000
 		end if
 		temp1 = arrayPos0
-		if options.vsMode == 0
+		
+		// global variable "array" (yes, this is actually how its done)
+		if options.vsMode == false
 			temp0 = currentPlayer
 			currentPlayer = 0
-			arrayPos0 = 22
+			arrayPos0 = VarName[player.score]
 		else
-			arrayPos0 = 22
+			arrayPos0 = VarName[player.score]
 			arrayPos0 += currentPlayer
 		end if
+
 		switch object[currentPlayer].value19
 		case 0
-			player.score += 100
+			global[arrayPos0] += 100
 			break
+
 		case 1
-			player.score += 200
+			global[arrayPos0] += 200
 			break
+
 		case 2
-			player.score += 500
+			global[arrayPos0] += 500
 			break
+
 		case 3
 		case 4
 		case 5
@@ -743,12 +795,14 @@ function PlayerObject_BadnikBreak
 		case 12
 		case 13
 		case 14
-			player.score += 1000
+			global[arrayPos0] += 1000
 			break
+
 		case 15
-			player.score += 0x2710
+			global[arrayPos0] += 10000
 			break
 		end switch
+
 		if object[currentPlayer].value19 < 15
 			object[currentPlayer].value19++
 		end if
@@ -928,7 +982,7 @@ end function
 
 
 function PlayerObject_ProcessPlayer
-	if options.attractMode == 0
+	if options.attractMode == false
 		if object.controlMode == 0
 			CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
 			if checkResult > -1
@@ -943,76 +997,87 @@ function PlayerObject_ProcessPlayer
 				temp2 >>= 6
 				switch temp2
 				case 0
-					inputDown.right = 1
+					inputDown.right = true
 					break
+
 				case 1
-					inputDown.down = 1
+					inputDown.down = true
 					break
+
 				case 2
-					inputDown.left = 1
+					inputDown.left = true
 					break
+
 				case 3
-					inputDown.up = 1
+					inputDown.up = true
 					break
 				end switch
 			end if
+
 			CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
 			if checkResult > -1
-				inputDown.buttonA = 1
+				inputDown.buttonA = true
 			end if
-			if touchJump == 0
+			if touchJump == false
 				inputPress.buttonA |= inputDown.buttonA
 			end if
 			touchJump = inputDown.buttonA
-			if stage.debugMode == 1
+
+			if stage.debugMode == true
 				CheckTouchRect(0, 0, 112, 56)
 				if checkResult > -1
 					inputDown.buttonB = 1
 				end if
-				if touchDebug == 0
+
+				if touchDebug == false
 					inputPress.buttonB |= inputDown.buttonB
 				end if
 				touchDebug = inputDown.buttonB
 			end if
+
 			CheckTouchRect(240, 0, screen.xsize, 40)
 			if checkResult > -1
 				if options.vsMode == 0
 					PlaySfx(SfxName[Menu Back], false)
 					StopSfx(SfxName[Flying])
 					StopSfx(SfxName[Tired])
-					engine.state = 5
+					engine.state = ENGINE_INITPAUSE
 				end if
 			end if
-			if inputPress.start == 1
-				if options.vsMode == 0
+
+			if inputPress.start == true
+				if options.vsMode == false
 					PlaySfx(SfxName[Menu Back], false)
 					StopSfx(SfxName[Flying])
 					StopSfx(SfxName[Tired])
-					engine.state = 5
+					engine.state = ENGINE_INITPAUSE
 				end if
 			end if
 		end if
 		ProcessObjectControl()
-		if options.vsMode == 1
-			CallNativeFunction2(SendEntity, 0, 0)
+		if options.vsMode == true
+			CallNativeFunction2(SendEntity, 0, false)
 		end if
 	else
 		if credits.screen == 0
 			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
-			if inputPress.start == 1
+			if inputPress.start == true
 				checkResult = 0
 			end if
+
 			if checkResult > -1
 				if PlayerObject_ReplayLength > 1
 					PlayerObject_ReplayLength = 1
 				end if
 			end if
-			if inputPress.start == 1
+
+			if inputPress.start == true
 				if PlayerObject_ReplayLength > 1
 					PlayerObject_ReplayLength = 1
 				end if
 			end if
 		end if
+
 		if object.controlMode == 0
 			PlayerObject_ReplayFrameCnt--
 			if PlayerObject_ReplayFrameCnt < 1
@@ -1029,10 +1094,11 @@ function PlayerObject_ProcessPlayer
 					PlayerObject_ReplayTablePos++
 				end if
 			else
-				if object.jumpPress == 1
-					object.jumpPress = 0
+				if object.jumpPress == true
+					object.jumpPress = false
 				end if
 			end if
+
 			if PlayerObject_ReplayLength > 0
 				PlayerObject_ReplayLength--
 				if PlayerObject_ReplayLength < 1
@@ -1046,6 +1112,7 @@ function PlayerObject_ProcessPlayer
 			end if
 		end if
 	end if
+	
 	if object.value6 > 0
 		object.value6--
 		if object.value6 < 1
@@ -1686,7 +1753,7 @@ end function
 
 
 function PlayerObject_ShieldAbilities
-	if object.jumpPress == 1
+	if object.jumpPress == true
 		CheckEqual(specialStage.emeralds, 127)
 		temp0 = checkResult
 		CheckGreater(player.rings, 49)
@@ -1695,7 +1762,7 @@ function PlayerObject_ShieldAbilities
 		temp0 &= checkResult
 		CheckNotEqual(object[30].type, TypeName[Act Finish])
 		temp0 &= checkResult
-		if temp0 == 1
+		if temp0 == true
 			currentPlayer = object.entityPos
 			CallFunction(PlayerObject_SuperTransform)
 		else
@@ -3096,7 +3163,7 @@ end function
 
 
 function PlayerObject_Hurt
-	if player.isPlayer2 == 0
+	if player.isSidekick == false
 		arrayPos0 = object.entityPos
 		arrayPos0 += playerCount
 		if object.value37 != 0
@@ -3148,6 +3215,7 @@ function PlayerObject_Hurt
 			object.yvel >>= 1
 		end if
 		break
+
 	case 2
 		object.state = PlayerObject_Knockback
 		object.animation = ANI_HURT
@@ -3168,6 +3236,7 @@ function PlayerObject_Hurt
 		else
 			temp1 = 0
 		end if
+
 		if temp1 > 16
 			temp1 = 16
 		end if
@@ -3182,6 +3251,7 @@ function PlayerObject_Hurt
 		else
 			temp2 -= 16
 		end if
+
 		temp3 = 0
 		while temp3 < temp1
 			CreateTempObject(TypeName[Lose Ring], object.collisionPlane, object.xpos, object.ypos)
@@ -3206,6 +3276,7 @@ function PlayerObject_Hurt
 		else
 			temp2 -= 16
 		end if
+
 		temp3 = 0
 		while temp3 < temp0
 			CreateTempObject(TypeName[Lose Ring], object.collisionPlane, object.xpos, object.ypos)
@@ -3222,6 +3293,7 @@ function PlayerObject_Hurt
 		player.rings 	= 0
 		ringExtraLife 	= 100
 		break
+
 	case 3
 		player.sortedDrawOrder = 6
 		object.speed = 0
@@ -3231,6 +3303,7 @@ function PlayerObject_Hurt
 		object.animation = ANI_DYING
 		object.tileCollisions = 0
 		object.interaction = 0
+
 		if object.entityPos == screen.cameraTarget
 			object.priority = PRIORITY_ACTIVE_PAUSED
 			if object[1].type == TypeName[Player 2 Object]
@@ -3241,9 +3314,11 @@ function PlayerObject_Hurt
 				stage.state = STAGE_FROZEN
 			end if
 		end if
+
 		if object[+playerCount].type == invincibilityType
 			object[+playerCount].propertyValue = 3
 		end if
+
 		object[+playerCount].type = TypeName[Blank Object]
 		break
 	end switch
@@ -3282,7 +3357,7 @@ function PlayerObject_Death
 
 	if object.value8 != 0
 		object.value8 = 0
-		object.visible = 1
+		object.visible = true
 	end if
 
 	object.yvel += 0x3800
@@ -3300,54 +3375,58 @@ function PlayerObject_Death
 	end if
 
 	if object.yvel > 0x100000
-		if player.isPlayer2 == 0
-			arrayPos0 = 25
+		if player.isSidekick == false
+			// global variable "array" (yes, this is actually how its done)
+			arrayPos0 = VarName[player.lives]
 			arrayPos0 += object.entityPos
-			player.lives--
-			if options.vsMode == 0
-				stage.timeEnabled = 0
+			global[arrayPos0]--
+
+			if options.vsMode == false
+				stage.timeEnabled = false
 				object.type = TypeName[Death Event]
 				deathEvent.drawOrder = 6
 				deathEvent.leftTextPos = screen.xcenter
 				deathEvent.leftTextPos -= 264
 				deathEvent.rightTextPos = screen.xcenter
 				deathEvent.rightTextPos += 200
-				if options.gameMode == 2
+				if options.gameMode == MODE_TIMEATTACK
 					deathEvent.timer = 0
 					deathEvent.state = 3
 				else
-					if player.lives == 0
-						deathEvent.timer = -0xB40
+					if global[arrayPos0] == true
+						deathEvent.timer = -2880
 						deathEvent.state = 0
 						PlayMusic(5)
-						stage.pauseEnabled = 0
+						stage.pauseEnabled = false
 					else
 						deathEvent.timer = 0
 						deathEvent.state = 2
-						if stage.timeOver == 1
-							deathEvent.timer = -0xB40
+						if stage.timeOver == true
+							deathEvent.timer = -2880
 							deathEvent.state = 1
 							PlayMusic(5)
-							stage.pauseEnabled = 0
+							stage.pauseEnabled = false
 						end if
 					end if
 				end if
 			else
-				if player.lives == 0
+				if global[arrayPos0] == 0
 					player.type = TypeName[Death Event]
 					deathEvent.state = 0
 				end if
-				if stage.timeOver == 1
+
+				if stage.timeOver == true
 					player.type = TypeName[Death Event]
 					deathEvent.state = 1
 				end if
+
 				if object.type == TypeName[Death Event]
 					deathEvent.drawOrder = 6
 					deathEvent.leftTextPos = screen.xcenter
 					deathEvent.leftTextPos -= 264
 					deathEvent.rightTextPos = screen.xcenter
 					deathEvent.rightTextPos += 200
-					deathEvent.timer = -0xB40
+					deathEvent.timer = -2880
 					PlayMusic(5)
 					stage.pauseEnabled = 0
 				else
@@ -3364,21 +3443,22 @@ function PlayerObject_Death
 						object.ypos = vs.restartY2
 					end if
 					object.direction = FLIP_NONE
-					object.tileCollisions = 1
-					object.interaction = 1
-					object.visible = 1
+					object.tileCollisions = true
+					object.interaction = true
+					object.visible = true
 					object.controlMode = 0
-					object.scrollTracking = 1
+					object.scrollTracking = true
 					object.drawOrder = DRAWORDER_PLAYER
 					player.sortedDrawOrder = 4
 					object.collisionPlane = PATH_A
+
 					if object.entityPos == screen.cameraTarget
 						CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
 						object[tempObjectPos].value0 = 384
 						object[tempObjectPos].state = 2
 						screen.cameraX = object.ixpos
 						screen.cameraY = object.iypos
-						screen.cameraEnabled = 1
+						screen.cameraEnabled = true
 					end if
 				end if
 			end if
@@ -3393,6 +3473,7 @@ function PlayerObject_Drown
 			PlayerObject_SuperState = SUPERSTATE_FADEOUT
 		end if
 	end if
+
 	object.controlMode = -1
 	object.yvel += object.value25
 	object.animation = ANI_DROWNING
@@ -3404,30 +3485,33 @@ function PlayerObject_Drown
 			object.ypos = temp0
 		end if
 	end if
+
 	if object.yvel > 0x80000
-		if player.isPlayer2 == 0
-			arrayPos0 = 25
+		if player.isSidekick == false
+			// global variable "array" (yes, this is actually how its done)
+			arrayPos0 = VarName[player.lives]
 			arrayPos0 += object.entityPos
-			if player.lives > 0
-				player.lives--
+			if global[arrayPos0] > 0
+				global[arrayPos0]--
 			end if
-			if options.vsMode == 0
-				stage.timeEnabled = 0
+
+			if options.vsMode == false
+				stage.timeEnabled = false
 				object.type = TypeName[Death Event]
 				deathEvent.drawOrder = 6
 				deathEvent.leftTextPos = screen.xcenter
 				deathEvent.leftTextPos -= 264
 				deathEvent.rightTextPos = screen.xcenter
 				deathEvent.rightTextPos += 200
-				if options.gameMode == 2
+				if options.gameMode == MODE_TIMEATTACK
 					deathEvent.timer = 0
 					deathEvent.state = 3
 				else
-					if player.lives == 0
-						deathEvent.timer = -0xB40
+					if global[arrayPos0] == 0
+						deathEvent.timer = -2880
 						deathEvent.state = 0
-						PlayMusic(5)
-						stage.pauseEnabled = 0
+						PlayMusic(TRACK_GAMEOVER)
+						stage.pauseEnabled = false
 					else
 						deathEvent.timer = 0
 						deathEvent.state = 2
@@ -3446,12 +3530,13 @@ function PlayerObject_Drown
 					object.xpos = vs.restartX2
 					object.ypos = vs.restartY2
 				end if
+
 				object.direction = FLIP_NONE
-				object.tileCollisions = 1
-				object.interaction = 1
-				object.visible = 1
+				object.tileCollisions = true
+				object.interaction = true
+				object.visible = true
 				object.controlMode = 0
-				object.scrollTracking = 1
+				object.scrollTracking = true
 				object.drawOrder = DRAWORDER_PLAYER
 				player.sortedDrawOrder = 4
 				object.collisionPlane = PATH_A
@@ -3461,7 +3546,7 @@ function PlayerObject_Drown
 					object[tempObjectPos].state = 2
 					screen.cameraX = object.ixpos
 					screen.cameraY = object.iypos
-					screen.cameraEnabled = 1
+					screen.cameraEnabled = true
 				end if
 			end if
 		end if

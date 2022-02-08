@@ -20,8 +20,6 @@ private alias object.value10 : object.hasPerfectBonus
 private alias object.value11 : object.totalScore
 private alias object.value12 : object.hasContinue
 
-private alias TitleCard_value23 : TitleCard_showZoneText
-
 // States
 private alias 0 : ACTFINISH_INIT
 private alias 1 : ACTFINISH_ENTERTEXT
@@ -31,9 +29,11 @@ private alias 4 : ACTFINISH_SHOWRESULTS
 private alias 5 : ACTFINISH_LOADNEXTSTAGE
 private alias 6 : ACTFINISH_GOTCONTINUE
 
-// Static Values
+// Player Aliases
+private alias object.value0 : player.rings
 
-// Tables
+// TitleCard Aliases
+private alias TitleCard_value23 : TitleCard_showZoneText
 
 event ObjectMain
 	options.touchControls = false
@@ -87,7 +87,7 @@ event ObjectMain
 
 		case 9
 			if stage.debugMode == false
-				if options.gameMode < 2
+				if options.gameMode < MODE_TIMEATTACK
 					if stage.seconds == 59
 						// Cutting it really close there - give the player a ton of points
 						object.timeBonus = 100000
@@ -134,7 +134,7 @@ event ObjectMain
 			object.hasPerfectBonus = true
 			object.perfectBonus = 500000
 			if stage.debugMode == false
-				CallNativeFunction2(SetAchievement, 6, 100)
+				CallNativeFunction2(SetAchievement, AchievementName[Perfectionist], 100)
 			end if
 		end if
 
@@ -145,18 +145,23 @@ event ObjectMain
 		if object.textPos < 0
 			object.textPos += 16
 		end if
+
 		if object.gotThroughTextPos > 0
 			object.gotThroughTextPos -= 16
 		end if
+
 		if object.timePos > 0
 			object.timePos -= 16
 		end if
+
 		if object.ringPos > 0
 			object.ringPos -= 16
 		end if
+
 		if object.perfectPos > 0
 			object.perfectPos -= 16
 		end if
+
 		if object.totalPos > 0
 			object.totalPos -= 16
 		else
@@ -213,6 +218,7 @@ event ObjectMain
 			else
 				object.state++
 			end if
+
 			object.timer = 0
 			PlaySfx(SfxName[Score Total], false)
 		end if
@@ -252,7 +258,7 @@ event ObjectMain
 				stage.listPos = 12
 				if options.stageSelectFlag == false
 					if stage.debugMode == false
-						if options.gameMode == 0
+						if options.gameMode == MODE_NOSAVE
 							ReadSaveRAM()
 							saveRAM[46] = true // "unlockedHPZ"
 							WriteSaveRAM()
@@ -263,14 +269,15 @@ event ObjectMain
 				end if
 			end if
 
-			if options.gameMode == 1
+			if options.gameMode == MODE_NORMAL
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
 				if stage.player2Enabled == true
-					saveRAM[arrayPos1] = 3
+					saveRAM[arrayPos1] = PlayerName[SONIC AND TAILS]
 				else
 					saveRAM[arrayPos1] = stage.playerListPos
 				end if
+
 				arrayPos1++
 				saveRAM[arrayPos1] = player.lives
 				arrayPos1++
@@ -290,7 +297,7 @@ event ObjectMain
 				WriteSaveRAM()
 			end if
 
-			if options.gameMode == 2
+			if options.gameMode == MODE_TIMEATTACK
 				timeAttack.result = stage.seconds
 				timeAttack.result *= 100
 				temp0 = stage.minutes
@@ -303,7 +310,7 @@ event ObjectMain
 				else
 					CallNativeFunction2(SetLeaderboard, 21, timeAttack.result) // Boss Rush
 				end if
-				engine.state = 8
+				engine.state = ENGINE_RESETGAME
 			else
 				temp0 = engine.trialMode
 				if stage.listPos >= stage.listSize
@@ -397,13 +404,13 @@ event ObjectStartup
 
 	// Assign sprite frames based on current characters in play
 	switch stage.playerListPos
-	case 0
-	case 3
+	case PlayerName[SONIC]
+	case PlayerName[SONIC AND TAILS]
 		SpriteFrame(-64, 0, 72, 16, 1, 222)			// ? - #0
 		SpriteFrame(16, 0, 48, 16, 1, 205)			// ? - #1
 		break
 
-	case 1
+	case PlayerName[TAILS]
 		// Determine Miles Vs Tails
 		if options.region == false
 			SpriteFrame(-61, 0, 69, 16, 74, 222)	// ? - #0
@@ -413,11 +420,10 @@ event ObjectStartup
 		SpriteFrame(16, 0, 48, 16, 1, 205)			// ? - #1
 		break
 		
-	case 2
+	case PlayerName[KNUCKLES]
 		SpriteFrame(-94, 0, 128, 16, 34, 188)		// ? - #0
 		SpriteFrame(40, 0, 48, 16, 1, 205)			// ? - #1
 		break
-
 	end switch
 
 	// Frames that are the same for everyone
@@ -445,22 +451,21 @@ event ObjectStartup
 	SpriteFrame(0, 0, 8, 11, 10, 74)				// ? - #23
 
 	switch stage.playerListPos
-	case 0
-	case 3
+	case PlayerName[SONIC]
+	case PlayerName[SONIC AND TAILS]
 		SpriteFrame(-8, -11, 16, 23, 178, 113)		// ? - #24
 		SpriteFrame(-8, -11, 16, 23, 195, 113)		// ? - #25
 		break
 
-	case 1
+	case PlayerName[TAILS]
 		SpriteFrame(-8, -11, 16, 23, 212, 113)		// ? - #24
 		SpriteFrame(-8, -11, 16, 23, 229, 113)		// ? - #25
 		break
 
-	case 2
+	case PlayerName[KNUCKLES]
 		SpriteFrame(-8, -11, 16, 23, 178, 137)		// ? - #24
 		SpriteFrame(-8, -11, 16, 23, 195, 137)		// ? - #25
 		break
-
 	end switch
 end event
 

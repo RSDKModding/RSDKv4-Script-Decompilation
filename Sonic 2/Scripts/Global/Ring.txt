@@ -6,12 +6,10 @@
 // ----------------------------------
 
 // Aliases
-private alias 10 : TYPE_RING
+private alias object.value1 : object.targetPlayer
 
-private alias object.value1 : ring.targetPlayer
-
-private alias 0 : STATE_UNATTRACTED
-private alias 1 : STATE_ATTRACTED
+private alias 0 : RING_IDLE
+private alias 1 : RING_ATTRACTED
 
 // Player aliases
 private alias object.state   : player.state
@@ -40,7 +38,6 @@ end function
 
 
 event ObjectMain
-
 	// Check interaction with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 
@@ -75,9 +72,7 @@ event ObjectMain
 					if player[0].rings > 999
 						player[0].rings = 999
 					end if
-
 				else
-
 					// Either:
 					// A) P2 in VS, or
 					// B) P1 in any mode
@@ -86,14 +81,12 @@ event ObjectMain
 					if player[currentPlayer].rings > 999
 						player[currentPlayer].rings = 999
 					end if
-
 				end if
 
 				// Check if the player should get an extra life
 				if player[0].rings >= ringExtraLife
-
 					// Not in time attack?
-					if options.gameMode != 2
+					if options.gameMode != MODE_TIMEATTACK
 						// Give the player an extra life and play the music
 						player.lives++
 						PlaySfx(SfxName[Life], false)
@@ -136,13 +129,13 @@ event ObjectMain
 				end if
 			else
 				// Check if the ring should get attracted
-				if object.state == STATE_UNATTRACTED
+				if object.state == RING_IDLE
 					if player[currentPlayer].shield == SHIELD_LIGHTNING
 						BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 						if checkResult == true
 							// Make the ring attracted to the player
-							object.state = STATE_ATTRACTED
-							ring.targetPlayer = currentPlayer
+							object.state = RING_ATTRACTED
+							object.targetPlayer = currentPlayer
 						end if
 					end if
 				end if
@@ -150,8 +143,8 @@ event ObjectMain
 		end if
 	next
 
-	if object.state == STATE_ATTRACTED
-		arrayPos0 = ring.targetPlayer
+	if object.state == RING_ATTRACTED
+		arrayPos0 = object.targetPlayer
 
 		if player[arrayPos0].shield != SHIELD_LIGHTNING
 			// If the player lost their shield, then make this ring dropped
@@ -159,7 +152,7 @@ event ObjectMain
 			object.animationSpeed = 128
 			object.alpha = 256
 		else
-			arrayPos0 = ring.targetPlayer
+			arrayPos0 = object.targetPlayer
 
 			// Move closer to the player
 			if object.xpos > player[arrayPos0].xpos
@@ -198,16 +191,13 @@ end event
 
 
 event ObjectDraw
-
 	// All rings use the same frame
 	// (Animation is handled by Stage Setup object)
 	DrawSprite(ringFrame)
-
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Items.gif")
 
 	// Set each ring's draw order to 4

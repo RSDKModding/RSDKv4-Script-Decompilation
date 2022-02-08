@@ -6,15 +6,12 @@
 // ----------------------------------
 
 // Aliases
-private alias 43 : TYPE_VPLATFORM
+private alias object.value0 : object.centerPos.y
+private alias object.value1 : object.collisionOffset.y
 
 // Function declarations
 reserve function VPlatform_DebugDraw
 reserve function VPlatform_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function VPlatform_DebugDraw
 	DrawSprite(0)
@@ -23,13 +20,14 @@ end function
 
 function VPlatform_DebugSpawn
 	CreateTempObject(TypeName[V Platform], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value0 = object.ypos
+	object[tempObjectPos].centerPos.y = object.ypos
 	object[tempObjectPos].propertyValue = object.direction
 end function
 
 
 event ObjectMain
 	temp7 = object.ypos
+	
 	GetTableValue(temp0, 12, StageSetup_oscillationTable)
 	if object.propertyValue == FLIP_X
 		FlipSign(temp0)
@@ -38,20 +36,24 @@ event ObjectMain
 		temp0 -= 0x4000
 	end if
 	temp0 <<= 8
-	object.ypos = object.value0
+
+	object.ypos = object.centerPos.y
 	object.ypos -= temp0
 	temp1 = object.ypos
+
 	temp7 &= -0x10000
-	object.value1 = object.ypos
-	object.value1 &= -0x10000
-	object.value1 -= temp7
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= -0x10000
+	object.collisionOffset.y -= temp7
 	object.ypos = temp7
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		if checkResult == true
-			object[currentPlayer].ypos += object.value1
+			object[currentPlayer].ypos += object.collisionOffset.y
 		end if
 	next
+
 	object.ypos = temp1
 end event
 
@@ -72,7 +74,7 @@ event ObjectStartup
 	end if
 
 	foreach (TypeName[V Platform], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value0 = object[arrayPos0].ypos
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
 	next
 
 	SetTableValue(TypeName[V Platform], DebugMode_ObjCount, DebugMode_TypesTable)

@@ -9,7 +9,7 @@
 private alias object.value2  : player.abilityTimer			// Note: Also used by death/drowning state
 private alias object.value3  : player.drownCounter			// Countdown before player moves to next drown "level"
 private alias object.value4  : player.drownLevel
-private alias object.value8  : player.invincibilityTimer
+private alias object.value8  : player.blinkTimer
 private alias object.value12 : player.tailFrame
 private alias object.value13 : player.tailAnim
 private alias object.value17 : debugMode.currentSelection
@@ -19,7 +19,9 @@ private alias object.value34 : player.collisionDisabled
 private alias object.value35 : player.doubleJumpState
 private alias object.value42 : player.prevGravity
 
-private alias 43 : ANI_UNKNOWN // there's 42 anims in the file, ID 43 doesn't exist
+// there's 42 anims in the file, ID 43 doesn't exist
+// this was probably "SSRoll" before it got moved to its own ani file
+private alias 43 : ANI_UNKNOWN
 
 // Function declarations
 reserve function TailsObject_ProcessTailAnim
@@ -44,7 +46,7 @@ function TailsObject_ProcessTailAnim
 	case 7 // ANI_SKIDDING
 	case 9 // ANI_SPINDASH
 	case 10 // ANI_JUMPING
-	case ANI_UNKNOWN
+	case 43 // ANI_UNKNOWN
 		player.tailFrame++
 		player.tailFrame %= 12
 		break
@@ -76,7 +78,7 @@ event ObjectMain
 			object.interaction = 0
 			object.drawOrder = 4
 			object.priority = PRIORITY_ACTIVE
-			player.invincibilityTimer = 0
+			player.blinkTimer = 0
 			object.visible = true
 			player.abilityTimer = 0
 			player.drownCounter = 0
@@ -258,7 +260,7 @@ event ObjectDraw
 		break
 		
 	case 10 // ANI_JUMPING
-	case ANI_UNKNOWN
+	case 43 // ANI_UNKNOWN
 		temp0 = player.tailFrame
 		temp0 >>= 2
 		CheckEqual(object.xvel, 0)
@@ -268,8 +270,8 @@ event ObjectDraw
 		temp2 = object.rotation
 		if temp1 == 0
 			ATan2(object.rotation, object.xvel, object.yvel)
-			object.rotation += 16
-			object.rotation &= 255
+			object.rotation += 0x10
+			object.rotation &= 0xFF
 			object.rotation >>= 5
 			switch object.rotation
 			case 0
@@ -331,11 +333,11 @@ event ObjectDraw
 			end switch
 
 			if object.direction == FLIP_X
-				object.rotation += 128
+				object.rotation += 0x80
 			end if
 		else
 			temp0 += 5
-			object.rotation = 0
+			object.rotation = 0x00
 		end if
 
 		object.rotation <<= 1
@@ -358,7 +360,6 @@ event ObjectDraw
 	// Draw Tails himself
 	// (Separate tails are drawn in the process above)
 	DrawObjectAnimation()
-	
 end event
 
 

@@ -6,63 +6,97 @@
 // ----------------------------------
 
 // Aliases
-private alias 37 : TYPE_VSGAME
+private alias object.value0 : object.timer
+private alias object.value1 : object.storedPosP1.x
+private alias object.value2 : object.storedPosP1.y
+private alias object.value3 : object.storedPosP2.x
+private alias object.value4 : object.storedPosP2.y
+private alias object.value5 : object.countdownPlayer
+private alias object.value6 : object.countdownTimer
 
+// States
+private alias 0 : VSGAME_DISPLAYTAGS
+private alias 1 : VSGAME_TELEPORT
+private alias 2 : VSGAME_FADEOUT
+private alias 3 : VSGAME_FINISH_COUNTDOWN
+private alias 4 : VSGAME_GOTOVSRESULTS
+private alias 5 : VSGAME_BOSSATTACK_FADEIN
+private alias 6 : VSGAME_BOSSATTACK_START
 
-// Static Values
+// Player aliases
+private alias object.value0  : player.rings
+private alias object.value6  : player.speedShoes
+private alias object.value7  : player.invincible
+private alias object.value37 : player.shield	// Current shield the player has, see above constants for what is what
 
-// Tables
+// Shields
+private alias 1 : SHIELD_NORMAL
+
+// TitleCard
+// Determines whether the act results will say got through zone or got through act [num]
+private alias TitleCard_value23 : TitleCard_showZoneText
 
 event ObjectMain
 	switch object.state
-	case 0
+	case VSGAME_DISPLAYTAGS
 		if vs.playerID == 0
 			if oscillation == 500
 				CallNativeFunction2(TransmitGlobal, "vs.randomValue", vs.randomValue)
 			end if
 		end if
+
 		if object[0].state != PlayerObject_Blank
-			object.value1 = object[0].xpos
-			object.value2 = object[0].ypos
+			object.storedPosP1.x = object[0].xpos
+			object.storedPosP1.y = object[0].ypos
 		end if
+
 		if object[1].state != PlayerObject_Blank
-			object.value3 = object[1].xpos
-			object.value4 = object[1].ypos
+			object.storedPosP2.x = object[1].xpos
+			object.storedPosP2.y = object[1].ypos
 		end if
 		break
-	case 1
-		if object.value0 < 384
-			object.value0 += 16
+
+	case VSGAME_TELEPORT
+		if object.timer < 384
+			object.timer += 16
+
 			if object[0].state == PlayerObject_Blank
-				object.state = 2
+				object.state = VSGAME_FADEOUT
 			end if
+
 			if object[1].state == PlayerObject_Blank
-				object.state = 2
+				object.state = VSGAME_FADEOUT
 			end if
 		else
-			object.state = 2
+			object.state = VSGAME_FADEOUT
 			if object[1].type != TypeName[Blank Object]
 				object[0].state = PlayerObject_HandleAir
-				object[0].xpos = object[30].value3
-				object[0].ypos = object[30].value4
+				object[0].xpos = object[30].storedPosP2.x
+				object[0].ypos = object[30].storedPosP2.y
+
 				object[1].state = PlayerObject_HandleAir
-				object[1].xpos = object[30].value1
-				object[1].ypos = object[30].value2
+				object[1].xpos = object[30].storedPosP1.x
+				object[1].ypos = object[30].storedPosP2.y
+
 				screen.cameraX = object[0].ixpos
 				screen.cameraY = object[0].iypos
+
 				temp0 = object[0].collisionPlane
 				object[0].collisionPlane = object[1].collisionPlane
 				object[1].collisionPlane = temp0
-				temp0 = object[0].value37
-				object[0].value37 = object[1].value37
-				object[1].value37 = temp0
+
+				temp0 = player[0].shield
+				player[0].shield = player[1].shield
+				player[1].shield = temp0
+
 				arrayPos0 = 0
 				arrayPos0 += playerCount
 				temp0 = object[arrayPos0].type
-				if PlayerObject_SuperState == 1
+				if PlayerObject_SuperState == SUPERSTATE_SUPER
 					temp0 = invincibilityType
-					object[0].value7 = 0x4EC
+					player[0].invincible = 1260
 				end if
+
 				arrayPos1 = 1
 				arrayPos1 += playerCount
 				temp1 = object[arrayPos1].type
@@ -74,9 +108,9 @@ event ObjectMain
 						arrayPos0 = arrayPos1
 						CallFunction(PlayerObject_RestorePowerup)
 					else
-						temp0 = object[0].value7
-						object[0].value7 = object[1].value7
-						object[1].value7 = temp0
+						temp0 = player[0].invincible
+						player[0].invincible = player[1].invincible
+						player[1].invincible = temp0
 					end if
 				else
 					if temp0 == invincibilityType
@@ -84,9 +118,10 @@ event ObjectMain
 						CallFunction(PlayerObject_RestorePowerup)
 						ResetObjectEntity(arrayPos1, invincibilityType, 0, object[1].xpos, object[1].ypos)
 						object[arrayPos1].priority = PRIORITY_ACTIVE
-						temp0 = object[0].value7
-						object[0].value7 = object[1].value7
-						object[1].value7 = temp0
+
+						temp0 = player[0].invincible
+						player[0].invincible = player[1].invincible
+						player[1].invincible = temp0
 					else
 						if temp1 == invincibilityType
 							ResetObjectEntity(arrayPos0, invincibilityType, 0, object[0].xpos, object[0].ypos)
@@ -94,9 +129,10 @@ event ObjectMain
 							currentPlayer = 1
 							arrayPos0 = arrayPos1
 							CallFunction(PlayerObject_RestorePowerup)
-							temp0 = object[0].value7
-							object[0].value7 = object[1].value7
-							object[1].value7 = temp0
+
+							temp0 = player[0].invincible
+							player[0].invincible = player[1].invincible
+							player[1].invincible = temp0
 						else
 							currentPlayer = 0
 							CallFunction(PlayerObject_RestorePowerup)
@@ -106,47 +142,56 @@ event ObjectMain
 						end if
 					end if
 				end if
-				temp0 = object[0].value6
-				object[0].value6 = object[1].value6
-				object[1].value6 = temp0
+
+				temp0 = player[0].speedShoes
+				player[0].speedShoes = player[1].speedShoes
+				player[1].speedShoes = temp0
 				currentPlayer = 0
 				CallFunction(PlayerObject_SwitchPhysicsState)
 				currentPlayer = 1
 				CallFunction(PlayerObject_SwitchPhysicsState)
+
 				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 					switch object[currentPlayer].propertyValue
+					default
+					case 0
+						break
+
 					case 1
 					case 2
-						if object[currentPlayer].value37 > 1
-							object[currentPlayer].value37 = 1
+						if player[currentPlayer].shield > SHIELD_NORMAL
+							player[currentPlayer].shield = SHIELD_NORMAL
 							arrayPos0 = currentPlayer
 							arrayPos0 += playerCount
 							if object[arrayPos0].type != invincibilityType
 								CallFunction(PlayerObject_RestorePowerup)
 							end if
 						end if
+						break
 					end switch
 				next
 			end if
 		end if
-		SetScreenFade(208, 255, 224, object.value0)
+		SetScreenFade(208, 255, 224, object.timer)
 		break
-	case 2
-		if object.value0 > 0
-			object.value0 -= 16
+
+	case VSGAME_FADEOUT
+		if object.timer > 0
+			object.timer -= 16
 		else
 			object.type = TypeName[Blank Object]
 		end if
-		SetScreenFade(208, 255, 224, object.value0)
+		SetScreenFade(208, 255, 224, object.timer)
 		break
-	case 3
-		if object.value6 > 0
-			object.value0++
-			if object.value0 == 60
-				object.value0 = 0
-				object.value6--
-				if object.value6 == 0
-					currentPlayer = object.value5
+
+	case VSGAME_FINISH_COUNTDOWN
+		if object.countdownTimer > 0
+			object.timer++
+			if object.timer == 60
+				object.timer = 0
+				object.countdownTimer--
+				if object.countdownTimer == 0
+					currentPlayer = object.countdownPlayer
 					if object[currentPlayer].state != PlayerObject_Death
 						if object[currentPlayer].type != TypeName[Death Event]
 							if currentPlayer == 0
@@ -162,22 +207,24 @@ event ObjectMain
 									temp2 = 0
 								end if
 							end if
+
 							if temp2 == 0
 								vs.time1P = stage.seconds
 								vs.time1P *= 100
 								temp2 = stage.minutes
-								temp2 *= 0x1770
+								temp2 *= 6000
 								vs.time1P += temp2
 								vs.time1P += stage.milliSeconds
 							else
 								vs.time2P = stage.seconds
 								vs.time2P *= 100
 								temp2 = stage.minutes
-								temp2 *= 0x1770
+								temp2 *= 6000
 								vs.time2P += temp2
 								vs.time2P += stage.milliSeconds
 							end if
-							stage.timeOver = 1
+
+							stage.timeOver = true
 							CallFunction(PlayerObject_Kill)
 						end if
 					end if
@@ -185,33 +232,36 @@ event ObjectMain
 			end if
 		end if
 		break
-	case 4
-		if object.value0 < 384
-			object.value0 += 16
+
+	case VSGAME_GOTOVSRESULTS
+		if object.timer < 384
+			object.timer += 16
 		else
 			if vs.playerID == 0
-				vs.rings1P = object[0].value0
-				vs.rings2P = object[1].value0
+				vs.rings1P = player[0].rings
+				vs.rings2P = player[1].rings
 			else
-				vs.rings1P = object[1].value0
-				vs.rings2P = object[0].value0
+				vs.rings1P = player[1].rings
+				vs.rings2P = player[0].rings
 			end if
 			stage.activeList = PRESENTATION_STAGE
 			stage.listPos = 3
 			LoadStage()
 		end if
-		if object.value0 > 0
-			SetScreenFade(0, 0, 0, object.value0)
+
+		if object.timer > 0
+			SetScreenFade(0, 0, 0, object.timer)
 		end if
 		break
-	case 5
-		if object.value0 == 320
-			object[0].value0 = vs.rings1P
+
+	case VSGAME_BOSSATTACK_FADEIN
+		if object.timer == 320
+			player[0].rings = vs.rings1P
 			object[0].speed = vs.speed
 			object[0].xvel = vs.speed
 			object[0].yvel = 0
 			object[0].gravity = GRAVITY_GROUND
-			object[0].value37 = vs.items1P
+			player[0].shield = vs.items1P
 			temp0 = currentPlayer
 			temp1 = arrayPos0
 			currentPlayer = 0
@@ -221,7 +271,7 @@ event ObjectMain
 			currentPlayer = temp0
 			arrayPos0 = temp1
 			temp0 = vs.time1P
-			temp0 /= 0x1770
+			temp0 /= 6000
 			stage.minutes = temp0
 			temp0 = vs.time1P
 			temp0 /= 100
@@ -230,45 +280,50 @@ event ObjectMain
 			temp0 = vs.time1P
 			temp0 %= 100
 			stage.milliSeconds = temp0
-			TitleCard_value23 = 1
+			TitleCard_showZoneText = true
 		end if
-		if object.value0 < 256
+
+		if object.timer < 256
 			stage.state = STAGE_RUNNING
-			stage.timeEnabled = 1
-			object[0].visible = 1
+			stage.timeEnabled = true
+			object[0].visible = true
 		else
 			if stage.listPos == 2
 				object[0].ypos = object.ypos
 			end if
 		end if
-		if object.value0 > 0
-			object.value0 -= 16
+
+		if object.timer > 0
+			object.timer -= 16
 		else
 			object.type = TypeName[Blank Object]
 		end if
-		SetScreenFade(0, 0, 0, object.value0)
+
+		SetScreenFade(0, 0, 0, object.timer)
 		break
-	case 6
-		if object.value0 > -1
-			if object.value0 < 320
-				object.value0 += 16
+
+	case VSGAME_BOSSATTACK_START
+		if object.timer > -1
+			if object.timer < 320
+				object.timer += 16
 			else
-				vs.rings1P = object[0].value0
+				vs.rings1P = object[0].timer
 				vs.time1P = stage.seconds
 				vs.time1P *= 100
 				temp2 = stage.minutes
-				temp2 *= 0x1770
+				temp2 *= 6000
 				vs.time1P += temp2
 				vs.time1P += stage.milliSeconds
-				vs.items1P = object[0].value37
+				vs.items1P = player[0].shield
 				vs.speed = object[0].speed
 				stage.listPos++
 				LoadStage()
 			end if
-			SetScreenFade(0, 0, 0, object.value0)
+
+			SetScreenFade(0, 0, 0, object.timer)
 		else
 			if object[0].xpos > object.xpos
-				object.value0 = 0
+				object.timer = 0
 			end if
 		end if
 		break
@@ -278,30 +333,34 @@ end event
 
 event ObjectDraw
 	switch object.state
-	case 0
+	case VSGAME_DISPLAYTAGS
 		temp0 = vs.playerID
 		temp0 ^= 1
 		DrawSpriteXY(temp0, object[1].xpos, object[1].ypos)
 		break
-	case 3
+
+	case VSGAME_FINISH_COUNTDOWN
 		temp0 = vs.playerID
 		temp0 ^= 1
 		DrawSpriteXY(temp0, object[1].xpos, object[1].ypos)
-		temp0 = object.value6
+
+		temp0 = object.countdownTimer
 		temp0 /= 10
 		temp0 += 2
 		temp1 = screen.xcenter
 		temp1 -= 8
 		DrawSpriteScreenXY(temp0, temp1, 13)
-		temp0 = object.value6
+
+		temp0 = object.countdownTimer
 		temp0 %= 10
 		temp0 += 2
 		temp1 += 8
 		DrawSpriteScreenXY(temp0, temp1, 13)
 		break
-	case 5
-		if object.value0 > 256
-			DrawRect(0, 0, screen.xsize, screen.ysize, 0, 0, 0, 255)
+
+	case VSGAME_BOSSATTACK_FADEIN
+		if object.timer > 256
+			DrawRect(0, 0, screen.xsize, screen.ysize, 0x00, 0x00, 0x00, 0xFF)
 		end if
 		break
 	end switch
@@ -326,32 +385,60 @@ event ObjectStartup
 	foreach (TypeName[VS Game], arrayPos0, ALL_ENTITIES)
 		switch object[arrayPos0].propertyValue
 		case 1
-			object[arrayPos0].state = 5
-			object[arrayPos0].value0 = 320
+			object[arrayPos0].state = VSGAME_BOSSATTACK_FADEIN
+			object[arrayPos0].timer = 320
 			object[arrayPos0].priority = PRIORITY_ACTIVE_PAUSED
 			object[arrayPos0].drawOrder = 6
-			object[0].visible = 0
+			object[0].visible = false
 			stage.state = STAGE_PAUSED
 			temp0++
 			break
+
 		case 2
-			object[arrayPos0].state = 6
-			object[arrayPos0].value0 = -1
+			object[arrayPos0].state = VSGAME_BOSSATTACK_START
+			object[arrayPos0].timer = -1
 			object[arrayPos0].priority = PRIORITY_XBOUNDS
 			temp0++
 			break
+
 		default
+		case 0
 			object[arrayPos0].type = TypeName[Blank Object]
+			break
 		end switch
 	next
+
 	if temp0 == 0
-		vs.bossAttack = 0
+		vs.bossAttack = false
 	end if
-	if options.vsMode == 1
+
+	if options.vsMode == true
 		object[30].type = TypeName[VS Game]
 		object[30].priority = PRIORITY_ACTIVE
 		object[30].drawOrder = 5
-		object[30].value6 = 60
+		object[30].countdownTimer = 60
+	end if
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
 	end if
 end event
 
@@ -362,4 +449,10 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("VS Game", 0)
+	AddEnumVariable("Boss Attack (Fade In)", 1)
+	AddEnumVariable("Boss Attack (Manager)", 2)
 end event

@@ -6,34 +6,41 @@
 // ----------------------------------
 
 // Aliases
-private alias 7 : TYPE_DEATHEVENT
+private alias object.value1 : object.leftTextPos
+private alias object.value2 : object.rightTextPos
+private alias object.value3 : object.timer
 
-private alias object.value1 : deathEvent.leftTextPos
-private alias object.value2 : deathEvent.rightTextPos
-private alias object.value3 : deathEvent.timer
+private alias 0 : DEATHEVENT_GAMEOVER
+private alias 1 : DEATHEVENT_TIMEOVER
+private alias 2 : DEATHEVENT_DEATH
+private alias 3 : DEATHEVENT_DEATH_TA
+
+// Player aliases
+private alias object.value0 : player.rings
 
 event ObjectMain
-
 	switch object.state
-	case 0
-	case 1
+	case DEATHEVENT_GAMEOVER
+	case DEATHEVENT_TIMEOVER
 		temp0 = screen.xcenter
 		temp0 -= 72
-		if deathEvent.leftTextPos < temp0
-			deathEvent.leftTextPos += 16
-			if deathEvent.leftTextPos > temp0
-				deathEvent.leftTextPos = temp0
+		if object.leftTextPos < temp0
+			object.leftTextPos += 16
+			if object.leftTextPos > temp0
+				object.leftTextPos = temp0
 			end if
 		end if
+
 		temp0 += 80
-		if deathEvent.rightTextPos > temp0
-			deathEvent.rightTextPos -= 16
-			if deathEvent.rightTextPos < temp0
-				deathEvent.rightTextPos = temp0
+		if object.rightTextPos > temp0
+			object.rightTextPos -= 16
+			if object.rightTextPos < temp0
+				object.rightTextPos = temp0
 			end if
 		end if
-		if deathEvent.timer < 288
-			deathEvent.timer += 4
+
+		if object.timer < 288
+			object.timer += 4
 		else
 			if object.state == 0
 				recStageList = stage.activeList
@@ -42,7 +49,7 @@ event ObjectMain
 				if options.vsMode == false
 					if player.continues == 0
 						stage.listPos = 0
-						engine.state = 8
+						engine.state = ENGINE_RESETGAME
 						CallNativeFunction2(ShowPromoPopup, 0, "GameOverPromo")
 					else
 						stage.listPos = 4
@@ -53,14 +60,14 @@ event ObjectMain
 						if object.entityPos == 0
 							player.score = 0
 							player.lives = 3
-							vs.time1P = 0xEA60
+							vs.time1P = 60000
 							vs.rings1P = 0
 							vs.totalRings1P = 0
 							vs.items1P = 0
 						else
 							player.score2 = 0
 							player.lives2 = 3
-							vs.time2P = 0xEA60
+							vs.time2P = 60000
 							vs.rings2P = 0
 							vs.totalRings2P = 0
 							vs.items2P = 0
@@ -69,22 +76,23 @@ event ObjectMain
 						if object.entityPos == 1
 							player.score2 = 0
 							player.lives2 = 3
-							vs.time1P = 0xEA60
+							vs.time1P = 60000
 							vs.rings1P = 0
 							vs.totalRings1P = 0
 							vs.items1P = 0
 						else
 							player.score = 0
 							player.lives = 3
-							vs.time2P = 0xEA60
+							vs.time2P = 60000
 							vs.rings2P = 0
 							vs.totalRings2P = 0
 							vs.items2P = 0
 						end if
 					end if
 				end if
+
 				starPostID = 0
-				if options.gameMode == 1
+				if options.gameMode == MODE_NORMAL
 					arrayPos1 = options.saveSlot
 					arrayPos1 <<= 3
 					arrayPos1++
@@ -94,24 +102,26 @@ event ObjectMain
 					arrayPos1++
 					saveRAM[arrayPos1] = 0
 					arrayPos1++
-					saveRAM[arrayPos1] = 0xC350
+					saveRAM[arrayPos1] = 50000
 					player.score = 0
 					WriteSaveRAM()
 				end if
 			else
 				if options.vsMode == true
 					if vs.playerID == 0
-						vs.rings1P = object[0].value0
-						vs.rings2P = object[1].value0
+						vs.rings1P = player[0].rings
+						vs.rings2P = player[1].rings
 					else
-						vs.rings1P = object[1].value0
-						vs.rings2P = object[0].value0
+						vs.rings1P = player[1].rings
+						vs.rings2P = player[0].rings
 					end if
+
 					starPostID = 0
 					stage.activeList = PRESENTATION_STAGE
 					stage.listPos = 3
 				end if
-				if options.gameMode == 1
+
+				if options.gameMode == MODE_NORMAL
 					arrayPos1 = options.saveSlot
 					arrayPos1 <<= 3
 					arrayPos1++
@@ -119,38 +129,45 @@ event ObjectMain
 					WriteSaveRAM()
 				end if
 			end if
-			if object.state == 1
+			
+			if object.state == DEATHEVENT_TIMEOVER
 				recMilliSeconds = 0
 				recSeconds = 0
 				recMinutes = 0
 			end if
+
 			LoadStage()
 		end if
-		if deathEvent.timer > 0
+
+		if object.timer > 0
 			music.volume -= 2
-			SetScreenFade(0, 0, 0, deathEvent.timer)
+			SetScreenFade(0, 0, 0, object.timer)
 		else
 			if inputPress.buttonA == true
-				deathEvent.timer = 0
+				object.timer = 0
 			end if
+
 			if inputPress.buttonB == true
-				deathEvent.timer = 0
+				object.timer = 0
 			end if
+
 			if inputPress.buttonC == true
-				deathEvent.timer = 0
+				object.timer = 0
 			end if
+
 			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 			if checkResult > -1
-				deathEvent.timer = 0
+				object.timer = 0
 			end if
 		end if
 		break
-	case 2
-		if deathEvent.timer < 288
+
+	case DEATHEVENT_DEATH
+		if object.timer < 288
 			music.volume -= 2
-			deathEvent.timer += 4
+			object.timer += 4
 		else
-			if options.gameMode == 1
+			if options.gameMode == MODE_NORMAL
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
 				arrayPos1++
@@ -159,15 +176,16 @@ event ObjectMain
 			end if
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, deathEvent.timer)
+		SetScreenFade(0, 0, 0, object.timer)
 		break
-	case 3
-		if deathEvent.timer < 288
+
+	case DEATHEVENT_DEATH_TA
+		if object.timer < 288
 			music.volume -= 2
-			deathEvent.timer += 4
+			object.timer += 4
 		else
 			timeAttack.result = 0
-			vs.bossAttack = 0
+			vs.bossAttack = false
 			player.score = 0
 			starPostID = 0
 			recMilliSeconds = 0
@@ -176,9 +194,9 @@ event ObjectMain
 			stage.milliSeconds = 0
 			stage.seconds = 0
 			stage.minutes = 0
-			engine.state = 8
+			engine.state = ENGINE_RESETGAME
 		end if
-		SetScreenFade(0, 0, 0, deathEvent.timer)
+		SetScreenFade(0, 0, 0, object.timer)
 		break
 	end switch
 end event
@@ -187,12 +205,13 @@ end event
 event ObjectDraw
 	switch object.state
 	case 0
-		DrawSpriteScreenXY(0, deathEvent.leftTextPos, 96)
-		DrawSpriteScreenXY(2, deathEvent.rightTextPos, 96)
+		DrawSpriteScreenXY(0, object.leftTextPos, 96)
+		DrawSpriteScreenXY(2, object.rightTextPos, 96)
 		break
+
 	case 1
-		DrawSpriteScreenXY(1, deathEvent.leftTextPos, 96)
-		DrawSpriteScreenXY(2, deathEvent.rightTextPos, 96)
+		DrawSpriteScreenXY(1, object.leftTextPos, 96)
+		DrawSpriteScreenXY(2, object.rightTextPos, 96)
 		break
 	end switch
 end event

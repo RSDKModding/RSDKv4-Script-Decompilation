@@ -23,16 +23,22 @@ private alias 4 : SIGNPOST_SPUN_VS
 private alias 5 : SIGNPOST_UNUSED
 private alias 6 : SIGNPOST_FINISHED
 
+// Player Aliases
 private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_FADEOUT
+
+// VSGame aliases
+private alias object.value0 : vsGame.timer
+private alias object.value5 : vsGame.countdownPlayer
+
+// VSGame States
+private alias 0 : VSGAME_DISPLAYTAGS
+private alias 3 : VSGAME_FINISH_COUNTDOWN
+private alias 4 : VSGAME_GOTOVSRESULTS
 
 // Function declarations
 reserve function SignPost_DebugDraw
 reserve function SignPost_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function SignPost_DebugDraw
 	DrawSprite(0)
@@ -145,7 +151,7 @@ event ObjectMain
 		temp0 <<= 16
 		temp0 += object.xpos
 		if object[0].xpos > temp0
-			PlayMusic(1)
+			PlayMusic(TRACK_ACTFINISH)
 			object.state = SIGNPOST_FINISHED
 			object[30].type = TypeName[Act Finish]
 			object[30].drawOrder = 6
@@ -198,6 +204,7 @@ event ObjectMain
 						vs.time2P += temp2
 						vs.time2P += stage.milliSeconds
 					end if
+
 					object.lastPlayerID = currentPlayer
 					object.spinCount = 16
 					object.state = SIGNPOST_SPUN_VS
@@ -205,9 +212,9 @@ event ObjectMain
 
 					if object.allPlayersFinished == false
 						PlaySfx(SfxName[Sign Post 2P], false)
-						object[30].state = 3
-						object[30].value5 = currentPlayer
-						object[30].value5 ^= 1
+						object[30].state = VSGAME_FINISH_COUNTDOWN
+						vsGame[30].countdownPlayer = currentPlayer
+						vsGame[30].countdownPlayer ^= 1
 						switch object[currentPlayer].propertyValue
 						case 0
 							EditFrame(5, -24, -16, 48, 32, 34, 1)
@@ -220,12 +227,12 @@ event ObjectMain
 							break
 						end switch
 					else
-						object[30].state = 0
+						object[30].state = VSGAME_DISPLAYTAGS
 					end if
 
 					if object.activePlayers == 3
 						object.allPlayersFinished	= true
-						object[30].state 			= 0
+						object[30].state 			= VSGAME_DISPLAYTAGS
 					end if
 				end if
 			end if
@@ -263,6 +270,7 @@ event ObjectMain
 				temp1 += object.ypos
 				temp1 -= 0x140000
 				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+				
 				object.spinCount--
 				if object.spinCount == 0
 					if object.allPlayersFinished == false
@@ -282,8 +290,8 @@ event ObjectMain
 						end if
 					else
 						object.state = SIGNPOST_FINISHED
-						object[30].state = 4
-						object[30].value0 = -768
+						object[30].state = VSGAME_GOTOVSRESULTS
+						vsGame[30].timer = -768
 					end if
 				end if
 			end if
@@ -353,6 +361,7 @@ event ObjectStartup
 	SpriteFrame(-16, -16, 32, 32, 149, 99)
 	SpriteFrame(-4, -16, 8, 32, 247, 2)
 	SpriteFrame(-16, -16, 32, 32, 116, 99)
+
 	foreach (TypeName[Sign Post], arrayPos0, ALL_ENTITIES)
 		CheckGreater(object[arrayPos0].propertyValue, 0)
 		temp0 = checkResult
@@ -367,10 +376,12 @@ event ObjectStartup
 				object[arrayPos0].priority = PRIORITY_XBOUNDS
 			end if
 		end if
+
 		if options.vsMode == true
-			object[arrayPos0].state = 3
+			object[arrayPos0].state = SIGNPOST_IDLE_VS
 		end if
 	next
+
 	SetTableValue(TypeName[Sign Post], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(SignPost_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(SignPost_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)

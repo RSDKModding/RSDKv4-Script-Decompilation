@@ -6,7 +6,15 @@
 // ----------------------------------
 
 // Aliases
-private alias 39 : TYPE_SPRINGBOARD
+private alias object.value0 : object.bounceDelay
+private alias object.value1 : object.force
+private alias object.value2 : object.activePlayers
+
+// Player aliases
+private alias object.value1  : player.timer
+private alias object.value10 : player.animationReserve
+private alias object.value17 : debugMode.currentSelection
+private alias object.value25 : player.gravityStrength
 
 // Function declarations
 reserve function Springboard_DebugDraw
@@ -14,24 +22,25 @@ reserve function Springboard_DebugSpawn
 
 // Static Values
 public value Springboard_value32 = 0;
+private alias Springboard_value32 : Springboard_debugStartID
 
 // Tables
-public table Springboard_table34
+public table Springboard_springForceTable
 	-0x40000, -0xA0000, -0x80000
 end table
 
-public table Springboard_table35
+public table Springboard_springPowerTable
 	0, 0, 0, 0, 0, 0, 0, 0, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000
 	-0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000
 	-0x30000, -0x30000, -0x30000, -0x30000, -0x30000, -0x30000, -0x40000, -0x40000
 end table
 
-public table Springboard_table36
+public table Springboard_heightsReadyTable
 	8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 17, 18, 19, 20, 20, 21
 	21, 22, 23, 24, 24, 24, 24, 24, 24, 24, 24, 24
 end table
 
-public table Springboard_table37
+public table Springboard_heightsFlatTable
 	8, 9, 10, 11, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 14, 14
 	15, 15, 16, 16, 16, 16, 15, 15, 14, 14, 13, 13
 end table
@@ -43,43 +52,45 @@ end function
 
 
 function Springboard_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= Springboard_value32
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Springboard_debugStartID
 	CreateTempObject(TypeName[Springboard], 0, object.xpos, object.ypos)
-	GetTableValue(object[tempObjectPos].value1, temp0, Springboard_table34)
+	GetTableValue(object[tempObjectPos].force, temp0, Springboard_springForceTable)
 	object[tempObjectPos].direction = object.direction
 end function
 
 
 event ObjectMain
-	if object.value0 != 0
-		object.value0--
-		switch object.value0
+	if object.bounceDelay != 0
+		object.bounceDelay--
+		switch object.bounceDelay
 		case 0
 			temp2 = 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-				GetBit(temp3, object.value2, temp2)
-				if temp3 == 1
+				GetBit(temp3, object.activePlayers, temp2)
+				if temp3 == true
 					temp0 = object[currentPlayer].xpos
 					temp0 -= object.xpos
 					temp0 += 0x1C0000
 					temp0 >>= 17
 					GetBit(temp3, object.direction, 0)
-					if temp3 == 1
+					if temp3 == true
 						temp0 -= 28
 						FlipSign(temp0)
 					end if
+
 					if temp0 >= 8
-						object[currentPlayer].value10 = ANI_WALKING
+						player[currentPlayer].animationReserve = ANI_WALKING
 						if object[currentPlayer].animation == ANI_RUNNING
-							object[currentPlayer].value10 = ANI_RUNNING
+							player[currentPlayer].animationReserve = ANI_RUNNING
 						end if
 						if object[currentPlayer].animation == ANI_PEELOUT
-							object[currentPlayer].value10 = ANI_PEELOUT
+							player[currentPlayer].animationReserve = ANI_PEELOUT
 						end if
-						object.value0 = 1
+
+						object.bounceDelay = 1
 						object[currentPlayer].state = PlayerObject_HandleAir
-						object[currentPlayer].tileCollisions = 1
+						object[currentPlayer].tileCollisions = true
 						object[currentPlayer].gravity = GRAVITY_AIR
 						object[currentPlayer].speed = object[currentPlayer].xvel
 						temp0 -= 8
@@ -87,28 +98,32 @@ event ObjectMain
 						if temp0 > 39
 							temp0 = 39
 						end if
-						GetTableValue(object[currentPlayer].yvel, temp0, Springboard_table35)
-						object[currentPlayer].yvel -= 0x40000
-						object[currentPlayer].yvel -= object[currentPlayer].value25
+
+						GetTableValue(object[currentPlayer].yvel, temp0, Springboard_springPowerTable)
+						object[currentPlayer].yvel -= 0x40000 // this should be object.force LOL
+						object[currentPlayer].yvel -= player[currentPlayer].gravityStrength
 						object[currentPlayer].animation = ANI_TWIRL
 						object[currentPlayer].prevAnimation = ANI_TWIRL
 						object[currentPlayer].frame = 0
 						object[currentPlayer].animationSpeed = 80
-						object[currentPlayer].value1 = 0
+						player[currentPlayer].timer = 0
 						PlaySfx(SfxName[Spring], false)
 					end if
 				end if
 				temp2++
 			next
 			break
+
 		case 1
 			object.frame = 0
 			break
+
 		default
 			object.frame = 1
 			break
 		end switch
 	end if
+
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		temp0 = object[currentPlayer].xpos
@@ -121,25 +136,28 @@ event ObjectMain
 		if temp0 > 27
 			temp0 = 27
 		end if
+
 		switch object.direction
-		case 0
+		case FLIP_NONE
 			if object.frame == 0
-				GetTableValue(temp1, temp0, Springboard_table36)
+				GetTableValue(temp1, temp0, Springboard_heightsReadyTable)
 			else
-				GetTableValue(temp1, temp0, Springboard_table37)
+				GetTableValue(temp1, temp0, Springboard_heightsFlatTable)
 			end if
+
 			FlipSign(temp1)
 			temp4 = object[currentPlayer].speed
 			temp5 = object[currentPlayer].xpos
 			BoxCollisionTest(C_BOX, object.entityPos, -28, temp1, 28, -8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			switch checkResult
-			case 2
+			case COL_LEFT
 				object[currentPlayer].speed = temp4
 				object[currentPlayer].xpos = temp5
-			case 0
-			case 3
-			case 4
-				GetBit(temp3, object.value2, temp2)
+				// [Fallthrough]
+			case COL_NONE
+			case COL_RIGHT
+			case COL_BOTTOM
+				GetBit(temp3, object.activePlayers, temp2)
 				if temp3 == 1
 					temp3 = object[currentPlayer].xpos
 					temp3 -= object.xpos
@@ -152,32 +170,35 @@ event ObjectMain
 							temp1 <<= 16
 							object[currentPlayer].ypos += temp1
 							object[currentPlayer].ypos += object.ypos
-							checkResult = 1
+							checkResult = true
 						end if
 					end if
 				end if
+				break
 			end switch
 			break
-		case 1
+		case FLIP_X
 			temp0 -= 27
 			Abs(temp0)
 			if object.frame == 0
-				GetTableValue(temp1, temp0, Springboard_table36)
+				GetTableValue(temp1, temp0, Springboard_heightsReadyTable)
 			else
-				GetTableValue(temp1, temp0, Springboard_table37)
+				GetTableValue(temp1, temp0, Springboard_heightsFlatTable)
 			end if
+
 			FlipSign(temp1)
 			temp4 = object[currentPlayer].speed
 			temp5 = object[currentPlayer].xpos
 			BoxCollisionTest(C_BOX, object.entityPos, -28, temp1, 28, -8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			switch checkResult
-			case 3
+			case COL_RIGHT
 				object[currentPlayer].speed = temp4
 				object[currentPlayer].xpos = temp5
-			case 0
-			case 2
-			case 4
-				GetBit(temp3, object.value2, temp2)
+				// [Fallthrough]
+			case COL_NONE
+			case COL_LEFT
+			case COL_BOTTOM
+				GetBit(temp3, object.activePlayers, temp2)
 				if temp3 == 1
 					temp3 = object[currentPlayer].xpos
 					temp3 -= object.xpos
@@ -194,22 +215,26 @@ event ObjectMain
 						end if
 					end if
 				end if
+				break
 			end switch
 			break
-		case 2
+
+		case FLIP_Y
 			break
-		case 3
+
+		case FLIP_XY
 			break
 		end switch
-		if checkResult == 1
-			SetBit(object.value2, temp2, 1)
+
+		if checkResult == true
+			SetBit(object.activePlayers, temp2, true)
 			if temp0 >= 8
-				if object.value0 == 0
-					object.value0 = 6
+				if object.bounceDelay == 0
+					object.bounceDelay = 6
 				end if
 			end if
 		else
-			SetBit(object.value2, temp2, 0)
+			SetBit(object.activePlayers, temp2, 0)
 		end if
 		temp2++
 	next
@@ -223,14 +248,17 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("Global/Items.gif")
+
 	foreach (TypeName[Springboard], arrayPos0, ALL_ENTITIES)
-		GetTableValue(object[arrayPos0].value1, temp0, Springboard_table34)
+		// ???
+		GetTableValue(object[arrayPos0].force, temp0, Springboard_springForceTable)
 	next
+
 	SpriteFrame(-28, -24, 56, 16, 52, 160)
 	SpriteFrame(-28, -16, 56, 8, 52, 177)
 	temp0 = 0
 	
-	Springboard_value32 = DebugMode_ObjCount
+	Springboard_debugStartID = DebugMode_ObjCount
 	while temp0 < 3
 		SetTableValue(TypeName[Springboard], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(Springboard_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)

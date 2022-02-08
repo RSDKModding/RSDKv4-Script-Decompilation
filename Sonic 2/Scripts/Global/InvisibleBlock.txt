@@ -8,6 +8,12 @@
 // Aliases
 private alias object.value0 : object.width
 private alias object.value1 : object.height
+private alias object.value2 : object.killTimerP1
+private alias object.value3 : object.killTimerP2
+
+private alias 0 : INVISIBLEBLOCK_SOLID		// regular invis block
+private alias 1 : INVISIBLEBLOCK_EJECT_L	// ejects the player out (to the left)
+private alias 2 : INVISIBLEBLOCK_EJECT_R	// ejects the player out (to the right)
 
 // Function declarations
 reserve function InvisibleBlock_DebugDraw
@@ -15,6 +21,7 @@ reserve function InvisibleBlock_DebugSpawn
 
 // Static Values
 public value InvisibleBlock_value31 = 8;
+private alias InvisibleBlock_value31 : InvisibleBlock_killDelay
 
 // Tables
 
@@ -24,11 +31,14 @@ function InvisibleBlock_DebugDraw
 	temp0 -= 0x80000
 	temp1 -= 0x80000
 	DrawSpriteXY(0, temp0, temp1)
+
 	temp0 += 0x100000
 	DrawSpriteXY(0, temp0, temp1)
+
 	temp0 -= 0x100000
 	temp1 += 0x100000
 	DrawSpriteXY(0, temp0, temp1)
+
 	temp0 += 0x100000
 	DrawSpriteXY(0, temp0, temp1)
 end function
@@ -47,8 +57,11 @@ event ObjectMain
 	FlipSign(temp0)
 	temp1 = object.height
 	FlipSign(temp1)
+
+	// Note: state is editable and is set via the editor
+	
 	switch object.state
-	case 0
+	case INVISIBLEBLOCK_SOLID
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
 				BoxCollisionTest(C_BOX, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
@@ -64,22 +77,24 @@ event ObjectMain
 					if checkResult == true
 						object[currentPlayer].gravity = GRAVITY_GROUND
 					end if
+					
 					if currentPlayer == 0
-						object.value2 = 0
+						object.killTimerP1 = 0
 					else
-						object.value3 = 0
+						object.killTimerP2 = 0
 					end if
 					break
+					
 				case COL_BOTTOM
 					if object[currentPlayer].gravity == GRAVITY_GROUND
 						if currentPlayer == 0
-							object.value2++
-							if object.value2 > InvisibleBlock_value31
+							object.killTimerP1++
+							if object.killTimerP1 > InvisibleBlock_killDelay
 								CallFunction(PlayerObject_Kill)
 							end if
 						else
-							object.value3++
-							if object.value3 > InvisibleBlock_value31
+							object.killTimerP2++
+							if object.killTimerP2 > InvisibleBlock_killDelay
 								CallFunction(PlayerObject_Kill)
 							end if
 						end if
@@ -89,11 +104,12 @@ event ObjectMain
 			end if
 		next
 		break
-	case 1
+
+	case INVISIBLEBLOCK_EJECT_L
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
 				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					if object[currentPlayer].gravity == GRAVITY_GROUND
 						object[currentPlayer].xpos = object[currentPlayer].collisionRight
 						FlipSign(object[currentPlayer].xpos)
@@ -108,11 +124,12 @@ event ObjectMain
 			end if
 		next
 		break
-	case 2
+
+	case INVISIBLEBLOCK_EJECT_R
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
 				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					if object[currentPlayer].gravity == GRAVITY_GROUND
 						object[currentPlayer].xpos = object[currentPlayer].collisionLeft
 						FlipSign(object[currentPlayer].xpos)
@@ -184,7 +201,7 @@ event ObjectStartup
 	
 	CheckCurrentStageFolder("Zone09")
 	if checkResult == true
-		InvisibleBlock_value31 = 1
+		InvisibleBlock_killDelay = 1
 	end if
 
 	SetTableValue(TypeName[Invisible Block], DebugMode_ObjCount, DebugMode_TypesTable)

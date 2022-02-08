@@ -6,19 +6,9 @@
 // ----------------------------------
 
 // Aliases
-
-// Player aliases
-private alias object.xpos    : player.xpos		// Total world-space position (0x10000 == 1.0)
-private alias object.ypos    : player.ypos
-private alias object.value3  : player.drownCounter
-private alias object.value4  : player.drownLevel
-private alias object.value6  : player.speedShoes
-private alias object.value7  : player.invincible
-private alias object.value16 : player.isPlayer2			// false is player 1, true if player 2
-private alias object.value37 : player.shield
-
 private alias object.value0 : object.contentsPos.y
 private alias object.value1 : object.timer
+private alias object.value3 : object.rewardPlayer
 
 // Monitor type aliases
 private alias 0  : MONITOR_BLANK
@@ -34,15 +24,32 @@ private alias 9  : MONITOR_SHIELD_BUBBLE
 private alias 10 : MONITOR_SHIELD_FIRE
 private alias 11 : MONITOR_SHIELD_LIGHTNING
 private alias 12 : MONITOR_EGGMAN
-private alias 13 : MONITOR_SWAP
+private alias 13 : MONITOR_TELEPORT
+private alias 14 : MONITOR_RANDOM
+// This is strange... spikes & emeralds shouldn't be here... yet they are.
 private alias 14 : MONITOR_DEBUG_SPIKES
 private alias 15 : MONITOR_DEBUG_SHIELD
 private alias 16 : MONITOR_DEBUG_EMERALDS
+private alias 17 : MONITOR_COUNT
 
 // Monitor states
 private alias 0 : MONITOR_STATE_RISE
 private alias 1 : MONITOR_STATE_FADE
 private alias 2 : MONITOR_STATE_IDLE
+
+// VSGame States
+private alias 1 : VSGAME_TELEPORT
+
+// Player aliases
+private alias object.xpos    : player.xpos		// Total world-space position (0x10000 == 1.0)
+private alias object.ypos    : player.ypos
+private alias object.value0  : player.rings
+private alias object.value3  : player.drownCounter
+private alias object.value4  : player.drownLevel
+private alias object.value6  : player.speedShoes
+private alias object.value7  : player.invincible
+private alias object.value16 : player.isPlayer2			// false is player 1, true if player 2
+private alias object.value37 : player.shield
 
 // Shields
 private alias 0 : SHIELD_NONE
@@ -56,11 +63,11 @@ private alias 5 : SHIELD_GOGGLES
 reserve function BrokenMonitor_DummyFunction
 
 // Static Values
-public value BrokenMonitor_ResetDrownMusic = 0;
+public value BrokenMonitor_ResetDrownMusic = 0
 
 
 function BrokenMonitor_DummyFunction
-
+	// Do nothing!
 end function
 
 
@@ -78,13 +85,13 @@ event ObjectMain
 		if object.timer == 0
 			object.state = MONITOR_STATE_FADE
 			object.inkEffect = INK_ALPHA
-			currentPlayer = object.value3
+			currentPlayer = object.rewardPlayer
 			switch object.propertyValue
 			case MONITOR_BLANK
 			default
 				break
 
-			case 1
+			case MONITOR_RINGS
 				player[currentPlayer].rings += 10
 				if ringPan == 0
 					PlaySfx(SfxName[Ring L], false)
@@ -102,6 +109,7 @@ event ObjectMain
 				
 				if player[0].rings >= ringExtraLife
 					if options.gameMode != MODE_TIMEATTACK
+						// this one doesn't have 2P code, its just like this
 						player.lives++
 						PlaySfx(SfxName[Life], false)
 						PauseMusic()
@@ -154,20 +162,20 @@ event ObjectMain
 			case MONITOR_1UP_SONIC
 			case MONITOR_1UP_TAILS
 			case MONITOR_1UP_KNUX
-				// (Unused?) 2 Player 1UP Sfx?
-				arrayPos0 = SLOT_MUSICEVENT_CHANGE
+				// global variable "array" (yes, this is actually how its done)
+				arrayPos0 = VarName[player.lives]
 				if player[currentPlayer].isPlayer2 == false
 					arrayPos0 += currentPlayer
 				end if
 
-				player.lives++
+				global[arrayPos0]++
 				PlaySfx(SfxName[Life], false)
 				PauseMusic()
 				ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
 				object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
 				break
 
-			case 8
+			case MONITOR_SUPER
 				currentPlayer = 0
 				player[0].rings += 50
 				if PlayerObject_SuperState != SUPERSTATE_SUPER
@@ -255,9 +263,9 @@ event ObjectMain
 				CallFunction(PlayerObject_Hit)
 				break
 
-			case MONITOR_SWAP
+			case MONITOR_TELEPORT
 				CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
-				object[tempObjectPos].state = 1
+				object[tempObjectPos].state = VSGAME_TELEPORT
 				PlaySfx(SfxName[Teleport], false)
 				break
 
@@ -311,6 +319,7 @@ end event
 
 event ObjectDraw
 	DrawSprite(0)
+	
 	if object.propertyValue > MONITOR_BLANK
 		DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.contentsPos.y)
 	end if

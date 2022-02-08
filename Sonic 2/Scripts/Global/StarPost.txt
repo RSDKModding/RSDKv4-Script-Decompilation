@@ -6,15 +6,37 @@
 // ----------------------------------
 
 // Aliases
-private alias 18 : TYPE_STARPOST
+private alias object.propertyValue : object.id
+
+private alias object.value0  : object.ballAngle
+private alias object.value1  : object.ballPos.x
+private alias object.value2  : object.ballPos.y
+private alias object.value3  : object.starTimer	
+private alias object.value4  : object.starType	
+private alias object.value5  : object.starAngleX	
+private alias object.value6  : object.starAngleY
+private alias object.value7  : object.starRadius
+private alias object.value8  : object.starFrame
+private alias object.value9  : object.timer
+private alias object.value10 : object.targetPlayer
+
+private alias 0 : STARPOST_AWAITPLAYER
+private alias 1 : STARPOST_SPUN
+private alias 2 : STARPOST_SHOWINGSTARS
+private alias 3 : STARPOST_TOSPECIALSTAGE
+private alias 4 : STARPOST_AWAITOTHERPLAYER
+
+private alias 0 : STARPOST_ANI_IDLE
+private alias 1 : STARPOST_ANI_SPINNING
+private alias 2 : STARPOST_ANI_SPUN
+
+// Player alises
+private alias object.value0  : player.rings
+private alias object.value16 : player.isSidekick			// 0/false is player 1, 1/true if player 2
 
 // Function declarations
 reserve function StarPost_DebugDraw
 reserve function StarPost_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function StarPost_DebugDraw
 	DrawSprite(2)
@@ -28,106 +50,117 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case STARPOST_AWAITPLAYER
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].value16 == 0
+			if player[currentPlayer].isSidekick == false
 				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -44, 8, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					if options.vsMode == 1
+				if checkResult == true
+					if options.vsMode == true
 						if currentPlayer == 0
 							vs.restartX1 = object.xpos
 							vs.restartY1 = object.ypos
-							object.value10 = 1
+							object.targetPlayer = 1
 						else
 							vs.restartX2 = object.xpos
 							vs.restartY2 = object.ypos
-							object.value10 = 0
+							object.targetPlayer = 0
 						end if
-						object.state = 4
+
+						object.state = STARPOST_AWAITOTHERPLAYER
 					else
 						starPostID = object.entityPos
 						foreach (TypeName[Star Post], arrayPos0, ALL_ENTITIES)
-							if object[arrayPos0].propertyValue < object.propertyValue
-								object[arrayPos0].state = 1
-								object[arrayPos0].animation = 2
-								object[arrayPos0].value0 = 0
+							if object[arrayPos0].id < object.id
+								object[arrayPos0].state = STARPOST_SPUN
+								object[arrayPos0].animation = STARPOST_ANI_SPUN
+								object[arrayPos0].ballAngle = 0
 							end if
 						next
-						if specialStage.emeralds < 127
-							if options.gameMode != 2
-								if object[0].value0 >= 50
-									object.state = 2
-									object.value4 = 4
-									object.value3 = 0
-									object.value6 = 0
-									object.value5 = 0
-									object.value7 = 0
+
+						if specialStage.emeralds < 0x7F
+							if options.gameMode != MODE_TIMEATTACK
+								if player[0].rings >= 50
+									object.state = STARPOST_SHOWINGSTARS
+									object.starType = 4
+									object.starTimer = 0
+									object.starAngleY = 0
+									object.starAngleX = 0
+									object.starRadius = 0
 								else
-									object.state = 1
+									object.state = STARPOST_SPUN
 								end if
 							else
-								object.state = 1
+								object.state = STARPOST_SPUN
 							end if
 						else
-							object.state = 1
+							object.state = STARPOST_SPUN
 						end if
 					end if
+
 					recMilliSeconds = stage.milliSeconds
 					recSeconds = stage.seconds
 					recMinutes = stage.minutes
 					recWaterState = stage.waterState
 					recWaterLevel = stage.waterLevel
-					object.value0 = 384
+					object.ballAngle = 0x180
+
 					if object.priority != PRIORITY_XBOUNDS_DESTROY
 						object.priority = PRIORITY_ACTIVE
 					end if
-					object.animation = 1
+
+					object.animation = STARPOST_ANI_SPINNING
 					PlaySfx(SfxName[Star Post], false)
 				end if
 			end if
 		next
 		break
-	case 1
+
+	case STARPOST_SPUN
 		object.animationTimer++
 		object.animationTimer &= 7
 		object.frame = object.animationTimer
 		object.frame >>= 2
 		break
-	case 2
-		object.value5 += 18
-		object.value5 &= 511
-		object.value6 += 4
-		object.value6 &= 511
-		if object.value3 < 128
-			object.value7++
+
+	case STARPOST_SHOWINGSTARS
+		object.starAngleX += 18
+		object.starAngleX &= 0x1FF
+		object.starAngleY += 4
+		object.starAngleY &= 0x1FF
+
+		if object.starTimer < 128
+			object.starRadius++
 		else
-			if object.value3 > 472
-				object.value7--
+			if object.starTimer > 472
+				object.starRadius--
 			end if
 		end if
-		object.value3++
-		if object.value3 == 600
-			object.state = 1
-			object.value3 = 0
-			object.value4 = 0
+
+		object.starTimer++
+		if object.starTimer == 600
+			object.state = STARPOST_SPUN
+			object.starTimer = 0
+			object.starType = 0
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.priority = PRIORITY_ACTIVE_BOUNDS
 			end if
 		end if
+
 		object.animationTimer++
 		object.animationTimer &= 7
 		object.frame = object.animationTimer
 		object.frame >>= 2
-		temp0 = object.value7
+		temp0 = object.starRadius
 		temp0 >>= 2
 		FlipSign(temp0)
-		temp1 = object.value7
+		temp1 = object.starRadius
 		temp1 >>= 2
-		if object.value3 > 60
+
+		if object.starTimer > 60
 			BoxCollisionTest(C_TOUCH, object.entityPos, temp0, -64, temp1, -56, 0, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				PlaySfx(SfxName[Warp], false)
-				object.state = 3
+				object.state = STARPOST_TOSPECIALSTAGE
 				object.priority = PRIORITY_ACTIVE_PAUSED
 				stage.state = STAGE_FROZEN
 				object[0].controlMode = -1
@@ -136,27 +169,29 @@ event ObjectMain
 				temp0 = 255
 				temp0 <<= 8
 				fadeColor += temp0
-				fadeColor += 224
-				object.value9 = 0
+				fadeColor += 0xE0
+				object.timer = 0
 			end if
 		end if
 		break
-	case 3
-		options.touchControls = 0
+
+	case STARPOST_TOSPECIALSTAGE
+		options.touchControls = false
 		music.volume -= 2
-		object.value9 += 8
-		SetScreenFade(208, 255, 224, object.value9)
-		if object.value9 == 0x400
+		object.timer += 8
+		SetScreenFade(208, 255, 224, object.timer)
+		if object.timer == 0x400
 			specialStage.nextZone = stage.listPos
 			stage.activeList = SPECIAL_STAGE
 			stage.listPos = specialStage.listPos
 			LoadStage()
 		end if
 		break
-	case 4
-		currentPlayer = object.value10
+
+	case STARPOST_AWAITOTHERPLAYER
+		currentPlayer = object.targetPlayer
 		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -44, 8, 20, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
+		if checkResult == true
 			if currentPlayer == 0
 				vs.restartX1 = object.xpos
 				vs.restartY1 = object.ypos
@@ -164,36 +199,42 @@ event ObjectMain
 				vs.restartX2 = object.xpos
 				vs.restartY2 = object.ypos
 			end if
-			if object.animation != 1
-				object.value0 = 384
+
+			if object.animation != STARPOST_ANI_SPINNING
+				object.ballAngle = 0x180
 			end if
+
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.priority = PRIORITY_ACTIVE
 			end if
-			object.animation = 1
-			object.state = 1
+			object.animation = STARPOST_ANI_SPINNING
+			object.state = STARPOST_SPUN
 			PlaySfx(SfxName[Star Post], false)
 		end if
+
 		object.animationTimer++
 		object.animationTimer &= 7
 		object.frame = object.animationTimer
 		object.frame >>= 2
 		break
 	end switch
-	if object.animation == 1
-		Cos(object.value1, object.value0)
-		object.value1 *= -0x500
-		Sin(object.value2, object.value0)
-		object.value2 *= 0x500
-		object.value1 += object.xpos
-		object.value2 += object.ypos
-		object.value2 -= 0x1A0000
-		object.value0 += 32
-		if object.value0 > 0x580
-			object.value0 = 0
-			object.animation = 2
+
+	if object.animation == STARPOST_ANI_SPINNING
+		Cos(object.ballPos.x, object.ballAngle)
+		object.ballPos.x *= -0x500
+
+		Sin(object.ballPos.y, object.ballAngle)
+		object.ballPos.y *= 0x500
+
+		object.ballPos.x += object.xpos
+		object.ballPos.y += object.ypos
+		object.ballPos.y -= 0x1A0000
+		object.ballAngle += 32
+		if object.ballAngle > 0x580
+			object.ballAngle = 0
+			object.animation = STARPOST_ANI_SPUN
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
-				if object.value4 == 0
+				if object.starType == 0
 					object.priority = PRIORITY_ACTIVE_BOUNDS
 				end if
 			end if
@@ -204,29 +245,32 @@ end event
 
 event ObjectDraw
 	switch object.animation
-	case 0
+	case STARPOST_ANI_IDLE
 		DrawSprite(2)
 		break
-	case 1
+
+	case STARPOST_ANI_SPINNING
 		DrawSprite(3)
-		DrawSpriteXY(0, object.value1, object.value2)
+		DrawSpriteXY(0, object.ballPos.x, object.ballPos.y)
 		break
-	case 2
+
+	case STARPOST_ANI_SPUN
 		DrawSprite(3)
 		temp0 = object.ypos
 		temp0 -= 0x240000
 		DrawSpriteXY(object.frame, object.xpos, temp0)
 		break
 	end switch
-	if object.value4 > 0
+
+	if object.starType > 0
 		temp0 = 0
-		temp1 = object.value5
-		Sin(temp4, object.value6)
+		temp1 = object.starAngleX
+		Sin(temp4, object.starAngleY)
 		temp4 *= 3
-		object.value8 = object.value6
-		object.value8 &= 15
-		object.value8 >>= 2
-		object.value8 += object.value4
+		object.starFrame = object.starAngleY
+		object.starFrame &= 15
+		object.starFrame >>= 2
+		object.starFrame += object.starType
 		while temp0 < 4
 			Sin(temp2, temp1)
 			temp2 <<= 12
@@ -235,14 +279,14 @@ event ObjectDraw
 			Sin(temp5, temp1)
 			temp5 *= temp4
 			temp3 += temp5
-			temp2 *= object.value7
+			temp2 *= object.starRadius
 			temp2 >>= 7
-			temp3 *= object.value7
+			temp3 *= object.starRadius
 			temp3 >>= 7
 			temp2 += object.xpos
 			temp3 += object.ypos
 			temp3 -= 0x3C0000
-			DrawSpriteXY(object.value8, temp2, temp3)
+			DrawSpriteXY(object.starFrame, temp2, temp3)
 			temp0++
 			temp1 += 128
 		loop
@@ -260,11 +304,13 @@ event ObjectStartup
 	SpriteFrame(-3, -3, 7, 7, 68, 214)
 	SpriteFrame(-7, -7, 15, 15, 52, 214)
 	SpriteFrame(-3, -3, 7, 7, 68, 214)
+
 	SetTableValue(TypeName[Star Post], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(StarPost_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(StarPost_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
-	if starPostID > 31
+
+	if starPostID >= 0x20
 		arrayPos0 = starPostID
 		currentPlayer = 0
 		while currentPlayer < playerCount
@@ -272,17 +318,19 @@ event ObjectStartup
 			object[currentPlayer].ypos = object[arrayPos0].ypos
 			currentPlayer++
 		loop
+
 		foreach (TypeName[Star Post], arrayPos1, ALL_ENTITIES)
-			if object[arrayPos1].propertyValue < object[arrayPos0].propertyValue
-				object[arrayPos1].state = 1
-				object[arrayPos1].animation = 2
-				object[arrayPos1].value0 = 0
+			if object[arrayPos1].id < object[arrayPos0].id
+				object[arrayPos1].state = STARPOST_SPUN
+				object[arrayPos1].animation = STARPOST_ANI_SPUN
+				object[arrayPos1].ballAngle = 0
 			end if
 		next
+
 		screen.cameraX = object[0].ixpos
 		screen.cameraY = object[0].iypos
-		object[arrayPos0].state = 1
-		object[arrayPos0].animation = 2
+		object[arrayPos0].state = STARPOST_SPUN
+		object[arrayPos0].animation = STARPOST_ANI_SPUN
 		stage.milliSeconds = recMilliSeconds
 		stage.seconds = recSeconds
 		stage.minutes = recMinutes
