@@ -15,16 +15,21 @@ private alias object.value5 : object.targetPlayer
 private alias object.value6 : object.unused
 private alias object.value7 : object.targetDistance
 
-private alias object.value38 :	player.hitboxLeft
-private alias object.value39 :	player.hitboxRight
-private alias object.value40 :	player.hitboxTop
-private alias object.value41 :	player.hitboxBottom
+// States
+private alias 0 : COCONUTS_AWAITPLAYER
+private alias 1 : COCONUTS_MOVING
+private alias 2 : COCONUTS_THROW
+private alias 3 : COCONUTS_HASTHROWN
+
+// Player Aliases
+private alias object.value38 : player.hitboxLeft
+private alias object.value39 : player.hitboxRight
+private alias object.value40 : player.hitboxTop
+private alias object.value41 : player.hitboxBottom
 
 // Function declarations
 reserve function Coconuts_DebugDraw
 reserve function Coconuts_DebugSpawn
-
-// Static Values
 
 // Tables
 public table Coconuts_throwDelays
@@ -44,7 +49,7 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case COCONUTS_AWAITPLAYER
 		object.priority = PRIORITY_ACTIVE
 		object.targetDistance = 0x7FFFFFFF
 		object.targetPlayer = 0
@@ -73,7 +78,7 @@ event ObjectMain
 					object.timer 		= 8
 					object.targetDelay 	= 32
 					object.frame 		= 1
-					object.state 		= 2
+					object.state 		= COCONUTS_THROW
 					temp0 				= true
 				end if
 			end if
@@ -90,34 +95,40 @@ event ObjectMain
 				else
 					object.yvel = 0x10000
 				end if
+
 				GetTableValue(object.timer, object.throwID, Coconuts_throwDelays)
+
 				object.throwID++
 				if object.throwID > 5
 					object.throwID = 0
 				end if
-				object.state = 1
+
+				object.state = COCONUTS_MOVING
 			end if
 		end if
 		break
 
-	case 1
+	case COCONUTS_MOVING
 		object.animationTimer++
 		if object.animationTimer == 6
 			object.frame = 1
 		end if
+
 		if object.animationTimer == 12
 			object.frame = 0
 			object.animationTimer = 0
 		end if
+
 		object.ypos += object.yvel
+
 		object.timer--
 		if object.timer < 0
 			object.timer = 16
-			object.state = 0
+			object.state = COCONUTS_AWAITPLAYER
 		end if
 		break
 
-	case 2
+	case COCONUTS_THROW
 		object.timer--
 		if object.timer < 0
 			CreateTempObject(TypeName[Coconut], 0, object.xpos, object.ypos)
@@ -134,11 +145,11 @@ event ObjectMain
 			object[tempObjectPos].priority = PRIORITY_ACTIVE
 			object.timer = 8
 			object.frame = 2
-			object.state = 3
+			object.state = COCONUTS_HASTHROWN
 		end if
 		break
 
-	case 3
+	case COCONUTS_HASTHROWN
 		object.timer--
 		if object.timer < 0
 			GetBit(temp0, object.throwID, 0)
@@ -147,13 +158,15 @@ event ObjectMain
 			else
 				object.yvel = 0x10000
 			end if
+
 			GetTableValue(object.timer, object.throwID, Coconuts_throwDelays)
 			object.throwID++
 			if object.throwID > 5
 				object.throwID = 0
 			end if
+
 			object.frame = 0
-			object.state = 1
+			object.state = COCONUTS_MOVING
 		end if
 		break
 	end switch
@@ -163,10 +176,11 @@ event ObjectMain
 		temp1 = object.ypos
 		object.xpos = object.startPos.x
 		object.ypos = object.startPos.y
+
 		if object.outOfBounds == true
 			object.targetDelay = 0
 			object.timer = 16
-			object.state = 0
+			object.state = COCONUTS_AWAITPLAYER
 			object.priority = PRIORITY_ACTIVE_BOUNDS
 		else
 			object.xpos = temp0
