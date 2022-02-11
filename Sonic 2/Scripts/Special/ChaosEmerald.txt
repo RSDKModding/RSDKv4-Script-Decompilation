@@ -7,18 +7,36 @@
 
 // Aliases
 private alias object.value0 : object.timer
+private alias object.value3 : object.size
+private alias object.value7 : object.emeraldPos.y
+private alias object.value8 : object.emeraldPos.z
 private alias object.value9 : object.notEnoughRings
+
+// Text Message Property Values
+private alias 1 : TEXTMESSAGE_NOTENOUGH
+
+// Halfpipe Aliases
+private alias object.value14 : halfpipe.worldTranslation.x
+private alias object.value15 : halfpipe.worldTranslation.y
+private alias object.value16 : halfpipe.worldTranslation.z
+private alias object.value17 : halfpipe.worldRotation.x
+private alias object.value18 : halfpipe.worldRotation.y
+private alias object.value19 : halfpipe.worldRotation.z
+private alias object.value23 : halfpipe.moveSpeed
+
+// Player Aliases
+private alias object.value0  : player.rings
+private alias object.value14 : player.stagePos.z
+
+// HUD Aliases
+private alias object.value1 : HUD.totalRings
 
 // Function declarations
 reserve function ChaosEmerald_HandleDrawing
 
-// Static Values
-
-// Tables
-
 function ChaosEmerald_HandleDrawing
-	MatrixRotateXYZ(MAT_WORLD, object[0].rotateX, object[0].rotateY, object[0].rotateZ)
-	MatrixTranslateXYZ(MAT_TEMP, object[0].translateX, object[0].translateY, object[0].translateZ)
+	MatrixRotateXYZ(MAT_WORLD, halfpipe[0].worldRotation.x, halfpipe[0].worldRotation.y, halfpipe[0].worldRotation.z)
+	MatrixTranslateXYZ(MAT_TEMP, halfpipe[0].worldTranslation.x, halfpipe[0].worldTranslation.y, halfpipe[0].worldTranslation.z)
 	MatrixMultiply(MAT_WORLD, MAT_TEMP)
 	arrayPos0 = scene3D.vertexCount
 	arrayPos1 = scene3D.faceCount
@@ -27,7 +45,7 @@ function ChaosEmerald_HandleDrawing
 	faceBuffer[arrayPos1].a = arrayPos0
 	vertexBuffer[arrayPos0].x = 0
 	vertexBuffer[arrayPos0].y = -0x3800
-	vertexBuffer[arrayPos0].z = object.value8
+	vertexBuffer[arrayPos0].z = object.emeraldPos.z
 	vertexBuffer[arrayPos0].u = 116
 	vertexBuffer[arrayPos0].v = 50
 	arrayPos2 = arrayPos0
@@ -65,8 +83,8 @@ function ChaosEmerald_HandleDrawing
 	faceBuffer[arrayPos1].flag = FACE_SPRITE_3D
 	faceBuffer[arrayPos1].a = arrayPos2
 	vertexBuffer[arrayPos2].x = 0
-	vertexBuffer[arrayPos2].y = object.value7
-	vertexBuffer[arrayPos2].z = object.value8
+	vertexBuffer[arrayPos2].y = object.emeraldPos.y
+	vertexBuffer[arrayPos2].z = object.emeraldPos.z
 	TransformVertices(MAT_WORLD, arrayPos2, arrayPos0)
 	vertexBuffer[arrayPos2].u = TypeName[Chaos Emerald]
 	vertexBuffer[arrayPos2].v = FX_SCALE
@@ -101,12 +119,12 @@ event ObjectMain
 	case 0
 		object[11].type = TypeName[Blank Object]
 		foreach (TypeName[Player Object], currentPlayer, ACTIVE_ENTITIES)
-			temp1 = object.value3
+			temp1 = object.size
 			temp1 -= 0x20000
-			temp2 = object.value3
+			temp2 = object.size
 			temp2 += 0x20000
-			if object[currentPlayer].value14 > temp1
-				if object[currentPlayer].value14 < temp2
+			if player[currentPlayer].stagePos.z > temp1
+				if player[currentPlayer].stagePos.z < temp2
 					ResetObjectEntity(11, TypeName[Blank Object], 0, 0, 0)
 					object.scale = 0
 					object.drawOrder = 5
@@ -136,13 +154,15 @@ event ObjectMain
 					else
 						object.notEnoughRings = true
 					end if
-					object.value8 = 0x14000
+
+					object.emeraldPos.z = 0x14000
 				end if
 			end if
 		next
+
 		if stage.actNum == 7
 			GetTableValue(temp0, SpecialSetup_checkpointID, SpecialSetup_ringCountTable)
-			if object[10].value1 > temp0
+			if HUD[10].totalRings > temp0
 				object.timer++
 				object.timer &= 1
 				if object.timer == 0
@@ -152,10 +172,11 @@ event ObjectMain
 		end if
 		break
 	case 1
-		Sin(object.value7, object.angle)
-		object.value7 -= 0x1C00
+		Sin(object.emeraldPos.y, object.angle)
+		object.emeraldPos.y -= 0x1C00
 		object.angle += 12
-		object.angle &= 511
+		object.angle &= 0x1FF
+
 		music.volume--
 		if object.notEnoughRings == false
 			if stage.actNum == 7
@@ -166,9 +187,9 @@ event ObjectMain
 				end if
 			end if
 			
-			if object.scale < 512
+			if object.scale < 0x200
 				object.scale += 4
-				object.value8 -= 512
+				object.emeraldPos.z -= 0x200
 			else
 				StopMusic()
 				PlaySfx(SfxName[Emerald], false)
@@ -176,20 +197,21 @@ event ObjectMain
 				object.state++
 			end if
 		else
-			if object.scale < 384
+			if object.scale < 0x180
 				object.scale += 4
-				object.value8 -= 512
+				object.emeraldPos.z -= 0x200
 			else
 				StopMusic()
-				CreateTempObject(TypeName[Text Message], 1, 0, 0)
+				CreateTempObject(TypeName[Text Message], TEXTMESSAGE_NOTENOUGH, 0, 0)
 				object[tempObjectPos].drawOrder = 5
 				object.state++
 			end if
 
-			if object[0].value23 > 4
+			if halfpipe[0].moveSpeed > 4
 				if object.animationTimer == 0
-					object[0].value23--
+					halfpipe[0].moveSpeed--
 				end if
+
 				object.animationTimer++
 				object.animationTimer &= 7
 			end if
@@ -198,30 +220,32 @@ event ObjectMain
 		break
 
 	case 2
-		Sin(object.value7, object.angle)
-		object.value7 -= 0x1C00
+		Sin(object.emeraldPos.y, object.angle)
+		object.emeraldPos.y -= 0x1C00
 		object.angle += 12
 		object.angle &= 511
 		CallFunction(ChaosEmerald_HandleDrawing)
 
 		if object.notEnoughRings == true
-			if object[0].value23 > 4
+			if halfpipe[0].moveSpeed > 4
 				if object.animationTimer == 0
-					object[0].value23--
+					halfpipe[0].moveSpeed--
 				end if
+
 				object.animationTimer++
 				object.animationTimer &= 7
 			end if
+
 			if object.scale > 0
 				object.scale -= 2
-				object.value8 += 256
+				object.emeraldPos.z += 0x100
 			end if
 		else
 			if stage.actNum == 7
 				temp0 = object.timer
 				temp0 &= 1
 				if temp0 == 0
-					RotatePalette(0, 129, 141, 0)
+					RotatePalette(0, 129, 141, false)
 				end if
 			end if
 		end if

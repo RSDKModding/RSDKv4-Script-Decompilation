@@ -6,14 +6,45 @@
 // ----------------------------------
 
 // Aliases
-public alias object.value0  : player.rings
-public alias object.value15 : player.worldX
-public alias object.value16 : player.worldY
-
-public alias object.value7   : player.invincibilityTimer
-private alias object.value18 : object.stateInput
+private alias object.value0  : object.rings
+private alias object.value1  : object.timer
+private alias object.value2  : object.zpos
+private alias object.value3  : object.xBoundsR
+private alias object.value4  : object.frameOffset
+// value5 is unused
+private alias object.value6  : object.spinTimer
+private alias object.value7  : object.invincibilityTimer
+// value8 is unused
+private alias object.value9  : object.xBoundsL
+private alias object.value10 : object.groundPos
+private alias object.value11 : object.shadowPos.x
+private alias object.value12 : object.shadowPos.y
+private alias object.value13 : object.shadowPos.u
+private alias object.value14 : object.stagePos.z
+private alias object.value15 : object.stagePos.x
+private alias object.value16 : object.stagePos.y
 private alias object.value17 : object.playerFrame
-private alias object.value23 : object.shadowFrame
+private alias object.value18 : object.stateInput
+private alias object.value19 : object.vsCheckpointID
+private alias object.value20 : object.vsCheckpoint1Rings
+private alias object.value21 : object.vsCheckpoint2Rings
+private alias object.value22 : object.vsCheckpoint3Rings
+private alias object.value23 : object.playerTagFrame
+private alias object.value24 : object.currentLeader
+private alias object.value25 : object.changedLeader
+private alias object.value26 : object.automoveActive
+
+// Halfpipe Aliases
+private alias object.value13 : halfpipe.playerPos.z
+private alias object.value14 : halfpipe.worldTranslation.x
+private alias object.value15 : halfpipe.worldTranslation.y
+private alias object.value16 : halfpipe.worldTranslation.z
+private alias object.value17 : halfpipe.worldRotation.x
+private alias object.value18 : halfpipe.worldRotation.y
+private alias object.value19 : halfpipe.worldRotation.z
+
+// LoseRing Aliases
+private alias object.value1 : loseRing.gravityStrength
 
 // Function declarations
 reserve function PlayerObject_ProcessP1Inputs
@@ -26,22 +57,27 @@ reserve function PlayerObject_ProcessDrawing
 reserve function PlayerObject_Process2PVSPlayer
 
 // Static Values
-public value PlayerObject_StateUp = 0
-public value PlayerObject_StateDown = 0
-public value PlayerObject_StateLeft = 0
-public value PlayerObject_StateRight = 0
-public value PlayerObject_StateJumpPress = 0
-public value PlayerObject_StateJumpHold = 0
-public value PlayerObject_value27 = 0
-public value PlayerObject_value25 = 0
-public value PlayerObject_value26 = 0
-public value PlayerObject_value24 = 0
-public value PlayerObject_value23 = 0
-public value PlayerObject_value28 = 0
-public value PlayerObject_value22 = 0
+public value PlayerObject_stateUp = 0
+public value PlayerObject_stateDown = 0
+public value PlayerObject_stateLeft = 0
+public value PlayerObject_stateRight = 0
+public value PlayerObject_stateJumpPress = 0
+public value PlayerObject_stateJumpHold = 0
+
+public value PlayerObject_ReplayTable = 0
+public value PlayerObject_ReplayTablePos = 0
+public value PlayerObject_ReplaySize = 0
+public value PlayerObject_ReplayFrameCnt = 0
+public value PlayerObject_ReplayLength = 0
+public value PlayerObject_ReplayManager = 0
+
+// What player is in front right now
+public value PlayerObject_leadingPlayer = 0
 
 // Tables
-public table PlayerObject_table4
+
+// Shadow Y Positions, with index 0 being as far left/right as it goes, and the last index being the center
+public table PlayerObject_shadowYPosTable
 	-128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -127, -127, -127, -127
 	-127, -127, -127, -127, -126, -126, -126, -126, -126, -126, -125, -125, -125, -125, -124, -124
 	-124, -124, -123, -123, -123, -123, -122, -122, -122, -121, -121, -121, -120, -120, -119, -119
@@ -53,18 +89,20 @@ public table PlayerObject_table4
 end table
 
 function PlayerObject_ProcessDrawing
-	MatrixRotateXYZ(MAT_WORLD, object[0].rotateX, object[0].rotateY, object[0].rotateZ)
-	MatrixTranslateXYZ(MAT_TEMP, object[0].translateX, object[0].translateY, object[0].translateZ)
+	MatrixRotateXYZ(MAT_WORLD, halfpipe[0].worldRotation.x, halfpipe[0].worldRotation.y, halfpipe[0].worldRotation.z)
+	MatrixTranslateXYZ(MAT_TEMP, halfpipe[0].worldTranslation.x, halfpipe[0].worldTranslation.y, halfpipe[0].worldTranslation.z)
 	MatrixMultiply(MAT_WORLD, MAT_TEMP)
 
 	arrayPos0 = scene3D.vertexCount
 	arrayPos1 = scene3D.faceCount
+
+	// Draw Shadow
 	faceBuffer[arrayPos1].flag = FACE_TEXTURED_D
 	faceBuffer[arrayPos1].a = arrayPos0
-	vertexBuffer[arrayPos0].x = object.value11
-	vertexBuffer[arrayPos0].y = object.value12
-	vertexBuffer[arrayPos0].z = object.value2
-	vertexBuffer[arrayPos0].u = object.value13
+	vertexBuffer[arrayPos0].x = object.shadowPos.x
+	vertexBuffer[arrayPos0].y = object.shadowPos.y
+	vertexBuffer[arrayPos0].z = object.zpos
+	vertexBuffer[arrayPos0].u = object.shadowPos.u
 	vertexBuffer[arrayPos0].v = 50
 	arrayPos2 = arrayPos0
 	arrayPos0++
@@ -74,7 +112,7 @@ function PlayerObject_ProcessDrawing
 	vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 	vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 	vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-	if object.value2 > 0x800
+	if object.zpos > 0x800
 		vertexBuffer[arrayPos0].u = 0x600
 		vertexBuffer[arrayPos0].v = 0x600
 	else
@@ -101,6 +139,7 @@ function PlayerObject_ProcessDrawing
 	scene3D.vertexCount += 4
 	scene3D.faceCount++
 
+	// Draw Player
 	if object.visible == true
 		arrayPos2 = arrayPos0
 		arrayPos0++
@@ -109,11 +148,13 @@ function PlayerObject_ProcessDrawing
 		faceBuffer[arrayPos1].a = arrayPos2
 		vertexBuffer[arrayPos2].x = object.xpos
 		vertexBuffer[arrayPos2].x >>= 1
-		player.worldX = vertexBuffer[arrayPos2].x
+		object.stagePos.x = vertexBuffer[arrayPos2].x
+
 		vertexBuffer[arrayPos2].y = object.ypos
 		vertexBuffer[arrayPos2].y >>= 1
-		player.worldY = vertexBuffer[arrayPos2].y
-		vertexBuffer[arrayPos2].z = object.value2
+		object.stagePos.y = vertexBuffer[arrayPos2].y
+
+		vertexBuffer[arrayPos2].z = object.zpos
 		TransformVertices(MAT_WORLD, arrayPos2, arrayPos0)
 
 		vertexBuffer[arrayPos2].u = TypeName[Player Object]
@@ -140,7 +181,9 @@ function PlayerObject_ProcessDrawing
 		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
 		scene3D.vertexCount += 4
 		scene3D.faceCount++
-		if object.value4 == 16
+
+ 		// if tails, draw tails
+		if object.frameOffset == 16
 			if object.animation == 0
 				arrayPos0++
 				arrayPos1++
@@ -181,7 +224,8 @@ function PlayerObject_ProcessDrawing
 		end if
 	end if
 
-	if object.shadowFrame > 0
+	// if active, draw 1P/2P Tag
+	if object.playerTagFrame > 0
 		arrayPos0++
 		arrayPos1++
 		faceBuffer[arrayPos1].flag = FACE_SPRITE_3D
@@ -197,7 +241,7 @@ function PlayerObject_ProcessDrawing
 		vertexBuffer[arrayPos0].x = vertexBuffer[arrayPos2].x
 		vertexBuffer[arrayPos0].y = vertexBuffer[arrayPos2].y
 		vertexBuffer[arrayPos0].z = vertexBuffer[arrayPos2].z
-		vertexBuffer[arrayPos0].u = object.shadowFrame
+		vertexBuffer[arrayPos0].u = object.playerTagFrame
 		vertexBuffer[arrayPos0].v = 0
 		arrayPos0++
 
@@ -275,7 +319,7 @@ function PlayerObject_ProcessP1Inputs
 		ProcessObjectControl()
 
 		if options.vsMode == true
-			object.value24 = PlayerObject_value22
+			object.currentLeader = PlayerObject_leadingPlayer
 			CallNativeFunction2(SendEntity, 2, false)
 		end if
 	else
@@ -285,28 +329,29 @@ function PlayerObject_ProcessP1Inputs
 		end if
 
 		if checkResult > -1
-			if PlayerObject_value23 > 1
-				PlayerObject_value23 = 1
+			if PlayerObject_ReplayLength > 1
+				PlayerObject_ReplayLength = 1
 			end if
 		end if
 
 		if inputPress.start == true
-			PlayerObject_value23 = 1
+			PlayerObject_ReplayLength = 1
 		end if
 
-		PlayerObject_value24--
-		if PlayerObject_value24 < 1
-			if PlayerObject_value25 < PlayerObject_value26
-				GetTableValue(temp0, PlayerObject_value25, PlayerObject_value27)
+		PlayerObject_ReplayFrameCnt--
+		if PlayerObject_ReplayFrameCnt < 1
+			if PlayerObject_ReplayTablePos < PlayerObject_ReplaySize
+				GetTableValue(temp0, PlayerObject_ReplayTablePos, PlayerObject_ReplayTable)
 				GetBit(object.up, temp0, 0)
 				GetBit(object.down, temp0, 1)
 				GetBit(object.left, temp0, 2)
 				GetBit(object.right, temp0, 3)
 				GetBit(object.jumpPress, temp0, 4)
 				GetBit(object.jumpHold, temp0, 5)
-				PlayerObject_value25++
-				GetTableValue(PlayerObject_value24, PlayerObject_value25, PlayerObject_value27)
-				PlayerObject_value25++
+				PlayerObject_ReplayTablePos++
+
+				GetTableValue(PlayerObject_ReplayFrameCnt, PlayerObject_ReplayTablePos, PlayerObject_ReplayTable)
+				PlayerObject_ReplayTablePos++
 			end if
 		else
 			if object.jumpPress == true
@@ -314,10 +359,11 @@ function PlayerObject_ProcessP1Inputs
 			end if
 		end if
 
-		if PlayerObject_value23 > 0
-			PlayerObject_value23--
-			if PlayerObject_value23 < 1
-				arrayPos0 = PlayerObject_value28
+		if PlayerObject_ReplayLength > 0
+			PlayerObject_ReplayLength--
+			if PlayerObject_ReplayLength < 1
+				// Should Prolly be titlecard or smth, blank object state 8 wont do a thing lol
+				arrayPos0 = PlayerObject_ReplayManager
 				object[arrayPos0].type = TypeName[Blank Object]
 				object[arrayPos0].state = 8
 				object[arrayPos0].priority = PRIORITY_ACTIVE
@@ -326,10 +372,10 @@ function PlayerObject_ProcessP1Inputs
 		end if
 	end if
 
-	if player.invincibilityTimer > 0
-		player.invincibilityTimer--
-		GetBit(temp0, player.invincibilityTimer, 2)
-		if temp0 == 1
+	if object.invincibilityTimer > 0
+		object.invincibilityTimer--
+		GetBit(temp0, object.invincibilityTimer, 2)
+		if temp0 == true
 			object.visible = false
 		else
 			object.visible = true
@@ -339,52 +385,57 @@ end function
 
 
 function PlayerObject_ProcessP2Inputs
-	PlayerObject_StateUp <<= 1
-	PlayerObject_StateUp |= object[2].up
-	PlayerObject_StateUp &= 0xFFFF
-	PlayerObject_StateDown <<= 1
-	PlayerObject_StateDown |= object[2].down
-	PlayerObject_StateDown &= 0xFFFF
-	PlayerObject_StateLeft <<= 1
-	PlayerObject_StateLeft |= object[2].left
-	PlayerObject_StateLeft &= 0xFFFF
-	PlayerObject_StateRight <<= 1
-	PlayerObject_StateRight |= object[2].right
-	PlayerObject_StateRight &= 0xFFFF
-	PlayerObject_StateJumpPress <<= 1
-	PlayerObject_StateJumpPress |= object[2].jumpPress
-	PlayerObject_StateJumpPress &= 0xFFFF
-	PlayerObject_StateJumpHold <<= 1
-	PlayerObject_StateJumpHold |= object[2].jumpHold
-	PlayerObject_StateJumpHold &= 0xFFFF
+	PlayerObject_stateUp <<= 1
+	PlayerObject_stateUp |= object[2].up
+	PlayerObject_stateUp &= 0xFFFF
 
-	temp0 = PlayerObject_StateUp
+	PlayerObject_stateDown <<= 1
+	PlayerObject_stateDown |= object[2].down
+	PlayerObject_stateDown &= 0xFFFF
+
+	PlayerObject_stateLeft <<= 1
+	PlayerObject_stateLeft |= object[2].left
+	PlayerObject_stateLeft &= 0xFFFF
+
+	PlayerObject_stateRight <<= 1
+	PlayerObject_stateRight |= object[2].right
+	PlayerObject_stateRight &= 0xFFFF
+
+	PlayerObject_stateJumpPress <<= 1
+	PlayerObject_stateJumpPress |= object[2].jumpPress
+	PlayerObject_stateJumpPress &= 0xFFFF
+
+	PlayerObject_stateJumpHold <<= 1
+	PlayerObject_stateJumpHold |= object[2].jumpHold
+	PlayerObject_stateJumpHold &= 0xFFFF
+
+	temp0 = PlayerObject_stateUp
 	temp0 >>= 15
 	object.up = temp0
 
-	temp0 = PlayerObject_StateDown
+	temp0 = PlayerObject_stateDown
 	temp0 >>= 15
 	object.down = temp0
 
-	temp0 = PlayerObject_StateLeft
+	temp0 = PlayerObject_stateLeft
 	temp0 >>= 15
 	object.left = temp0
 
-	temp0 = PlayerObject_StateRight
+	temp0 = PlayerObject_stateRight
 	temp0 >>= 15
 	object.right = temp0
 
-	temp0 = PlayerObject_StateJumpPress
+	temp0 = PlayerObject_stateJumpPress
 	temp0 >>= 15
 	object.jumpPress = temp0
 
-	temp0 = PlayerObject_StateJumpHold
+	temp0 = PlayerObject_stateJumpHold
 	temp0 >>= 15
 	object.jumpHold = temp0
 
-	if player.invincibilityTimer > 0
-		player.invincibilityTimer--
-		GetBit(temp0, player.invincibilityTimer, 2)
+	if object.invincibilityTimer > 0
+		object.invincibilityTimer--
+		GetBit(temp0, object.invincibilityTimer, 2)
 		if temp0 == true
 			object.visible = false
 		else
@@ -395,19 +446,19 @@ end function
 
 
 function PlayerObject_Process2PVSPlayer
-	temp0 = object.value23
+	temp0 = object.playerTagFrame
 	CallNativeFunction2(ReceiveEntity, 3, true)
 	object.type = TypeName[Player Object]
-	object.stateInput = 9
-	object.value23 = temp0
+	object.stateInput = PlayerObject_Process2PVSPlayer
+	object.playerTagFrame = temp0
 
 	if vs.playerID == 1
-		PlayerObject_value22 = object.value24
+		PlayerObject_leadingPlayer = object.currentLeader
 	end if
 
-	if player.invincibilityTimer > 0
-		player.invincibilityTimer--
-		GetBit(temp0, player.invincibilityTimer, 2)
+	if object.invincibilityTimer > 0
+		object.invincibilityTimer--
+		GetBit(temp0, object.invincibilityTimer, 2)
 		if temp0 == true
 			object.visible = false
 		else
@@ -423,21 +474,24 @@ function PlayerObject_HandleGround
 		if object.speed < -0x600
 			object.speed = -0x600
 		end if
-		object.value26 = 0
-		object.value1 = 0
+
+		object.automoveActive = false
+		object.timer = 0
 	else
 		if object.left == true
 			object.speed += 48
 			if object.speed > 0x600
 				object.speed = 0x600
 			end if
-			object.value26 = 0
-			object.value1 = 0
+
+			object.automoveActive = false
+			object.timer = 0
 		else
-			if object.value26 == 0
-				object.value1 = 60
-				object.value26 = 1
+			if object.automoveActive == false
+				object.timer = 60
+				object.automoveActive = true
 			end if
+
 			temp0 = object.speed
 			temp0 >>= 4
 			object.speed -= temp0
@@ -456,9 +510,12 @@ function PlayerObject_HandleGround
 	object.angle &= 0xFFFF
 	object.rotation = object.angle
 	object.rotation >>= 7
-	if object.value1 > 0
-		object.value1--
+
+	// Wait for it....
+	if object.timer > 0
+		object.timer--
 	else
+		// Move to center
 		temp1 = object.rotation
 		temp1 >>= 1
 		Sin256(temp0, temp1)
@@ -468,15 +525,17 @@ function PlayerObject_HandleGround
 	end if
 
 	Sin(object.xpos, object.rotation)
-	object.xpos *= object.value9
+	object.xpos *= object.xBoundsL
 	object.xpos >>= 9
+
 	Cos(object.ypos, object.rotation)
-	object.ypos *= object.value9
+	object.ypos *= object.xBoundsL
 	object.ypos >>= 9
+
 	object.animation = 0
 	object.animationSpeed = 60
 	temp0 = object.rotation
-	object.value25 = 0
+	object.changedLeader = false
 
 	if object.jumpPress == true
 		object.speed = 0
@@ -489,7 +548,7 @@ function PlayerObject_HandleGround
 		object.state = PlayerObject_HandleAir
 		object.rotation = 0
 		object.frame = 8
-		object.frame += object.value4
+		object.frame += object.frameOffset
 		object.animation = 8
 		object.animationSpeed = 60
 		object.animationTimer = 0
@@ -517,27 +576,30 @@ function PlayerObject_HandleGround
 		end if
 	end if
 
-	Sin(object.value11, temp0)
-	object.value11 *= -52
-	object.value11 >>= 1
-	Cos(object.value12, temp0)
-	object.value12 *= -52
-	object.value12 >>= 1
-	object.value13 = 116
+	Sin(object.shadowPos.x, temp0)
+	object.shadowPos.x *= -52
+	object.shadowPos.x >>= 1
+
+	Cos(object.shadowPos.y, temp0)
+	object.shadowPos.y *= -52
+	object.shadowPos.y >>= 1
+
+	object.shadowPos.u = 116
+
 	if temp0 < 256
 		if temp0 > 112
-			object.value13 = 224
+			object.shadowPos.u = 224
 		else
 			if temp0 > 39
-				object.value13 = 149
+				object.shadowPos.u = 149
 			end if
 		end if
 	else
 		if temp0 < 400
-			object.value13 = 215
+			object.shadowPos.u = 215
 		else
 			if temp0 < 473
-				object.value13 = 182
+				object.shadowPos.u = 182
 			end if
 		end if
 	end if
@@ -554,19 +616,19 @@ end function
 
 function PlayerObject_HandleAir
 	if options.vsMode == true
-		if object.value25 == 0
-			PlayerObject_value22 ^= 1
-			object.value25 = 1
+		if object.changedLeader == false
+			PlayerObject_leadingPlayer ^= 1
+			object.changedLeader = true
 		end if
 	end if
 
 	object.xpos += object.xvel
-	if object.xpos <= object.value9
-		object.xpos = object.value9
+	if object.xpos <= object.xBoundsL
+		object.xpos = object.xBoundsL
 	end if
 
-	if object.xpos >= object.value3
-		object.xpos = object.value3
+	if object.xpos >= object.xBoundsR
+		object.xpos = object.xBoundsR
 	end if
 
 	if object.left == true
@@ -585,7 +647,7 @@ function PlayerObject_HandleAir
 		temp1 = object.ypos
 		temp1 *= object.ypos
 		temp0 += temp1
-		if temp0 > object.value10
+		if temp0 > object.groundPos
 			object.state = PlayerObject_HandleGround
 			object.gravity = GRAVITY_GROUND
 			ATan2(object.angle, object.ypos, object.xpos)
@@ -608,30 +670,33 @@ function PlayerObject_HandleAir
 		end if
 	end if
 
-	object.value11 = object.xpos
-	object.value11 *= 144
-	object.value11 >>= 8
+	object.shadowPos.x = object.xpos
+	object.shadowPos.x *= 144
+	object.shadowPos.x >>= 8
 
 	temp0 = object.xpos
 	temp0 *= 45
 	temp0 >>= 13
 	Abs(temp0)
-	GetTableValue(object.value12, temp0, PlayerObject_table4)
-	temp0 = object.value12
-	object.value12 *= 105
-	object.value13 = 116
+	GetTableValue(object.shadowPos.y, temp0, PlayerObject_shadowYPosTable)
+	temp0 = object.shadowPos.y
+	object.shadowPos.y *= 105
+
+	object.shadowPos.u = 116
+
+	// Shadow frame funky stuff
 	if temp0 > -112
 		if temp0 > -24
 			if object.xpos < 0
-				object.value13 = 224
+				object.shadowPos.u = 224
 			else
-				object.value13 = 215
+				object.shadowPos.u = 215
 			end if
 		else
 			if object.xpos < 0
-				object.value13 = 149
+				object.shadowPos.u = 149
 			else
-				object.value13 = 182
+				object.shadowPos.u = 182
 			end if
 		end if
 	end if
@@ -641,23 +706,23 @@ end function
 function PlayerObject_HurtSpin
 	if options.vsMode == true
 		if vs.playerID == 0
-			if object.value25 == 0
-				PlayerObject_value22 = object.entityPos
-				PlayerObject_value22 -= 2
-				PlayerObject_value22 ^= vs.playerID
-				PlayerObject_value22 ^= 1
-				object.value25 = 1
+			if object.changedLeader == false
+				PlayerObject_leadingPlayer = object.entityPos
+				PlayerObject_leadingPlayer -= 2
+				PlayerObject_leadingPlayer ^= vs.playerID
+				PlayerObject_leadingPlayer ^= 1
+				object.changedLeader = true
 			end if
 		end if
 	end if
 	
-	if object.value6 < 512
-		object.value6 += 16
+	if object.spinTimer < 512
+		object.spinTimer += 16
 		object.rotation += 16
 	else
 		object.speed = 0
-		object.value6 = 0
-		player.invincibilityTimer = 60
+		object.spinTimer = 0
+		object.invincibilityTimer = 60
 		if object.gravity == GRAVITY_GROUND
 			object.state = PlayerObject_HandleGround
 		else
@@ -668,14 +733,16 @@ end function
 
 
 function PlayerObject_RingLoss
-	if player[currentPlayer].rings > 0
+	if object[currentPlayer].rings > 0
 		PlaySfx(SfxName[Lose Rings], false)
-		player[currentPlayer].rings -= 10
+		object[currentPlayer].rings -= 10
+
 		temp0 = 10
-		if player[currentPlayer].rings < 0
-			temp0 += player[currentPlayer].rings
-			player[currentPlayer].rings = 0
+		if object[currentPlayer].rings < 0
+			temp0 += object[currentPlayer].rings
+			object[currentPlayer].rings = 0
 		end if
+
 		temp2 = temp0
 		temp2 >>= 1
 		temp2 <<= 5
@@ -698,9 +765,9 @@ function PlayerObject_RingLoss
 			Sin(object[tempObjectPos].yvel, temp1)
 			object[tempObjectPos].xvel <<= 9
 			object[tempObjectPos].yvel <<= 10
-			object[tempObjectPos].scale = 320
-			Rand(object[tempObjectPos].value1, 0x2000)
-			object[tempObjectPos].value1 += 0x7000
+			object[tempObjectPos].scale = 0x140
+			Rand(loseRing[tempObjectPos].gravityStrength, 0x2000)
+			loseRing[tempObjectPos].gravityStrength += 0x7000
 			Rand(object[tempObjectPos].animationSpeed, 128)
 			object[tempObjectPos].animationSpeed += 64
 			temp0--
@@ -718,21 +785,22 @@ event ObjectMain
 		temp0 = object.entityPos
 		temp0 -= 2
 		temp0 ^= vs.playerID
-		temp0 ^= PlayerObject_value22
+		temp0 ^= PlayerObject_leadingPlayer
 		if temp0 == 0
-			if object.value2 < 0x1000
-				object.value2 += 64
+			if object.zpos < 0x1000
+				object.zpos += 64
 			end if
 		else
-			if object.value2 > 0x400
-				object.value2 -= 64
+			if object.zpos > 0x400
+				object.zpos -= 64
 			end if
 		end if
 	end if
-	object.value14 = object.value2
-	object.value14 <<= 8
-	object.value14 += object[0].value13
-	object.value14 += 0xC0000
+
+	object.stagePos.z = object.zpos
+	object.stagePos.z <<= 8
+	object.stagePos.z += halfpipe[0].playerPos.z
+	object.stagePos.z += 0xC0000
 
 	object.animationTimer += object.animationSpeed
 	if object.animationTimer >= 240
@@ -740,7 +808,7 @@ event ObjectMain
 		object.frame++
 		object.frame &= 7
 		object.frame += object.animation
-		object.frame += object.value4
+		object.frame += object.frameOffset
 	end if
 
 	CallFunction(PlayerObject_ProcessDrawing)
@@ -824,76 +892,75 @@ event ObjectStartup
 
 	object[2].type = TypeName[Player Object]
 	object[2].priority = PRIORITY_ACTIVE
-	object[2].value2 = 0x1000
+	object[2].zpos = 0x1000
 	object[2].state = PlayerObject_HandleGround
 	object[2].stateInput = PlayerObject_ProcessP1Inputs
 	switch stage.playerListPos
 	case PlayerName[SONIC]
-		object[2].value3 = 88
-		object[2].value4 = 0
+		object[2].xBoundsR = 88
+		object[2].frameOffset = 0
 		break
 
 	case PlayerName[TAILS]
-		object[2].value3 = 90
-		object[2].value4 = 16
+		object[2].xBoundsR = 90
+		object[2].frameOffset = 16
 		break
 		
 	case PlayerName[KNUCKLES]
-		object[2].value3 = 88
-		object[2].value4 = 32
+		object[2].xBoundsR = 88
+		object[2].frameOffset = 32
 		break
 
 	end switch
 
-	object[2].value3 <<= 8
-	object[2].value9 = object[2].value3
-	FlipSign(object[2].value9)
-	object[2].value10 = object[2].value3
-	object[2].value10 *= object[2].value3
-	object[2].value10 -= 0x10000
-	object[2].frame = object[2].value4
+	object[2].xBoundsR <<= 8
+	object[2].xBoundsL = object[2].xBoundsR
+	FlipSign(object[2].xBoundsL)
+	object[2].groundPos = object[2].xBoundsR
+	object[2].groundPos *= object[2].xBoundsR
+	object[2].groundPos -= 0x10000
+	object[2].frame = object[2].frameOffset
 
 	if options.vsMode == true
 		object[3].type = TypeName[Player Object]
 		object[3].priority = PRIORITY_ACTIVE
-		object[3].shadowFrame = vs.playerID
-		object[3].shadowFrame ^= 1
-		object[3].shadowFrame += 55
+		object[3].playerTagFrame = vs.playerID
+		object[3].playerTagFrame ^= 1
+		object[3].playerTagFrame += 55
 		if vs.playerID == 0
-			object[2].value2 = 0x1000
-			object[3].value2 = 0x400
+			object[2].zpos = 0x1000
+			object[3].zpos = 0x400
 		else
-			object[2].value2 = 0x400
-			object[3].value2 = 0x1000
+			object[2].zpos = 0x400
+			object[3].zpos = 0x1000
 		end if
 
 		object[3].state = PlayerObject_HandleGround
 		object[3].stateInput = PlayerObject_Process2PVSPlayer
 		switch vs.player2Type
 		case PlayerName[SONIC]
-			object[3].value3 = 88
-			object[3].value4 = 0
+			object[3].xBoundsR = 88
+			object[3].frameOffset = 0
 			break
 
 		case PlayerName[TAILS]
-			object[3].value3 = 90
-			object[3].value4 = 16
+			object[3].xBoundsR = 90
+			object[3].frameOffset = 16
 			break
 
 		case PlayerName[KNUCKLES]
-			object[3].value3 = 88
-			object[3].value4 = 32
+			object[3].xBoundsR = 88
+			object[3].frameOffset = 32
 			break
-
 		end switch
 
-		object[3].value3 <<= 8
-		object[3].value9 = object[3].value3
-		FlipSign(object[3].value9)
-		object[3].value10 = object[3].value3
-		object[3].value10 *= object[3].value3
-		object[3].value10 -= 0x10000
-		object[3].frame = object[3].value4
+		object[3].xBoundsR <<= 8
+		object[3].xBoundsL = object[3].xBoundsR
+		FlipSign(object[3].xBoundsL)
+		object[3].groundPos = object[3].xBoundsR
+		object[3].groundPos *= object[3].xBoundsR
+		object[3].groundPos -= 0x10000
+		object[3].frame = object[3].frameOffset
 
 		stage.player2Enabled = false
 		playerCount = 2
@@ -904,18 +971,18 @@ event ObjectStartup
 	if stage.player2Enabled == true
 		object[3].type = TypeName[Player Object]
 		object[3].priority = PRIORITY_ACTIVE
-		object[3].value2 = 0x400
+		object[3].zpos = 0x400
 		object[3].state = PlayerObject_HandleAir
 		object[3].stateInput = PlayerObject_ProcessP2Inputs
-		object[3].value3 = 90
-		object[3].value4 = 16
-		object[3].value3 <<= 8
-		object[3].value9 = object[3].value3
-		FlipSign(object[3].value9)
-		object[3].value10 = object[3].value3
-		object[3].value10 *= object[3].value3
-		object[3].value10 -= 0x10000
-		object[3].frame = object[3].value4
+		object[3].xBoundsR = 90
+		object[3].frameOffset = 16
+		object[3].xBoundsR <<= 8
+		object[3].xBoundsL = object[3].xBoundsR
+		FlipSign(object[3].xBoundsL)
+		object[3].groundPos = object[3].xBoundsR
+		object[3].groundPos *= object[3].xBoundsR
+		object[3].groundPos -= 0x10000
+		object[3].frame = object[3].frameOffset
 	end if
 end event
 
