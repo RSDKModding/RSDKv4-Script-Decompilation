@@ -7,10 +7,10 @@
 
 // Aliases
 private alias object.value1  : player.timer
-private alias object.value3  : player.drownCounter			// Countdown before player moves to next drown "level"
+private alias object.value3  : player.drownTimer			// Countdown before player moves to next drown "level"
 private alias object.value4  : player.drownLevel
-private alias object.value6  : player.speedShoes
-private alias object.value7  : player.invincible
+private alias object.value6  : player.speedShoesTimer
+private alias object.value7  : player.invincibleTimer
 private alias object.value8  : player.blinkTimer
 private alias object.value11 : player.scrollDelay			// A timer of how long the camera will stay locked for
 private alias object.value12 : player.tailFrame
@@ -30,11 +30,11 @@ private alias object.value38 : player.hitboxTop
 private alias object.value41 : player.hitboxRight
 private alias object.value39 : player.hitboxBottom
 private alias object.value42 : player.prevGravity
-private alias object.value43 : player.jumpInDelay
+private alias object.value43 : player.jumpInTimer
 private alias object.value44 : player.p2InputFunction
-private alias object.value45 : player.p2JumpActionDelay
-private alias object.value46 : player.curFlyCarryPos.x
-private alias object.value47 : player.curFlyCarryPos.y
+private alias object.value45 : player.autoJumpTimer
+private alias object.value46 : player.targetLeaderPos.x
+private alias object.value47 : player.targetLeaderPos.y
 
 // Function declarations
 reserve function Player2Object_ProcessP2InputLag
@@ -45,8 +45,8 @@ reserve function Player2Object_FlyIn
 reserve function Player2Object_StartFlyIn
 reserve function Player2Object_ProcessPlayer2
 reserve function Player2Object_NoInput
-reserve function Player2Object_p2JumpAbility
-reserve function Player2Object_ProcessVSPlayer2
+reserve function Player2Object_JumpAbility_P2
+reserve function Player2Object_ProcessPlayer2_VS
 
 // Static Values
 public value Player2Object_stateUp = 0;
@@ -55,15 +55,15 @@ public value Player2Object_stateLeft = 0;
 public value Player2Object_stateRight = 0;
 public value Player2Object_stateJumpPress = 0;
 public value Player2Object_stateJumpHold = 0;
-public value Player2Object_flyCarryPosA = 0;
-public value Player2Object_flyCarryPosB = 0;
+public value Player2Object_nextLeaderPosID = 0;
+public value Player2Object_lastLeaderPosID = 0;
 
 // Tables
-public table Player2Object_flyCarryPosX
+public table Player2Object_leaderPosBufferX
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 end table
 
-public table Player2Object_flyCarryPosY
+public table Player2Object_leaderPosBufferY
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 end table
 
@@ -73,13 +73,13 @@ function Player2Object_NoInput
 end function
 
 
-function Player2Object_p2JumpAbility
+function Player2Object_JumpAbility_P2
 	CheckNotEqual(player.p2InputFunction, Player2Object_NoInput)
 	temp0 = checkResult
 	CheckNotEqual(object.up, true)
 	temp0 &= checkResult
 	if temp0 == false
-		CallFunction(PlayerObject_StartTailsFlight)
+		CallFunction(PlayerObject_JumpAbility_Tails)
 	end if
 end function
 
@@ -152,44 +152,44 @@ function Player2Object_ProcessP2InputLag
 
 	if object[0].state != PlayerObject_Death
 		if object[0].type != TypeName[Death Event]
-			SetTableValue(object[0].xpos, Player2Object_flyCarryPosB, Player2Object_flyCarryPosX)
-			SetTableValue(object[0].ypos, Player2Object_flyCarryPosB, Player2Object_flyCarryPosY)
+			SetTableValue(object[0].xpos, Player2Object_lastLeaderPosID, Player2Object_leaderPosBufferX)
+			SetTableValue(object[0].ypos, Player2Object_lastLeaderPosID, Player2Object_leaderPosBufferY)
 
-			Player2Object_flyCarryPosB++
-			Player2Object_flyCarryPosB &= 15
-			Player2Object_flyCarryPosA++
-			Player2Object_flyCarryPosA &= 15
+			Player2Object_lastLeaderPosID++
+			Player2Object_lastLeaderPosID &= 15
+			Player2Object_nextLeaderPosID++
+			Player2Object_nextLeaderPosID &= 15
 			CheckEqual(object[0].gravity, GRAVITY_AIR)
 			temp0 = checkResult
 			CheckEqual(player[0].prevGravity, 0)
 			temp0 &= checkResult
 
 			if temp0 == 0
-				GetTableValue(player.curFlyCarryPos.x, Player2Object_flyCarryPosA, Player2Object_flyCarryPosX)
-				GetTableValue(player.curFlyCarryPos.y, Player2Object_flyCarryPosA, Player2Object_flyCarryPosY)
+				GetTableValue(player.targetLeaderPos.x, Player2Object_nextLeaderPosID, Player2Object_leaderPosBufferX)
+				GetTableValue(player.targetLeaderPos.y, Player2Object_nextLeaderPosID, Player2Object_leaderPosBufferY)
 			else
-				player.curFlyCarryPos.x = object[0].xpos
-				player.curFlyCarryPos.y = object[0].ypos
+				player.targetLeaderPos.x = object[0].xpos
+				player.targetLeaderPos.y = object[0].ypos
 			end if
 		else
-			temp0 = Player2Object_flyCarryPosB
+			temp0 = Player2Object_lastLeaderPosID
 			temp0--
 			if temp0 < 0
 				temp0 += 16
 			end if
 
-			GetTableValue(player.curFlyCarryPos.x, temp0, Player2Object_flyCarryPosX)
-			GetTableValue(player.curFlyCarryPos.y, temp0, Player2Object_flyCarryPosY)
+			GetTableValue(player.targetLeaderPos.x, temp0, Player2Object_leaderPosBufferX)
+			GetTableValue(player.targetLeaderPos.y, temp0, Player2Object_leaderPosBufferY)
 		end if
 	else
-		temp0 = Player2Object_flyCarryPosB
+		temp0 = Player2Object_lastLeaderPosID
 		temp0--
 		if temp0 < 0
 			temp0 += 16
 		end if
 
-		GetTableValue(player.curFlyCarryPos.x, temp0, Player2Object_flyCarryPosX)
-		GetTableValue(player.curFlyCarryPos.y, temp0, Player2Object_flyCarryPosY)
+		GetTableValue(player.targetLeaderPos.x, temp0, Player2Object_leaderPosBufferX)
+		GetTableValue(player.targetLeaderPos.y, temp0, Player2Object_leaderPosBufferY)
 	end if
 end function
 
@@ -224,7 +224,7 @@ function Player2Object_ProcessP2Input
 		end if
 
 		if object[0].state != PlayerObject_HandleFlyCarry
-			temp0 = player.curFlyCarryPos.x
+			temp0 = player.targetLeaderPos.x
 			temp1 = object[0].gravity
 			temp1 |= player[0].prevGravity
 
@@ -272,34 +272,34 @@ function Player2Object_ProcessP2Input
 			end if
 
 			if object.animation == ANI_PUSHING
-				player.p2JumpActionDelay++
+				player.autoJumpTimer++
 				if object[0].direction == object.direction
 					if object[0].animation == ANI_PUSHING
-						player.p2JumpActionDelay = 0
+						player.autoJumpTimer = 0
 					end if
 				end if
 
-				if player.p2JumpActionDelay >= 30
+				if player.autoJumpTimer >= 30
 					if object.gravity == GRAVITY_GROUND
 						CallFunction(PlayerObject_StartJump)
 					end if
 					player.timer = 0
-					player.p2JumpActionDelay = 0
+					player.autoJumpTimer = 0
 				end if
 			else
 				temp0 = object.ypos
-				temp0 -= player.curFlyCarryPos.y
+				temp0 -= player.targetLeaderPos.y
 				if temp0 > 0x200000
-					player.p2JumpActionDelay++
-					if player.p2JumpActionDelay >= 64
+					player.autoJumpTimer++
+					if player.autoJumpTimer >= 64
 						if object.gravity == GRAVITY_GROUND
 							CallFunction(PlayerObject_StartJump)
 						end if
 						player.timer = 0
-						player.p2JumpActionDelay = 0
+						player.autoJumpTimer = 0
 					end if
 				else
-					player.p2JumpActionDelay = 0
+					player.autoJumpTimer = 0
 				end if
 			end if
 
@@ -328,10 +328,10 @@ function Player2Object_InputJumpIn
 			if object.speed < 0x4000
 				if object.speed > -0x4000
 					player.p2InputFunction = Player2Object_ForceJump
-					player.p2JumpActionDelay = 1
+					player.autoJumpTimer = 1
 
 					if object.animation != ANI_SPINDASH
-						if object.xpos < player.curFlyCarryPos.x
+						if object.xpos < player.targetLeaderPos.x
 							object.direction = FLIP_NONE
 						else
 							object.direction = FLIP_X
@@ -346,9 +346,9 @@ end function
 
 
 function Player2Object_ForceJump
-	if player.p2JumpActionDelay < 64
+	if player.autoJumpTimer < 64
 		object.down = true
-		temp0 = player.p2JumpActionDelay
+		temp0 = player.autoJumpTimer
 		temp0 &= 15
 		if temp0 == 0
 			object.jumpPress = true
@@ -356,9 +356,9 @@ function Player2Object_ForceJump
 			object.jumpPress = false
 		end if
 
-		player.p2JumpActionDelay++
+		player.autoJumpTimer++
 	else
-		player.p2JumpActionDelay = 0
+		player.autoJumpTimer = 0
 		object.down = false
 		object.jumpPress = false
 		player.p2InputFunction = Player2Object_ProcessP2Input
@@ -375,12 +375,12 @@ function Player2Object_FlyIn
 		object.animation = ANI_SWIMMING
 	end if
 
-	temp0 = player.curFlyCarryPos.x
+	temp0 = player.targetLeaderPos.x
 	temp0 -= object.xpos
 	temp1 = temp0
 	temp0 >>= 4
 
-	if object.xpos < player.curFlyCarryPos.x
+	if object.xpos < player.targetLeaderPos.x
 		object.direction = FLIP_NONE
 		if temp0 > 0xC0000
 			temp0 = 0xC0000
@@ -413,11 +413,11 @@ function Player2Object_FlyIn
 	end if
 
 	object.xpos += temp0
-	if object.ypos < player.curFlyCarryPos.y
+	if object.ypos < player.targetLeaderPos.y
 		object.ypos += 0x10000
 	end if
 
-	if object.ypos > player.curFlyCarryPos.y
+	if object.ypos > player.targetLeaderPos.y
 		object.ypos -= 0x10000
 	end if
 
@@ -426,7 +426,7 @@ function Player2Object_FlyIn
 			if object[0].state != PlayerObject_Drown
 				if object[0].state != PlayerObject_HandleRollDecel
 					if temp1 == 0
-						temp0 = player.curFlyCarryPos.y
+						temp0 = player.targetLeaderPos.y
 						temp0 -= object.ypos
 						if temp0 < 0
 							FlipSign(temp0)
@@ -461,13 +461,13 @@ end function
 function Player2Object_StartFlyIn
 	if object[0].type == TypeName[Player Object]
 		if object.outOfBounds == true
-			player.jumpInDelay++
+			player.jumpInTimer++
 		else
-			player.jumpInDelay = 0
+			player.jumpInTimer = 0
 		end if
 
-		if player.jumpInDelay >= 240
-			player.jumpInDelay = 0
+		if player.jumpInTimer >= 240
+			player.jumpInTimer = 0
 			object.state = Player2Object_FlyIn
 			object.xpos = object[0].xpos
 			object.ypos = screen.yoffset
@@ -480,7 +480,7 @@ function Player2Object_StartFlyIn
 			object.interaction = false
 			object.controlMode = 1
 			player.sortedDrawOrder = 4
-			player.drownCounter = 0
+			player.drownTimer = 0
 			player.drownLevel = 0
 		end if
 
@@ -493,7 +493,7 @@ function Player2Object_StartFlyIn
 		CheckNotEqual(object.state, PlayerObject_Death)
 		temp0 &= checkResult
 		if temp0 == true
-			player.jumpInDelay = 0
+			player.jumpInTimer = 0
 			object.state = Player2Object_FlyIn
 			object.xvel = 0
 			object.yvel = 0
@@ -529,16 +529,16 @@ function Player2Object_ProcessPlayer2
 		end if
 	end if
 
-	if player.invincible > 0
+	if player.invincibleTimer > 0
 		if object.state != PlayerObject_Knockback
-			if player.invincible > 2000
-				player.invincible = 120
+			if player.invincibleTimer > 2000
+				player.invincibleTimer = 120
 				player.blinkTimer = 3
 			end if
 		end if
 
-		player.invincible--
-		if player.invincible == 0
+		player.invincibleTimer--
+		if player.invincibleTimer == 0
 			player.blinkTimer = 0
 			object.visible = true
 		end if
@@ -566,19 +566,19 @@ function Player2Object_ProcessPlayer2
 end function
 
 
-function Player2Object_ProcessVSPlayer2
+function Player2Object_ProcessPlayer2_VS
 	CallNativeFunction2(ReceiveEntity, object.entityPos, true)
 	object.type = TypeName[Player 2 Object]
 
-	if player.speedShoes > 0
-		player.speedShoes--
-		if player.speedShoes < 1
+	if player.speedShoesTimer > 0
+		player.speedShoesTimer--
+		if player.speedShoesTimer < 1
 			currentPlayer = object.entityPos
 			CallFunction(PlayerObject_SwitchPhysicsState)
 
 			temp0 = 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-				temp0 += player[currentPlayer].speedShoes
+				temp0 += player[currentPlayer].speedShoesTimer
 			next
 
 			if temp0 == 0
@@ -587,7 +587,7 @@ function Player2Object_ProcessVSPlayer2
 				end if
 			end if
 
-			player.speedShoes = 0
+			player.speedShoesTimer = 0
 		end if
 	end if
 
@@ -603,12 +603,12 @@ function Player2Object_ProcessVSPlayer2
 		end if
 	end if
 
-	if player.invincible > 0
-		player.invincible--
-		if player.invincible == 0
+	if player.invincibleTimer > 0
+		player.invincibleTimer--
+		if player.invincibleTimer == 0
 			temp0 = 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-				temp0 += player[currentPlayer].invincible
+				temp0 += player[currentPlayer].invincibleTimer
 			next
 			
 			if temp0 == 0
@@ -665,7 +665,7 @@ event ObjectMain
 
 		CallFunction(TailsObject_ProcessTailAnim)
 	else
-		CallFunction(Player2Object_ProcessVSPlayer2)
+		CallFunction(Player2Object_ProcessPlayer2_VS)
 		CallFunction(object.state)
 		ProcessAnimation()
 
@@ -882,8 +882,8 @@ end event
 
 
 event ObjectStartup
-	Player2Object_flyCarryPosA 		= 1
-	Player2Object_flyCarryPosB 		= 0
+	Player2Object_nextLeaderPosID 		= 1
+	Player2Object_lastLeaderPosID 		= 0
 	Player2Object_stateUp 			= 0
 	Player2Object_stateDown 		= 0
 	Player2Object_stateLeft 		= 0
@@ -919,7 +919,7 @@ event ObjectStartup
 			LoadAnimation("Sonic.ani")
 			object[1].propertyValue = PlayerName[SONIC]
 			player[1].jumpOffset = -5
-			player[1].jumpAbility = PlayerObject_ShieldAbilities
+			player[1].jumpAbility = PlayerObject_JumpAbility_Sonic
 			ANI_PEELOUT = ANI_RUNNING
 			break
 
@@ -927,7 +927,7 @@ event ObjectStartup
 			LoadAnimation("Tails.ani")
 			object[1].propertyValue = PlayerName[TAILS]
 			player[1].jumpOffset = -1
-			player[1].jumpAbility = PlayerObject_StartTailsFlight
+			player[1].jumpAbility = PlayerObject_JumpAbility_Tails
 			stage.player2Enabled = 0
 			break
 
@@ -935,7 +935,7 @@ event ObjectStartup
 			LoadAnimation("Knuckles.ani")
 			object[1].propertyValue = PlayerName[KNUCKLES]
 			player[1].jumpOffset = -5
-			player[1].jumpAbility = PlayerObject_StartKnuxGlide
+			player[1].jumpAbility = PlayerObject_JumpAbility_Knux
 			ANI_PEELOUT = ANI_RUNNING
 			break
 		end switch
@@ -959,12 +959,14 @@ event ObjectStartup
 		object[1].controlMode = 0
 		object[1].drawOrder = -1
 		player[1].sortedDrawOrder = 4
+
 		currentPlayer = 1
 		CallFunction(PlayerObject_SwitchPhysicsState)
+		
 		player[1].rollingDeceleration = 0x2000
 		player[1].jumpOffset = -1
-		player[1].isSidekick = 1
-		player[1].jumpAbility = Player2Object_p2JumpAbility
+		player[1].isSidekick = true
+		player[1].jumpAbility = Player2Object_JumpAbility_P2
 		player[1].spindashFunction = PlayerObject_StartSpindash
 		CheckCurrentStageFolder("Continue")
 		if checkResult == true
@@ -975,8 +977,8 @@ event ObjectStartup
 
 		temp0 = 0
 		while temp0 < 16
-			SetTableValue(object[0].xpos, temp0, Player2Object_flyCarryPosX)
-			SetTableValue(object[0].ypos, temp0, Player2Object_flyCarryPosY)
+			SetTableValue(object[0].xpos, temp0, Player2Object_leaderPosBufferX)
+			SetTableValue(object[0].ypos, temp0, Player2Object_leaderPosBufferY)
 			temp0++
 		loop
 

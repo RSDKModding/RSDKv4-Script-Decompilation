@@ -6,7 +6,16 @@
 // ----------------------------------
 
 // Aliases
-private alias 58 : TYPE_ROTATEPLATFORM
+private alias object.value0 : object.centerPos.x
+private alias object.value1 : object.centerPos.y
+private alias object.value2 : object.drawPos.x
+private alias object.value3 : object.drawPos.y
+private alias object.value4 : object.hitboxL
+private alias object.value5 : object.hitboxR
+private alias object.value6 : object.stoodPlayers
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
 reserve function RotatePlatform_DebugDraw
@@ -14,20 +23,19 @@ reserve function RotatePlatform_DebugSpawn
 
 // Static Values
 public value RotatePlatform_value48 = 0;
-
-// Tables
+private alias RotatePlatform_value48 : RotatePlatform_startDebugID
 
 function RotatePlatform_DebugDraw
-	temp0 = object[0].value17
-	temp0 -= RotatePlatform_value48
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RotatePlatform_startDebugID
 	temp0 >>= 2
 	DrawSprite(temp0)
 end function
 
 
 function RotatePlatform_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= RotatePlatform_value48
+	temp0 = debugMode[0].currentSelection
+	temp0 -= RotatePlatform_startDebugID
 	temp2 = temp0
 	temp0 &= 3
 	temp2 >>= 2
@@ -36,77 +44,90 @@ function RotatePlatform_DebugSpawn
 	temp1 <<= 6
 	temp0 += temp1
 	CreateTempObject(TypeName[Rotate Platform], temp0, object.xpos, object.ypos)
-	object[tempObjectPos].value0 = object.xpos
-	object[tempObjectPos].value1 = object.ypos
+
+	object[tempObjectPos].centerPos.x = object.xpos
+	object[tempObjectPos].centerPos.y = object.ypos
 	object[tempObjectPos].frame = temp2
 	if temp2 == 0
-		object[tempObjectPos].value4 = -32
-		object[tempObjectPos].value5 = 32
+		object[tempObjectPos].hitboxL = -32
+		object[tempObjectPos].hitboxR = 32
 	else
-		object[tempObjectPos].value4 = -24
-		object[tempObjectPos].value5 = 24
+		object[tempObjectPos].hitboxL = -24
+		object[tempObjectPos].hitboxR = 24
 	end if
 end function
 
 
 event ObjectMain
-	temp4 = object.value2
-	temp5 = object.value3
+	temp4 = object.drawPos.x
+	temp5 = object.drawPos.y
+
+	// MoveX
 	GetTableValue(temp0, 28, StageSetup_oscillationTable)
 	temp0 <<= 8
 	temp0 &= -0x10000
 	temp0 -= 0x400000
+
+	// MoveY
 	GetTableValue(temp1, 30, StageSetup_oscillationTable)
 	temp1 <<= 8
 	temp1 &= -0x10000
 	temp1 -= 0x400000
+
 	GetBit(temp2, object.propertyValue, 5)
-	if temp2 == 1
+	if temp2 == true
 		FlipSign(temp0)
 		FlipSign(temp1)
 	end if
+
 	GetBit(temp2, object.propertyValue, 6)
-	if temp2 == 1
+	if temp2 == true
 		FlipSign(temp0)
 	end if
+
 	GetBit(temp2, object.propertyValue, 4)
-	if temp2 == 0
-		object.value2 = temp0
-		object.value3 = temp1
+	if temp2 == false
+		object.drawPos.x = temp0
+		object.drawPos.y = temp1
 	else
 		FlipSign(temp0)
-		object.value2 = temp1
-		object.value3 = temp0
+		object.drawPos.x = temp1
+		object.drawPos.y = temp0
 	end if
-	object.value2 += object.value0
-	object.value3 += object.value1
-	temp6 = object.value2
+
+	object.drawPos.x += object.centerPos.x
+	object.drawPos.y += object.centerPos.y
+
+	temp6 = object.drawPos.x
 	temp6 -= temp4
-	temp7 = object.value3
+	temp7 = object.drawPos.y
 	temp7 -= temp5
-	object.xpos = object.value2
-	object.ypos = object.value3
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		GetBit(temp0, object.value6, temp2)
-		if temp0 == 1
+		GetBit(temp0, object.stoodPlayers, temp2)
+		if temp0 == true
 			object[currentPlayer].xpos += temp6
 			object[currentPlayer].ypos += temp7
 		end if
-		SetBit(object.value6, temp2, 0)
-		BoxCollisionTest(C_PLATFORM, object.entityPos, object.value4, -16, object.value5, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			SetBit(object.value6, temp2, 1)
+
+		SetBit(object.stoodPlayers, temp2, 0)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitboxL, -16, object.hitboxR, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == true
+			SetBit(object.stoodPlayers, temp2, true)
 		end if
 		temp2++
 	next
-	object.xpos = object.value0
-	object.ypos = object.value1
+
+	object.xpos = object.centerPos.x
+	object.ypos = object.centerPos.y
 end event
 
 
 event ObjectDraw
-	DrawSpriteXY(object.frame, object.value2, object.value3)
+	DrawSpriteXY(object.frame, object.drawPos.x, object.drawPos.y)
 end event
 
 
@@ -114,21 +135,23 @@ event ObjectStartup
 	LoadSpriteSheet("CPZ/Objects.gif")
 	SpriteFrame(-32, -16, 64, 27, 136, 155)
 	SpriteFrame(-24, -16, 48, 26, 136, 183)
+	
 	foreach (TypeName[Rotate Platform], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value0 = object[arrayPos0].xpos
-		object[arrayPos0].value1 = object[arrayPos0].ypos
+		object[arrayPos0].centerPos.x = object[arrayPos0].xpos
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
 		object[arrayPos0].frame = object[arrayPos0].propertyValue
 		object[arrayPos0].frame &= 15
 		if object[arrayPos0].frame == 0
-			object[arrayPos0].value4 = -32
-			object[arrayPos0].value5 = 32
+			object[arrayPos0].hitboxL = -32
+			object[arrayPos0].hitboxR = 32
 		else
-			object[arrayPos0].value4 = -24
-			object[arrayPos0].value5 = 24
+			object[arrayPos0].hitboxL = -24
+			object[arrayPos0].hitboxR = 24
 		end if
 	next
+	
 	temp0 = 0
-	RotatePlatform_value48 = DebugMode_ObjCount
+	RotatePlatform_startDebugID = DebugMode_ObjCount
 	while temp0 < 8
 		SetTableValue(TypeName[Rotate Platform], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(RotatePlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -138,11 +161,80 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // frameID
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		case 1 // flipMoveX
+			GetBit(checkResult, object.propertyValue, 6)
+			break
+		case 2 // flipMoveY
+			GetBit(checkResult, object.propertyValue, 4)
+			break
+		case 3 // flipMoveXY
+			GetBit(checkResult, object.propertyValue, 5)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // frameID
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		case 1 // flipMoveX
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 6, checkResult)
+			break
+		case 2 // flipMoveY
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 4, checkResult)
+			break
+		case 3 // flipMoveXY
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 5, checkResult)
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	object.frame = object.propertyValue
+	object.frame &= 15
+
+	DrawSprite(object.frame)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("CPZ/Objects.gif")
+	SpriteFrame(-32, -16, 64, 27, 136, 155)
+	SpriteFrame(-24, -16, 48, 26, 136, 183)
+
+	AddEditorVariable("frameID")
+	SetActiveVariable("frameID")
+	AddEnumVariable("Large", 0)
+	AddEnumVariable("Small", 1)
+
+	AddEditorVariable("flipMoveX")
+	SetActiveVariable("flipMoveX")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("flipMoveY")
+	SetActiveVariable("flipMoveY")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+
+	AddEditorVariable("flipMoveXY")
+	SetActiveVariable("flipMoveXY")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
 end event

@@ -6,14 +6,25 @@
 // ----------------------------------
 
 // Aliases
-private alias 51 : TYPE_STAIRCASE
+private alias object.value0 : object.timer
+private alias object.value1 : object.blockMovePos
+
+private alias 0 : STAIRCASE_0
+private alias 1 : STAIRCASE_1
+private alias 2 : STAIRCASE_2
+private alias 3 : STAIRCASE_3
+private alias 4 : STAIRCASE_STATIC
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
 reserve function Staircase_DebugDraw
 reserve function Staircase_DebugSpawn
 
 // Static Values
-public value Staircase_value42 = 0;
+public value Staircase_value42 = 0
+private alias Staircase_value42 : Staircase_startDebugID
 
 // Tables
 
@@ -25,50 +36,55 @@ end function
 function Staircase_DebugSpawn
 	CreateTempObject(TypeName[Staircase], 0, object.xpos, object.ypos)
 	GetBit(object[tempObjectPos].direction, object.direction, 0)
-	object[tempObjectPos].propertyValue = object[0].value17
-	object[tempObjectPos].propertyValue -= Staircase_value42
+	object[tempObjectPos].propertyValue = debugMode[0].currentSelection
+	object[tempObjectPos].propertyValue -= Staircase_startDebugID
 end function
 
 
 event ObjectMain
 	object.priority = PRIORITY_ACTIVE
 	switch object.state
-	case 0
+	case STAIRCASE_0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 112, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == COL_TOP
 				object.priority = PRIORITY_ACTIVE
-				object.value0 = 32
+				object.timer = 32
 				object.state++
 			end if
 		next
 		break
-	case 1
+
+	case STAIRCASE_1
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 112, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
-		object.value0--
-		if object.value0 < 0
-			object.value0 = 128
+
+		object.timer--
+		if object.timer < 0
+			object.timer = 128
 			object.state++
 		end if
 		break
-	case 2
+
+	case STAIRCASE_2
 		temp0 = object.xpos
 		temp1 = object.ypos
+
 		if object.direction == FLIP_NONE
 			object.xpos += 0x600000
 			temp4 = -0x200000
 		else
 			temp4 = 0x200000
 		end if
-		temp5 = object.value1
+
+		temp5 = object.blockMovePos
 		temp2 = 1
 		while temp2 < 5
 			object.ypos += temp5
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == COL_TOP
 					temp6 = object.ypos
 					temp6 &= -0x10000
 					if object.propertyValue == 0
@@ -82,8 +98,9 @@ event ObjectMain
 					temp7 -= temp6
 					object[currentPlayer].ypos += temp7
 				end if
+
 				if object[currentPlayer].gravity == GRAVITY_GROUND
-					if checkResult == 4
+					if checkResult == COL_BOTTOM
 						if object.propertyValue == 0
 							CallFunction(PlayerObject_Kill)
 						end if
@@ -93,19 +110,22 @@ event ObjectMain
 			object.xpos += temp4
 			temp2++
 		loop
+
 		if object.propertyValue == 0
-			object.value1 += 0x4000
+			object.blockMovePos += 0x4000
 		else
-			object.value1 -= 0x4000
+			object.blockMovePos -= 0x4000
 		end if
+
 		object.xpos = temp0
 		object.ypos = temp1
-		object.value0--
-		if object.value0 <= 0
+		object.timer--
+		if object.timer <= 0
 			object.state++
 		end if
 		break
-	case 3
+
+	case STAIRCASE_3
 		temp0 = object.xpos
 		temp1 = object.ypos
 		if object.direction == FLIP_NONE
@@ -114,14 +134,15 @@ event ObjectMain
 		else
 			temp4 = 0x200000
 		end if
-		temp5 = object.value1
+
+		temp5 = object.blockMovePos
 		temp2 = 1
 		while temp2 < 5
 			object.ypos += temp5
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if object[currentPlayer].gravity == GRAVITY_GROUND
-					if checkResult == 4
+					if checkResult == COL_BOTTOM
 						CallFunction(PlayerObject_Kill)
 					end if
 				end if
@@ -129,31 +150,38 @@ event ObjectMain
 			object.xpos += temp4
 			temp2++
 		loop
+
 		object.xpos = temp0
 		object.ypos = temp1
 		break
+
+	case STAIRCASE_STATIC
+		break
 	end switch
+
 	temp1 = 0
 	temp0 = screen.cameraX
 	temp0 -= object.ixpos
 	Abs(temp0)
 	temp0 -= 192
 	if temp0 >= screen.xcenter
-		temp1 = 1
+		temp1 = true
 	end if
+
 	temp0 = screen.cameraY
 	temp0 -= object.iypos
 	Abs(temp0)
 	temp0 -= 192
 	if temp0 >= screen.ycenter
-		temp1 = 1
+		temp1 = true
 	end if
-	if temp1 == 1
+
+	if temp1 == true
 		object.priority = PRIORITY_ACTIVE_BOUNDS
-		object.state = 0
-		object.value1 = 0
+		object.state = STAIRCASE_0
+		object.blockMovePos = 0
 		if object.propertyValue == 2
-			object.state = 4
+			object.state = STAIRCASE_STATIC
 		end if
 	end if
 end event
@@ -161,12 +189,13 @@ end event
 
 event ObjectDraw
 	switch object.state
-	case 0
-	case 1
+	case STAIRCASE_0
+	case STAIRCASE_1
 		DrawSprite(0)
 		break
-	case 2
-	case 3
+
+	case STAIRCASE_2
+	case STAIRCASE_3
 		temp2 = object.xpos
 		temp3 = object.ypos
 		if object.direction == FLIP_NONE
@@ -175,18 +204,25 @@ event ObjectDraw
 		else
 			temp4 = 0x200000
 		end if
-		temp5 = object.value1
+
+		temp5 = object.blockMovePos
 		temp3 += temp5
 		DrawSpriteXY(1, temp2, temp3)
+
 		temp2 += temp4
 		temp3 += temp5
 		DrawSpriteXY(1, temp2, temp3)
+
 		temp2 += temp4
 		temp3 += temp5
 		DrawSpriteXY(1, temp2, temp3)
+
 		temp2 += temp4
 		temp3 += temp5
 		DrawSpriteXY(1, temp2, temp3)
+		break
+
+	case STAIRCASE_STATIC
 		break
 	end switch
 end event
@@ -196,13 +232,15 @@ event ObjectStartup
 	LoadSpriteSheet("CPZ/Objects3.gif")
 	SpriteFrame(-16, -16, 128, 32, 1, 62)
 	SpriteFrame(-16, -16, 32, 32, 1, 62)
+
 	foreach (TypeName[Staircase], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue == 2
-			object[arrayPos0].state = 4
+			object[arrayPos0].state = STAIRCASE_STATIC
 		end if
 	next
+
 	temp0 = 0
-	Staircase_value42 = DebugMode_ObjCount
+	Staircase_startDebugID = DebugMode_ObjCount
 	while temp0 < 2
 		SetTableValue(TypeName[Staircase], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(Staircase_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -212,11 +250,41 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 7
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("CPZ/Objects3.gif")
+	SpriteFrame(-16, -16, 128, 32, 1, 62)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Extend Downwards", 0)
+	AddEnumVariable("Extend Upwards", 4) // idk why its 4, 1 also works but whatever floats your boat ig
+	AddEnumVariable("Static", 2)
 end event

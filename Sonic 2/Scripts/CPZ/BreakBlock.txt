@@ -6,15 +6,20 @@
 // ----------------------------------
 
 // Aliases
-private alias 50 : TYPE_BREAKBLOCK
+
+private alias 0 : BREAKBLOCK_SOLID
+private alias 1 : BREAKBLOCK_DEBRIS1
+private alias 2 : BREAKBLOCK_DEBRIS2
+private alias 3 : BREAKBLOCK_DEBRIS3
+private alias 4 : BREAKBLOCK_DEBRIS4
+
+// Player Aliases
+private alias object.value16 : player.isSidekick			// 0/false is player 1, 1/true if player 2
+private alias object.value19 : player.scoreBonus
 
 // Function declarations
 reserve function BreakBlock_DebugDraw
 reserve function BreakBlock_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function BreakBlock_DebugDraw
 	DrawSprite(0)
@@ -28,52 +33,58 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case BREAKBLOCK_SOLID
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].animation == ANI_JUMPING
 				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == COL_TOP
 					object[currentPlayer].yvel = -0x30000
 					object[currentPlayer].gravity = GRAVITY_AIR
-					CreateTempObject(TypeName[Object Score], object[currentPlayer].value19, object.xpos, object.ypos)
+
+					CreateTempObject(TypeName[Object Score], player[currentPlayer].scoreBonus, object.xpos, object.ypos)
 					object[tempObjectPos].drawOrder = 4
+
 					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos -= 8
 					object[tempObjectPos].iypos -= 8
 					object[tempObjectPos].xvel = -0x20000
 					object[tempObjectPos].yvel = -0x20000
-					object[tempObjectPos].state = 1
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS1
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos += 8
 					object[tempObjectPos].iypos -= 8
 					object[tempObjectPos].xvel = 0x20000
 					object[tempObjectPos].yvel = -0x20000
-					object[tempObjectPos].state = 2
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS2
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos -= 8
 					object[tempObjectPos].iypos += 8
 					object[tempObjectPos].xvel = -0x10000
 					object[tempObjectPos].yvel = -0x10000
-					object[tempObjectPos].state = 3
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS3
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos += 8
 					object[tempObjectPos].iypos += 8
 					object[tempObjectPos].xvel = 0x10000
 					object[tempObjectPos].yvel = -0x10000
-					object[tempObjectPos].state = 4
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS4
 					object[tempObjectPos].drawOrder = 5
+
 					object.type = TypeName[Blank Object]
 					
 					// global variable "array" (yes, this is actually how its done)
 					arrayPos0 = VarName[player.score]
-					if object[currentPlayer].value16 == 0
+					if player[currentPlayer].isSidekick == false
 						arrayPos0 += currentPlayer
 					end if
 
-					switch object[currentPlayer].value19
+					switch player[currentPlayer].scoreBonus
 					case 0
 						global[arrayPos0] += 100
 						break
@@ -107,10 +118,11 @@ event ObjectMain
 					end switch
 
 					if object[currentPlayer].gravity == GRAVITY_AIR
-						if object[currentPlayer].value19 < 15
-							object[currentPlayer].value19++
+						if player[currentPlayer].scoreBonus < 15
+							player[currentPlayer].scoreBonus++
 						end if
 					end if
+
 					PlaySfx(SfxName[Block Break], false)
 				end if
 			else
@@ -119,14 +131,14 @@ event ObjectMain
 		next
 		break
 		
-	case 1
-	case 2
-	case 3
-	case 4
+	case BREAKBLOCK_DEBRIS1
+	case BREAKBLOCK_DEBRIS2
+	case BREAKBLOCK_DEBRIS3
+	case BREAKBLOCK_DEBRIS4
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x3800
-		if object.outOfBounds == 1
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
 		break
@@ -146,6 +158,7 @@ event ObjectStartup
 	SpriteFrame(-8, -8, 16, 16, 181, 223)
 	SpriteFrame(-8, -8, 16, 16, 165, 239)
 	SpriteFrame(-8, -8, 16, 16, 181, 239)
+
 	SetTableValue(TypeName[Break Block], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(BreakBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(BreakBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -157,6 +170,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("CPZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 165, 223)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -6,15 +6,12 @@
 // ----------------------------------
 
 // Aliases
-private alias 60 : TYPE_ONEWAYDOOR
+private alias object.state  : object.isOpen
+private alias object.value0 : object.movePos
 
 // Function declarations
 reserve function OneWayDoor_DebugDraw
 reserve function OneWayDoor_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function OneWayDoor_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
@@ -28,17 +25,18 @@ end function
 
 
 event ObjectMain
-	if object.state == 0
-		if object.value0 > 0
-			object.value0 -= 0x80000
+	if object.isOpen == false
+		if object.movePos > 0
+			object.movePos -= 0x80000
 		end if
 	else
-		if object.value0 < 0x400000
-			object.value0 += 0x80000
+		if object.movePos < 0x400000
+			object.movePos += 0x80000
 		end if
 	end if
-	object.ypos -= object.value0
-	if object.value0 == 0
+
+	object.ypos -= object.movePos
+	if object.movePos == 0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -8, -32, 8, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
@@ -47,8 +45,9 @@ event ObjectMain
 			BoxCollisionTest(C_BOX, object.entityPos, -8, -32, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
 	end if
-	object.ypos += object.value0
-	object.state = 0
+
+	object.ypos += object.movePos
+	object.isOpen = false
 	if object.propertyValue == 0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].xvel < 0x60000
@@ -56,7 +55,7 @@ event ObjectMain
 			else
 				BoxCollisionTest(C_TOUCH, object.entityPos, -88, -32, 8, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			end if
-			object.state |= checkResult
+			object.isOpen |= checkResult
 		next
 	else
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -65,14 +64,14 @@ event ObjectMain
 			else
 				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -32, 88, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			end if
-			object.state |= checkResult
+			object.isOpen |= checkResult
 		next
 	end if
 end event
 
 
 event ObjectDraw
-	temp0 = object.value0
+	temp0 = object.movePos
 	FlipSign(temp0)
 	temp0 += object.ypos
 	DrawSpriteFX(0, FX_FLIP, object.xpos, temp0)
@@ -82,15 +81,39 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("CPZ/Objects.gif")
 	SpriteFrame(-8, -32, 16, 64, 206, 142)
+
 	foreach (TypeName[One Way Door], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue == 1
 			object[arrayPos0].direction = FLIP_X
 		end if
 	next
+
 	SetTableValue(TypeName[One Way Door], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(OneWayDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(OneWayDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -98,6 +121,11 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("CPZ/Objects.gif")
+	SpriteFrame(-8, -32, 16, 64, 206, 142)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Left Only", 0)
+	AddEnumVariable("Right Only", 1)
 end event

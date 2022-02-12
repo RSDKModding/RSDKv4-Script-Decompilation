@@ -5,35 +5,76 @@
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
-// Aliases
-private alias 41 : TYPE_WATER
+// Any water objects in the scene should be followed by THREE blank objects, these manage player stuff
 
-private alias ZoneSetup_value34 : CPZSetup_FlashTimer
+// Aliases
+private alias object.value1 : object.constBubbleTimer
+private alias object.value2 : object.randBubbleTimer
+private alias object.value3 : object.proccessActEffects
+private alias object.value8 : object.nextTrackID // stores the track that should play after the drowning one stops
+
+// Player Aliases
+private alias object.value1  : player.timer
+private alias object.value3  : player.drownTimer
+private alias object.value4  : player.drownLevel
+private alias object.value7  : player.invincibleTimer
+private alias object.value18 : player.sortedDrawOrder
+private alias object.value20 : player.topSpeed
+private alias object.value21 : player.acceleration
+private alias object.value22 : player.deceleration
+private alias object.value23 : player.airAcceleration
+private alias object.value24 : player.airDeceleration
+private alias object.value25 : player.gravityStrength
+private alias object.value27 : player.jumpStrength
+private alias object.value28 : player.jumpCap
+private alias object.value37 : player.shield
+
+// AirBubble Aliases
+private alias object.value1 : airBubble.originPos.x
+private alias object.value2 : airBubble.targetPlayer
+
+// CountdownBubble Aliases
+private alias object.value1 : countdownBubble.drawPos.x
+private alias object.value2 : countdownBubble.drawPos.y
+
+// Shields
+private alias 0 : SHIELD_NONE
+private alias 1 : SHIELD_NORMAL
+private alias 2 : SHIELD_BUBBLE
+private alias 3 : SHIELD_FIRE
+private alias 4 : SHIELD_LIGHTNING
 
 // Function declarations
-reserve function Water_Function103
-reserve function Water_Function104
-reserve function Water_Function105
-reserve function Water_Function106
+reserve function Water_ProcessCPZAct1
+reserve function Water_ProcessCPZAct2
+reserve function Water_SpawnSmallAirBubble
+reserve function Water_SpawnCountDownBubble
 reserve function Water_ResetDrownMusic
 
 // Static Values
 public value Water_value37 = 0;
 public value Water_value38 = 0;
 
+private alias Water_value37 : Water_waterSlotID
+private alias Water_value38 : Water_activateFlag
+
+// Uses Water_ since all water objects use it from the setup so its easier to make new objs this way
+private alias ZoneSetup_value34 : Water_flashTimer
+
 // Tables
-public table Water_table42
+public table Water_processActTable
 	0, 0, 0
 end table
 
-function Water_Function103
+function Water_ProcessCPZAct1
+	// No code!
 end function
 
 
-function Water_Function104
+function Water_ProcessCPZAct2
 	if object.state == 0
 		stage.newWaterLevel = 0x7100000
-		if temp0 >= 0x1E80
+		if temp0 >= 7808
 			stage.newWaterLevel = 0x5100000
 			object.state++
 		end if
@@ -41,80 +82,85 @@ function Water_Function104
 end function
 
 
-function Water_Function105
-	if object[+currentPlayer].value1 > 0
-		object[+currentPlayer].value1--
-		if object[+currentPlayer].value2 > 0
-			object[+currentPlayer].value2--
+function Water_SpawnSmallAirBubble
+	if object[+currentPlayer].constBubbleTimer > 0
+		object[+currentPlayer].constBubbleTimer--
+
+		if object[+currentPlayer].randBubbleTimer > 0
+			object[+currentPlayer].randBubbleTimer--
 		else
 			CreateTempObject(TypeName[Air Bubble], 2, object[currentPlayer].xpos, object[currentPlayer].ypos)
 			object[tempObjectPos].drawOrder = 4
 			object[tempObjectPos].yvel = -0x8800
-			object[tempObjectPos].value2 = currentPlayer
+			airBubble[tempObjectPos].targetPlayer = currentPlayer
 			if object[currentPlayer].direction == FLIP_NONE
 				object[tempObjectPos].xpos += 0x60000
 			else
 				object[tempObjectPos].xpos -= 0x60000
 				object[tempObjectPos].angle = 256
 			end if
-			object[tempObjectPos].value1 = object[tempObjectPos].xpos
-			object[+currentPlayer].value2 = 512
+			airBubble[tempObjectPos].originPos.x = object[tempObjectPos].xpos
+			object[+currentPlayer].randBubbleTimer = 512
 		end if
 	else
 		Rand(temp0, 3)
 		if temp0 == 1
-			Rand(object[+currentPlayer].value2, 16)
-			object[+currentPlayer].value2 += 8
+			Rand(object[+currentPlayer].randBubbleTimer, 16)
+			object[+currentPlayer].randBubbleTimer += 8
 		else
-			object[+currentPlayer].value2 = 512
+			object[+currentPlayer].randBubbleTimer = 512
 		end if
-		object[+currentPlayer].value1 = 60
+
+		object[+currentPlayer].constBubbleTimer = 60
 		CreateTempObject(TypeName[Air Bubble], 2, object[currentPlayer].xpos, object[currentPlayer].ypos)
 		object[tempObjectPos].drawOrder = 4
 		object[tempObjectPos].yvel = -0x8800
-		object[tempObjectPos].value2 = currentPlayer
+		airBubble[tempObjectPos].targetPlayer = currentPlayer
 		if object[currentPlayer].direction == FLIP_NONE
 			object[tempObjectPos].xpos += 0x60000
 		else
 			object[tempObjectPos].xpos -= 0x60000
 			object[tempObjectPos].angle = 256
 		end if
-		object[tempObjectPos].value1 = object[tempObjectPos].xpos
+
+		airBubble[tempObjectPos].originPos.x = object[tempObjectPos].xpos
 	end if
 end function
 
 
-function Water_Function106
+function Water_SpawnCountDownBubble
 	CreateTempObject(TypeName[Countdown Bubble], temp0, object[currentPlayer].xpos, object[currentPlayer].ypos)
 	object[tempObjectPos].drawOrder = 5
 	object[tempObjectPos].yvel = -0x8800
-	object[tempObjectPos].value2 = currentPlayer
+	countdownBubble[tempObjectPos].drawPos.y = currentPlayer // this is odd... this is drawPos.y, not "targetPlayer", likely a leftover from AirBubble spawning
 	if object[currentPlayer].direction == FLIP_NONE
 		object[tempObjectPos].xpos += 0x60000
 	else
 		object[tempObjectPos].xpos -= 0x60000
 		object[tempObjectPos].angle = 256
 	end if
-	object[tempObjectPos].value1 = object[tempObjectPos].xpos
+
+	countdownBubble[tempObjectPos].drawPos.x = object[tempObjectPos].xpos
 end function
 
 
 function Water_ResetDrownMusic
 	if currentPlayer == 0
-		arrayPos0 = Water_value37
+		arrayPos0 = Water_waterSlotID
 		arrayPos0 += currentPlayer
 		if object[currentPlayer].type != TypeName[Death Event]
-			if music.currentTrack == 6
-				if object[arrayPos0].value8 == 2
+			if music.currentTrack == TRACK_DROWNING
+				if object[arrayPos0].nextTrackID == TRACK_INVINCIBLE
 					arrayPos1 = currentPlayer
 					arrayPos1 += playerCount
 					if object[arrayPos1].type != TypeName[Invincibility]
-						if PlayerObject_SuperState != 1
-							object[arrayPos0].value8 = 0
+						if PlayerObject_SuperState != SUPERSTATE_SUPER
+							object[arrayPos0].nextTrackID = TRACK_STAGE
 						end if
 					end if
 				end if
-				PlayMusic(object[arrayPos0].value8)
+
+				PlayMusic(object[arrayPos0].nextTrackID)
 			end if
 		end if
 	end if
@@ -126,14 +172,17 @@ event ObjectMain
 	temp0 >>= 16
 	temp1 = object[0].ypos
 	temp1 >>= 16
+
 	arrayPos0 = object.entityPos
-	CallFunction(object.value3)
+	CallFunction(object.proccessActEffects)
+
 	if object.ypos < stage.newWaterLevel
 		object.ypos += 0x10000
 	end if
 	if object.ypos > stage.newWaterLevel
 		object.ypos -= 0x10000
 	end if
+
 	temp0 = oscillation
 	temp0 <<= 1
 	Sin(stage.waterLevel, temp0)
@@ -141,9 +190,10 @@ event ObjectMain
 	stage.waterLevel += object.ypos
 	temp7 = stage.waterLevel
 	stage.waterLevel >>= 16
+	
 	currentPlayer = 0
 	while currentPlayer < playerCount
-		if object[currentPlayer].value25 == 0x3800
+		if player[currentPlayer].gravityStrength == 0x3800
 			CheckNotEqual(object[currentPlayer].type, TypeName[Debug Mode])
 			temp0 = checkResult
 			CheckNotEqual(object[currentPlayer].state, PlayerObject_Death)
@@ -152,35 +202,41 @@ event ObjectMain
 			temp0 &= checkResult
 			CheckGreater(object[currentPlayer].ypos, temp7)
 			temp0 &= checkResult
-			if temp0 == 1
+			if temp0 == true
 				if object[currentPlayer].yvel > 0
 					object[currentPlayer].yvel >>= 2
 				end if
+
 				if object.ypos < stage.newWaterLevel
 					object[currentPlayer].yvel += 0x10000
 				end if
+
 				if object[currentPlayer].state == PlayerObject_HandleTailsFlight
 					StopSfx(SfxName[Flying])
 					StopSfx(SfxName[Jump])
 				end if
+
 				object[currentPlayer].xvel >>= 1
 				object[currentPlayer].speed >>= 1
+
 				CallFunction(PlayerObject_SwitchPhysicsState)
 				if currentPlayer == 0
 					ZoneSetup_value36 = 1
 				end if
+
 				if object[currentPlayer].yvel != 0
 					CreateTempObject(TypeName[Water Splash], 0, object[currentPlayer].xpos, temp7)
 					object[tempObjectPos].drawOrder = 4
-					object[currentPlayer].value18 = 4
+					player[currentPlayer].sortedDrawOrder = 4
 					PlaySfx(SfxName[Water Splash], false)
 				end if
-				object[+currentPlayer].value1 = 52
-				object[currentPlayer].value3 = 0
+
+				object[+currentPlayer].constBubbleTimer = 52
+				player[currentPlayer].drownTimer = 0
 			end if
 		else
-			if object[currentPlayer].value7 == 0
-				if object[currentPlayer].value37 == 3
+			if player[currentPlayer].invincibleTimer == 0
+				if player[currentPlayer].shield == SHIELD_FIRE
 					temp2 = 0
 					while temp2 < 8
 						Rand(temp0, 32)
@@ -192,128 +248,142 @@ event ObjectMain
 						temp1 <<= 16
 						temp1 += object[currentPlayer].ypos
 						CreateTempObject(TypeName[Dust Puff], 0, temp0, temp1)
-						object[tempObjectPos].drawOrder = object[currentPlayer].value18
+						object[tempObjectPos].drawOrder = player[currentPlayer].sortedDrawOrder
 						object[tempObjectPos].drawOrder++
 						object[tempObjectPos].xvel = object[currentPlayer].xvel
 						object[tempObjectPos].yvel = object[currentPlayer].yvel
 						temp2++
 					loop
-					object[currentPlayer].value37 = 0
+
+					player[currentPlayer].shield = SHIELD_NONE
 					arrayPos0 = currentPlayer
 					arrayPos0 += playerCount
 					CallFunction(PlayerObject_RestorePowerup)
 				end if
+
 				// Player hit the water with a lightning shield - take their shield and electrocute the water
-				if object[currentPlayer].value37 == 4
-					object[currentPlayer].value37 = 0
+				if player[currentPlayer].shield == SHIELD_LIGHTNING
+					player[currentPlayer].shield = SHIELD_NONE
 					arrayPos0 = currentPlayer
 					arrayPos0 += playerCount
 					CallFunction(PlayerObject_RestorePowerup)
-					CPZSetup_flashTimer = 4
+					Water_flashTimer = 4
 				end if
 			end if
-			if object[currentPlayer].value37 != 2
-				if object[currentPlayer].value3 == 0
-					object[currentPlayer].value4 = 0
+
+			if player[currentPlayer].shield != SHIELD_BUBBLE
+				if player[currentPlayer].drownTimer == 0
+					player[currentPlayer].drownLevel = 0
 					CallFunction(Water_ResetDrownMusic)
 				end if
-				switch object[currentPlayer].value4
+
+				switch player[currentPlayer].drownLevel
 				case 0
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 360
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 360
 						if currentPlayer == 0
 							PlaySfx(SfxName[Drown Alert], false)
 						end if
-						object[currentPlayer].value4++
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 1
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 660
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 660
 						if currentPlayer == 0
 							PlaySfx(SfxName[Drown Alert], false)
 						end if
-						object[currentPlayer].value4++
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 2
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 960
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 960
 						if currentPlayer == 0
 							PlaySfx(SfxName[Drown Alert], false)
 						end if
-						object[currentPlayer].value4++
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 3
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 0x438
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 1080
 						if currentPlayer == 0
-							object.value8 = music.currentTrack
-							PlayMusic(6)
+							object.nextTrackID = music.currentTrack
+							PlayMusic(TRACK_DROWNING)
 						end if
+
 						temp0 = 0
-						CallFunction(Water_Function106)
-						object[currentPlayer].value4++
+						CallFunction(Water_SpawnCountDownBubble)
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 4
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 0x4B0
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 1200
 						temp0 = 1
-						CallFunction(Water_Function106)
-						object[currentPlayer].value4++
+						CallFunction(Water_SpawnCountDownBubble)
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 5
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 0x528
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 1320
 						temp0 = 2
-						CallFunction(Water_Function106)
-						object[currentPlayer].value4++
+						CallFunction(Water_SpawnCountDownBubble)
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 6
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 0x5A0
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 1440
 						temp0 = 3
-						CallFunction(Water_Function106)
-						object[currentPlayer].value4++
+						CallFunction(Water_SpawnCountDownBubble)
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 7
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 0x618
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 1560
 						temp0 = 4
-						CallFunction(Water_Function106)
-						object[currentPlayer].value4++
+						CallFunction(Water_SpawnCountDownBubble)
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 8
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 0x690
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 1680
 						temp0 = 5
-						CallFunction(Water_Function106)
-						object[currentPlayer].value4++
+						CallFunction(Water_SpawnCountDownBubble)
+						player[currentPlayer].drownLevel++
 					end if
 					break
+
 				case 9
-					CallFunction(Water_Function105)
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 0x708
+					CallFunction(Water_SpawnSmallAirBubble)
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 1800
 						if object[currentPlayer].state != PlayerObject_Death
 							if currentPlayer == 0
-								stage.timeEnabled = 0
-								screen.cameraEnabled = 0
+								stage.timeEnabled = false
+								screen.cameraEnabled = false
 							end if
 							object[currentPlayer].state = PlayerObject_Drown
 							object[currentPlayer].animation = ANI_DROWNING
@@ -322,22 +392,24 @@ event ObjectMain
 							object[currentPlayer].yvel = 0
 							object[currentPlayer].tileCollisions = 0
 							object[currentPlayer].interaction = 0
-							object[currentPlayer].value18 = 5
-							object[+currentPlayer].value1 = 2
+							player[currentPlayer].sortedDrawOrder = 5
+							object[+currentPlayer].constBubbleTimer = 2
 							PlaySfx(SfxName[Drowning], false)
-							object[currentPlayer].value4++
+							player[currentPlayer].drownLevel++
 						end if
 					end if
 					break
+
 				case 10
-					object[currentPlayer].value3++
-					if object[currentPlayer].value3 == 0x744
-						object[currentPlayer].value4++
+					player[currentPlayer].drownTimer++
+					if player[currentPlayer].drownTimer == 1860
+						player[currentPlayer].drownLevel++
 					end if
-					if object[+currentPlayer].value1 > 0
-						object[+currentPlayer].value1--
-						if object[+currentPlayer].value2 > 0
-							object[+currentPlayer].value2--
+
+					if object[+currentPlayer].constBubbleTimer > 0
+						object[+currentPlayer].constBubbleTimer--
+						if object[+currentPlayer].randBubbleTimer > 0
+							object[+currentPlayer].randBubbleTimer--
 						else
 							Rand(temp1, 2)
 							temp1 += 2
@@ -345,49 +417,63 @@ event ObjectMain
 							object[tempObjectPos].drawOrder = 5
 							object[tempObjectPos].yvel = -0x8800
 							object[tempObjectPos].ypos -= 0x60000
-							object[tempObjectPos].value2 = currentPlayer
+							airBubble[tempObjectPos].targetPlayer = currentPlayer
 							Rand(object[tempObjectPos].angle, 256)
-							object[tempObjectPos].value1 = object[tempObjectPos].xpos
-							object[+currentPlayer].value2 = 512
+							airBubble[tempObjectPos].originPos.x = object[tempObjectPos].xpos
+							object[+currentPlayer].randBubbleTimer = 512
 						end if
 					else
 						Rand(temp0, 5)
 						if temp0 == 1
-							object[+currentPlayer].value2 = 2
+							object[+currentPlayer].randBubbleTimer = 2
 						else
-							object[+currentPlayer].value2 = 512
+							object[+currentPlayer].randBubbleTimer = 512
 						end if
-						object[+currentPlayer].value1 = 6
+						object[+currentPlayer].constBubbleTimer = 6
+
 						Rand(temp1, 2)
 						temp1 += 2
 						CreateTempObject(TypeName[Air Bubble], temp1, object[currentPlayer].xpos, object[currentPlayer].ypos)
 						object[tempObjectPos].drawOrder = 5
 						object[tempObjectPos].yvel = -0x8800
 						object[tempObjectPos].ypos -= 0x60000
-						object[tempObjectPos].value2 = currentPlayer
-						Rand(object[tempObjectPos].angle, 256)
-						object[tempObjectPos].value1 = object[tempObjectPos].xpos
+						airBubble[tempObjectPos].targetPlayer = currentPlayer
+						Rand(object[tempObjectPos].angle, 0x100)
+						airBubble[tempObjectPos].originPos.x = object[tempObjectPos].xpos
 					end if
 					break
 				end switch
 			end if
+
 			CheckEqual(object[currentPlayer].type, TypeName[Debug Mode])
 			temp0 = checkResult
 			CheckLower(object[currentPlayer].ypos, temp7)
 			temp0 |= checkResult
-			if temp0 == 1
+			if temp0 == true
 				if object[currentPlayer].state != PlayerObject_Death
 					object[currentPlayer].yvel <<= 1
 					if object[currentPlayer].yvel < -0x100000
 						object[currentPlayer].yvel = -0x100000
 					end if
+
+					// plucked this from the forever version, *this* is the water jump bug fix
+					if object[currentPlayer].animation == ANI_JUMPING
+						if player[currentPlayer].timer > 0
+							if object[currentPlayer].yvel < -0x68000
+								object[currentPlayer].yvel = -0x68000
+							end if
+						end if
+					end if
+
 					if object[currentPlayer].state == PlayerObject_HandleTailsFlight
-						if object[currentPlayer].value1 < 480
+						if player[currentPlayer].timer < 480
 							PlaySfx(SfxName[Flying], true)
 						else
 							PlaySfx(SfxName[Jump], true)
 						end if
 					end if
+					
+
 					CallFunction(PlayerObject_SwitchPhysicsState)
 					if object[currentPlayer].yvel != 0
 						temp0 = object.ypos
@@ -395,19 +481,21 @@ event ObjectMain
 						if temp0 < 0xF00000
 							CreateTempObject(TypeName[Water Splash], 0, object[currentPlayer].xpos, temp7)
 							object[tempObjectPos].drawOrder = 4
-							object[currentPlayer].value18 = 4
 							PlaySfx(SfxName[Water Splash], false)
 						end if
 					end if
-					object[currentPlayer].value3 = 0
+
+					player[currentPlayer].drownTimer = 0
 					CallFunction(Water_ResetDrownMusic)
 				end if
 			end if
 		end if
+		
 		currentPlayer++
 	loop
+
 	object.animationTimer++
-	object.animationTimer &= 31
+	object.animationTimer %= 24
 	object.frame = object.animationTimer
 	object.frame >>= 3
 end event
@@ -420,22 +508,26 @@ event ObjectDraw
 	temp0 += temp1
 	temp0 &= 63
 	FlipSign(temp0)
+
 	temp1 = stage.waterLevel
 	temp1 -= screen.yoffset
 	DrawSpriteScreenFX(object.frame, FX_INK, temp0, temp1)
+
 	temp0 += 256
 	DrawSpriteScreenFX(object.frame, FX_INK, temp0, temp1)
 end event
 
 
 event ObjectStartup
-	SetTableValue(Water_Function103, 1, Water_table42)
-	SetTableValue(Water_Function104, 2, Water_table42)
-	if options.vsMode == 1
+	SetTableValue(Water_ProcessCPZAct1, 1, Water_processActTable)
+	SetTableValue(Water_ProcessCPZAct2, 2, Water_processActTable)
+
+	if options.vsMode == true
 		foreach (TypeName[Water], arrayPos0, ALL_ENTITIES)
 			object[arrayPos0].type = TypeName[Blank Object]
 		next
 	end if
+
 	foreach (TypeName[Water], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		object[arrayPos0].drawOrder = 5
@@ -451,18 +543,19 @@ event ObjectStartup
 			temp1 = object[0].ypos
 			temp1 >>= 16
 		end if
-		Water_value37 = arrayPos0
-		GetTableValue(object[arrayPos0].value3, stage.actNum, Water_table42)
-		CallFunction(object[arrayPos0].value3)
+		Water_waterSlotID = arrayPos0
+		GetTableValue(object[arrayPos0].proccessActEffects, stage.actNum, Water_processActTable)
+		CallFunction(object[arrayPos0].proccessActEffects)
 		stage.waterLevel = stage.newWaterLevel
 		stage.waterLevel >>= 16
 		object[arrayPos0].ypos = stage.newWaterLevel
+		
 		if starPostID > 31
 			stage.waterState = recWaterState
 			stage.waterLevel = recWaterLevel
 			stage.newWaterLevel = recWaterLevel
 			stage.newWaterLevel <<= 16
-			arrayPos0 = Water_value37
+			arrayPos0 = Water_waterSlotID
 			object[arrayPos0].ypos = stage.newWaterLevel
 		else
 			if credits.screen == 0
@@ -470,28 +563,30 @@ event ObjectStartup
 			end if
 		end if
 	next
-	Water_value38 = 0
-	foreach (256, currentPlayer, ALL_ENTITIES)
-		object[currentPlayer].value3 = 0
+
+	Water_activateFlag = false
+
+	foreach (GROUP_PLAYERS, currentPlayer, ALL_ENTITIES)
+		player[currentPlayer].drownTimer = 0
 		if object[currentPlayer].ypos > stage.newWaterLevel
 			object[currentPlayer].yvel >>= 2
 			object[currentPlayer].xvel >>= 1
 			object[currentPlayer].speed >>= 1
-			object[currentPlayer].value20 >>= 1
-			object[currentPlayer].value21 >>= 1
-			object[currentPlayer].value22 >>= 1
-			object[currentPlayer].value23 >>= 1
-			object[currentPlayer].value24 >>= 1
-			object[currentPlayer].value25 = 0x1000
-			if stage.playerListPos == 2
-				object[currentPlayer].value27 = 0x30000
+			player[currentPlayer].topSpeed >>= 1
+			player[currentPlayer].acceleration >>= 1
+			player[currentPlayer].deceleration >>= 1
+			player[currentPlayer].airAcceleration >>= 1
+			player[currentPlayer].airDeceleration >>= 1
+			player[currentPlayer].gravityStrength = 0x1000
+			if stage.playerListPos == PlayerName[KNUCKLES]
+				player[currentPlayer].jumpStrength = 0x30000
 			else
-				object[currentPlayer].value27 = 0x38000
+				player[currentPlayer].jumpStrength = 0x38000
 			end if
-			object[currentPlayer].value28 = -0x20000
-			arrayPos0 = Water_value37
+			player[currentPlayer].jumpCap = -0x20000
+			arrayPos0 = Water_waterSlotID
 			arrayPos0 += currentPlayer
-			object[arrayPos0].value1 = 52
+			object[arrayPos0].constBubbleTimer = 52
 		end if
 	next
 
@@ -509,6 +604,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("CPZ/Objects2.gif")
+	SpriteFrame(0, -8, 256, 16, 0, 0)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

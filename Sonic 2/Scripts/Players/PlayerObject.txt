@@ -95,11 +95,11 @@ private alias object.right		:	player.right
 private alias object.value0  : player.rings
 private alias object.value1  : player.timer
 private alias object.value2  : player.abilityTimer			// Note: Also used by death/drowning state
-private alias object.value3  : player.drownCounter			// Countdown before player moves to next drown "level"
+private alias object.value3  : player.drownTimer			// Countdown before player moves to next drown "level"
 private alias object.value4  : player.drownLevel
 private alias object.value5  : player.customRollAnimSpeed
-private alias object.value6  : player.speedShoes
-private alias object.value7  : player.invincible
+private alias object.value6  : player.speedShoesTimer
+private alias object.value7  : player.invincibleTimer
 private alias object.value8  : player.blinkTimer
 private alias object.value9  : player.skidSpeed
 private alias object.value10 : player.animationReserve		// Used by springs to store what animation will play after the bounce animation
@@ -128,7 +128,7 @@ private alias object.value31 : player.rollingDeceleration	// Passive rolling dec
 private alias object.value32 : player.jumpAbility			// Used to store whatever function this player has for its jump ability
 private alias object.value33 : player.spindashFunction		// Used to store whatever function this player has for its spindash ability
 private alias object.value34 : player.collisionDisabled
-private alias object.value35 : player.doubleJumpState
+private alias object.value35 : player.jumpAbilityState
 private alias object.value36 : player.flyCarryTimer		// Tails assist lockout timer
 private alias object.value37 : player.shield				// Current shield the player has, see above constants for what is what
 private alias object.value40 : player.hitboxLeft
@@ -137,11 +137,11 @@ private alias object.value41 : player.hitboxRight
 private alias object.value39 : player.hitboxBottom
 private alias object.value42 : player.prevGravity
 // P2 values
-private alias object.value43 : player.jumpInDelay
+private alias object.value43 : player.jumpInTimer
 private alias object.value44 : player.p2InputFunction
-private alias object.value45 : player.p2JumpActionDelay
-private alias object.value46 : player.curFlyCarryPos.x
-private alias object.value47 : player.curFlyCarryPos.y
+private alias object.value45 : player.autoJumpTimer
+private alias object.value46 : player.targetLeaderPos.x
+private alias object.value47 : player.targetLeaderPos.y
 
 // Death Event related values
 private alias object.drawOrder : deathEvent.drawOrder
@@ -159,8 +159,8 @@ reserve function PlayerObject_HandleAirMovement
 reserve function PlayerObject_ResetOnFloor
 reserve function PlayerObject_StartJump
 reserve function PlayerObject_StartSpindash
-reserve function PlayerObject_StartTailsFlight
-reserve function PlayerObject_StartKnuxGlide
+reserve function PlayerObject_JumpAbility_Tails
+reserve function PlayerObject_JumpAbility_Knux
 reserve function PlayerObject_HandleGround
 reserve function PlayerObject_HandleBored2
 reserve function PlayerObject_HandleAir
@@ -209,14 +209,14 @@ reserve function PlayerObject_RollDecel2
 reserve function PlayerObject_Transforming
 reserve function PlayerObject_SuperTransform
 reserve function PlayerObject_BubbleBounce
-reserve function PlayerObject_ShieldAbilities
+reserve function PlayerObject_JumpAbility_Sonic
 reserve function PlayerObject_StartFlyCarry
 
 // Static Values
-public value PlayerObject_LeaderX = 0
-public value PlayerObject_LeaderY = 0
-public value PlayerObject_SidekickX = 0
-public value PlayerObject_SidekickY = 0
+public value PlayerObject_flyCarryLeaderXPos = 0
+public value PlayerObject_flyCarryLeaderYPos = 0
+public value PlayerObject_flyCarryBuddyXPos = 0
+public value PlayerObject_flyCarryBuddyYPos = 0
 public value PlayerObject_SuperState = SUPERSTATE_NONE
 public value PlayerObject_SuperRingLossTimer = 0
 public value PlayerObject_SuperBlendClr = 0
@@ -606,7 +606,7 @@ function PlayerObject_SwitchPhysicsState
 			temp2 = 2
 		end if
 
-		if player[currentPlayer].speedShoes > 0
+		if player[currentPlayer].speedShoesTimer > 0
 			SetBit(temp1, 2, true)
 			temp2 = 1
 		end if
@@ -653,7 +653,7 @@ function PlayerObject_ProcessSuperState
 	end if
 
 	if PlayerObject_SuperState == SUPERSTATE_SUPER
-		player.invincible = 60
+		player.invincibleTimer = 60
 		PlayerObject_SuperRingLossTimer++
 		if PlayerObject_SuperRingLossTimer == 60
 			PlayerObject_SuperRingLossTimer = 0
@@ -675,7 +675,7 @@ function PlayerObject_ProcessSuperState
 			PlayMusic(0)
 		end if
 
-		player.invincible = 0
+		player.invincibleTimer = 0
 		currentPlayer = object.entityPos
 		if object.state != PlayerObject_Death
 			if object.state != PlayerObject_Drown
@@ -700,7 +700,7 @@ function PlayerObject_CheckHit
 	temp0 |= checkResult
 	CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
 	temp0 |= checkResult
-	CheckNotEqual(player[currentPlayer].invincible, 0)
+	CheckNotEqual(player[currentPlayer].invincibleTimer, 0)
 	temp0 |= checkResult
 	CheckEqual(object[currentPlayer].animation, ANI_FLYING)
 	temp1 = checkResult
@@ -734,7 +734,7 @@ function PlayerObject_CheckHit
 		checkResult = true
 	else
 		if object[currentPlayer].state != PlayerObject_Death
-			if player[currentPlayer].invincible == 0
+			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
 					object[currentPlayer].state = PlayerObject_Hurt
 					if object[currentPlayer].xpos > object.xpos
@@ -760,7 +760,7 @@ function PlayerObject_BadnikBreak
 	temp0 |= checkResult
 	CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
 	temp0 |= checkResult
-	CheckNotEqual(player[currentPlayer].invincible, 0)
+	CheckNotEqual(player[currentPlayer].invincibleTimer, 0)
 	temp0 |= checkResult
 	CheckEqual(object[currentPlayer].animation, ANI_FLYING)
 	temp1 = checkResult
@@ -861,7 +861,7 @@ function PlayerObject_BadnikBreak
 		arrayPos0 = temp1
 	else
 		if object[currentPlayer].state != PlayerObject_Death
-			if player[currentPlayer].invincible == 0
+			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
 					object[currentPlayer].state = PlayerObject_Hurt
 					if object[currentPlayer].xpos > object.xpos
@@ -880,7 +880,7 @@ function PlayerObject_Hit
 	if object[currentPlayer].state != PlayerObject_Death
 		arrayPos0 = object[currentPlayer].entityPos
 		arrayPos0 += playerCount
-		if player[currentPlayer].invincible == 0
+		if player[currentPlayer].invincibleTimer == 0
 			if player[currentPlayer].blinkTimer == 0
 				object[currentPlayer].state = PlayerObject_Hurt
 				if object[currentPlayer].xpos > object.xpos
@@ -899,7 +899,7 @@ function PlayerObject_FireHit
 		if object[currentPlayer].state != PlayerObject_Death
 			arrayPos0 = object[currentPlayer].entityPos
 			arrayPos0 += playerCount
-			if player[currentPlayer].invincible == 0
+			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
 					object[currentPlayer].state = PlayerObject_Hurt
 					if object[currentPlayer].xpos > object.xpos
@@ -919,7 +919,7 @@ function PlayerObject_LightningHit
 		if object[currentPlayer].state != PlayerObject_Death
 			arrayPos0 = object[currentPlayer].entityPos
 			arrayPos0 += playerCount
-			if player[currentPlayer].invincible == 0
+			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
 					object[currentPlayer].state = PlayerObject_Hurt
 					if object[currentPlayer].xpos > object.xpos
@@ -951,7 +951,7 @@ function PlayerObject_ProjectileHit
 		if object[currentPlayer].state != PlayerObject_Death
 			arrayPos0 = object[currentPlayer].entityPos
 			arrayPos0 += playerCount
-			if player[currentPlayer].invincible == 0
+			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
 					object[currentPlayer].state = PlayerObject_Hurt
 					if object[currentPlayer].xpos > object.xpos
@@ -970,7 +970,7 @@ function PlayerObject_SpikeHit
 	if object[currentPlayer].state != PlayerObject_Death
 		arrayPos0 = object[currentPlayer].entityPos
 		arrayPos0 += playerCount
-		if player[currentPlayer].invincible == 0
+		if player[currentPlayer].invincibleTimer == 0
 			if object[currentPlayer].state != PlayerObject_Hurt
 				if object[currentPlayer].state != PlayerObject_Knockback
 					temp0 = options.spikeBehavior
@@ -1159,23 +1159,23 @@ function PlayerObject_ProcessPlayer
 					object[11].state = 8
 					object[11].priority = PRIORITY_ACTIVE
 					object[11].drawOrder = 6
-					player.invincible = 80
+					player.invincibleTimer = 80
 					screen.cameraEnabled = 0
 				end if
 			end if
 		end if
 	end if
 	
-	if player.speedShoes > 0
-		player.speedShoes--
-		if player.speedShoes < 1
+	if player.speedShoesTimer > 0
+		player.speedShoesTimer--
+		if player.speedShoesTimer < 1
 			currentPlayer = object.entityPos
 			CallFunction(PlayerObject_SwitchPhysicsState)
 
 			// if any player has speed shoes, continue the music
 			temp0 = 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-				temp0 += player[currentPlayer].speedShoes
+				temp0 += player[currentPlayer].speedShoesTimer
 			next
 			if temp0 == 0
 				if SlowDownMusic != 0
@@ -1183,7 +1183,7 @@ function PlayerObject_ProcessPlayer
 				end if
 			end if
 
-			player.speedShoes = 0
+			player.speedShoesTimer = 0
 		end if
 	end if
 
@@ -1199,14 +1199,14 @@ function PlayerObject_ProcessPlayer
 		end if
 	end if
 
-	if player.invincible > 0
-		player.invincible--
-		if player.invincible == 0
+	if player.invincibleTimer > 0
+		player.invincibleTimer--
+		if player.invincibleTimer == 0
 
 			// if any player is invincible, continue playing
 			temp0 = 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-				temp0 += player[currentPlayer].invincible
+				temp0 += player[currentPlayer].invincibleTimer
 			next
 
 			if temp0 == 0
@@ -1647,7 +1647,7 @@ function PlayerObject_HandleAirMovement
 	object.scrollTracking = true
 	object.yvel += player.gravityStrength
 	if object.yvel < player.jumpCap
-		if object.jumpHold == 0
+		if object.jumpHold == false
 			if player.timer > 0
 				object.yvel = player.jumpCap
 				temp0 = object.speed
@@ -1750,7 +1750,7 @@ function PlayerObject_StartJump
 
 		PlaySfx(SfxName[Jump], false)
 		player.collisionDisabled = true
-		player.doubleJumpState = 1
+		player.jumpAbilityState = 1
 	end if
 end function
 
@@ -1792,7 +1792,7 @@ function PlayerObject_SuperTransform
 		PlayMusic(7)
 
 		PlayerObject_SuperState = SUPERSTATE_SUPER
-		player[currentPlayer].invincible = 60
+		player[currentPlayer].invincibleTimer = 60
 		player[currentPlayer].blinkTimer = 0
 		object[currentPlayer].visible = true
 
@@ -1813,7 +1813,7 @@ function PlayerObject_BubbleBounce
 	CallFunction(PlayerObject_AirAcceleration)
 	CheckNotEqual(player.shield, SHIELD_BUBBLE)
 	temp0 = checkResult
-	CheckNotEqual(player.invincible, 0)
+	CheckNotEqual(player.invincibleTimer, 0)
 	temp0 |= checkResult
 	CheckEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 	temp0 |= checkResult
@@ -1824,7 +1824,7 @@ function PlayerObject_BubbleBounce
 		if object.gravity == GRAVITY_AIR
 			CallFunction(PlayerObject_HandleAirMovement)
 		else
-			player.doubleJumpState = 1
+			player.jumpAbilityState = 1
 			object.gravity = GRAVITY_AIR
 			if player.jumpStrength == 0x38000
 				temp1 = -0x40000
@@ -1861,7 +1861,7 @@ function PlayerObject_BubbleBounce
 end function
 
 
-function PlayerObject_ShieldAbilities
+function PlayerObject_JumpAbility_Sonic
 	if object.jumpPress == true
 		CheckEqual(specialStage.emeralds, 0x7F)
 		temp0 = checkResult
@@ -1876,7 +1876,7 @@ function PlayerObject_ShieldAbilities
 			currentPlayer = object.entityPos
 			CallFunction(PlayerObject_SuperTransform)
 		else
-			CheckEqual(player.invincible, 0)
+			CheckEqual(player.invincibleTimer, 0)
 			temp0 = checkResult
 			CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 			temp0 &= checkResult
@@ -1896,7 +1896,7 @@ function PlayerObject_ShieldAbilities
 							object[arrayPos0].priority = PRIORITY_ACTIVE
 						end if
 
-						player.doubleJumpState = 2
+						player.jumpAbilityState = 2
 						object[+playerCount].state = 1
 						if object.state == PlayerObject_RollingJump
 							object.state = PlayerObject_HandleAir
@@ -1912,7 +1912,7 @@ function PlayerObject_ShieldAbilities
 					object.yvel = 0x80000
 					object.xvel = 0
 					object.speed = object.xvel
-					player.doubleJumpState = 2
+					player.jumpAbilityState = 2
 					object.state = PlayerObject_BubbleBounce
 					object[+playerCount].state = 2
 					break
@@ -1928,7 +1928,7 @@ function PlayerObject_ShieldAbilities
 
 					object.speed = object.xvel
 					object.yvel = 0
-					player.doubleJumpState = 2
+					player.jumpAbilityState = 2
 					if object.entityPos == screen.cameraTarget
 						player.scrollDelay = 15
 						screen.cameraStyle = 4
@@ -1944,7 +1944,7 @@ function PlayerObject_ShieldAbilities
 				case SHIELD_LIGHTNING
 					PlaySfx(SfxName[Lightning Jump], false)
 					object.yvel = -0x58000
-					player.doubleJumpState = 2
+					player.jumpAbilityState = 2
 
 					CreateTempObject(TypeName[Lightning Spark], 0, object.xpos, object.ypos)
 					object[tempObjectPos].xvel = -0x20000
@@ -1973,7 +1973,7 @@ function PlayerObject_ShieldAbilities
 end function
 
 
-function PlayerObject_StartTailsFlight
+function PlayerObject_JumpAbility_Tails
 	if object.jumpPress == true
 		CheckEqual(specialStage.emeralds, 0x7F)
 		temp0 = checkResult
@@ -2003,7 +2003,7 @@ function PlayerObject_StartTailsFlight
 end function
 
 
-function PlayerObject_StartKnuxGlide
+function PlayerObject_JumpAbility_Knux
 	if object.jumpPress == true
 		CheckEqual(specialStage.emeralds, 0x7F)
 		temp0 = checkResult
@@ -2409,7 +2409,7 @@ function PlayerObject_HandleAir
 		end if
 
 		if object.animation == ANI_JUMPING
-			if player.doubleJumpState == 1
+			if player.jumpAbilityState == 1
 				if object.yvel >= player.jumpCap
 					CallFunction(player.jumpAbility)
 				end if
@@ -2464,7 +2464,7 @@ function PlayerObject_RollingJump
 	
 	if object.gravity == GRAVITY_AIR
 		if object.animation == ANI_JUMPING
-			if player.doubleJumpState == 1
+			if player.jumpAbilityState == 1
 				if object.yvel >= player.jumpCap
 					CallFunction(player.jumpAbility)
 				end if
@@ -2657,8 +2657,8 @@ function PlayerObject_StartFlyCarry
 		temp7 = object.yvel
 		ProcessObjectMovement()
 
-		PlayerObject_SidekickX = object.xpos
-		PlayerObject_SidekickY = object.ypos
+		PlayerObject_flyCarryBuddyXPos = object.xpos
+		PlayerObject_flyCarryBuddyYPos = object.ypos
 		temp4 = object.xpos
 		temp4 &= -0x10000
 		temp5 = object.ypos
@@ -2683,8 +2683,8 @@ function PlayerObject_StartFlyCarry
 		object[0].collisionPlane = object.collisionPlane
 		object[0].speed = object.speed
 		object[0].direction = object.direction
-		PlayerObject_LeaderX = object[0].xpos
-		PlayerObject_LeaderY = object[0].ypos
+		PlayerObject_flyCarryLeaderXPos = object[0].xpos
+		PlayerObject_flyCarryLeaderYPos = object[0].ypos
 		temp2 = object[0].xpos
 		temp2 &= -0x10000
 		temp3 = object[0].ypos
@@ -2715,10 +2715,10 @@ function PlayerObject_HandleFlyCarry
 	temp0 &= -0x10000
 	temp2 = object.xpos
 	temp2 &= -0x10000
-	if object.xpos == PlayerObject_LeaderX
-		PlayerObject_SidekickX &= -0x10000
+	if object.xpos == PlayerObject_flyCarryLeaderXPos
+		PlayerObject_flyCarryBuddyXPos &= -0x10000
 		temp1 = temp0
-		temp1 -= PlayerObject_SidekickX
+		temp1 -= PlayerObject_flyCarryBuddyXPos
 		temp2 += temp1
 	end if
 
@@ -3989,7 +3989,7 @@ event ObjectMain
 			player.blinkTimer = 0
 			object.visible = true
 			player.abilityTimer = 0
-			player.drownCounter = 0
+			player.drownTimer = 0
 			player.drownLevel = 0
 			object.frame = debugMode.currentSelection
 			screen.cameraEnabled = true
@@ -4013,7 +4013,7 @@ event ObjectMain
 			end if
 		else
 			if object.gravity == GRAVITY_GROUND
-				player.doubleJumpState = 0
+				player.jumpAbilityState = 0
 			end if
 
 			CallFunction(object.state)
@@ -4068,7 +4068,7 @@ event ObjectMain
 		CallFunction(PlayerObject_ProcessPlayer)
 
 		if object.gravity == GRAVITY_GROUND
-			player.doubleJumpState = 0
+			player.jumpAbilityState = 0
 		end if
 
 		CallFunction(object.state)
@@ -4178,7 +4178,7 @@ event ObjectStartup
 			CallFunction(PlayerObject_ProcessSuperPalS)
 			object[0].propertyValue = PlayerName[SONIC]
 			player[0].jumpOffset = -5
-			player[0].jumpAbility = PlayerObject_ShieldAbilities
+			player[0].jumpAbility = PlayerObject_JumpAbility_Sonic
 			ANI_PEELOUT = ANI_RUNNING
 			break
 
@@ -4193,7 +4193,7 @@ event ObjectStartup
 			end if
 
 			if options.tailsFlight == true
-				player[0].jumpAbility = PlayerObject_StartTailsFlight
+				player[0].jumpAbility = PlayerObject_JumpAbility_Tails
 			else
 				player[0].jumpAbility = PlayerObject_Blank
 			end if
@@ -4205,7 +4205,7 @@ event ObjectStartup
 			CallFunction(PlayerObject_ProcessSuperPalK)
 			object[0].propertyValue = PlayerName[KNUCKLES]
 			player[0].jumpOffset = -5
-			player[0].jumpAbility = PlayerObject_StartKnuxGlide
+			player[0].jumpAbility = PlayerObject_JumpAbility_Knux
 			ANI_PEELOUT = ANI_RUNNING
 
 			if options.saveSlot > 0
