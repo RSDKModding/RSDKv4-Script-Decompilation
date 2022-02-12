@@ -6,15 +6,58 @@
 // ----------------------------------
 
 // Aliases
-private alias 70 : TYPE_EGGMAN
+private alias object.value0  : object.originPos.x
+private alias object.value1  : object.originPos.y
+private alias object.value2  : object.oscillationAngle
+private alias object.value4  : object.timer
+private alias object.value5  : object.flameAnim
+private alias object.value6  : object.flameAnimTimer
+private alias object.value7  : object.health
+private alias object.value8  : object.invincibilityTimer
+private alias object.value9  : object.exploding
+private alias object.value10 : object.nonStopBopCount
+
+// Eggman States
+private alias 0 : CPZEGGMAN_AWAITPLAYER
+private alias 1 : CPZEGGMAN_BOSSFIGHT
+private alias 2 : CPZEGGMAN_EXPLODE
+private alias 3 : CPZEGGMAN_DEFEATFALL
+private alias 4 : CPZEGGMAN_DEFEATRISE
+private alias 5 : CPZEGGMAN_FLEE
+private alias 6 : CPZEGGMAN_ESCAPE
+
+// Eggman Animations
+private alias 0 : CPZEGGANI_INVISIBLE
+private alias 1 : CPZEGGANI_IDLE
+private alias 2 : CPZEGGANI_LAUGH
+private alias 3 : CPZEGGANI_HIT
+private alias 4 : CPZEGGANI_DEFEATED
+private alias 5 : CPZEGGANI_DESTROYED
+private alias 6 : CPZEGGANI_PANIC
+
+// Flame Animations
+private alias 0 : FLAME_INACTIVE
+private alias 1 : FLAME_ACTIVE
+private alias 2 : FLAME_EXPLODE
+
+// Dropper Aliases
+private alias object.value4  : chemicalDropper.boundsL
+private alias object.value5  : chemicalDropper.boundsR
+
+// Dropper States
+private alias 4 : CHEMICALDROPPER_DESTROYED
+
+// Player aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Function declarations
 reserve function CPZEggman_Oscillate
 
-// Static Values
-
 // Tables
-public table CPZEggman_table54
+public table CPZEggman_flameAnimFrameTable
 	7, 8, 8, 7, 7, 16
 end table
 
@@ -22,18 +65,18 @@ end table
 // Using CPZEggman as a prefix here because there's like 12 "Eggman" objects in the game so its less confusing this way
 
 function CPZEggman_Oscillate
-	object.ypos = object.value1
-	Sin256(temp0, object.value2)
+	object.ypos = object.originPos.y
+	Sin256(temp0, object.oscillationAngle)
 	temp0 <<= 10
 	object.ypos += temp0
-	object.value2 += 2
-	object.value2 &= 255
+	object.oscillationAngle += 2
+	object.oscillationAngle &= 255
 end function
 
 
 event ObjectMain
 	switch object.state
-	case 0
+	case CPZEGGMAN_AWAITPLAYER
 		temp0 = object.ixpos
 		temp0 -= screen.xcenter
 		stage.newXBoundary1 = temp0
@@ -41,40 +84,40 @@ event ObjectMain
 		temp0 += screen.xcenter
 		stage.newXBoundary2 = temp0
 		if object[0].xpos > object.xpos
-			object.animation = 1
+			object.animation = CPZEGGANI_IDLE
 			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
 			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
-			object.value1 = object.ypos
+			object.originPos.y = object.ypos
 			object[+1].type = TypeName[Chemical Dropper]
-			object[+1].value4 = object.xpos
-			object[+1].value4 -= 0x700000
-			object[+1].value5 = object.xpos
-			object[+1].value5 += 0x700000
+			chemicalDropper[+1].boundsL = object.xpos
+			chemicalDropper[+1].boundsL -= 0x700000
+			chemicalDropper[+1].boundsR = object.xpos
+			chemicalDropper[+1].boundsR += 0x700000
 			temp0 = screen.xcenter
 			temp0 += 256
 			temp0 <<= 16
 			object.xpos += temp0
 			object[+1].xpos = object.xpos
 			object[+1].ypos = object.ypos
-			object[+1].value0 = object.xpos
-			object[+1].value1 = object.ypos
+			object[+1].originPos.x = object.xpos
+			object[+1].originPos.y = object.ypos
 			object[+1].priority = PRIORITY_ACTIVE
-			object.value5 = 1
-			object.value7 = 8
+			object.flameAnim = FLAME_ACTIVE
+			object.health = 8
 			object.priority = PRIORITY_ACTIVE
 			object.state++
 		end if
 		break
 
-	case 1
+	case CPZEGGMAN_BOSSFIGHT
 		break
 
-	case 2
-		object.value4++
-		if object.value4 == 180
-			object.value4 = 0
-			object.animation = 5
-			object.value9 = 0
+	case CPZEGGMAN_EXPLODE
+		object.timer++
+		if object.timer == 180
+			object.timer = 0
+			object.animation = CPZEGGANI_DESTROYED
+			object.exploding = false
 			object.state++
 			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
 			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
@@ -84,43 +127,43 @@ event ObjectMain
 		end if
 		break
 
-	case 3
+	case CPZEGGMAN_DEFEATFALL
 		object.ypos += object.yvel
 		object.yvel += 0x1800
-		object.value4++
-		if object.value4 == 38
+		object.timer++
+		if object.timer == 38
 			object.yvel = 0
-			object.value4 = 0
+			object.timer = 0
 			object.animationTimer = 0
 			object.state++
 		end if
 		break
 
-	case 4
-		if object.value4 < 48
+	case CPZEGGMAN_DEFEATRISE
+		if object.timer < 48
 			object.ypos += object.yvel
 			object.yvel -= 0x800
-			object.value4++
+			object.timer++
 		else
-			object.value4 = 0
+			object.timer = 0
 			object.yvel = 0
-			object.value1 = object.ypos
+			object.originPos.y = object.ypos
 			object.state++
 		end if
 		break
 		
-	case 5
-		object.ypos = object.value1
+	case CPZEGGMAN_FLEE
+		object.ypos = object.originPos.y
 		CallFunction(CPZEggman_Oscillate)
 
-		if object.value4 < 8
-			object.value4++
+		if object.timer < 8
+			object.timer++
 		else
-			object.value4 = 0
-			object.animation = 6
+			object.timer = 0
+			object.animation = CPZEGGANI_PANIC
 			object.animationTimer = 0
-			object.value5 = 2
-			object.value6 = 0
+			object.flameAnim = FLAME_EXPLODE
+			object.flameAnimTimer = 0
 			object.direction = FLIP_X
 			object.priority = PRIORITY_ACTIVE
 			temp0 = tileLayer[0].xsize
@@ -130,9 +173,9 @@ event ObjectMain
 		end if
 		break
 
-	case 6
+	case CPZEGGMAN_ESCAPE
 		object.xpos += 0x40000
-		object.value1 -= 0x4000
+		object.originPos.y -= 0x4000
 		CallFunction(CPZEggman_Oscillate)
 		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
@@ -142,14 +185,14 @@ event ObjectMain
 	end switch
 
 	if object[0].gravity == GRAVITY_GROUND
-		object.value10 = 0
+		object.nonStopBopCount = false
 	end if
 
-	if object.value7 != 0
-		if object.value8 > 0
-			object.value8--
-			GetBit(temp0, object.value8, 0)
-			if temp0 == 1
+	if object.health != 0
+		if object.invincibilityTimer > 0
+			object.invincibilityTimer--
+			GetBit(temp0, object.invincibilityTimer, 0)
+			if temp0 == true
 				SetPaletteEntry(0, 192, 0xE0E0E0)
 			else
 				SetPaletteEntry(0, 192, 0x000000)
@@ -157,48 +200,48 @@ event ObjectMain
 		end if
 
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object.value8 == 0
+			if object.invincibilityTimer == 0
 				CheckEqual(object[currentPlayer].animation, ANI_HURT)
 				temp0 = checkResult
 				CheckEqual(object[currentPlayer].animation, ANI_DYING)
 				temp0 |= checkResult
 				CheckEqual(object[currentPlayer].animation, ANI_DROWNING)
 				temp0 |= checkResult
-				if temp0 != 0
-					if object.animation != 2
-						object.animation = 2
+				if temp0 != false
+					if object.animation != CPZEGGANI_LAUGH
+						object.animation = CPZEGGANI_LAUGH
 						object.animationTimer = 0
 					end if
 				end if
 
-				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 22, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 22, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
 				if checkResult == true
 					CallFunction(PlayerObject_CheckHit)
 					if checkResult == true
-						object.value7--
-						if object.value7 == 0
+						object.health--
+						if object.health == 0
 							player.score += 1000
-							object.animation = 4
+							object.animation = CPZEGGANI_DEFEATED
 							object.animationTimer = 0
-							object.value5 = 0
-							object.value9 = 1
-							object.value1 = object.ypos
-							object.value2 = object[+1].value2
+							object.flameAnim = FLAME_INACTIVE
+							object.exploding = true
+							object.originPos.y = object.ypos
+							object.oscillationAngle = object[+1].oscillationAngle
 							object.state++
-							object[+1].state = 4
-							if object.value10 >= 7
-								if stage.debugMode == 0
+							object[+1].state = CHEMICALDROPPER_DESTROYED
+							if object.nonStopBopCount >= 7
+								if stage.debugMode == false
 									CallNativeFunction2(SetAchievement, AchievementName[Bop Non-stop], 100)
 								end if
 							end if
 						else
-							object.animation = 3
+							object.animation = CPZEGGANI_HIT
 							object.animationTimer = 0
-							object.value8 = 32
+							object.invincibilityTimer = 32
 							PlaySfx(SfxName[Boss Hit], false)
 							if currentPlayer == 0
 								if object[0].gravity == GRAVITY_AIR
-									object.value10++
+									object.nonStopBopCount++
 								end if
 							end if
 						end if
@@ -208,7 +251,8 @@ event ObjectMain
 		next
 	end if
 
-	if object.state != 6
+	// R Boundary
+	if object.state != CPZEGGMAN_ESCAPE
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = object[currentPlayer].collisionRight
 			temp0 <<= 16
@@ -226,7 +270,7 @@ event ObjectMain
 		next
 	end if
 
-	if object.value9 == 1
+	if object.exploding == true
 		temp0 = oscillation
 		temp0 &= 7
 		if temp0 == 0
@@ -247,12 +291,12 @@ end event
 
 
 event ObjectDraw
-	if object.animation != 0
+	if object.animation != CPZEGGANI_INVISIBLE
 		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
 	end if
 
 	switch object.animation
-	case 1
+	case CPZEGGANI_IDLE
 		temp0 = object.animationTimer
 		temp0 >>= 3
 		object.animationTimer++
@@ -260,7 +304,7 @@ event ObjectDraw
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case 2
+	case CPZEGGANI_LAUGH
 		temp0 = object.animationTimer
 		temp0 &= 15
 		temp0 >>= 3
@@ -269,25 +313,25 @@ event ObjectDraw
 		if object.animationTimer == 50
 			object.animationTimer = 0
 			if object[0].animation != ANI_DYING
-				object.animation = 1
+				object.animation = CPZEGGANI_IDLE
 			end if
 		end if
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case 3
+	case CPZEGGANI_HIT
 		temp0 = object.animationTimer
 		temp0 &= 1
 		temp0 += 2
 		object.animationTimer++
 		if object.animationTimer == 50
 			object.animationTimer = 0
-			object.animation = 1
+			object.animation = CPZEGGANI_IDLE
 		end if
 		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case 4
+	case CPZEGGANI_DEFEATED
 		temp0 = object.animationTimer
 		temp0 >>= 5
 		temp0 += 4
@@ -297,16 +341,17 @@ event ObjectDraw
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case 5
+	case CPZEGGANI_DESTROYED
 		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case 6
+	case CPZEGGANI_PANIC
 		temp0 = object.animationTimer
 		temp0 >>= 3
 		object.animationTimer++
 		object.animationTimer &= 15
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
 		temp0 = object.animationTimer
 		temp0 >>= 2
 		temp0 &= 1
@@ -316,25 +361,29 @@ event ObjectDraw
 		break
 	end switch
 
-	switch object.value5
-	case 1
-		GetTableValue(temp0, object.value6, CPZEggman_table54)
-		object.value6++
-		if object.value6 == 6
-			object.value6 = 0
+	switch object.flameAnim
+	default
+	case FLAME_INACTIVE
+		break
+
+	case FLAME_ACTIVE
+		GetTableValue(temp0, object.flameAnimTimer, CPZEggman_flameAnimFrameTable)
+		object.flameAnimTimer++
+		if object.flameAnimTimer == 6
+			object.flameAnimTimer = 0
 		end if
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case 2
-		temp0 = object.value6
+	case FLAME_EXPLODE
+		temp0 = object.flameAnimTimer
 		temp0 /= 3
 		temp0 += 9
-		object.value6++
-		if object.value6 >= 18
-			object.value6 = 0
+		object.flameAnimTimer++
+		if object.flameAnimTimer >= 18
+			object.flameAnimTimer = 0
 			temp0 = 7
-			object.value5 = 1
+			object.flameAnim = FLAME_ACTIVE
 		end if
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
