@@ -6,18 +6,19 @@
 // ----------------------------------
 
 // Aliases
-private alias 59 : TYPE_EGGMANDRILL
-
-
-// Static Values
-
-// Tables
+private alias 0 : DRILL_ACTIVE
+private alias 1 : DRILL_FELLOFF
 
 event ObjectMain
-	if object.state == 0
-		if object.interaction == 1
+	if object.state == DRILL_ACTIVE
+		if object.interaction == true
+			// Object is active, check collision with players
+
+			// Backup the object's position since it'll need to be changed for collision checks
 			temp0 = object.xpos
 			temp1 = object.ypos
+
+			// First, check for the hitbox at the base of the drill
 			Sin(object.xpos, object.angle)
 			if object.direction == FLIP_NONE
 				object.xpos *= -0xC00
@@ -30,10 +31,12 @@ event ObjectMain
 			object.ypos += temp1
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_Hit)
 				end if
 			next
+
+			// Check for the hitbox at the tip of the drill, too
 			Sin(object.xpos, object.angle)
 			if object.direction == FLIP_NONE
 				object.xpos *= -0x1300
@@ -46,18 +49,22 @@ event ObjectMain
 			object.ypos += temp1
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_Hit)
 				end if
 			next
+
+			// Restore the object's position
 			object.xpos = temp0
 			object.ypos = temp1
 		end if
 	else
+		// Drills falling off after boss is defeated
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x3800
-		if object.outOfBounds == 1
+
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
 	end if
@@ -71,7 +78,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone06")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("MCZ/Objects.gif")
 		SpriteFrame(-12, -48, 24, 64, 1, 132)
 		SpriteFrame(-12, -48, 24, 64, 26, 132)
@@ -95,6 +102,14 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == true
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-12, -48, 24, 64, 1, 132)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-12, -48, 24, 64, 42, 191)
+	end if
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

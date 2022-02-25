@@ -6,13 +6,22 @@
 // ----------------------------------
 
 // Aliases
-private alias 62 : TYPE_RINGPLATFORM
+private alias object.value0 : object.store.x
+private alias object.value1 : object.store.y
+private alias object.value2 : object.temp
+
+// Even though object.value2 is an object value, it's used more as a temp value since all other temps are occupied by the main function too
+
+// Player aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
 
 // Function declarations
 reserve function RingPlatform_DebugDraw
 reserve function RingPlatform_DebugSpawn
 
 // Tables
+
 // Unused table, possibly meant to hold values before this object was optimized
 private table RingPlatform_UnusedTable
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -32,14 +41,21 @@ end function
 
 event ObjectMain
 	temp0 = object.angle
+
+	// Rotate the object based on which direction it's facingrt
 	if object.direction == FLIP_NONE
 		object.angle++
 	else
 		object.angle--
 	end if
+
+	// Backup the object's position
 	temp6 = object.xpos
 	temp7 = object.ypos
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+
+		// Setup some useful numbers
 		temp0 >>= 1
 		temp5 = object.angle
 		temp5 >>= 1
@@ -51,31 +67,37 @@ event ObjectMain
 		temp0 <<= 12
 		Sin256(temp1, temp5)
 		temp1 <<= 12
-		object.value0 = object.xpos
-		object.value1 = object.ypos
+
+		object.store.x = object.xpos
+		object.store.y = object.ypos
+
 		temp4 = 0
 		while temp4 < 6
 			BoxCollisionTest(C_BOX, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				temp5 = object.value0
+			if checkResult == true
+				temp5 = object.store.x
 				temp5 &= -0x10000
-				object.value2 = object.xpos
-				object.value2 &= -0x10000
-				temp5 -= object.value2
-				object[currentPlayer].xpos += temp5
-				temp5 = object.value1
+				object.temp = object.xpos
+				object.temp &= -0x10000
+				temp5 -= object.temp
+				player[currentPlayer].xpos += temp5
+
+				temp5 = object.store.y
 				temp5 &= -0x10000
-				object.value2 = object.ypos
-				object.value2 &= -0x10000
-				temp5 -= object.value2
-				object[currentPlayer].ypos += temp5
+				object.temp = object.ypos
+				object.temp &= -0x10000
+				temp5 -= object.temp
+				player[currentPlayer].ypos += temp5
 			end if
+
 			object.xpos += temp2
 			object.ypos += temp3
-			object.value0 += temp0
-			object.value1 += temp1
+			object.store.x += temp0
+			object.store.y += temp1
 			temp4++
 		loop
+
+		// Restore the object's position
 		object.xpos = temp6
 		object.ypos = temp7
 	next
@@ -103,21 +125,67 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("Global/Items.gif")
+
 	foreach (TypeName[Ring Platform], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 4
 	next
-	SpriteFrame(-8, -8, 16, 16, 1, 1)
+
+	SpriteFrame(-8, -8, 16, 16, 1, 1) // 0 - First frame of the ring animation
+
 	SetTableValue(TypeName[Ring Platform], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(RingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(RingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // rotation direction
+			checkResult = object.direction
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // rotation direction
+			object.direction = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	// TODO: maybe have it show at some angle rather than just straight idk
+//	temp5 = object.angle
+	temp5 = 0
+	temp5 >>= 1
+	temp0 = object.xpos
+	temp1 = object.ypos
+	Cos256(temp2, temp5)
+	temp2 <<= 12
+	Sin256(temp3, temp5)
+	temp3 <<= 12
+	temp4 = 0
+	while temp4 < 6
+		DrawSpriteXY(0, temp0, temp1)
+		temp0 += temp2
+		temp1 += temp3
+		temp4++
+	loop
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 1)
+
+	AddEditorVariable("rotation direction")
+	SetActiveVariable("rotation direction")
+	AddEnumVariable("Clockwise",          0)
+	AddEnumVariable("Counter-Clockwise" , 1)
 end event

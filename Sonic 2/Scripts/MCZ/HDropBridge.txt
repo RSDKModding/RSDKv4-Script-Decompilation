@@ -6,15 +6,21 @@
 // ----------------------------------
 
 // Aliases
-private alias 53 : TYPE_HDROPBRIDGE
+private alias object.value1 : object.angle.left
+private alias object.value2 : object.angle.right
+private alias object.value3 : object.startPos
+private alias object.value4 : object.endPos
+
+private alias 0 : STATE_CLOSED
+private alias 1 : STATE_OPENING
+private alias 2 : STATE_OPENED
+
+// Activator switch alias
+private alias object.propertyValue : object.pulled
 
 // Function declarations
 reserve function HDropBridge_DebugDraw
 reserve function HDropBridge_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function HDropBridge_DebugDraw
 	temp0 = object.xpos
@@ -31,46 +37,50 @@ end function
 function HDropBridge_DebugSpawn
 	CreateTempObject(TypeName[H Drop Bridge], 0, object.xpos, object.ypos)
 	object[tempObjectPos].drawOrder = 4
-	object[tempObjectPos].value1 = 0
-	object[tempObjectPos].value2 = 256
-	object[tempObjectPos].value3 = object[tempObjectPos].xpos
-	object[tempObjectPos].value3 -= 0x380000
-	object[tempObjectPos].value4 = object[tempObjectPos].xpos
-	object[tempObjectPos].value4 += 0x380000
+	object[tempObjectPos].angle.left = 0
+	object[tempObjectPos].angle.right = 256
+	object[tempObjectPos].startPos = object[tempObjectPos].xpos
+	object[tempObjectPos].startPos -= 0x380000
+	object[tempObjectPos].endPos = object[tempObjectPos].xpos
+	object[tempObjectPos].endPos += 0x380000
 end function
 
 
 event ObjectMain
 	switch object.state
-	case 0
-		if object[-1].propertyValue == 1
+	case STATE_CLOSED
+		// object[-1] is a switch of either the normal or vine variety
+		if object[-1].pulled == true
 			object.state++
 			PlaySfx(SfxName[Flapping Door], false)
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.priority = PRIORITY_ACTIVE
 			end if
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -64, -8, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
 		break
-	case 1
-		if object.value1 < 128
-			object.value1 += 8
-			object.value2 -= 8
+
+	case STATE_OPENING
+		if object.angle.left < 128
+			object.angle.left += 8
+			object.angle.right -= 8
 		else
 			object.state++
 		end if
-	case 2
+		// [Fallthrough]
+	case STATE_OPENED
 		temp6 = object.xpos
 		temp7 = object.ypos
 		temp0 = 0
 		temp1 = 0
 		while temp0 < 4
-			Cos(object.xpos, object.value1)
+			Cos(object.xpos, object.angle.left)
 			object.xpos *= temp1
-			object.xpos += object.value3
-			Sin(object.ypos, object.value1)
+			object.xpos += object.startPos
+			Sin(object.ypos, object.angle.left)
 			object.ypos *= temp1
 			object.ypos += temp7
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -82,10 +92,10 @@ event ObjectMain
 		temp0 = 0
 		temp1 = 0
 		while temp0 < 4
-			Cos(object.xpos, object.value2)
+			Cos(object.xpos, object.angle.right)
 			object.xpos *= temp1
-			object.xpos += object.value4
-			Sin(object.ypos, object.value2)
+			object.xpos += object.endPos
+			Sin(object.ypos, object.angle.right)
 			object.ypos *= temp1
 			object.ypos += temp7
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -97,38 +107,43 @@ event ObjectMain
 		object.xpos = temp6
 		object.ypos = temp7
 		break
+
 	end switch
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		if object.priority != PRIORITY_XBOUNDS_DESTROY
-			object.value1 = 0
-			object.value2 = 256
-			object.state = 0
+			object.angle.left = 0
+			object.angle.right = 256
+			object.state = STATE_CLOSED
 		end if
 	end if
 end event
 
 
 event ObjectDraw
+	// Draw the left 4 pieces first
 	temp0 = 0
 	temp1 = 0
 	while temp0 < 4
-		Cos(temp2, object.value1)
+		Cos(temp2, object.angle.left)
 		temp2 *= temp1
-		temp2 += object.value3
-		Sin(temp3, object.value1)
+		temp2 += object.startPos
+		Sin(temp3, object.angle.left)
 		temp3 *= temp1
 		temp3 += object.ypos
 		DrawSpriteXY(0, temp2, temp3)
 		temp0++
 		temp1 += 0x800
 	loop
+
+	// Then draw the right 4 pieces afterwards
 	temp0 = 0
 	temp1 = 0
 	while temp0 < 4
-		Cos(temp2, object.value2)
+		Cos(temp2, object.angle.right)
 		temp2 *= temp1
-		temp2 += object.value4
-		Sin(temp3, object.value2)
+		temp2 += object.endPos
+		Sin(temp3, object.angle.right)
 		temp3 *= temp1
 		temp3 += object.ypos
 		DrawSpriteXY(0, temp2, temp3)
@@ -140,16 +155,20 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("MCZ/Objects.gif")
+
 	SpriteFrame(-8, -8, 16, 16, 135, 131)
+
 	foreach (TypeName[H Drop Bridge], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 4
-		object[arrayPos0].value1 = 0
-		object[arrayPos0].value2 = 256
-		object[arrayPos0].value3 = object[arrayPos0].xpos
-		object[arrayPos0].value3 -= 0x380000
-		object[arrayPos0].value4 = object[arrayPos0].xpos
-		object[arrayPos0].value4 += 0x380000
+		object[arrayPos0].angle.left = 0
+		object[arrayPos0].angle.right = 256
+		object[arrayPos0].startPos = object[arrayPos0].xpos
+		object[arrayPos0].startPos -= 0x380000
+		object[arrayPos0].endPos = object[arrayPos0].xpos
+		object[arrayPos0].endPos += 0x380000
 	next
+
+	// Add this object to the debug item list
 	SetTableValue(TypeName[H Drop Bridge], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(HDropBridge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(HDropBridge_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -157,10 +176,38 @@ event ObjectStartup
 end event
 
 event RSDKDraw
-	DrawSprite(0)
+	temp0 = 0
+	temp1 = 0
+	while temp0 < 4
+		// TODO: replace this with the actual value of cos/sine(constant)
+		Cos(temp2, 0)
+		temp2 *= temp1
+		temp2 += object.xpos
+		temp2 -= 0x380000
+		Sin(temp3, 0)
+		temp3 *= temp1
+		temp3 += object.ypos
+		DrawSpriteXY(0, temp2, temp3)
+		temp0++
+		temp1 += 0x800
+	loop
+	temp0 = 0
+	temp1 = 0
+	while temp0 < 4
+		Cos(temp2, 256)
+		temp2 *= temp1
+		temp2 += object.xpos
+		temp2 += 0x380000
+		Sin(temp3, 256)
+		temp3 *= temp1
+		temp3 += object.ypos
+		DrawSpriteXY(0, temp2, temp3)
+		temp0++
+		temp1 += 0x800
+	loop
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 135, 131)
 end event
