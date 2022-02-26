@@ -42,19 +42,24 @@ function SwingPlatform_DebugDraw
 		temp2 *= temp1
 		temp2 <<= 7
 		temp2 += object.xpos
+
 		Sin(temp3, 128)
 		temp3 *= temp1
 		temp3 <<= 7
 		temp3 += object.ypos
+
 		DrawSpriteXY(1, temp2, temp3)
+
 		temp0++
 		temp1 += 16
 	loop
 	temp1 -= 8
+
 	Cos(temp2, 128)
 	temp2 *= temp1
 	temp2 <<= 7
 	temp2 += object.xpos
+
 	Sin(temp3, 128)
 	temp3 *= temp1
 	temp3 <<= 7
@@ -86,8 +91,8 @@ event ObjectMain
 	object.angle >>= 8
 
 	if object.recoilDir == RECOIL_DIR_LEFT // As in, is the object is going to bounce back to the left?
-		if object.angle <= 64
-			object.angle = 64
+		if object.angle <= 0x40
+			object.angle = 0x40
 			if object.collided == false
 				object.collided = true
 				PlaySfx(SfxName[Plat Collide], false)
@@ -96,8 +101,8 @@ event ObjectMain
 			object.collided = false
 		end if
 	else
-		if object.angle >= 64
-			object.angle = 64
+		if object.angle >= 0x40
+			object.angle = 0x40
 			if object.collided == false
 				object.collided = true
 				PlaySfx(SfxName[Plat Collide], false)
@@ -108,8 +113,8 @@ event ObjectMain
 	end if
 
 	if object.direction == FLIP_X
-		object.angle ^= 255
-		object.angle += 129
+		object.angle ^= 0xFF
+		object.angle += 0x81
 	end if
 
 	object.angle <<= 1
@@ -161,11 +166,14 @@ event ObjectDraw
 		temp2 *= temp1
 		temp2 <<= 7
 		temp2 += object.xpos
+
 		Sin(temp3, object.angle)
 		temp3 *= temp1
 		temp3 <<= 7
 		temp3 += object.ypos
+		
 		DrawSpriteXY(1, temp2, temp3)
+
 		temp0++
 		temp1 += 16
 	loop
@@ -229,10 +237,47 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // length
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+		case 1 // swingDir
+			GetBit(checkResult, object.propertyValue, 4)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // length
+			temp0 = 7
+			Not(temp0)
+			object.propertyValue &= temp0
+			editor.variableValue &= 7
+
+			object.propertyValue |= editor.variableValue
+			break
+		case 1 // swingDir
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 4, checkResult)
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	temp7 = object.length
+	temp7 = object.propertyValue
 	temp7 &= 7
 	temp7++
+	
+	// Draw the chains
 	temp0 = 0
 	temp1 = 16
 	while temp0 < temp7
@@ -240,24 +285,33 @@ event RSDKDraw
 		temp2 *= temp1
 		temp2 <<= 7
 		temp2 += object.xpos
+
 		Sin(temp3, 128)
 		temp3 *= temp1
 		temp3 <<= 7
 		temp3 += object.ypos
+		
 		DrawSpriteXY(1, temp2, temp3)
+
 		temp0++
 		temp1 += 16
 	loop
 	temp1 -= 8
+
 	Cos(temp2, 128)
 	temp2 *= temp1
 	temp2 <<= 7
 	temp2 += object.xpos
+
 	Sin(temp3, 128)
 	temp3 *= temp1
 	temp3 <<= 7
 	temp3 += object.ypos
+
+	// Draw the post
 	DrawSprite(0)
+
+	// Draw the platform itself
 	DrawSpriteXY(2, temp2, temp3)
 end event
 
@@ -267,8 +321,11 @@ event RSDKLoad
 	SpriteFrame( -8,  -8, 16, 16, 135, 148) // 1 - Link frame
 	SpriteFrame(-24,  -8, 48, 16, 141, 165) // 2 - Platform frame
 
-	// note for rdc when they come along to do rsdkedit stuff:
-	// propertyValue follows format of 0000DXXX, where
-	// D - direction the platform should wring in, check RECOIL_DIR_* constants
-	// XXX - how many chains there should be, 8 separate options max
+	AddEditorVariable("length")
+	SetActiveVariable("length")
+
+	AddEditorVariable("swingDir")
+	SetActiveVariable("swingDir")
+	AddEnumVariable("left", RECOIL_DIR_LEFT)
+	AddEnumVariable("right", RECOIL_DIR_RIGHT)
 end event

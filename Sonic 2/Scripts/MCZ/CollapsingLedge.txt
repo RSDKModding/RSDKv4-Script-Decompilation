@@ -9,23 +9,23 @@
 private alias object.value0 : object.timer
 private alias object.value1 : object.delay
 
-private alias 0 : STATE_ACTIVE
-private alias 1 : STATE_COLLAPSE
-private alias 2 : STATE_PLATFORMDELAY
-private alias 3 : STATE_BLANK
-private alias 4 : STATE_TILEDELAY
-private alias 5 : STATE_TILEFALL
+private alias 0 : CLEDGE_ACTIVE
+private alias 1 : CLEDGE_COLLAPSE
+private alias 2 : CLEDGE_COLLAPSED
+private alias 3 : CLEDGE_NONE
+private alias 4 : CLEDGE_TILEDELAY
+private alias 5 : CLEDGE_TILEFALL
 
 // Function declarations
 reserve function CLedge_DebugDraw
 reserve function CLedge_DebugSpawn
 
 // Tables
-public table CLedge_fragmentSpriteTable
+public table CLedge_tileFrameTable
 	1, 2, 3, 4, 5, 6
 end table
 
-public table CLedge_fragmentDelayTable
+public table CLedge_collapseTable
 	2, 6, 10, 14, 18, 22
 end table
 
@@ -43,17 +43,20 @@ end function
 
 event ObjectMain
 	switch object.state
-	case STATE_COLLAPSE
+	case CLEDGE_ACTIVE
+		break
+
+	case CLEDGE_COLLAPSE
 		if object.timer < 10
 			object.timer++
 		else
 			temp0 = 0
 			while temp0 < 6
-				GetTableValue(temp1, temp0, CLedge_fragmentSpriteTable)
+				GetTableValue(temp1, temp0, CLedge_tileFrameTable)
 				CreateTempObject(TypeName[C Ledge], temp1, object.xpos, object.ypos)
 				object[tempObjectPos].state = 4
 				object[tempObjectPos].direction = object.direction
-				GetTableValue(object[tempObjectPos].delay, temp0, CLedge_fragmentDelayTable)
+				GetTableValue(object[tempObjectPos].delay, temp0, CLedge_collapseTable)
 				temp0++
 			loop
 			PlaySfx(SfxName[Ledge Break], false)
@@ -62,7 +65,7 @@ event ObjectMain
 		end if
 		break
 
-	case STATE_PLATFORMDELAY
+	case CLEDGE_COLLAPSED
 		// During this state, the object is invisible, but it's still providing collision for a brief moment before it truly disappears
 		if object.timer < 20
 			object.timer++
@@ -72,9 +75,11 @@ event ObjectMain
 		end if
 		break
 
-	// Nothing for state 3 ("STATE_BLANK")
+	case CLEDGE_NONE
+		break
+	// Nothing for state 3 ("CLEDGE_NONE")
 
-	case STATE_TILEDELAY
+	case CLEDGE_TILEDELAY
 		if object.timer < object.delay
 			object.timer++
 		else
@@ -83,7 +88,7 @@ event ObjectMain
 		end if
 		break
 
-	case STATE_TILEFALL
+	case CLEDGE_TILEFALL
 		object.ypos += object.yvel
 		object.yvel += 0x4000
 		if object.outOfBounds == true
@@ -93,7 +98,7 @@ event ObjectMain
 
 	end switch
 
-	if object.state < STATE_TILEDELAY
+	if object.state < CLEDGE_TILEDELAY
 		if object.outOfBounds == true
 			object.state = 0
 			object.timer = 0
@@ -101,14 +106,14 @@ event ObjectMain
 		end if
 	end if
 
-	if object.state < STATE_BLANK
+	if object.state < CLEDGE_NONE
 		// In one of the platform states, so act like one and provide collision to the player
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -24, 32, -8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 
 			if checkResult == true
-				if object.state == STATE_ACTIVE
-					object.state = STATE_COLLAPSE
+				if object.state == CLEDGE_ACTIVE
+					object.state = CLEDGE_COLLAPSE
 					object.priority = PRIORITY_ACTIVE
 				end if
 			end if
@@ -119,18 +124,21 @@ end event
 
 event ObjectDraw
 	switch object.state
-	case STATE_ACTIVE
-	case STATE_COLLAPSE
+	case CLEDGE_ACTIVE
+	case CLEDGE_COLLAPSE
 		// Full platform - simply draw the entire sprite
 		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 		break
 
-	case STATE_TILEDELAY
-	case STATE_TILEFALL
+	case CLEDGE_COLLAPSED
+	case CLEDGE_NONE
+		break
+
+	case CLEDGE_TILEDELAY
+	case CLEDGE_TILEFALL
 		// Tile fragment, draw whatever sprite's assigned to this object
 		DrawSpriteFX(object.propertyValue, FX_FLIP, object.xpos, object.ypos)
 		break
-
 	end switch
 end event
 
@@ -158,11 +166,44 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // collapseDir
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // collapseDir
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	object.direction = object.propertyValue
+	object.direction &= FLIP_X
+
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
 	SpriteFrame(-32, -24, 64, 48, 136, 66)
+	
+
+	AddEditorVariable("collapseDir")
+	SetActiveVariable("collapseDir")
+	AddEnumVariable("Right", FLIP_NONE)
+	AddEnumVariable("Left", FLIP_X)
 end event

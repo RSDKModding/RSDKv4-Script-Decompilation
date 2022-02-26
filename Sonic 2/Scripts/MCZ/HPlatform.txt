@@ -7,8 +7,8 @@
 
 // Aliases
 private alias object.value0 : object.timer
-private alias object.value1 : object.platform.X
-private alias object.value2 : object.shiftX
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.collisionOffset.x
 
 // Function declarations
 reserve function HPlatform_DebugDraw
@@ -21,13 +21,13 @@ end function
 
 function HPlatform_DebugSpawn
 	CreateTempObject(TypeName[H Platform], 0, object.xpos, object.ypos)
-	object[tempObjectPos].platform.X = object[tempObjectPos].xpos
+	object[tempObjectPos].drawPos.x = object[tempObjectPos].xpos
 	if object.direction == FLIP_NONE
-		object[tempObjectPos].platform.X += 0x680000
+		object[tempObjectPos].drawPos.x += 0x680000
 		object[tempObjectPos].xvel = -0x10000
 		object[tempObjectPos].timer = 104
 	else
-		object[tempObjectPos].platform.X -= 0x680000
+		object[tempObjectPos].drawPos.x -= 0x680000
 		object[tempObjectPos].xvel = 0x10000
 		object[tempObjectPos].timer = -104
 	end if
@@ -35,8 +35,8 @@ end function
 
 
 event ObjectMain
-	object.platform.X += object.xvel
-	object.shiftX = object.xvel
+	object.drawPos.x += object.xvel
+	object.collisionOffset.x = object.xvel
 
 	if object.xvel > 0
 		object.timer++
@@ -52,11 +52,11 @@ event ObjectMain
 
 	// Backup the object's XPos and temporarily move it for hitbox tests
 	temp0 = object.xpos
-	object.xpos = object.platform.X
+	object.xpos = object.drawPos.x
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		if checkResult == true
-			object[currentPlayer].xpos += object.shiftX
+			object[currentPlayer].xpos += object.collisionOffset.x
 		end if
 	next
 
@@ -66,7 +66,7 @@ end event
 
 
 event ObjectDraw
-	DrawSpriteXY(0, object.platform.X, object.ypos)
+	DrawSpriteXY(0, object.drawPos.x, object.ypos)
 end event
 
 
@@ -76,13 +76,13 @@ event ObjectStartup
 	SpriteFrame(-24, -8, 48, 16, 141, 165)
 
 	foreach (TypeName[H Platform], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].platform.X = object[arrayPos0].xpos
+		object[arrayPos0].drawPos.x = object[arrayPos0].xpos
 		if object[arrayPos0].propertyValue == 0
-			object[arrayPos0].platform.X += 0x680000
+			object[arrayPos0].drawPos.x += 0x680000
 			object[arrayPos0].xvel = -0x10000
 			object[arrayPos0].timer = 104
 		else
-			object[arrayPos0].platform.X -= 0x680000
+			object[arrayPos0].drawPos.x -= 0x680000
 			object[arrayPos0].xvel = 0x10000
 			object[arrayPos0].timer = -104
 		end if
@@ -101,7 +101,7 @@ event RSDKEdit
 		case EDIT_VAR_PROPVAL // property value
 			checkResult = object.propertyValue
 			break
-		case 0 // start direction
+		case 0 // startDir
 			checkResult = object.propertyValue
 			break
 		end switch
@@ -110,7 +110,7 @@ event RSDKEdit
 		case EDIT_VAR_PROPVAL // property value
 			object.propertyValue = editor.variableValue
 			break
-		case 0 // start direction
+		case 0 // startDir
 			object.propertyValue = editor.variableValue
 			break
 		end switch
@@ -125,8 +125,8 @@ event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
 	SpriteFrame(-24, -8, 48, 16, 141, 165)
 
-	AddEditorVariable("start direction")
-	SetActiveVariable("start direction")
-	AddEnumVariable("Left", 0)
-	AddEnumVariable("Right", 1)
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Left", FLIP_NONE)
+	AddEnumVariable("Right", FLIP_X)
 end event

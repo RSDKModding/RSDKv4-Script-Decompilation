@@ -6,15 +6,14 @@
 // ----------------------------------
 
 // Aliases
-private alias 0 : STATE_CLOSED
-private alias 1 : STATE_OPENING_L
-private alias 2 : STATE_OPENING_R
-private alias 3 : STATE_OPEN_L
-private alias 4 : STATE_OPEN_R
-
+private alias 0 : VDROPBRIDGE_CLOSED
+private alias 1 : VDROPBRIDGE_OPENING_L
+private alias 2 : VDROPBRIDGE_OPENING_R
+private alias 3 : VDROPBRIDGE_OPEN_L
+private alias 4 : VDROPBRIDGE_OPEN_R
 
 // Activator switch alias
-private alias object.propertyValue : object.pulled
+private alias object.propertyValue : pullSwitch.pulled
 
 
 // Function declarations
@@ -36,12 +35,12 @@ end function
 
 event ObjectMain
 	switch object.state
-	case STATE_CLOSED
-		if object[-1].pulled == true
+	case VDROPBRIDGE_CLOSED
+		if pullSwitch[-1].pulled == true
 			if object.direction == FLIP_NONE
-				object.state = STATE_OPENING_R
+				object.state = VDROPBRIDGE_OPENING_R
 			else
-				object.state = STATE_OPENING_L
+				object.state = VDROPBRIDGE_OPENING_L
 			end if
 
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
@@ -56,11 +55,11 @@ event ObjectMain
 		next
 		break
 
-	case STATE_OPENING_L
+	case VDROPBRIDGE_OPENING_L
 		if object.angle < 384
 			object.angle += 2
 		else
-			object.state = STATE_OPEN_L
+			object.state = VDROPBRIDGE_OPEN_L
 			PlaySfx(SfxName[Drop Bridge 2], false)
 		end if
 
@@ -69,11 +68,11 @@ event ObjectMain
 		next
 		break
 
-	case STATE_OPENING_R
+	case VDROPBRIDGE_OPENING_R
 		if object.angle > 128
 			object.angle -= 2
 		else
-			object.state = STATE_OPEN_R
+			object.state = VDROPBRIDGE_OPEN_R
 			PlaySfx(SfxName[Drop Bridge 2], false)
 		end if
 
@@ -82,13 +81,13 @@ event ObjectMain
 		next
 		break
 
-	case STATE_OPEN_L
+	case VDROPBRIDGE_OPEN_L
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -136, -8, -8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
 		break
 
-	case STATE_OPEN_R
+	case VDROPBRIDGE_OPEN_R
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, 8, -8, 136, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
@@ -100,7 +99,7 @@ event ObjectMain
 		if object.priority != PRIORITY_XBOUNDS_DESTROY
 			// If offscreen, reset this object
 			object.angle = 256
-			object.state = STATE_CLOSED
+			object.state = VDROPBRIDGE_CLOSED
 		end if
 	end if
 end event
@@ -114,10 +113,13 @@ event ObjectDraw
 		Sin(temp2, object.angle)
 		temp2 *= temp1
 		temp2 += object.xpos
+
 		Cos(temp3, object.angle)
 		temp3 *= temp1
 		temp3 += object.ypos
+
 		DrawSpriteXY(0, temp2, temp3)
+
 		temp0++
 		temp1 += 0x800
 	loop
@@ -147,7 +149,7 @@ event RSDKEdit
 		case EDIT_VAR_PROPVAL // property value
 			checkResult = object.propertyValue
 			break
-		case 0 // opening direction
+		case 0 // openDir
 			checkResult = object.propertyValue
 			break
 		end switch
@@ -156,7 +158,7 @@ event RSDKEdit
 		case EDIT_VAR_PROPVAL // property value
 			object.propertyValue = editor.variableValue
 			break
-		case 0 // opening direction
+		case 0 // openDir
 			object.propertyValue = editor.variableValue
 			break
 		end switch
@@ -170,10 +172,13 @@ event RSDKDraw
 		Sin(temp2, 256)
 		temp2 *= temp1
 		temp2 += object.xpos
+
 		Cos(temp3, 256)
 		temp3 *= temp1
 		temp3 += object.ypos
+
 		DrawSpriteXY(0, temp2, temp3)
+
 		temp0++
 		temp1 += 0x800
 	loop
@@ -183,8 +188,8 @@ event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
 	SpriteFrame(-8, -8, 16, 16, 135, 131)
 
-	AddEditorVariable("opening direction")
-	SetActiveVariable("opening direction")
+	AddEditorVariable("openDir")
+	SetActiveVariable("openDir")
 	AddEnumVariable("Right", 0)
 	AddEnumVariable("Left" , 1)
 end event

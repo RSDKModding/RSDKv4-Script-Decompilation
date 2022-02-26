@@ -6,25 +6,24 @@
 // ----------------------------------
 
 // Aliases
-private alias 51 : TYPE_PULLVINE
-
 private alias object.propertyValue : object.pulled
-private alias object.value0 : object.timer
-private alias object.value1 : object.unused // Seems to be a duplicate of originY?
-private alias object.value2 : object.originY
-private alias object.value3 : object.cooldown
 
-private alias object.state : player.state
-private alias object.animation : player.animation
-private alias object.gravity : player.gravity
-private alias object.collisionTop : player.collisionTop
-private alias object.xpos : player.xpos
-private alias object.ypos : player.ypos
-private alias object.xvel : player.xvel
-private alias object.yvel : player.yvel
-private alias object.speed : player.speed
-private alias object.jumpPress : player.jumpPress
-private alias object.down : player.down
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.y // unused
+private alias object.value2 : object.originPos.y
+private alias object.value3 : object.grabDelay
+
+private alias object.state 			: player.state
+private alias object.animation 		: player.animation
+private alias object.gravity 		: player.gravity
+private alias object.collisionTop 	: player.collisionTop
+private alias object.xpos 			: player.xpos
+private alias object.ypos 			: player.ypos
+private alias object.xvel 			: player.xvel
+private alias object.yvel 			: player.yvel
+private alias object.speed 			: player.speed
+private alias object.jumpPress 		: player.jumpPress
+private alias object.down 			: player.down
 
 // Function declarations
 reserve function PullVine_DebugDraw
@@ -37,9 +36,9 @@ end function
 
 function PullVine_DebugSpawn
 	CreateTempObject(TypeName[Pull Vine], 0, object.xpos, object.ypos)
-	object[tempObjectPos].unused = object[tempObjectPos].ypos
+	object[tempObjectPos].startPos.y = object[tempObjectPos].ypos
 	object[tempObjectPos].yvel = 0x20000
-	object[tempObjectPos].originY = object[tempObjectPos].ypos
+	object[tempObjectPos].originPos.y = object[tempObjectPos].ypos
 end function
 
 
@@ -55,11 +54,10 @@ event ObjectMain
 			object.ypos -= object.yvel
 		end if
 	end if
-
 	object.pulled = false
 
-	if object.cooldown > 0
-		object.cooldown--
+	if object.grabDelay > 0
+		object.grabDelay--
 	end if
 
 	temp0 = object.ypos
@@ -67,7 +65,7 @@ event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if player[currentPlayer].state != PlayerObject_Blank
 			if player[currentPlayer].down == false
-				if object.cooldown == 0
+				if object.grabDelay == 0
 					if player[currentPlayer].ypos < temp0
 						BoxCollisionTest(C_TOUCH, object.entityPos, -8, 88, 8, 96, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 					else
@@ -99,7 +97,7 @@ event ObjectMain
 					player[currentPlayer].state = PlayerObject_HandleAir
 					player[currentPlayer].yvel = -0x40000
 					player[currentPlayer].gravity = GRAVITY_AIR
-					object.cooldown = 30 // Half a second before the player can grab the vine again
+					object.grabDelay = 30 // Half a second before the player can grab the vine again
 				else
 					player[currentPlayer].xpos = object.xpos
 					player[currentPlayer].ypos = player[currentPlayer].collisionTop
@@ -126,7 +124,7 @@ end event
 event ObjectDraw
 	// Edit the sprite frame based on how low (or high) the vine should appear
 	temp0 = object.ypos
-	temp0 -= object.originY
+	temp0 -= object.originPos.y
 	temp0 >>= 16
 	temp1 = 176
 	temp1 -= temp0
@@ -146,7 +144,7 @@ event ObjectStartup
 	SpriteFrame(-12, -40, 24, 80, 232, 176) // Debug mode preview frame, otherwise unused
 
 	foreach (TypeName[Pull Vine], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].originY = object[arrayPos0].ypos
+		object[arrayPos0].originPos.y = object[arrayPos0].ypos
 		if object[arrayPos0].propertyValue == 0
 			// Moving down variant
 			object[arrayPos0].yvel = 0x20000
@@ -156,7 +154,7 @@ event ObjectStartup
 			object[arrayPos0].ypos += 0xB00000
 		end if
 
-		object[arrayPos0].unused = object[arrayPos0].ypos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
 		object[arrayPos0].propertyValue = 0
 	next
 
@@ -171,6 +169,7 @@ event RSDKEdit
 		switch editor.variableID
 		case EDIT_VAR_PROPVAL // property value
 			checkResult = object.propertyValue
+			checkResult &= 1
 			break
 		case 0 // pull direction
 			checkResult = object.propertyValue
@@ -181,6 +180,7 @@ event RSDKEdit
 		switch editor.variableID
 		case EDIT_VAR_PROPVAL // property value
 			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
 			break
 		case 0 // pull direction
 			object.propertyValue = editor.variableValue
@@ -199,8 +199,8 @@ event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
 	SpriteFrame(-12, -40, 24, 80, 232, 176)
 
-	AddEditorVariable("pull direction")
-	SetActiveVariable("pull direction")
+	AddEditorVariable("pullDir")
+	SetActiveVariable("pullDir")
 	AddEnumVariable("down", 0)
 	AddEnumVariable("up" , 1)
 end event

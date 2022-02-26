@@ -6,14 +6,12 @@
 // ----------------------------------
 
 // Aliases
-private alias 48 : TYPE_ROTATINGSPIKE
-
 private alias object.value0 : object.swingAngle
-private alias object.value1 : object.spinRate
+private alias object.value1 : object.spinSpeed
 private alias object.value2 : object.length
-private alias object.value3 : object.spikePos // To be thought of as like `object.entityPos`, not as in position
-private alias object.value4 : object.spike.x
-private alias object.value5 : object.spike.y
+private alias object.value3 : object.amplitude // To be thought of as like `object.entityPos`, not as in position
+private alias object.value4 : object.spikePos.x
+private alias object.value5 : object.spikePos.y
 
 private alias object.value17 : debugMode.currentSelection
 
@@ -28,9 +26,11 @@ private alias RotatingSpike_value33 : RotatingSpike_startDebugID
 function RotatingSpike_DebugDraw
 	temp7 = debugMode[0].currentSelection
 	temp7 -= RotatingSpike_startDebugID
+
 	temp6 = object.direction
 	temp6 <<= 8
 	DrawSprite(0)
+
 	temp0 = 0
 	temp1 = 16
 	while temp0 < temp7
@@ -50,10 +50,12 @@ function RotatingSpike_DebugDraw
 	temp2 *= temp1
 	temp2 <<= 7
 	temp2 += object.xpos
+
 	Sin(temp3, temp6)
 	temp3 *= temp1
 	temp3 <<= 7
 	temp3 += object.ypos
+
 	DrawSpriteXY(2, temp2, temp3)
 end function
 
@@ -65,42 +67,42 @@ function RotatingSpike_DebugSpawn
 	object[tempObjectPos].swingAngle <<= 16
 
 	if object.direction == FLIP_NONE
-		object[tempObjectPos].spinRate = 256
+		object[tempObjectPos].spinSpeed = -0x100
 	else
-		object[tempObjectPos].spinRate = -256
+		object[tempObjectPos].spinSpeed = -0x100
 	end if
 
 	object[tempObjectPos].length = debugMode[0].currentSelection
 	object[tempObjectPos].length -= RotatingSpike_startDebugID
 	object[tempObjectPos].length++
 
-	object[tempObjectPos].spikePos = object[tempObjectPos].length
-	object[tempObjectPos].spikePos <<= 4
+	object[tempObjectPos].amplitude = object[tempObjectPos].length
+	object[tempObjectPos].amplitude <<= 4
 end function
 
 
 event ObjectMain
-	object.swingAngle += object.spinRate
+	object.swingAngle += object.spinSpeed
 	object.swingAngle &= 0x1FFFF
 	temp0 = object.swingAngle
 	temp0 >>= 8
 
 	// Calculate the spike ball's position
-	Cos(object.spike.x, temp0)
-	object.spike.x *= object.spikePos
-	object.spike.x <<= 7
-	object.spike.x += object.xpos
+	Cos(object.spikePos.x, temp0)
+	object.spikePos.x *= object.amplitude
+	object.spikePos.x <<= 7
+	object.spikePos.x += object.xpos
 
-	Sin(object.spike.y, temp0)
-	object.spike.y *= object.spikePos
-	object.spike.y <<= 7
-	object.spike.y += object.ypos
+	Sin(object.spikePos.y, temp0)
+	object.spikePos.y *= object.amplitude
+	object.spikePos.y <<= 7
+	object.spikePos.y += object.ypos
 
 	// Backup the object position and replace it with the spike ball's position for collision checks
 	temp0 = object.xpos
 	temp1 = object.ypos
-	object.xpos = object.spike.x
-	object.ypos = object.spike.y
+	object.xpos = object.spikePos.x
+	object.ypos = object.spikePos.y
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
@@ -130,18 +132,21 @@ event ObjectDraw
 		temp2 *= temp1
 		temp2 <<= 7
 		temp2 += object.xpos
+
 		Sin(temp3, temp4)
 		temp3 *= temp1
 		temp3 <<= 7
 		temp3 += object.ypos
+
 		DrawSpriteXY(1, temp2, temp3)
+
 		temp0++
 		temp1 += 16
 	loop
 	temp1 -= 8
 	
 	// And finally draw the spike ball itself
-	DrawSpriteXY(2, object.spike.x, object.spike.y)
+	DrawSpriteXY(2, object.spikePos.x, object.spikePos.y)
 end event
 
 
@@ -158,18 +163,18 @@ event ObjectStartup
 
 		object[arrayPos0].direction = FLIP_NONE
 
-		object[arrayPos0].spinRate = object[arrayPos0].propertyValue
-		object[arrayPos0].spinRate &= 240
-		if object[arrayPos0].spinRate >= 128
-			object[arrayPos0].spinRate -= 256
+		object[arrayPos0].spinSpeed = object[arrayPos0].propertyValue
+		object[arrayPos0].spinSpeed &= 0xF0
+		if object[arrayPos0].spinSpeed >= 0x80
+			object[arrayPos0].spinSpeed -= 0x100
 		end if
-		object[arrayPos0].spinRate <<= 4
+		object[arrayPos0].spinSpeed <<= 4
 
 		object[arrayPos0].length = object[arrayPos0].propertyValue
-		object[arrayPos0].length &= 15
+		object[arrayPos0].length &= 0x0F
 
-		object[arrayPos0].spikePos = object[arrayPos0].length
-		object[arrayPos0].spikePos <<= 4
+		object[arrayPos0].amplitude = object[arrayPos0].length
+		object[arrayPos0].amplitude <<= 4
 	next
 
 	// Add the object to the debug item list a few times for different lengths
@@ -185,8 +190,69 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // length
+			checkResult = object.propertyValue
+			checkResult &= 0x0F
+			break
+		case 1 // spinSpeed
+			checkResult = object.propertyValue
+			checkResult &= 0xF0
+			checkResult >>= 4
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // length
+			object.propertyValue &= 0xF0
+			editor.variableValue &= 0x0F
+
+			object.propertyValue |= editor.variableValue
+			break
+		case 1 // spinSpeed
+			object.propertyValue &= 0x0F
+			editor.variableValue &= 0x0F
+			editor.variableValue <<= 4
+
+			object.propertyValue |= editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
+	object.length = object.propertyValue
+	object.length &= 15
+	object.amplitude = object.length
+	object.amplitude <<= 4
+
+	object.swingAngle = object.direction
+	object.swingAngle <<= 15 // To make it around 256 or -256
+	object.swingAngle &= 0x1FFFF
+	temp0 = object.swingAngle
+	temp0 >>= 8
+
+	// Calculate the spike ball's position
+	Cos(object.spikePos.x, temp0)
+	object.spikePos.x *= object.amplitude
+	object.spikePos.x <<= 7
+	object.spikePos.x += object.xpos
+
+	Sin(object.spikePos.y, temp0)
+	object.spikePos.y *= object.amplitude
+	object.spikePos.y <<= 7
+	object.spikePos.y += object.ypos
+
 	DrawSprite(0)
+
 	temp0 = 0
 	temp1 = 16
 	temp4 = object.swingAngle
@@ -205,14 +271,21 @@ event RSDKDraw
 		temp1 += 16
 	loop
 	temp1 -= 8
-	DrawSpriteXY(2, object.spike.x, object.spike.y)
+
+	DrawSpriteXY(2, object.spikePos.x, object.spikePos.y)
 end event
 
 event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
-	SpriteFrame(-8, -8, 16, 16, 135, 148)
-	SpriteFrame(-8, -8, 16, 16, 135, 148)
-	SpriteFrame(-16, -16, 32, 32, 103, 0)
 
-	// TODO: rsdkedit stuff idk just give me that re2 early beta already,,
+	SpriteFrame(-8, -8, 16, 16, 135, 148) // 0 - Wood block post
+	SpriteFrame(-8, -8, 16, 16, 135, 148) // 1 - Chain
+	SpriteFrame(-16, -16, 32, 32, 103, 0) // 2 - Spike ball
+
+
+	AddEditorVariable("length")
+	SetActiveVariable("length")
+
+	AddEditorVariable("spinSpeed")
+	SetActiveVariable("spinSpeed")
 end event
