@@ -174,7 +174,7 @@ reserve function PlayerObject_JumpAbility_Knux
 reserve function PlayerObject_HandleGround
 reserve function PlayerObject_HandleAir
 reserve function PlayerObject_AirCtrlLock
-reserve function PlayerObject_HandleRoll
+reserve function PlayerObject_HandleRolling
 reserve function PlayerObject_RollingJump
 reserve function PlayerObject_LookingUp
 reserve function PlayerObject_Crouching
@@ -203,7 +203,7 @@ reserve function PlayerObject_RestorePowerup
 reserve function PlayerObject_HandleSuperPalSonic
 reserve function PlayerObject_HandleSuperPalTails
 reserve function PlayerObject_HandleSuperPalKnux
-reserve function PlayerObject_SwapPhysics
+reserve function PlayerObject_UpdatePhysicsState
 reserve function PlayerObject_ProcessSuperForms
 reserve function PlayerObject_CheckHit
 reserve function PlayerObject_BadnikBreak
@@ -213,10 +213,10 @@ reserve function PlayerObject_LightningHit
 reserve function PlayerObject_ProjectileHit
 reserve function PlayerObject_SpikeHit
 reserve function PlayerObject_Kill
-reserve function PlayerObject_HandleRollAnimSpd
+reserve function PlayerObject_HandleRollingAnimSpd
 reserve function PlayerObject_HandleWalkAnimSpd
 reserve function PlayerObject_HandleRunAnimSpd
-reserve function PlayerObject_HandleRolling
+reserve function PlayerObject_HandleRollingDecel
 reserve function PlayerObject_Transforming
 reserve function PlayerObject_SuperTransform
 reserve function PlayerObject_BubbleBounce
@@ -606,7 +606,7 @@ function PlayerObject_HandleSuperPalKnux
 end function
 
 
-function PlayerObject_SwapPhysics
+function PlayerObject_UpdatePhysicsState
 
 	switch stage.playerListPos
 	case PlayerName[SONIC AND TAILS] // S&T falls through to Sonic alone
@@ -745,7 +745,7 @@ function PlayerObject_ProcessSuperForms
 		end if
 
 		PlayerObject_SuperState = SUPERSTATE_END
-		CallFunction(PlayerObject_SwapPhysics)
+		CallFunction(PlayerObject_UpdatePhysicsState)
 	end if
 end function
 
@@ -1297,7 +1297,7 @@ function PlayerObject_ProcessPlayer
 		if player.speedShoesTimer < 1
 			// Reset player speed
 			currentPlayer = player.entityPos
-			CallFunction(PlayerObject_SwapPhysics)
+			CallFunction(PlayerObject_UpdatePhysicsState)
 
 			// SlowDownMusic is normally set by the stage's setup script, but if it's not set then don't call it
 			if SlowDownMusic != 0
@@ -1380,7 +1380,7 @@ function PlayerObject_Blank
 end function
 
 // Handles animation speed when rolling
-function PlayerObject_HandleRollAnimSpd
+function PlayerObject_HandleRollingAnimSpd
 
 	if player.character == PLAYER_TAILS_ALONE
 		// Tails gets a constant anim speed of 120
@@ -1708,8 +1708,8 @@ function PlayerObject_HandleAirAcceleration
 end function
 
 
-// Handles player rolling on ground. Not to be confused for PlayerObject_HandleRoll
-function PlayerObject_HandleRolling
+// Handles player rolling on ground. Not to be confused for PlayerObject_HandleRolling
+function PlayerObject_HandleRollingDecel
 	if player.right == true
 		if player.speed < 0
 			player.speed += player.rollingDeceleration
@@ -1942,10 +1942,10 @@ function PlayerObject_StartJump
 		player.timer = 1
 
 		// Set initial animation speed
-		CallFunction(PlayerObject_HandleRollAnimSpd)
+		CallFunction(PlayerObject_HandleRollingAnimSpd)
 
 		// Set the player's state to one depending if they were previously rolling or not
-		if player.state == PlayerObject_HandleRoll
+		if player.state == PlayerObject_HandleRolling
 			player.state = PlayerObject_RollingJump
 		else
 			player.state = PlayerObject_HandleAir
@@ -2015,7 +2015,7 @@ function PlayerObject_SuperTransform
 		player[currentPlayer].blinkTimer = 0
 		player[currentPlayer].visible = true
 
-		CallFunction(PlayerObject_SwapPhysics)
+		CallFunction(PlayerObject_UpdatePhysicsState)
 
 		// Load Super Sonic sprites if Sonic
 		if stage.playerListPos == PlayerName[SONIC]
@@ -2096,7 +2096,7 @@ function PlayerObject_BubbleBounce
 			player.collisionMode = CMODE_FLOOR
 			player.timer = 1
 
-			CallFunction(PlayerObject_HandleRollAnimSpd)
+			CallFunction(PlayerObject_HandleRollingAnimSpd)
 
 			player.state = PlayerObject_HandleAir
 			PlaySfx(SfxName[Bubble Bounce], false)
@@ -2554,7 +2554,7 @@ function PlayerObject_HandleGround
 								if player.speed > 0x8800
 
 									// Start rolling
-									player.state = PlayerObject_HandleRoll
+									player.state = PlayerObject_HandleRolling
 									player.animation = ANI_JUMPING
 									if player.prevAnimation != ANI_JUMPING
 										player.iypos -= player.jumpOffset
@@ -2567,7 +2567,7 @@ function PlayerObject_HandleGround
 								if player.speed < -0x8800
 
 									// Start rolling
-									player.state = PlayerObject_HandleRoll
+									player.state = PlayerObject_HandleRolling
 									player.animation = ANI_JUMPING
 									if player.prevAnimation != ANI_JUMPING
 										player.iypos -= player.jumpOffset
@@ -2671,9 +2671,9 @@ function PlayerObject_AirCtrlLock
 end function
 
 
-function PlayerObject_HandleRoll
+function PlayerObject_HandleRolling
 
-	CallFunction(PlayerObject_HandleRolling)
+	CallFunction(PlayerObject_HandleRollingDecel)
 
 	if player.gravity == GRAVITY_AIR
 
@@ -2681,7 +2681,7 @@ function PlayerObject_HandleRoll
 		player.timer = 0
 		CallFunction(PlayerObject_HandleAirMovement)
 	else
-		CallFunction(PlayerObject_HandleRollAnimSpd)
+		CallFunction(PlayerObject_HandleRollingAnimSpd)
 
 		player.animationSpeed = player.customRollAnimSpeed
 		CallFunction(PlayerObject_ResetOnFloor)
@@ -2824,7 +2824,7 @@ function PlayerObject_HandleSpindash
 		// Release the spindash!
 
 		player.timer = 0
-		player.state = PlayerObject_HandleRoll
+		player.state = PlayerObject_HandleRolling
 		player.animation = ANI_JUMPING
 		player.iypos -= player.jumpOffset
 
@@ -2889,7 +2889,7 @@ function PlayerObject_StartFlyCarry
 		if temp2 == false
 			CheckEqual(player[0].state, PlayerObject_HandleGround)
 			temp2 = checkResult
-			CheckEqual(player[0].state, PlayerObject_HandleRoll)
+			CheckEqual(player[0].state, PlayerObject_HandleRolling)
 			temp2 |= checkResult
 			CheckEqual(player[0].state, PlayerObject_HandleAir)
 			temp2 |= checkResult
@@ -4028,7 +4028,7 @@ end function
 // Unused leftover from Sonic Nexus (2008)
 function PlayerObject_CorkscrewRoll
 	player.angle = 0
-	CallFunction(PlayerObject_HandleRolling)
+	CallFunction(PlayerObject_HandleRollingDecel)
 
 	if player.speed < 0x60000
 		if player.speed > -0x60000
@@ -4101,7 +4101,7 @@ function PlayerObject_TubeSwitch
 			player.speed += temp0
 		end if
 
-		CallFunction(PlayerObject_HandleRollAnimSpd)
+		CallFunction(PlayerObject_HandleRollingAnimSpd)
 		player.animationSpeed = player.customRollAnimSpeed
 		CallFunction(PlayerObject_ResetOnFloor)
 	end if
@@ -4149,7 +4149,7 @@ function PlayerObject_WaterSlide
 			player.speed = -0xA0000
 		end if
 
-		CallFunction(PlayerObject_HandleRollAnimSpd)
+		CallFunction(PlayerObject_HandleRollingAnimSpd)
 
 		player.animation = ANI_WATERSLIDE
 
@@ -4258,7 +4258,7 @@ event ObjectMain
 						if player.animation == ANI_JUMPING
 							if player.down == false
 								if player.state != PlayerObject_BubbleBounce
-									if player.state != PlayerObject_HandleRoll
+									if player.state != PlayerObject_HandleRolling
 										if player.state != PlayerObject_TubeSwitch
 											player.animation = ANI_WALKING
 											if player.entityPos == screen.cameraTarget
@@ -4311,7 +4311,7 @@ event ObjectMain
 					if player.animation == ANI_JUMPING
 						if player.down == false
 							if player.state != PlayerObject_BubbleBounce
-								if player.state != PlayerObject_HandleRoll
+								if player.state != PlayerObject_HandleRolling
 									if player.state != PlayerObject_TubeSwitch
 										player.animation = ANI_WALKING
 										if player.entityPos == screen.cameraTarget
@@ -4492,7 +4492,7 @@ event ObjectStartup
 		currentPlayer = 0
 
 		// Init physics
-		CallFunction(PlayerObject_SwapPhysics)
+		CallFunction(PlayerObject_UpdatePhysicsState)
 
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next

@@ -6,17 +6,44 @@
 // ----------------------------------
 
 // Aliases
-private alias 55 : TYPE_BATBOT
+private alias object.value0  : object.timer
+private alias object.value1  : object.originPos.y
+private alias object.value2  : object.landPos.x
+private alias object.value3  : object.landPos.y
+private alias object.value4  : object.startPos.x
+private alias object.value5  : object.startPos.y
+private alias object.value6  : object.swoopAngle
+private alias object.value7  : object.targetPlayer
+private alias object.value8  : object.showJet
+private alias object.value9  : object.jetFrame
+private alias object.value10 : object.jetAnimTimer
+private alias object.value11 : object.swoopDir
+
+// States
+private alias 0 : BATBOT_SETUP
+private alias 1 : BATBOT_IDLE
+private alias 2 : BATBOT_ATTACK
+private alias 3 : BATBOT_SWOOP_LEFT
+private alias 4 : BATBOT_SWOOP_RIGHT
+
+// Animations
+private alias 0 : REDZ_ANI_FLAP
+private alias 1 : REDZ_ANI_SPIN
+private alias 2 : REDZ_ANI_SWOOP
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Function declarations
 reserve function Batbot_DebugDraw
 reserve function Batbot_DebugSpawn
 
-// Static Values
-
 // Tables
-public table Batbot_table48
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1
+public table Batbot_directionTable
+	FLIP_NONE, FLIP_NONE, FLIP_NONE, FLIP_NONE, FLIP_NONE, FLIP_NONE, FLIP_NONE, FLIP_NONE, FLIP_NONE, FLIP_X, FLIP_X, FLIP_X
 end table
 
 
@@ -33,101 +60,118 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case BATBOT_SETUP
 		if object.priority != PRIORITY_XBOUNDS_DESTROY
 			object.priority = PRIORITY_ACTIVE
 		end if
-		object.value8 = 1
-		object.value1 = object.ypos
+		object.showJet = true
+		object.originPos.y = object.ypos
 		object.prevAnimation = -1
-		object.animation = 0
-		object.state = 1
+		object.animation = REDZ_ANI_FLAP
+		object.state = BATBOT_IDLE
 		break
-	case 1
+
+	case BATBOT_IDLE
 		object.angle += 8
-		object.angle &= 511
+		object.angle &= 0x1FF
 		Sin(object.ypos, object.angle)
 		object.ypos <<= 9
-		object.ypos += object.value1
-		object.animation = 0
+		object.ypos += object.originPos.y
+
+		object.animation = REDZ_ANI_FLAP
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -96, -64, 96, 128, currentPlayer, 0, 0, 0, 0)
-			if checkResult == 1
-				object.animation = 1
+			if checkResult == true
+				object.animation = REDZ_ANI_SPIN
 			end if
+
 			BoxCollisionTest(C_TOUCH, object.entityPos, -80, -64, 80, 96, currentPlayer, 0, 0, 0, 0)
-			if checkResult == 1
-				object.value7 = currentPlayer
-				object.state = 2
+			if checkResult == true
+				object.targetPlayer = currentPlayer
+				object.state = BATBOT_ATTACK
 			end if
 		next
 		break
-	case 2
+
+	case BATBOT_ATTACK
 		if object.angle != 0
 			object.angle += 8
-			object.angle &= 511
+			object.angle &= 0x1FF
 			Sin(object.ypos, object.angle)
 			object.ypos <<= 9
-			object.ypos += object.value1
+			object.ypos += object.originPos.y
 		end if
-		object.value0++
-		if object.value0 == 20
-			object.value0 = 0
-			object.value2 = object.xpos
-			object.value3 = object.ypos
-			currentPlayer = object.value7
+
+		object.timer++
+		if object.timer == 20
+			object.timer = 0
+			object.landPos.x = object.xpos
+			object.landPos.y = object.ypos
+
+			currentPlayer = object.targetPlayer
 			if object[currentPlayer].xpos > object.xpos
-				object.value6 = 256
-				object.value2 += 0x500000
-				object.value11 = 1
-				object.state = 4
+				object.swoopAngle = 0x100
+				object.landPos.x += 0x500000
+				object.swoopDir = FLIP_X
+				object.state = BATBOT_SWOOP_RIGHT
 			else
-				object.value6 = 0
-				object.value2 -= 0x500000
-				object.value11 = 0
-				object.state = 3
+				object.swoopAngle = 0x000
+				object.landPos.x -= 0x500000
+				object.swoopDir = FLIP_NONE
+				object.state = BATBOT_SWOOP_LEFT
 			end if
-			object.value8 = 0
-			object.animation = 2
+
+			object.showJet = false
+			object.animation = REDZ_ANI_SWOOP
 		end if
 		break
-	case 3
-		object.value6 += 4
-		Cos(object.xpos, object.value6)
+
+	case BATBOT_SWOOP_LEFT
+		object.swoopAngle += 4
+
+		Cos(object.xpos, object.swoopAngle)
 		object.xpos *= 0x2800
-		object.xpos += object.value2
-		Sin(object.ypos, object.value6)
+		object.xpos += object.landPos.x
+
+		Sin(object.ypos, object.swoopAngle)
 		object.ypos *= 0x2800
-		object.ypos += object.value3
-		if object.value6 == 256
-			object.value8 = 1
-			object.animation = 0
-			object.state = 1
+		object.ypos += object.landPos.y
+
+		if object.swoopAngle == 256
+			object.showJet = true
+			object.animation = REDZ_ANI_FLAP
+			object.state = BATBOT_IDLE
 		end if
 		break
-	case 4
-		object.value6 -= 4
-		Cos(object.xpos, object.value6)
+
+	case BATBOT_SWOOP_RIGHT
+		object.swoopAngle -= 4
+
+		Cos(object.xpos, object.swoopAngle)
 		object.xpos *= 0x2800
-		object.xpos += object.value2
-		Sin(object.ypos, object.value6)
+		object.xpos += object.landPos.x
+
+		Sin(object.ypos, object.swoopAngle)
 		object.ypos *= 0x2800
-		object.ypos += object.value3
-		if object.value6 == 0
-			object.value8 = 1
-			object.animation = 0
-			object.state = 1
+		object.ypos += object.landPos.y
+
+		if object.swoopAngle == 0
+			object.showJet = true
+			object.animation = REDZ_ANI_FLAP
+			object.state = BATBOT_IDLE
 		end if
 		break
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 12, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 12, currentPlayer, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
 			CallFunction(PlayerObject_BadnikBreak)
 		end if
 	next
+
 	switch object.animation
-	case 0
+	case REDZ_ANI_FLAP
 		if object.animation != object.prevAnimation
 			object.prevAnimation = object.animation
 			object.animationTimer = 0
@@ -143,7 +187,8 @@ event ObjectMain
 			end if
 		end if
 		break
-	case 1
+
+	case REDZ_ANI_SPIN
 		if object.animation != object.prevAnimation
 			object.prevAnimation = object.animation
 			object.animationTimer = 0
@@ -158,10 +203,12 @@ event ObjectMain
 				end if
 			end if
 		end if
-		GetTableValue(object.direction, object.frame, Batbot_table48)
-		object.direction ^= object.value11
+
+		GetTableValue(object.direction, object.frame, Batbot_directionTable)
+		object.direction ^= object.swoopDir
 		break
-	case 2
+
+	case REDZ_ANI_SWOOP
 		if object.animation != object.prevAnimation
 			object.prevAnimation = object.animation
 			object.animationTimer = 0
@@ -176,30 +223,33 @@ event ObjectMain
 				end if
 			end if
 		end if
-		object.direction = object.value11
+
+		object.direction = object.swoopDir
 		break
 	end switch
-	if object.value8 == 1
-		object.value9 = object.value10
-		object.value9 >>= 1
-		object.value10++
-		object.value10 &= 3
+
+	if object.showJet == true
+		object.jetFrame = object.jetAnimTimer
+		object.jetFrame >>= 1
+		object.jetAnimTimer++
+		object.jetAnimTimer &= 3
 	end if
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.value4
-		object.ypos = object.value5
-		if object.outOfBounds == 1
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
 			object.prevAnimation = -1
-			object.animation = 0
-			object.value8 = 1
-			object.value0 = 0
-			object.value10 = 0
+			object.animation = REDZ_ANI_FLAP
+			object.showJet = true
+			object.timer = 0
+			object.jetAnimTimer = 0
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.priority = PRIORITY_ACTIVE_BOUNDS
 			end if
-			object.state = 1
+			object.state = BATBOT_IDLE
 		else
 			object.xpos = temp0
 			object.ypos = temp1
@@ -210,8 +260,8 @@ end event
 
 event ObjectDraw
 	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
-	if object.value8 == 1
-		DrawSprite(object.value9)
+	if object.showJet == true
+		DrawSprite(object.jetFrame)
 	end if
 end event
 
@@ -234,10 +284,12 @@ event ObjectStartup
 	SpriteFrame(-7, -16, 14, 27, 168, 29)
 	SpriteFrame(-7, -16, 14, 27, 183, 29)
 	SpriteFrame(-19, -16, 38, 27, 1, 57)
+
 	foreach (TypeName[Batbot], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value4 = object[arrayPos0].xpos
-		object[arrayPos0].value5 = object[arrayPos0].ypos
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
 	next
+
 	SetTableValue(TypeName[Batbot], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Batbot_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Batbot_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -245,10 +297,28 @@ event ObjectStartup
 end event
 
 event RSDKDraw
+	DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
 	DrawSprite(0)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-3, 10, 6, 5, 206, 1)
+	SpriteFrame(-3, 10, 6, 3, 213, 1)
+	SpriteFrame(-37, -16, 74, 27, 60, 1)
+	SpriteFrame(-35, -16, 70, 27, 135, 1)
+	SpriteFrame(-37, -16, 74, 27, 60, 1)
+	SpriteFrame(-29, -16, 58, 27, 1, 1)
+	SpriteFrame(-35, -16, 70, 27, 135, 1)
+	SpriteFrame(-19, -16, 38, 27, 1, 29)
+	SpriteFrame(-8, -16, 16, 26, 40, 29)
+	SpriteFrame(-8, -16, 16, 26, 40, 29)
+	SpriteFrame(-19, -16, 38, 27, 1, 29)
+	SpriteFrame(-35, -16, 70, 27, 57, 29)
+	SpriteFrame(-19, -16, 38, 27, 128, 29)
+	SpriteFrame(-7, -16, 14, 27, 168, 29)
+	SpriteFrame(-7, -16, 14, 27, 183, 29)
+	SpriteFrame(-19, -16, 38, 27, 1, 57)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

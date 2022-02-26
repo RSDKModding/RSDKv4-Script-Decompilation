@@ -182,7 +182,7 @@ reserve function PlayerObject_Knockback
 reserve function PlayerObject_Death
 reserve function PlayerObject_Drown
 reserve function PlayerObject_HangingBar // Unused - Leftover from CD
-reserve function PlayerObject_HandleRollDecel
+reserve function PlayerObject_TubeSwitch
 reserve function PlayerObject_Clinging
 reserve function PlayerObject_Waterslide
 reserve function PlayerObject_HandleFlyCarry
@@ -192,7 +192,7 @@ reserve function PlayerObject_RestorePowerup
 reserve function PlayerObject_ProcessSuperPalS
 reserve function PlayerObject_ProcessSuperPalT
 reserve function PlayerObject_ProcessSuperPalK
-reserve function PlayerObject_SwitchPhysicsState
+reserve function PlayerObject_UpdatePhysicsState
 reserve function PlayerObject_ProcessSuperState
 reserve function PlayerObject_CheckHit
 reserve function PlayerObject_BadnikBreak
@@ -205,7 +205,7 @@ reserve function PlayerObject_Kill
 reserve function PlayerObject_RollAnimSpd
 reserve function PlayerObject_WalkAnimSpd
 reserve function PlayerObject_RunAnimSpd
-reserve function PlayerObject_RollDecel2
+reserve function PlayerObject_HandleRollingDecel
 reserve function PlayerObject_Transforming
 reserve function PlayerObject_SuperTransform
 reserve function PlayerObject_BubbleBounce
@@ -569,7 +569,7 @@ function PlayerObject_ProcessSuperPalK
 end function
 
 
-function PlayerObject_SwitchPhysicsState
+function PlayerObject_UpdatePhysicsState
 	switch stage.playerListPos
 	case PlayerName[SONIC]
 	case PlayerName[SONIC AND TAILS]
@@ -686,7 +686,7 @@ function PlayerObject_ProcessSuperState
 		end if
 
 		PlayerObject_SuperState = SUPERSTATE_END
-		CallFunction(PlayerObject_SwitchPhysicsState)
+		CallFunction(PlayerObject_UpdatePhysicsState)
 	end if
 end function
 
@@ -1170,7 +1170,7 @@ function PlayerObject_ProcessPlayer
 		player.speedShoesTimer--
 		if player.speedShoesTimer < 1
 			currentPlayer = object.entityPos
-			CallFunction(PlayerObject_SwitchPhysicsState)
+			CallFunction(PlayerObject_UpdatePhysicsState)
 
 			// if any player has speed shoes, continue the music
 			temp0 = 0
@@ -1552,7 +1552,7 @@ function PlayerObject_AirAcceleration
 end function
 
 
-function PlayerObject_RollDecel2
+function PlayerObject_HandleRollingDecel
 	if object.right == true
 		if object.speed < 0
 			object.speed += player.rollingDeceleration
@@ -1695,7 +1695,7 @@ end function
 
 function PlayerObject_StartJump
 
-	// Let's mind out head!!!
+	// Let's mind our head!!!
 	temp1 = false
 	if object.collisionMode == CMODE_FLOOR
 		temp6 = object.xpos
@@ -1796,7 +1796,7 @@ function PlayerObject_SuperTransform
 		player[currentPlayer].blinkTimer = 0
 		object[currentPlayer].visible = true
 
-		CallFunction(PlayerObject_SwitchPhysicsState)
+		CallFunction(PlayerObject_UpdatePhysicsState)
 		if stage.playerListPos == PlayerName[SONIC]
 			LoadAnimation("SuperSonic.ani")
 		end if
@@ -2430,7 +2430,7 @@ function PlayerObject_AirCtrlLock
 	if object.gravity == GRAVITY_AIR
 		CallFunction(PlayerObject_HandleAirMovement)
 	else
-		object.state = PlayerObject_HandleRollDecel
+		object.state = PlayerObject_TubeSwitch
 		CallFunction(PlayerObject_ResetOnFloor)
 		player.skidding = 0
 	end if
@@ -2440,7 +2440,7 @@ end function
 
 
 function PlayerObject_HandleRolling
-	CallFunction(PlayerObject_RollDecel2)
+	CallFunction(PlayerObject_HandleRollingDecel)
 
 	if object.gravity == GRAVITY_AIR
 		object.state = PlayerObject_HandleAir
@@ -3836,7 +3836,7 @@ function PlayerObject_HangingBar
 end function
 
 
-function PlayerObject_HandleRollDecel
+function PlayerObject_TubeSwitch
 	if object.gravity == GRAVITY_AIR
 		object.state = PlayerObject_AirCtrlLock
 		player.timer = 0
@@ -4046,7 +4046,7 @@ event ObjectMain
 							if object.down == false
 								if object.state != PlayerObject_BubbleBounce
 									if object.state != PlayerObject_HandleRolling
-										if object.state != PlayerObject_HandleRollDecel
+										if object.state != PlayerObject_TubeSwitch
 											object.animation = ANI_WALKING
 											if object.entityPos == screen.cameraTarget
 												screen.adjustCameraY = 0
@@ -4101,7 +4101,7 @@ event ObjectMain
 						if object.down == false
 							if object.state != PlayerObject_BubbleBounce
 								if object.state != PlayerObject_HandleRolling
-									if object.state != PlayerObject_HandleRollDecel
+									if object.state != PlayerObject_TubeSwitch
 										object.animation = ANI_WALKING
 										if object.entityPos == screen.cameraTarget
 											screen.adjustCameraY = 0
@@ -4221,7 +4221,7 @@ event ObjectStartup
 		end if
 
 		currentPlayer = 0
-		CallFunction(PlayerObject_SwitchPhysicsState)
+		CallFunction(PlayerObject_UpdatePhysicsState)
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
 end event

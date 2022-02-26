@@ -39,7 +39,6 @@ private alias object.value2 : countdownBubble.drawPos.y
 
 // Shields
 private alias 0 : SHIELD_NONE
-private alias 1 : SHIELD_NORMAL
 private alias 2 : SHIELD_BUBBLE
 private alias 3 : SHIELD_FIRE
 private alias 4 : SHIELD_LIGHTNING
@@ -65,6 +64,7 @@ private alias Water_value38 : Water_activateFlag
 
 // Uses Water_ since all water objects use it from the setup so its easier to make new objs this way
 private alias ZoneSetup_value34 : Water_flashTimer
+private alias ZoneSetup_value36 : CPZSetup_enteredWater
 
 // Tables
 public table Water_processActTable
@@ -224,9 +224,9 @@ event ObjectMain
 				object[currentPlayer].xvel >>= 1
 				object[currentPlayer].speed >>= 1
 
-				CallFunction(PlayerObject_SwitchPhysicsState)
+				CallFunction(PlayerObject_UpdatePhysicsState)
 				if currentPlayer == 0
-					ZoneSetup_value36 = 1
+					CPZSetup_enteredWater = true
 				end if
 
 				if object[currentPlayer].yvel != 0
@@ -479,13 +479,14 @@ event ObjectMain
 					end if
 					
 
-					CallFunction(PlayerObject_SwitchPhysicsState)
+					CallFunction(PlayerObject_UpdatePhysicsState)
 					if object[currentPlayer].yvel != 0
 						temp0 = object.ypos
 						temp0 -= object[currentPlayer].ypos
 						if temp0 < 0xF00000
 							CreateTempObject(TypeName[Water Splash], 0, object[currentPlayer].xpos, temp7)
 							object[tempObjectPos].drawOrder = 4
+							player[currentPlayer].sortedDrawOrder = 4
 							PlaySfx(SfxName[Water Splash], false)
 						end if
 					end if
@@ -500,7 +501,7 @@ event ObjectMain
 	loop
 
 	object.animationTimer++
-	object.animationTimer %= 24
+	object.animationTimer &= 31
 	object.frame = object.animationTimer
 	object.frame >>= 3
 end event
@@ -537,7 +538,7 @@ event ObjectStartup
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		object[arrayPos0].drawOrder = 5
 		object[arrayPos0].inkEffect = INK_ALPHA
-		object[arrayPos0].alpha = 160
+		object[arrayPos0].alpha = 0xA0
 		if credits.screen == 0
 			stage.newWaterLevel = object[arrayPos0].ypos
 		else
@@ -555,7 +556,7 @@ event ObjectStartup
 		stage.waterLevel >>= 16
 		object[arrayPos0].ypos = stage.newWaterLevel
 		
-		if starPostID > 31
+		if starPostID >= 32
 			stage.waterState = recWaterState
 			stage.waterLevel = recWaterLevel
 			stage.newWaterLevel = recWaterLevel

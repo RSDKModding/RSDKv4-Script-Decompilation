@@ -6,16 +6,27 @@
 // ----------------------------------
 
 // Aliases
-private alias 65 : TYPE_ROTATEPLATFORM
+private alias object.state  : object.isDynamic
+
+private alias object.value0  : object.rotateAngle
+private alias object.value1  : object.drawPos.x
+private alias object.value2  : object.drawPos.y
+private alias object.value3  : object.collisionOffset.x
+private alias object.value4  : object.collisionOffset.y
+private alias object.value5  : object.length
+private alias object.value6  : object.rotateSpeed
+private alias object.value7  : object.useSpikeballs
+private alias object.value8  : object.platformFrame
+private alias object.value9  : object.pivotAnimTimer
+private alias object.value10 : object.pivotFrame
+private alias object.value11 : object.amplitude
 
 // Function declarations
 reserve function RotatePlatform_DebugDraw
 reserve function RotatePlatform_DebugSpawn
 
-// Static Values
-
 // Tables
-public table RotatePlatform_table49
+public table RotatePlatform_pivotFrames
 	2, 2, 2, 2, 1, 0, 0, 1
 end table
 
@@ -23,6 +34,7 @@ end table
 function RotatePlatform_DebugDraw
 	temp7 = 3
 	DrawSprite(0)
+
 	temp0 = 0
 	temp1 = 16
 	while temp0 < temp7
@@ -30,181 +42,374 @@ function RotatePlatform_DebugDraw
 		temp2 *= temp1
 		temp2 <<= 7
 		temp2 += object.xpos
+
 		Sin(temp3, 128)
 		temp3 *= temp1
 		temp3 <<= 7
 		temp3 += object.ypos
+
 		DrawSpriteXY(1, temp2, temp3)
+
 		temp0++
 		temp1 += 16
 	loop
 	temp1 -= 8
+
 	Cos(temp2, 128)
 	temp2 *= temp1
 	temp2 <<= 7
 	temp2 += object.xpos
+
 	Sin(temp3, 128)
 	temp3 *= temp1
 	temp3 <<= 7
 	temp3 += object.ypos
+
 	DrawSpriteXY(2, temp2, temp3)
 end function
 
 
 function RotatePlatform_DebugSpawn
 	CreateTempObject(TypeName[Rotate Platform], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value5 = 3
-	object[tempObjectPos].value6 = 128
-	object[tempObjectPos].value0 = 0
+	object[tempObjectPos].length = 3
+	object[tempObjectPos].rotateSpeed = 128
+	object[tempObjectPos].rotateAngle = 0
+
 	CreateTempObject(TypeName[Rotate Platform], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value5 = 3
-	object[tempObjectPos].value6 = 128
-	object[tempObjectPos].value0 = 0x5500
+	object[tempObjectPos].length = 3
+	object[tempObjectPos].rotateSpeed = 128
+	object[tempObjectPos].rotateAngle = 0x5500
+
 	CreateTempObject(TypeName[Rotate Platform], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value5 = 3
-	object[tempObjectPos].value6 = 128
-	object[tempObjectPos].value0 = 0xAB00
+	object[tempObjectPos].length = 3
+	object[tempObjectPos].rotateSpeed = 128
+	object[tempObjectPos].rotateAngle = 0xAB00
 end function
 
 
 event ObjectMain
-	if object.state == 1
+	if object.isDynamic == true
 		temp0 = oscillation
 		temp0 <<= 1
-		Sin(object.value11, temp0)
-		object.value11 >>= 3
-		object.value11 += 192
+		Sin(object.amplitude, temp0)
+		object.amplitude >>= 3
+		object.amplitude += 0xC0
 	else
-		object.value11 = 256
+		object.amplitude = 0x100
 	end if
+
 	temp2 = object.xpos
 	temp3 = object.ypos
-	object.value0 += object.value6
-	object.value0 &= 0x1FFFF
-	temp0 = object.value0
+	object.rotateAngle += object.rotateSpeed
+	object.rotateAngle &= 0x1FFFF
+
+	temp0 = object.rotateAngle
 	temp0 >>= 8
-	temp1 = object.value5
+	temp1 = object.length
 	temp1++
 	temp1 <<= 4
-	object.xpos = object.value1
-	object.ypos = object.value2
-	Cos256(object.value3, temp0)
-	object.value3 *= temp1
-	object.value3 *= object.value11
-	object.value3 += temp2
-	object.value3 &= -0x10000
-	object.value1 = object.value3
-	object.value3 -= object.xpos
-	Sin256(object.value4, temp0)
-	object.value4 *= temp1
-	object.value4 *= object.value11
-	object.value4 += temp3
-	object.value4 &= -0x10000
-	object.value2 = object.value4
-	object.value4 -= object.ypos
-	if object.value7 == 0
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	Cos256(object.collisionOffset.x, temp0)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x *= object.amplitude
+	object.collisionOffset.x += temp2
+	object.collisionOffset.x &= -0x10000
+	object.drawPos.x = object.collisionOffset.x
+	object.collisionOffset.x -= object.xpos
+
+	Sin256(object.collisionOffset.y, temp0)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y *= object.amplitude
+	object.collisionOffset.y += temp3
+	object.collisionOffset.y &= -0x10000
+	object.drawPos.y = object.collisionOffset.y
+	object.collisionOffset.y -= object.ypos
+
+	if object.useSpikeballs == false
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object[currentPlayer].xpos += object.value3
-				object[currentPlayer].ypos += object.value4
+			if checkResult == true
+				object[currentPlayer].xpos += object.collisionOffset.x
+				object[currentPlayer].ypos += object.collisionOffset.y
 			end if
 		next
 	else
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				CallFunction(PlayerObject_Hit)
 			end if
 		next
 	end if
+
 	object.xpos = temp2
 	object.ypos = temp3
-	temp0 = object.value9
+
+	temp0 = object.pivotAnimTimer
 	temp0 >>= 2
-	GetTableValue(object.value10, temp0, RotatePlatform_table49)
-	object.value9++
-	object.value9 &= 31
+	GetTableValue(object.pivotFrame, temp0, RotatePlatform_pivotFrames)
+	object.pivotAnimTimer++
+	object.pivotAnimTimer &= 31
 end event
 
 
 event ObjectDraw
 	temp0 = 0
 	temp1 = 16
-	temp4 = object.value0
+	temp4 = object.rotateAngle
 	temp4 >>= 8
-	while temp0 < object.value5
+	while temp0 < object.length
 		Cos256(temp2, temp4)
 		temp2 *= temp1
-		temp2 *= object.value11
+		temp2 *= object.amplitude
 		temp2 += object.xpos
+
 		Sin256(temp3, temp4)
 		temp3 *= temp1
-		temp3 *= object.value11
+		temp3 *= object.amplitude
 		temp3 += object.ypos
+
 		DrawSpriteXY(3, temp2, temp3)
+
 		temp0++
 		temp1 += 16
 	loop
-	Cos256(object.value1, temp4)
-	object.value1 *= temp1
-	object.value1 *= object.value11
-	object.value1 += object.xpos
-	object.value1 &= -0x10000
-	Sin256(object.value2, temp4)
-	object.value2 *= temp1
-	object.value2 *= object.value11
-	object.value2 += object.ypos
-	object.value2 &= -0x10000
-	DrawSpriteXY(object.value8, object.value1, object.value2)
-	DrawSprite(object.value10)
+
+	Cos256(object.drawPos.x, temp4)
+	object.drawPos.x *= temp1
+	object.drawPos.x *= object.amplitude
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= -0x10000
+
+	Sin256(object.drawPos.y, temp4)
+	object.drawPos.y *= temp1
+	object.drawPos.y *= object.amplitude
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000
+
+	DrawSpriteXY(object.platformFrame, object.drawPos.x, object.drawPos.y)
+	DrawSprite(object.pivotFrame)
 end event
 
 
 event ObjectStartup
 	LoadSpriteSheet("HPZ/Objects.gif")
-	SpriteFrame(-8, -8, 16, 16, 181, 73)
-	SpriteFrame(-8, -8, 16, 16, 181, 90)
-	SpriteFrame(-8, -8, 16, 16, 181, 107)
-	SpriteFrame(-8, -8, 16, 16, 181, 73)
-	SpriteFrame(-32, -8, 64, 16, 1, 183)
-	SpriteFrame(-20, -20, 40, 40, 402, 66)
+	SpriteFrame(-8, -8, 16, 16, 181, 73)  	// orb (inactive) - #0
+	SpriteFrame(-8, -8, 16, 16, 181, 90)  	// orb (activating) - #1
+	SpriteFrame(-8, -8, 16, 16, 181, 107) 	// orb (active) - #2
+	SpriteFrame(-8, -8, 16, 16, 181, 73)  	// orb (inactive) - #3
+	SpriteFrame(-32, -8, 64, 16, 1, 183)  	// platform - #4
+	SpriteFrame(-20, -20, 40, 40, 402, 66) 	// spike - #5
+
 	SetTableValue(TypeName[Rotate Platform], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(RotatePlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(RotatePlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+
 	foreach (TypeName[Rotate Platform], arrayPos0, ALL_ENTITIES)
-		if object[arrayPos0].state == 1
-			object[arrayPos0].value5 = 5
+		if object[arrayPos0].isDynamic == true
+			object[arrayPos0].length = 5
 		else
-			object[arrayPos0].value5 = 4
+			object[arrayPos0].length = 4
 		end if
-		object[arrayPos0].value6 = object[arrayPos0].propertyValue
-		object[arrayPos0].value6 >>= 3
-		object[arrayPos0].value6 <<= 7
-		object[arrayPos0].value6 &= 0x7FB
-		if object[arrayPos0].value6 >= 0x400
-			object[arrayPos0].value6 -= 0x400
-			FlipSign(object[arrayPos0].value6)
+
+		object[arrayPos0].rotateSpeed = object[arrayPos0].propertyValue
+		object[arrayPos0].rotateSpeed >>= 3
+		object[arrayPos0].rotateSpeed <<= 7
+		object[arrayPos0].rotateSpeed &= 0x7FB
+		if object[arrayPos0].rotateSpeed >= 0x400
+			object[arrayPos0].rotateSpeed -= 0x400
+			FlipSign(object[arrayPos0].rotateSpeed)
 		end if
-		object[arrayPos0].value0 = object[arrayPos0].propertyValue
-		object[arrayPos0].value0 &= 7
-		object[arrayPos0].value0 *= 0x2A00
-		object[arrayPos0].value7 = object[arrayPos0].propertyValue
-		object[arrayPos0].value7 >>= 7
-		if object[arrayPos0].value7 == 0
-			object[arrayPos0].value8 = 4
+
+		object[arrayPos0].rotateAngle = object[arrayPos0].propertyValue
+		object[arrayPos0].rotateAngle &= 7
+		object[arrayPos0].rotateAngle *= 0x2A00
+
+		object[arrayPos0].useSpikeballs = object[arrayPos0].propertyValue
+		object[arrayPos0].useSpikeballs >>= 7
+		if object[arrayPos0].useSpikeballs == false
+			object[arrayPos0].platformFrame = 4
 		else
-			object[arrayPos0].value8 = 5
+			object[arrayPos0].platformFrame = 5
 		end if
 	next
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // startDir
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+		case 1 // startDir
+			checkResult = object.propertyValue
+			checkResult >>= 3
+			checkResult &= 0xF
+			break
+		case 2 // startDir
+			GetBit(checkResult, object.propertyValue, 7)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // startDir
+			editor.variableValue &= 7
+
+			temp0 = 7
+			Not(temp0)
+			object.propertyValue &= temp0
+
+			object.propertyValue |= editor.variableValue
+			break
+		case 1 // startDir
+			editor.variableValue &= 0xF
+			editor.variableValue <<= 3
+
+			temp0 = 0x78
+			Not(temp0)
+			object.propertyValue &= temp0
+
+			object.propertyValue |= editor.variableValue
+			break
+		case 2 // useSpikeball
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 7, checkResult)
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	if object.isDynamic == true
+		object.length = 5
+	else
+		object.length = 4
+	end if
+
+	object.rotateSpeed = object.propertyValue
+	object.rotateSpeed >>= 3
+	object.rotateSpeed <<= 7
+	object.rotateSpeed &= 0x7FB
+	if object.rotateSpeed >= 0x400
+		object.rotateSpeed -= 0x400
+		FlipSign(object.rotateSpeed)
+	end if
+
+	object.rotateAngle = object.propertyValue
+	object.rotateAngle &= 7
+	object.rotateAngle *= 0x2A00
+
+	object.useSpikeballs = object.propertyValue
+	object.useSpikeballs >>= 7
+	if object.useSpikeballs == false
+		object.platformFrame = 4
+	else
+		object.platformFrame = 5
+	end if
+
+	if object.isDynamic == true
+		Sin(object.amplitude, 0)
+		object.amplitude >>= 3
+		object.amplitude += 0xC0
+	else
+		object.amplitude = 0x100
+	end if
+
+	temp2 = object.xpos
+	temp3 = object.ypos
+	object.rotateAngle &= 0x1FFFF
+
+	temp0 = object.rotateAngle
+	temp0 >>= 8
+	temp1 = object.length
+	temp1++
+	temp1 <<= 4
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	Cos256(object.collisionOffset.x, temp0)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x *= object.amplitude
+	object.collisionOffset.x += temp2
+	object.collisionOffset.x &= -0x10000
+	object.drawPos.x = object.collisionOffset.x
+	object.collisionOffset.x -= object.xpos
+
+	Sin256(object.collisionOffset.y, temp0)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y *= object.amplitude
+	object.collisionOffset.y += temp3
+	object.collisionOffset.y &= -0x10000
+	object.drawPos.y = object.collisionOffset.y
+	object.collisionOffset.y -= object.ypos
+
+	object.xpos = temp2
+	object.ypos = temp3
+
+	temp0 = 0
+	temp1 = 16
+	temp4 = object.rotateAngle
+	temp4 >>= 8
+	while temp0 < object.length
+		Cos256(temp2, temp4)
+		temp2 *= temp1
+		temp2 *= object.amplitude
+		temp2 += object.xpos
+
+		Sin256(temp3, temp4)
+		temp3 *= temp1
+		temp3 *= object.amplitude
+		temp3 += object.ypos
+
+		DrawSpriteXY(3, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+
+	Cos256(object.drawPos.x, temp4)
+	object.drawPos.x *= temp1
+	object.drawPos.x *= object.amplitude
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= -0x10000
+
+	Sin256(object.drawPos.y, temp4)
+	object.drawPos.y *= temp1
+	object.drawPos.y *= object.amplitude
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000
+
+	DrawSpriteXY(object.platformFrame, object.drawPos.x, object.drawPos.y)
+	DrawSprite(2)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 181, 73)  	// orb (inactive) - #0
+	SpriteFrame(-8, -8, 16, 16, 181, 90)  	// orb (activating) - #1
+	SpriteFrame(-8, -8, 16, 16, 181, 107) 	// orb (active) - #2
+	SpriteFrame(-8, -8, 16, 16, 181, 73)  	// orb (inactive) - #3
+	SpriteFrame(-32, -8, 64, 16, 1, 183)  	// platform - #4
+	SpriteFrame(-20, -20, 40, 40, 402, 66) 	// spike - #5
+
+	AddEditorVariable("angle")
+	SetActiveVariable("angle")
+
+	AddEditorVariable("rotateSpeed")
+	SetActiveVariable("rotateSpeed")
+
+	AddEditorVariable("useSpikeball")
+	SetActiveVariable("useSpikeball")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
 end event

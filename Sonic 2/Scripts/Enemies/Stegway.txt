@@ -6,15 +6,37 @@
 // ----------------------------------
 
 // Aliases
-private alias 68 : TYPE_STEGWAY
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.x
+private alias object.value2 : object.startPos.y
+private alias object.value3 : object.showJet
+private alias object.value4 : object.jetAnimTimer
+private alias object.value5 : object.wheelFrame
+private alias object.value6 : object.wheelAnimTimer
+private alias object.value7 : object.noFloor
+
+// States
+private alias 0 : STEGWAY_MOVING
+private alias 1 : STEGWAY_TURN
+private alias 2 : STEGWAY_REVUP
+private alias 3 : STEGWAY_REVRELEASE
+private alias 4 : STEGWAY_DASH
+
+// Animations
+private alias 0 : STEGWAY_ANI_MOVE
+private alias 1 : STEGWAY_ANI_REVRELEASE
+private alias 2 : STEGWAY_ANI_REVUP
+private alias 3 : STEGWAY_ANI_DASH
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Function declarations
 reserve function Stegway_DebugDraw
 reserve function Stegway_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function Stegway_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
@@ -35,10 +57,11 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case STEGWAY_MOVING
 		if object.priority != PRIORITY_XBOUNDS_DESTROY
 			object.priority = PRIORITY_ACTIVE
 		end if
+
 		object.xpos += object.xvel
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object.direction == FLIP_NONE
@@ -46,32 +69,36 @@ event ObjectMain
 			else
 				BoxCollisionTest(C_TOUCH, object.entityPos, 0, -32, 96, 14, currentPlayer, 0, 0, 0, 0)
 			end if
-			if checkResult == 1
-				object.state = 2
-				object.animation = 3
+
+			if checkResult == true
+				object.state = STEGWAY_REVUP
+				object.animation = STEGWAY_ANI_DASH
 			end if
 		next
+
 		if object.direction == FLIP_NONE
 			ObjectTileGrip(CSIDE_FLOOR, -12, 16, 0)
 		else
 			ObjectTileGrip(CSIDE_FLOOR, 12, 16, 0)
 		end if
-		if checkResult == 0
-			object.state = 1
-			object.animation = 3
-			object.value3 = 0
+
+		if checkResult == false
+			object.state = STEGWAY_TURN
+			object.animation = STEGWAY_ANI_DASH
+			object.showJet = false
 			if object.frame == 3
 				object.frame = 2
 			end if
 		end if
 		break
-	case 1
-		if object.value0 < 29
-			object.value0++
+
+	case STEGWAY_TURN
+		if object.timer < 29
+			object.timer++
 		else
-			object.value0 = 0
-			object.state = 0
-			object.animation = 0
+			object.timer = 0
+			object.state = STEGWAY_MOVING
+			object.animation = STEGWAY_ANI_MOVE
 			object.direction ^= FLIP_X
 			if object.direction == FLIP_NONE
 				object.xvel = -0x4000
@@ -80,50 +107,59 @@ event ObjectMain
 			end if
 		end if
 		break
-	case 2
-		object.value0++
-		if object.value0 == 8
-			object.value0 = 0
-			object.state = 3
-			object.animation = 2
+
+	case STEGWAY_REVUP
+		object.timer++
+		if object.timer == 8
+			object.timer = 0
+			object.state = STEGWAY_REVRELEASE
+			object.animation = STEGWAY_ANI_REVUP
 			PlaySfx(SfxName[Rev Up], false)
 		end if
 		break
-	case 3
-		object.value0++
-		if object.value0 == 32
-			object.value0 = 0
-			object.state = 4
-			object.animation = 1
-			object.value3 = 1
+
+	case STEGWAY_REVRELEASE
+		object.timer++
+		if object.timer == 32
+			object.timer = 0
+			object.state = STEGWAY_DASH
+			object.animation = STEGWAY_ANI_REVRELEASE
+			object.showJet = true
 			object.xvel *= 12
 			PlaySfx(SfxName[Release], false)
 		end if
 		break
-	case 4
+
+	case STEGWAY_DASH
 		object.xpos += object.xvel
+
 		if object.direction == FLIP_NONE
-			if object.value7 == 0
+			if object.noFloor == false
 				temp0 = object.ypos
 				ObjectTileGrip(CSIDE_FLOOR, -64, 16, 0)
-				if checkResult == 0
-					object.value7 = 1
+				if checkResult == false
+					object.noFloor = true
 				end if
+
 				object.ypos = temp0
 			end if
+
 			ObjectTileGrip(CSIDE_FLOOR, -12, 16, 0)
 		else
-			if object.value7 == 0
+			if object.noFloor == false
 				temp0 = object.ypos
 				ObjectTileGrip(CSIDE_FLOOR, 64, 16, 0)
-				if checkResult == 0
-					object.value7 = 1
+				if checkResult == false
+					object.noFloor = true
 				end if
+
 				object.ypos = temp0
 			end if
+
 			ObjectTileGrip(CSIDE_FLOOR, 12, 16, 0)
 		end if
-		if object.value7 == 1
+
+		if object.noFloor == true
 			if ringTimer == 0
 				CreateTempObject(TypeName[Dust Puff], 0, object.xpos, object.ypos)
 				if object.direction == FLIP_NONE
@@ -133,48 +169,52 @@ event ObjectMain
 				end if
 				object[tempObjectPos].iypos += 16
 			end if
+
 			if object.xvel >= 0x4000
 				object.xvel -= 0xA00
 				if object.xvel < 0x4000
 					object.xvel = 0x4000
-					object.state = 0
-					object.animation = 0
+					object.state = STEGWAY_MOVING
+					object.animation = STEGWAY_ANI_MOVE
 					object.animationTimer = 0
 					object.frame = 1
-					object.value3 = 0
-					object.value7 = 0
+					object.showJet = false
+					object.noFloor = false
 				end if
 			end if
+
 			if object.xvel <= -0x4000
 				object.xvel += 0xA00
 				if object.xvel > -0x4000
 					object.xvel = -0x4000
-					object.state = 0
-					object.animation = 0
+					object.state = STEGWAY_MOVING
+					object.animation = STEGWAY_ANI_MOVE
 					object.animationTimer = 0
 					object.frame = 1
-					object.value3 = 0
-					object.value7 = 0
+					object.showJet = false
+					object.noFloor = false
 				end if
 			end if
 		end if
-		if checkResult == 0
-			object.state = 1
-			object.animation = 3
-			object.value3 = 0
-			object.value7 = 0
+
+		if checkResult == false
+			object.state = STEGWAY_TURN
+			object.animation = STEGWAY_ANI_DASH
+			object.showJet = false
+			object.noFloor = false
 			if object.frame == 3
 				object.frame = 2
 			end if
 		end if
 		break
 	end switch
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.value1
-		object.ypos = object.value2
-		if object.outOfBounds == 1
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
 			if object.propertyValue == 0
 				object.direction = FLIP_NONE
 				object.xvel = -0x4000
@@ -182,28 +222,32 @@ event ObjectMain
 				object.direction = FLIP_X
 				object.xvel = 0x4000
 			end if
-			object.animation = 0
+
+			object.animation = STEGWAY_ANI_MOVE
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.priority = PRIORITY_ACTIVE_BOUNDS
 			end if
-			object.value3 = 0
-			object.value5 = 0
-			object.value4 = 0
-			object.value7 = 0
-			object.state = 0
+
+			object.showJet = false
+			object.wheelFrame = 0
+			object.jetAnimTimer = 0
+			object.noFloor = false
+			object.state = STEGWAY_MOVING
 		else
 			object.xpos = temp0
 			object.ypos = temp1
 		end if
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -20, -14, 20, 14, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
+		BoxCollisionTest(C_TOUCH, object.entityPos, -20, -14, 20, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
 			CallFunction(PlayerObject_BadnikBreak)
 		end if
 	next
+
 	switch object.animation
-	case 0
+	case STEGWAY_ANI_MOVE
 		if object.animationTimer == 0
 			object.frame++
 			object.frame %= 3
@@ -221,44 +265,53 @@ event ObjectMain
 		else
 			object.animationTimer--
 		end if
-		object.value6++
-		object.value6 &= 15
-		object.value5 = object.value6
-		object.value5 >>= 3
+
+		object.wheelAnimTimer++
+		object.wheelAnimTimer &= 15
+		object.wheelFrame = object.wheelAnimTimer
+		object.wheelFrame >>= 3
 		break
-	case 1
+
+	case STEGWAY_ANI_REVRELEASE
 		object.frame = 3
-		object.value6++
-		object.value6 %= 6
-		if object.value7 == 1
-			object.value5 = 0
+		object.wheelAnimTimer++
+		object.wheelAnimTimer %= 6
+		if object.noFloor == true
+			object.wheelFrame = 0
 		else
-			object.value5 = object.value6
-			object.value5 /= 3
+			object.wheelFrame = object.wheelAnimTimer
+			object.wheelFrame /= 3
 		end if
 		break
-	case 2
+
+	case STEGWAY_ANI_REVUP
 		object.frame = 2
-		object.value6++
-		object.value6 &= 3
-		object.value5 = object.value6
-		object.value5 >>= 1
+		object.wheelAnimTimer++
+		object.wheelAnimTimer &= 3
+		object.wheelFrame = object.wheelAnimTimer
+		object.wheelFrame >>= 1
+		break
+
+	case STEGWAY_ANI_DASH
 		break
 	end switch
-	if object.value3 == 1
-		object.value4++
-		object.value4 &= 3
+
+	if object.showJet == true
+		object.jetAnimTimer++
+		object.jetAnimTimer &= 3
 	end if
 end event
 
 
 event ObjectDraw
 	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
-	if object.value5 == 1
+
+	if object.wheelFrame == 1
 		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
 	end if
-	if object.value3 == 1
-		temp0 = object.value4
+
+	if object.showJet == true
+		temp0 = object.jetAnimTimer
 		temp0 >>= 1
 		temp0 += 5
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
@@ -268,16 +321,17 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("HPZ/Objects.gif")
-	SpriteFrame(-24, -16, 48, 32, 40, 57)
-	SpriteFrame(-24, -16, 48, 32, 89, 57)
-	SpriteFrame(-24, -16, 48, 32, 82, 90)
-	SpriteFrame(-24, -16, 48, 32, 33, 90)
-	SpriteFrame(0, 0, 24, 16, 198, 29)
-	SpriteFrame(24, 4, 7, 6, 206, 7)
-	SpriteFrame(24, 4, 8, 6, 206, 14)
+	SpriteFrame(-24, -16, 48, 32, 40, 57) 	// moving 1 - #0
+	SpriteFrame(-24, -16, 48, 32, 89, 57) 	// moving 2 - #1
+	SpriteFrame(-24, -16, 48, 32, 82, 90) 	// dashing 1 - #2
+	SpriteFrame(-24, -16, 48, 32, 33, 90) 	// dashing 2 - #3
+	SpriteFrame(0, 0, 24, 16, 198, 29) 		// wheel - #4
+	SpriteFrame(24, 4, 7, 6, 206, 7) 		// jet 1 - #5
+	SpriteFrame(24, 4, 8, 6, 206, 14)		// jet 2 - #6
+
 	foreach (TypeName[Stegway], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].xpos
-		object[arrayPos0].value2 = object[arrayPos0].ypos
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
 		if object[arrayPos0].propertyValue == 0
 			object[arrayPos0].direction = FLIP_NONE
 			object[arrayPos0].xvel = -0x4000
@@ -286,17 +340,60 @@ event ObjectStartup
 			object[arrayPos0].xvel = 0x4000
 		end if
 	next
+
 	SetTableValue(TypeName[Stegway], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Stegway_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Stegway_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		case 0 // direction
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		case 0 // direction
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	if object.propertyValue == 0
+		object.direction = FLIP_NONE
+	else
+		object.direction = FLIP_X
+	end if
+
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("HPZ/Objects.gif")
+	SpriteFrame(-24, -16, 48, 32, 40, 57)
+	SpriteFrame(-24, -16, 48, 32, 89, 57)
+	SpriteFrame(-24, -16, 48, 32, 82, 90)
+	SpriteFrame(-24, -16, 48, 32, 33, 90)
+	SpriteFrame(0, 0, 24, 16, 198, 29)
+	SpriteFrame(24, 4, 7, 6, 206, 7)
+	SpriteFrame(24, 4, 8, 6, 206, 14)
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
 end event

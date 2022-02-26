@@ -6,111 +6,157 @@
 // ----------------------------------
 
 // Aliases
-private alias 62 : TYPE_TUBESWITCH
+private alias object.value0 : object.inTube // I dont really know what the point of this variable is but alright I guess
 
+private alias 0 : TUBESWITCH_R_ENTRY
+private alias 1 : TUBESWITCH_L_ENTRY
+private alias 2 : TUBESWITCH_RWALL_ENTRY
+private alias 3 : TUBESWITCH_LWALL_ENTRY
 
-// Static Values
-
-// Tables
+// Player Aliases
+private alias object.state     		: player.state
+private alias object.speed     		: player.speed
+private alias object.xvel      		: player.xvel
+private alias object.yvel      		: player.yvel
+private alias object.gravity   		: player.gravity
+private alias object.direction 		: player.direction
+private alias object.animation 		: player.animation
+private alias object.collisionMode	: player.collisionMode
+private alias object.angle 			: player.angle
+private alias object.value34   		: player.collisionDisabled
 
 event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		if object[currentPlayer].value34 == 1
-			object[currentPlayer].value34 = 0
+		if player[currentPlayer].collisionDisabled == true
+			player[currentPlayer].collisionDisabled = false
 		end if
-		CheckEqual(object[currentPlayer].state, PlayerObject_Death)
+
+		CheckEqual(player[currentPlayer].state, PlayerObject_Death)
 		temp0 = checkResult
-		CheckEqual(object[currentPlayer].state, PlayerObject_KnuxLedgePullUp)
+		CheckEqual(player[currentPlayer].state, PlayerObject_KnuxLedgePullUp)
 		temp0 |= checkResult
-		CheckEqual(object[currentPlayer].state, PlayerObject_KnuxWallClimb)
+		CheckEqual(player[currentPlayer].state, PlayerObject_KnuxWallClimb)
 		temp0 |= checkResult
-		if temp0 == 0
+		if temp0 == false
 			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				if object[currentPlayer].yvel < 0
-					object[currentPlayer].yvel = 0
+			if checkResult == true
+				if player[currentPlayer].yvel < 0
+					player[currentPlayer].yvel = 0
 				end if
+
 				switch object.propertyValue
-				case 0
-					if object[currentPlayer].xvel > 0
-						if object[currentPlayer].animation != ANI_JUMPING
-							if object[currentPlayer].state != PlayerObject_HandleRollDecel
+				case TUBESWITCH_R_ENTRY // Enter from the right, exit from the left
+					if player[currentPlayer].xvel > 0
+						if player[currentPlayer].animation != ANI_JUMPING
+							if player[currentPlayer].state != PlayerObject_TubeSwitch
 								PlaySfx(SfxName[Rolling], false)
 							end if
 						end if
-						if object[currentPlayer].state == PlayerObject_KnuxGlideLeft
-							FlipSign(object[currentPlayer].speed)
+
+						if player[currentPlayer].state == PlayerObject_KnuxGlideLeft
+							FlipSign(player[currentPlayer].speed)
 						end if
-						object[currentPlayer].direction = FLIP_NONE
-						object[currentPlayer].state = PlayerObject_HandleRollDecel
-						object[currentPlayer].animation = ANI_JUMPING
+
+						player[currentPlayer].direction = FLIP_NONE
+						player[currentPlayer].state = PlayerObject_TubeSwitch
+						player[currentPlayer].animation = ANI_JUMPING
 					else
-						if object[currentPlayer].gravity == GRAVITY_GROUND
-							if object[currentPlayer].xvel > -0x20000
-								object[currentPlayer].speed = -0x20000
+						if player[currentPlayer].gravity == GRAVITY_GROUND
+							if player[currentPlayer].xvel > -0x20000
+								player[currentPlayer].speed = -0x20000
 							end if
 						end if
-						object[currentPlayer].state = PlayerObject_HandleRolling
-						object[currentPlayer].animation = ANI_JUMPING
+
+						player[currentPlayer].state = PlayerObject_HandleRolling
+						player[currentPlayer].animation = ANI_JUMPING
 					end if
 					break
-				case 1
-					if object[currentPlayer].xvel < 0
-						if object[currentPlayer].animation != ANI_JUMPING
-							if object[currentPlayer].state != PlayerObject_HandleRollDecel
+
+				case TUBESWITCH_L_ENTRY // Enter from the left, exit from the right
+					if player[currentPlayer].xvel < 0
+						if player[currentPlayer].animation != ANI_JUMPING
+							if player[currentPlayer].state != PlayerObject_TubeSwitch
 								PlaySfx(SfxName[Rolling], false)
 							end if
 						end if
-						if object[currentPlayer].state == PlayerObject_KnuxGlideLeft
-							FlipSign(object[currentPlayer].speed)
+
+						if player[currentPlayer].state == PlayerObject_KnuxGlideLeft
+							FlipSign(player[currentPlayer].speed)
 						end if
-						object[currentPlayer].direction = FLIP_X
-						object[currentPlayer].state = PlayerObject_HandleRollDecel
-						object[currentPlayer].animation = ANI_JUMPING
+
+						player[currentPlayer].direction = FLIP_X
+						player[currentPlayer].state = PlayerObject_TubeSwitch
+						player[currentPlayer].animation = ANI_JUMPING
 					else
-						if object[currentPlayer].gravity == GRAVITY_GROUND
-							if object[currentPlayer].xvel < 0x20000
-								object[currentPlayer].speed = 0x20000
+						if player[currentPlayer].gravity == GRAVITY_GROUND
+							if player[currentPlayer].xvel < 0x20000
+								player[currentPlayer].speed = 0x20000
 							end if
 						end if
-						object[currentPlayer].state = PlayerObject_HandleRolling
-						object[currentPlayer].animation = ANI_JUMPING
+
+						player[currentPlayer].state = PlayerObject_HandleRolling
+						player[currentPlayer].animation = ANI_JUMPING
 					end if
 					break
+
 				case 2
-					if object[currentPlayer].gravity == GRAVITY_AIR
-						if object[currentPlayer].yvel > 0
-							object[currentPlayer].animation = ANI_JUMPING
-							object[currentPlayer].state = PlayerObject_HandleRollDecel
-							object[currentPlayer].gravity = GRAVITY_GROUND
-							object[currentPlayer].speed = object[currentPlayer].yvel
-							object[currentPlayer].collisionMode = CMODE_RWALL
-							object[currentPlayer].angle = 64
+					if player[currentPlayer].gravity == GRAVITY_AIR
+						if player[currentPlayer].yvel > 0
+							player[currentPlayer].animation = ANI_JUMPING
+							player[currentPlayer].state = PlayerObject_TubeSwitch
+							player[currentPlayer].gravity = GRAVITY_GROUND
+							player[currentPlayer].speed = player[currentPlayer].yvel
+							player[currentPlayer].collisionMode = CMODE_RWALL
+							player[currentPlayer].angle = 0x40
 							PlaySfx(SfxName[Rolling], false)
 						end if
 					end if
 					break
+
 				case 3
-					if object[currentPlayer].gravity == GRAVITY_AIR
-						if object[currentPlayer].yvel > 0
-							object[currentPlayer].animation = ANI_JUMPING
-							object[currentPlayer].state = PlayerObject_HandleRollDecel
-							object[currentPlayer].gravity = GRAVITY_GROUND
-							object[currentPlayer].speed = object[currentPlayer].yvel
-							FlipSign(object[currentPlayer].speed)
-							object[currentPlayer].collisionMode = CMODE_LWALL
-							object[currentPlayer].angle = 192
+					if player[currentPlayer].gravity == GRAVITY_AIR
+						if player[currentPlayer].yvel > 0
+							player[currentPlayer].animation = ANI_JUMPING
+							player[currentPlayer].state = PlayerObject_TubeSwitch
+							player[currentPlayer].gravity = GRAVITY_GROUND
+							player[currentPlayer].speed = player[currentPlayer].yvel
+							FlipSign(player[currentPlayer].speed)
+							player[currentPlayer].collisionMode = CMODE_LWALL
+							player[currentPlayer].angle = 0xC0
 							PlaySfx(SfxName[Rolling], false)
 						end if
 					end if
 					break
 				end switch
-				object.value0 = 1
+
+				object.inTube = true
 			else
-				object.value0 = 0
+				object.inTube = false
 			end if
 		end if
 	next
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -120,4 +166,11 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Enter From Right, Exit From Left", 0)
+	AddEnumVariable("Enter From Left, Exit From Right", 1)
+	AddEnumVariable("Enter From Top, Stick to RWall", 2)
+	AddEnumVariable("Enter From Top, Stick to LWall", 3)
 end event

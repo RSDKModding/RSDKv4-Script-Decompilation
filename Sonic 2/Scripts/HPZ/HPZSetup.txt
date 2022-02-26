@@ -6,7 +6,19 @@
 // ----------------------------------
 
 // Aliases
-private alias 40 : TYPE_HPZSETUP
+private alias object.value9  : object.clrDivisor_R
+private alias object.value10 : object.clrDivisor_G
+private alias object.value11 : object.clrDivisor_B
+private alias object.value12 : object.waterClrDivisor_R
+private alias object.value13 : object.waterClrDivisor_G
+private alias object.value14 : object.waterClrDivisor_B
+
+private alias object.value8  : object.orbFrameTimer
+private alias object.value16 : object.waterfallLoopTimer
+private alias object.value17 : object.playingWaterfallLoop
+
+private alias 1 : TILE_WATERSLIDE
+
 
 // Tracks
 private alias 0 : TRACK_STAGE
@@ -42,10 +54,12 @@ reserve function HPZSetup_SlowDownMusic
 public value HPZSetup_value33 = 0;
 public value HPZSetup_value34 = 0;
 public value HPZSetup_value35 = 0;
-public value HPZSetup_hasAchievement = false
+public value HPZSetup_value36 = false
 
 private alias HPZSetup_value33 : HPZSetup_flashTimer
-private alias HPZSetup_value34 : HPZSetup_bossEncounterFlag
+private alias HPZSetup_value34 : HPZSetup_bossFightActive
+private alias HPZSetup_value35 : HPZSetup_glowingOrbFrame
+private alias HPZSetup_value36 : HPZSetup_hasAchievement
 
 // Tables
 public table HPZSetup_table38
@@ -64,60 +78,64 @@ public table HPZSetup_table41
 	789, 18, 792, 9, 795, 18, 792, 9
 end table
 
-public table HPZSetup_table42
+public table HPZSetup_orbFrameTable
 	0, 0, 1, 2, 3, 3, 2, 1, 2, 3, 3, 2, 1, 0
 end table
 
+// Wacky function to take a normal color and turn it into an underwater color
 function HPZSetup_getClrDivisor
-	object.value9 = temp1
-	object.value9 >>= 16
+	// Regular Colour
+	object.clrDivisor_R = temp1
+	object.clrDivisor_R >>= 16
 
-	object.value10 = temp1
-	object.value10 >>= 8
-	object.value10 &= 0xFF
+	object.clrDivisor_G = temp1
+	object.clrDivisor_G >>= 8
+	object.clrDivisor_G &= 0xFF
 
-	object.value11 = temp1
-	object.value11 &= 0xFF
+	object.clrDivisor_B = temp1
+	object.clrDivisor_B &= 0xFF
 
-	object.value12 = temp2
-	object.value12 >>= 16
+	// Underwater Colour
+	object.waterClrDivisor_R = temp2
+	object.waterClrDivisor_R >>= 16
 
-	object.value13 = temp2
-	object.value13 >>= 8
-	object.value13 &= 0xFF
+	object.waterClrDivisor_G = temp2
+	object.waterClrDivisor_G >>= 8
+	object.waterClrDivisor_G &= 0xFF
 
-	object.value14 = temp2
-	object.value14 &= 0xFF
+	object.waterClrDivisor_B = temp2
+	object.waterClrDivisor_B &= 0xFF
 
-	if object.value12 == 0
-		object.value12 = 1
+	// Minimum of 1 (you cant divide by zero)
+	if object.waterClrDivisor_R == 0
+		object.waterClrDivisor_R = 1
 	end if
 
-	if object.value13 == 0
-		object.value13 = 1
+	if object.waterClrDivisor_G == 0
+		object.waterClrDivisor_G = 1
 	end if
 
-	if object.value14 == 0
-		object.value14 = 1
+	if object.waterClrDivisor_B == 0
+		object.waterClrDivisor_B = 1
 	end if
 
-	object.value9 <<= 8
-	object.value10 <<= 8
-	object.value11 <<= 8
-	object.value9 /= object.value12
-	object.value10 /= object.value13
-	object.value11 /= object.value14
+	object.clrDivisor_R <<= 8
+	object.clrDivisor_G <<= 8
+	object.clrDivisor_B <<= 8
+	object.clrDivisor_R /= object.waterClrDivisor_R
+	object.clrDivisor_G /= object.waterClrDivisor_G
+	object.clrDivisor_B /= object.waterClrDivisor_B
 
-	if object.value9 == 0
-		object.value9 = 0x100
+	if object.clrDivisor_R == 0
+		object.clrDivisor_R = 0x100
 	end if
 
-	if object.value10 == 0
-		object.value10 = 0x100
+	if object.clrDivisor_G == 0
+		object.clrDivisor_G = 0x100
 	end if
 
-	if object.value11 == 0
-		object.value11 = 0x100
+	if object.clrDivisor_B == 0
+		object.clrDivisor_B = 0x100
 	end if
 end function
 
@@ -125,6 +143,7 @@ end function
 function HPZSetup_InitSuperSonicPal
 	temp0 = 0
 	
+	// First Set of colours is just the regular underwater palette
 	GetPaletteEntry(1, 2, temp1)
 	SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
 	temp0++
@@ -159,6 +178,7 @@ function HPZSetup_InitSuperSonicPal
 		SetPaletteEntry(3, 3, temp1)
 		temp0 -= 3
 
+		// Just mix the 2 palettes, we'll use the results as our new colours
 		SetPaletteFade(5, 3, 4, 48, 0, 4)
 
 		GetPaletteEntry(5, 0, temp1)
@@ -217,13 +237,13 @@ function HPZSetup_InitSuperTailsPal
 		temp1 >>= 16
 
 		temp1 *= 0xF8
-		temp1 /= object.value9
+		temp1 /= object.clrDivisor_R
 
 		temp2 *= 0xF8
-		temp2 /= object.value10
+		temp2 /= object.clrDivisor_G
 
 		temp3 *= 0xF8
-		temp3 /= object.value11
+		temp3 /= object.clrDivisor_B
 
 		temp1 &= 0xF0
 		temp2 &= 0xF0
@@ -266,13 +286,13 @@ function HPZSetup_InitSuperTailsPal
 		temp1 >>= 16
 
 		temp1 *= 0x100
-		temp1 /= object.value9
+		temp1 /= object.clrDivisor_R
 
 		temp2 *= 0x100
-		temp2 /= object.value10
+		temp2 /= object.clrDivisor_G
 
 		temp3 *= 0x100
-		temp3 /= object.value11
+		temp3 /= object.clrDivisor_B
 
 		temp1 &= 0xF0
 		temp2 &= 0xF0
@@ -302,7 +322,7 @@ function HPZSetup_InitSuperTailsPal
 		GetPaletteEntry(1, 18, temp2)
 
 		CallFunction(HPZSetup_getClrDivisor)
-		
+
 		GetTableValue(temp1, temp0, PlayerObject_TailsSuperPal)
 
 		temp2 = temp1
@@ -311,17 +331,17 @@ function HPZSetup_InitSuperTailsPal
 
 		temp3 = temp1
 		temp3 &= 0xFF
-		
+
 		temp1 >>= 16
 
 		temp1 *= 0x100
-		temp1 /= object.value9
+		temp1 /= object.clrDivisor_R
 
 		temp2 *= 0x100
-		temp2 /= object.value10
+		temp2 /= object.clrDivisor_G
 
 		temp3 *= 0x100
-		temp3 /= object.value11
+		temp3 /= object.clrDivisor_B
 
 		temp1 &= 0xF0
 		temp2 &= 0xF0
@@ -346,6 +366,7 @@ function HPZSetup_InitSuperTailsPal
 		SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
 		temp0++
 
+
 		GetPaletteEntry(0, 16, temp1)
 		GetPaletteEntry(1, 16, temp2)
 
@@ -363,13 +384,13 @@ function HPZSetup_InitSuperTailsPal
 		temp1 >>= 16
 
 		temp1 *= 0x100
-		temp1 /= object.value9
+		temp1 /= object.clrDivisor_R
 
 		temp2 *= 0x100
-		temp2 /= object.value10
+		temp2 /= object.clrDivisor_G
 
 		temp3 *= 0x100
-		temp3 /= object.value11
+		temp3 /= object.clrDivisor_B
 
 		temp1 &= 0xF0
 		temp2 &= 0xF0
@@ -378,6 +399,7 @@ function HPZSetup_InitSuperTailsPal
 		if temp1 > 0xE0
 			temp1 = 0xE0
 		end if
+		
 		if temp2 > 0xE0
 			temp2 = 0xE0
 		end if
@@ -414,7 +436,6 @@ end function
 
 
 function HPZSetup_SpeedUpMusic
-
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
 
@@ -426,21 +447,21 @@ function HPZSetup_SpeedUpMusic
 
 	if temp0 == 0
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x78B1)
-			SwapMusicTrack("MysticCave2_F.ogg", 0, 0x3BA8, 0x1F40)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
+			SwapMusicTrack("MysticCave2_F.ogg", TRACK_STAGE, 15272, 8000)
 			break
 
-		case 2
-			SetMusicTrack("MysticCave2_F.ogg", 0, 0x3BA8)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 0x78B1, 0x1F40)
+		case TRACK_INVINCIBLE
+			SetMusicTrack("MysticCave2_F.ogg", TRACK_STAGE, 15272)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897, 8000)
 			break
 
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("MysticCave2_F.ogg", 0, 0x3BA8)
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x78B1)
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("MysticCave2_F.ogg", TRACK_STAGE, 15272)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
 			break
 
 		end switch
@@ -464,21 +485,21 @@ function HPZSetup_SlowDownMusic
 
 	if temp0 == 0
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 0x9717)
-			SwapMusicTrack("MysticCave2.ogg", 0, 0x48F0, 0x30D4)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
+			SwapMusicTrack("MysticCave2.ogg", TRACK_STAGE, 18672, 12500)
 			break
 
-		case 2
-			SetMusicTrack("MysticCave2.ogg", 0, 0x48F0)
-			SwapMusicTrack("Invincibility.ogg", 2, 0x9717, 0x30D4)
+		case TRACK_INVINCIBLE
+			SetMusicTrack("MysticCave2.ogg", TRACK_STAGE, 18672)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679, 12500)
 			break
 
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("MysticCave2.ogg", 0, 0x48F0)
-			SetMusicTrack("Invincibility.ogg", 2, 0x9717)
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("MysticCave2.ogg", TRACK_STAGE, 18672)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
 			break
 
 		end switch
@@ -497,20 +518,24 @@ event ObjectMain
 			stage.newWaterLevel = 0x74C0000
 		end if
 	end if
+
 	object.value0++
 	if object.value0 == 2
 		tileLayer[0].deformationOffsetW++
 	end if
+
 	if object.value0 == 4
 		tileLayer[0].deformationOffsetW++
 		tileLayer[1].deformationOffsetW++
 		object.value0 = 0
 	end if
+
 	object.value1++
 	if object.value1 == 5
 		object.value1 = 0
-		RotatePalette(0, 185, 188, 1)
+		RotatePalette(0, 185, 188, true)
 	end if
+
 	if object.value2 < 2
 		GetTableValue(temp0, object.value3, HPZSetup_table38)
 		Copy16x16Tile(738, temp0)
@@ -539,6 +564,7 @@ event ObjectMain
 	else
 		object.value2--
 	end if
+
 	if object.value4 < 2
 		GetTableValue(temp0, object.value5, HPZSetup_table38)
 		Copy16x16Tile(740, temp0)
@@ -567,27 +593,35 @@ event ObjectMain
 	else
 		object.value4--
 	end if
+
 	if object.value6 < 2
 		GetTableValue(temp0, object.value7, HPZSetup_table38)
 		Copy16x16Tile(742, temp0)
 		temp0++
+
 		Copy16x16Tile(743, temp0)
 		GetTableValue(temp0, object.value7, HPZSetup_table39)
 		Copy16x16Tile(748, temp0)
 		temp0++
+
 		Copy16x16Tile(749, temp0)
 		GetTableValue(temp0, object.value7, HPZSetup_table40)
 		Copy16x16Tile(756, temp0)
 		temp0++
+
 		Copy16x16Tile(757, temp0)
 		temp0++
+
 		Copy16x16Tile(758, temp0)
 		GetTableValue(temp0, object.value7, HPZSetup_table41)
 		Copy16x16Tile(765, temp0)
 		temp0++
+
 		Copy16x16Tile(766, temp0)
 		temp0++
+
 		Copy16x16Tile(767, temp0)
+
 		object.value7++
 		GetTableValue(object.value6, object.value7, HPZSetup_table38)
 		object.value7++
@@ -595,14 +629,18 @@ event ObjectMain
 	else
 		object.value6--
 	end if
+
 	if HPZSetup_flashTimer > 0
 		HPZSetup_flashTimer--
 	end if
-	temp0 = object.value8
+
+	temp0 = object.orbFrameTimer
 	temp0 /= 6
-	GetTableValue(HPZSetup_value35, temp0, HPZSetup_table42)
-	object.value8++
-	object.value8 %= 84
+	GetTableValue(HPZSetup_glowingOrbFrame, temp0, HPZSetup_orbFrameTable)
+	object.orbFrameTimer++
+	object.orbFrameTimer %= 84
+
+	// Check for waterslide
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		temp1 = object[currentPlayer].xpos
 		temp1 >>= 16
@@ -612,32 +650,34 @@ event ObjectMain
 		temp2--
 		if object[currentPlayer].gravity == GRAVITY_GROUND
 			Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
-			if temp0 == 1
+			if temp0 == TILE_WATERSLIDE
 				object[currentPlayer].state = PlayerObject_Waterslide
 				object[currentPlayer].direction = FLIP_NONE
 			end if
 		end if
 	next
+
+	// Waterslide Sfx
 	if object[0].state == PlayerObject_Waterslide
-		if object.value16 == 0
-			if object.value17 == 0
+		if object.waterfallLoopTimer == 0
+			if object.playingWaterfallLoop == false
 				PlaySfx(SfxName[Waterfall], false)
 				StopSfx(SfxName[Waterfall Loop])
-				object.value17 = 1
+				object.playingWaterfallLoop = true
 			else
 				StopSfx(SfxName[Waterfall])
 				PlaySfx(SfxName[Waterfall Loop], false)
 			end if
 		end if
-		object.value16++
-		object.value16 &= 63
+		object.waterfallLoopTimer++
+		object.waterfallLoopTimer &= 0x3F
 	else
-		if object.value16 != 0
-			object.value16++
-			object.value16 &= 63
+		if object.waterfallLoopTimer != 0
+			object.waterfallLoopTimer++
+			object.waterfallLoopTimer &= 0x3F
 		else
-			object.value16 = 0
-			object.value17 = 0
+			object.waterfallLoopTimer = 0
+			object.playingWaterfallLoop = false
 		end if
 	end if
 
@@ -660,15 +700,18 @@ event ObjectDraw
 	if temp0 < 0
 		temp0 = 0
 	end if
+
 	if temp0 > screen.ysize
 		temp0 = screen.ysize
 	end if
+	
 	SetActivePalette(0, 0, temp0)
 	if HPZSetup_flashTimer > 0
 		SetActivePalette(2, temp0, screen.ysize)
 	else
 		SetActivePalette(1, temp0, screen.ysize)
 	end if
+
 	AddDrawListEntityRef(2, object.entityPos)
 end event
 
@@ -676,12 +719,12 @@ end event
 event ObjectStartup
 	if stage.actNum == 1
 		// Normal Hidden Palace Zone
-		SetMusicTrack("MysticCave2.ogg", 0, 0x48EF)
+		SetMusicTrack("MysticCave2.ogg", TRACK_STAGE, 18671) // why is this one 1 sample greater than the loopPoint found in HPZSetup_SlowDownMusic...?
 		SpeedUpMusic = HPZSetup_SpeedUpMusic
 		SlowDownMusic = HPZSetup_SlowDownMusic
 	else
 		// Proto Palace Zone
-		SetMusicTrack("Extra.ogg", 0, 0xE9CC)
+		SetMusicTrack("Extra.ogg", TRACK_STAGE, 59852)
 	end if
 
 	if stage.player2Enabled == true
@@ -691,7 +734,7 @@ event ObjectStartup
 	animalType1 = TypeName[Rocky]
 	animalType2 = TypeName[Mocky]
 
-	SetPaletteEntry(0, 192, 0)
+	SetPaletteEntry(0, 192, 0x000000)
 
 	object[10].type = TypeName[HPZ Setup]
 	object[10].priority = PRIORITY_ACTIVE
@@ -711,7 +754,7 @@ event ObjectStartup
 	LoadPalette("ElectricFlash.act", 2, 0, 0, 256)
 
 	HPZSetup_flashTimer = 0
-	HPZSetup_bossEncounterFlag = false
+	HPZSetup_bossFightActive = false
 
 	// Make the next stage OOZ
 	stage.listPos = 20
@@ -734,4 +777,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
