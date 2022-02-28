@@ -6,7 +6,63 @@
 // ----------------------------------
 
 // Aliases
-private alias 68 : TYPE_EGGMAN
+private alias object.value0 : object.originPos.x
+private alias object.value1 : object.originPos.y
+private alias object.value2 : object.oscillationAngle
+private alias object.value4 : object.timer
+private alias object.value5 : object.unused1 // Technically, it *is* used... but it's never used anywhere important
+private alias object.value6 : object.unused2 // Technically, it *is* used... but it's never used anywhere important
+private alias object.value7 : object.health
+private alias object.value8 : object.invincibilityTimer
+private alias object.value9 : object.exploding
+
+// Eggman States
+private alias 0 : ARZEGGMAN_AWAITPLAYER
+private alias 1 : ARZEGGMAN_BOSSFIGHT
+private alias 2 : ARZEGGMAN_EXPLODE
+private alias 3 : ARZEGGMAN_DEFEATFALL
+private alias 4 : ARZEGGMAN_DEFEATRISE
+private alias 5 : ARZEGGMAN_FLEE
+private alias 6 : ARZEGGMAN_ESCAPE
+
+// Eggman Animations
+private alias 0 : ARZEGGANI_INVISIBLE
+private alias 1 : ARZEGGANI_IDLE
+private alias 2 : ARZEGGANI_LAUGH
+private alias 3 : ARZEGGANI_HIT
+private alias 4 : ARZEGGANI_DEFEATED
+private alias 5 : ARZEGGANI_DESTROYED
+private alias 6 : ARZEGGANI_PANIC
+
+// EggmanHammer Aliases
+private alias object.value0  : eggmanHammer.originPos.x
+private alias object.value1  : eggmanHammer.originPos.y
+private alias object.value2  : eggmanHammer.oscillationAngle
+private alias object.value3  : eggmanHammer.timer
+private alias object.value4  : eggmanHammer.boundsR
+private alias object.value5  : eggmanHammer.boundsL
+private alias object.value7  : eggmanHammer.boundsOffset
+private alias object.value8  : eggmanHammer.hideFlames
+private alias object.value12 : eggmanHammer.arrowVelocity
+
+// EggmanHammer States
+private alias 4 : EGGMANHAMMER_DESTROYED
+private alias 5 : EGGMANHAMMER_DEBRIS
+
+// EggmanTotemPole Aliases
+private alias object.value3 : eggmanTotemPole.timer
+
+// EggmanTotemPole States
+private alias 3 : EGGMANTOTEMPOLE_LOWERING
+
+// EggmanArrow States
+private alias 2 : EGGMANARROW_FALLING
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Music Events
 private alias 26 : SLOT_MUSICEVENT_BOSS
@@ -15,23 +71,26 @@ private alias  0 : MUSICEVENT_FADETOBOSS
 private alias  1 : MUSICEVENT_FADETOSTAGE
 
 // Function declarations
-reserve function Eggman_Function151
-
-// Static Values
+reserve function ARZEggman_Oscillate
 
 // Tables
-//0x153A0
-private table Eggman_table0
+
+// No flames so this isn't used at all
+// It's the same table as the one in CPZ/Eggman
+private table ARZEggman_flameAnimFrameTable
 	7, 8, 8, 7, 7, 16
 end table
 
-function Eggman_Function151
-	object.ypos = object.value1
-	Sin256(temp0, object.value2)
+// Using ARZEggman as a prefix here because there's like 12 "Eggman" objects in the game so its less confusing this way
+
+function ARZEggman_Oscillate
+	object.ypos = object.originPos.y
+	Sin256(temp0, object.oscillationAngle)
 	temp0 <<= 10
 	object.ypos += temp0
-	object.value2 += 2
-	object.value2 &= 255
+	object.oscillationAngle += 2
+	object.oscillationAngle &= 255
+
 	object[+1].xpos = object.xpos
 	object[+1].ypos = object.ypos
 	object[+1].direction = object.direction
@@ -40,126 +99,152 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case ARZEGGMAN_AWAITPLAYER
 		temp0 = object.ixpos
 		temp0 -= screen.xcenter
 		stage.newXBoundary1 = temp0
+
 		temp0 = object.ixpos
 		temp0 += screen.xcenter
 		stage.newXBoundary2 = temp0
+
 		if object[0].xpos > object.xpos
-			object.animation = 1
+			object.animation = ARZEGGANI_IDLE
 			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
 			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+
 			object[+1].type = TypeName[Eggman Hammer]
-			object[+1].value3 = 168
+			eggmanHammer[+1].timer = 168
+
 			object.ypos -= 0xF80000
-			object.value1 = object.ypos
+			object.originPos.y = object.ypos
+
 			object[+1].xpos = object.xpos
 			object[+1].ypos = object.ypos
-			object[+1].value0 = object.xpos
-			object[+1].value1 = object.ypos
+			eggmanHammer[+1].originPos.x = object.xpos
+			eggmanHammer[+1].originPos.y = object.ypos
 			object[+1].frame = 3
 			object[+1].priority = PRIORITY_ACTIVE
+
 			object[+5].type = TypeName[Eggman Totem]
 			object[+5].xpos = object.ixpos
 			object[+5].xpos -= screen.xcenter
 			object[+5].xpos += 16
 			object[+5].xpos <<= 16
-			object[+1].value4 = object[+5].xpos
-			object[+1].value4 += 0x5A0000
-			object[+5].value3 = 136
+
+			eggmanHammer[+1].boundsR = object[+5].xpos
+			eggmanHammer[+1].boundsR += 0x5A0000
+
+			eggmanTotemPole[+5].timer = 136
 			object[+5].drawOrder = 2
 			object[+5].priority = PRIORITY_ACTIVE
-			object[+1].value7 = 0xC800
-			object[+1].value7 *= screen.xcenter
-			object[+1].value7 /= 160
-			object[+1].value12 = 0x30000
-			object[+1].value12 *= screen.xcenter
-			object[+1].value12 /= 160
+
+			eggmanHammer[+1].boundsOffset = 0xC800
+			eggmanHammer[+1].boundsOffset *= screen.xcenter
+			eggmanHammer[+1].boundsOffset /= 160
+			eggmanHammer[+1].arrowVelocity = 0x30000
+			eggmanHammer[+1].arrowVelocity *= screen.xcenter
+			eggmanHammer[+1].arrowVelocity /= 160
+
 			object[+6].type = TypeName[Eggman Totem]
 			object[+6].xpos = object.ixpos
 			object[+6].xpos += screen.xcenter
 			object[+6].xpos -= 16
 			object[+6].xpos <<= 16
-			object[+1].value5 = object[+6].xpos
-			object[+1].value5 -= 0x5A0000
-			object[+6].value3 = 136
+
+			eggmanHammer[+1].boundsL = object[+6].xpos
+			eggmanHammer[+1].boundsL -= 0x5A0000
+
+			eggmanTotemPole[+6].timer = 136
 			object[+6].direction = FLIP_X
 			object[+6].drawOrder = 2
 			object[+6].priority = PRIORITY_ACTIVE
-			object.value7 = 8
+
+			object.health = 8
 			object.priority = PRIORITY_ACTIVE
 			object.state++
 		end if
 		break
-	case 1
+
+	case ARZEGGMAN_BOSSFIGHT
 		break
-	case 2
-		object.value4++
-		if object.value4 == 60
+
+	case ARZEGGMAN_EXPLODE
+		object.timer++
+		if object.timer == 60
 			if object.direction == FLIP_NONE
 				object[+1].xvel = -0x10000
 			else
 				object[+1].xvel = 0x10000
 			end if
+
 			object[+1].yvel = -0x40000
 			object[+1].state++
 		end if
-		if object.value4 == 180
-			object.value4 = 0
-			object.animation = 5
-			object.value9 = 0
+
+		if object.timer == 180
+			object.timer = 0
+			object.animation = ARZEGGANI_DESTROYED
+			object.exploding = false
 			object.state++
+
 			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
 			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
+
 			temp0 = tileLayer[0].xsize
 			temp0 <<= 7
 			stage.newXBoundary2 = temp0
-			object[+1].value8 = 1
+			eggmanHammer[+1].hideFlames = true
 		end if
 		break
-	case 3
+
+	case ARZEGGMAN_DEFEATFALL
 		object.ypos += object.yvel
 		object.yvel += 0x1800
-		object.value4++
-		if object.value4 == 38
+
+		object.timer++
+		if object.timer == 38
 			object.yvel = 0
-			object.value4 = 0
+			object.timer = 0
 			object.animationTimer = 0
-			object[+1].value8 = 0
+			eggmanHammer[+1].hideFlames = false
 			object.state++
 		end if
+
 		object[+1].xpos = object.xpos
 		object[+1].ypos = object.ypos
 		object[+1].direction = object.direction
 		break
-	case 4
-		if object.value4 < 48
+
+	case ARZEGGMAN_DEFEATRISE
+		if object.timer < 48
 			object.ypos += object.yvel
 			object.yvel -= 0x800
-			object.value4++
+			object.timer++
 		else
-			object.value4 = 0
+			object.timer = 0
 			object.yvel = 0
-			object.value1 = object.ypos
+			object.originPos.y = object.ypos
 			object.state++
 		end if
+
 		object[+1].xpos = object.xpos
 		object[+1].ypos = object.ypos
 		object[+1].direction = object.direction
 		break
-	case 5
-		object.ypos = object.value1
-		CallFunction(Eggman_Function151)
-		if object.value4 < 8
-			object.value4++
+
+	case ARZEGGMAN_FLEE
+		object.ypos = object.originPos.y
+		CallFunction(ARZEggman_Oscillate)
+
+		if object.timer < 8
+			object.timer++
 		else
-			object.value4 = 0
-			object.animation = 6
+			object.timer = 0
+			object.animation = ARZEGGANI_PANIC
 			object.animationTimer = 0
-			object.value5 = 2
-			object.value6 = 0
+			object.unused1 = 2
+			object.unused2 = 0
 			object.direction = FLIP_X
 			object.priority = PRIORITY_ACTIVE
 			temp0 = tileLayer[0].xsize
@@ -168,28 +253,33 @@ event ObjectMain
 			object.state++
 		end if
 		break
-	case 6
+
+	case ARZEGGMAN_ESCAPE
 		object.xpos += 0x40000
-		object.value1 -= 0x4000
-		CallFunction(Eggman_Function151)
-		if object.outOfBounds == 1
+		object.originPos.y -= 0x4000
+
+		CallFunction(ARZEggman_Oscillate)
+
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 			object[+1].type = TypeName[Blank Object]
 		end if
 		break
 	end switch
-	if object.value7 != 0
-		if object.value8 > 0
-			object.value8--
-			GetBit(temp0, object.value8, 0)
+
+	if object.health != 0
+		if object.invincibilityTimer > 0
+			object.invincibilityTimer--
+			GetBit(temp0, object.invincibilityTimer, 0)
 			if temp0 == 1
 				SetPaletteEntry(0, 192, 0xE0E0E0)
 			else
-				SetPaletteEntry(0, 192, 0)
+				SetPaletteEntry(0, 192, 0x000000)
 			end if
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object.value8 == 0
+			if object.invincibilityTimer == 0
 				CheckEqual(object[currentPlayer].animation, ANI_HURT)
 				temp0 = checkResult
 				CheckEqual(object[currentPlayer].animation, ANI_DYING)
@@ -197,37 +287,41 @@ event ObjectMain
 				CheckEqual(object[currentPlayer].animation, ANI_DROWNING)
 				temp0 |= checkResult
 				if temp0 != 0
-					if object.animation != 2
-						object.animation = 2
+					if object.animation != ARZEGGANI_LAUGH
+						object.animation = ARZEGGANI_LAUGH
 						object.animationTimer = 0
 					end if
 				end if
-				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-				if checkResult == 1
+
+				BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
 					CallFunction(PlayerObject_CheckHit)
-					if checkResult == 1
-						object.value7--
-						if object.value7 == 0
+					if checkResult == true
+						object.health--
+						if object.health == 0
 							player.score += 1000
-							object.animation = 4
+							object.animation = ARZEGGANI_DEFEATED
 							object.animationTimer = 0
-							object.value5 = 0
-							object.value9 = 1
-							object.value1 = object.ypos
-							object.value2 = object[+1].value2
+							object.unused1 = 0
+							object.exploding = true
+							object.originPos.y = object.ypos
+							object.oscillationAngle = eggmanHammer[+1].oscillationAngle
 							object.state++
-							object[+1].state = 4
-							object[+2].state = 2
-							object[+3].state = 2
-							object[+4].state = 2
-							object[+5].value3 = 144
-							object[+5].state = 3
-							object[+6].value3 = 144
-							object[+6].state = 3
+							object[+1].state = EGGMANHAMMER_DESTROYED
+
+							object[+2].state = EGGMANARROW_FALLING
+							object[+3].state = EGGMANARROW_FALLING
+							object[+4].state = EGGMANARROW_FALLING
+
+							eggmanTotemPole[+5].timer = 144
+							object[+5].state = EGGMANTOTEMPOLE_LOWERING
+
+							eggmanTotemPole[+6].timer = 144
+							object[+6].state = EGGMANTOTEMPOLE_LOWERING
 						else
-							object.animation = 3
+							object.animation = ARZEGGANI_HIT
 							object.animationTimer = 0
-							object.value8 = 64
+							object.invincibilityTimer = 64
 							PlaySfx(SfxName[Boss Hit], false)
 						end if
 					end if
@@ -235,7 +329,8 @@ event ObjectMain
 			end if
 		next
 	end if
-	if object.state != 6
+
+	if object.state != ARZEGGMAN_ESCAPE
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = object[currentPlayer].collisionRight
 			temp0 <<= 16
@@ -252,7 +347,8 @@ event ObjectMain
 			end if
 		next
 	end if
-	if object.value9 == 1
+
+	if object.exploding == true
 		temp0 = oscillation
 		temp0 &= 7
 		if temp0 == 0
@@ -274,14 +370,19 @@ end event
 
 event ObjectDraw
 	switch object.animation
-	case 1
+	default
+	case ARZEGGANI_INVISIBLE
+		break
+
+	case ARZEGGANI_IDLE
 		temp0 = object.animationTimer
 		temp0 >>= 3
 		object.animationTimer++
 		object.animationTimer &= 15
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 2
+
+	case ARZEGGANI_LAUGH
 		temp0 = object.animationTimer
 		temp0 &= 15
 		temp0 >>= 3
@@ -290,23 +391,25 @@ event ObjectDraw
 		if object.animationTimer == 50
 			object.animationTimer = 0
 			if object[0].animation != ANI_DYING
-				object.animation = 1
+				object.animation = ARZEGGANI_IDLE
 			end if
 		end if
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 3
+
+	case ARZEGGANI_HIT
 		temp0 = object.animationTimer
 		temp0 &= 1
 		temp0 += 2
 		object.animationTimer++
 		if object.animationTimer == 50
 			object.animationTimer = 0
-			object.animation = 1
+			object.animation = ARZEGGANI_IDLE
 		end if
 		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 4
+
+	case ARZEGGANI_DEFEATED
 		temp0 = object.animationTimer
 		temp0 >>= 5
 		temp0 += 4
@@ -315,15 +418,18 @@ event ObjectDraw
 		object.animationTimer &= 63
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 5
+
+	case ARZEGGANI_DESTROYED
 		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
 		break
-	case 6
+
+	case ARZEGGANI_PANIC
 		temp0 = object.animationTimer
 		temp0 >>= 3
 		object.animationTimer++
 		object.animationTimer &= 15
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
 		temp0 = object.animationTimer
 		temp0 >>= 2
 		temp0 &= 1
@@ -337,7 +443,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone03")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("Global/EggMobile.gif")
 		SpriteFrame(-28, -28, 60, 20, 5, 1)
 		SpriteFrame(-28, -28, 60, 20, 66, 1)
@@ -356,7 +462,8 @@ event ObjectStartup
 		SpriteFrame(30, 2, 14, 12, 66, 74)
 		SpriteFrame(-3, -28, 11, 8, 79, 65)
 		SpriteFrame(0, 0, 0, 0, 7, 2)
-		if options.vsMode == 1
+
+		if options.vsMode == true
 			foreach (TypeName[Eggman], arrayPos0, ALL_ENTITIES)
 				object[arrayPos0].type = TypeName[Blank Object]
 			next
@@ -385,9 +492,20 @@ end event
 
 event RSDKDraw
 	DrawSprite(0)
+	DrawSprite(1)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone03")
+	if checkResult == true
+		LoadSpriteSheet("Global/EggMobile.gif")
+		SpriteFrame(-28, -28, 60, 20, 5, 1)
+		SpriteFrame(-32, -8, 64, 29, 1, 64)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-28, -28, 60, 20, 1, 1)
+		SpriteFrame(-32, -8, 64, 29, 415, 170)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
