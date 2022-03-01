@@ -8,32 +8,76 @@
 // Aliases
 private alias 57 : TYPE_FLASHER
 
+private alias 0 : FLASHER_PAUSED
+private alias 1 : FLASHER_MOVING
+private alias 2 : FLASHER_CHARGING
+private alias 3 : FLASHER_FLASHING
+private alias 4 : FLASHER_DIMMING
+
+private alias object.value0 : object.timer
+private alias object.value1 : object.holdTimer
+private alias object.value2 : object.moveIndex
+private alias object.value3 : object.flip
+private alias object.value4 : object.turnIndex
+private alias object.value5 : object.originPos.x
+private alias object.value6 : object.originPos.y
+
+// Player Aliases
+private alias object.value37 : player.shield
+
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+private alias 4 : SHIELD_LIGHTNING
+
 // Function declarations
 reserve function Flasher_DebugDraw
 reserve function Flasher_DebugSpawn
 
-// Static Values
-
 // Tables
-public table Flasher_table41
-	256, 416, 520, 645, 768, 832, 912, 0x440, 0xF000
+
+// How long the Flasher should pause between movements
+private table Flasher_delayTable
+	256, 416, 520, 645, 768, 832, 912, 1088, 61440
 end table
 
-public table Flasher_table42
-	1, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 0, 1, 0, 1
+// Which way the flasher should turn after each cycle
+// First value in an entry is if it should turn around X-wise, second is for Y
+private table Flasher_directionTable
+	true,  true
+	false, true
+	true,  true
+	false, true
+	false, true
+	true,  false
+	false, true
+	false, true
 end table
 
-public table Flasher_table43
-	1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0
-	1, 0, 1, 0, 1, 0, 1, 0, 1, 0
+
+// The three below are animation tables, with values corresponding to SpriteFrames
+private table Flasher_aniCharging
+	1, 0, 0, 0
+	0, 0, 1, 0
+	0, 0, 0, 1
+	0, 0, 1, 0
+	1, 0, 1, 0
+	1, 0, 1, 0
+	1, 0
 end table
 
-public table Flasher_table44
-	2, 3, 4, 3, 2, 0, 2, 0, 3, 0, 4, 0, 3, 0
+private table Flasher_aniFlashing
+	2, 3, 4, 3, 2, 0, 2
+	0, 3, 0, 4, 0, 3, 0
 end table
 
-public table Flasher_table45
-	4, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1
+private table Flasher_aniDimming
+	4, 4, 4, 4
+	3, 3, 3, 3
+	2, 2, 2, 2
+	1, 1, 1, 1
 	0, 0, 0, 0
 end table
 
@@ -49,161 +93,182 @@ end function
 
 
 event ObjectMain
+	player.score = object.state
 	switch object.state
-	case 0
-		object.value0++
-		if object.value0 == 64
-			object.value0 = 128
+	case FLASHER_PAUSED
+		// State only used upon init, just pause for a moment before starting to attack the player
+		object.timer++
+		if object.timer == 64
+			object.timer = 128
 			object.xvel = -0x10000
 			object.yvel = 0x4000
 			object.speed = 512
-			object.state = 1
+			object.state = FLASHER_MOVING
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.priority = PRIORITY_ACTIVE
 			end if
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-			if checkResult == 1
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+			if checkResult == true
 				CallFunction(PlayerObject_BadnikBreak)
 			end if
 		next
 		break
-	case 1
-		if object.value0 > 0
-			object.value0--
+
+	case FLASHER_MOVING
+		if object.timer > 0
+			object.timer--
 			if object.xvel < 0
 				object.direction = FLIP_NONE
 			else
 				object.direction = FLIP_X
 			end if
-			GetTableValue(temp0, object.value2, Flasher_table41)
-			object.value1++
-			if object.value1 == temp0
-				GetTableValue(object.value3, object.value4, Flasher_table42)
-				if object.value3 == 1
+
+			GetTableValue(temp0, object.moveIndex, Flasher_delayTable)
+			object.holdTimer++
+			if object.holdTimer == temp0
+				GetTableValue(object.flip, object.turnIndex, Flasher_directionTable)
+				if object.flip == true
 					FlipSign(object.speed)
 				end if
-				object.value4++
-				GetTableValue(object.value3, object.value4, Flasher_table42)
-				if object.value3 == 1
+
+				object.turnIndex++
+				GetTableValue(object.flip, object.turnIndex, Flasher_directionTable)
+				if object.flip == true
 					FlipSign(object.yvel)
 				end if
-				object.value4++
-				object.value4 &= 15
-				object.value2++
-				if object.value2 == 10
-					object.value2 = 0
-					object.value1 = 0
+
+				object.turnIndex++
+				object.turnIndex &= 15
+
+				object.moveIndex++
+				if object.moveIndex == 10
+					object.moveIndex = 0
+					object.holdTimer = 0
 				end if
 			end if
+
 			object.xvel += object.speed
 			object.xpos += object.xvel
 			object.ypos += object.yvel
 		else
-			object.state = 2
+			object.state = FLASHER_CHARGING
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-			if checkResult == 1
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+			if checkResult == true
 				CallFunction(PlayerObject_BadnikBreak)
 			end if
 		next
 		break
-	case 2
-		GetTableValue(object.frame, object.value0, Flasher_table43)
-		object.value0++
-		if object.value0 == 26
-			object.value0 = 0
-			object.state = 3
+
+	case FLASHER_CHARGING
+		GetTableValue(object.frame, object.timer, Flasher_aniCharging)
+		object.timer++
+		if object.timer == 26
+			object.timer = 0
+			object.state = FLASHER_FLASHING
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if object[currentPlayer].value37 != 4
-				if checkResult == 1
+			if player[currentPlayer].shield != SHIELD_LIGHTNING
+				if checkResult == true
 					CallFunction(PlayerObject_LightningHit)
 				else
-					BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-					if checkResult == 1
+					BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					if checkResult == true
 						CallFunction(PlayerObject_BadnikBreak)
 					end if
 				end if
 			else
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_BadnikBreak)
 				end if
 			end if
 		next
 		break
-	case 3
-		GetTableValue(object.frame, object.animationTimer, Flasher_table44)
+
+	case FLASHER_FLASHING
+		GetTableValue(object.frame, object.animationTimer, Flasher_aniFlashing)
 		object.animationTimer++
 		if object.animationTimer == 14
 			object.animationTimer = 6
 		end if
-		object.value0++
-		if object.value0 == 128
-			object.value0 = 0
-			object.state = 4
+
+		object.timer++
+		if object.timer == 128
+			object.timer = 0
+			object.state = FLASHER_DIMMING
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].value37 != 4
+			if player[currentPlayer].shield != SHIELD_LIGHTNING
 				BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_LightningHit)
 				else
-					BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-					if checkResult == 1
+					BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					if checkResult == true
 						CallFunction(PlayerObject_BadnikBreak)
 					end if
 				end if
 			else
-				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-				if checkResult == 1
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
 					CallFunction(PlayerObject_BadnikBreak)
 				end if
 			end if
 		next
 		break
-	case 4
-		GetTableValue(object.frame, object.value0, Flasher_table45)
-		object.value0++
-		if object.value0 == 20
-			object.value0 = 128
-			object.state = 1
+
+	case FLASHER_DIMMING
+		GetTableValue(object.frame, object.timer, Flasher_aniDimming)
+		object.timer++
+		if object.timer == 20
+			object.timer = 128
+			object.state = FLASHER_MOVING
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if object[currentPlayer].value37 != 4
-				if checkResult == 1
+			if player[currentPlayer].shield != SHIELD_LIGHTNING
+				if checkResult == true
 					CallFunction(PlayerObject_LightningHit)
 				else
-					BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-					if checkResult == 1
+					BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					if checkResult == true
 						CallFunction(PlayerObject_BadnikBreak)
 					end if
 				end if
 			else
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_BadnikBreak)
 				end if
 			end if
 		next
 		break
+
 	end switch
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
+		// Even if out of bounds, only despawn the Flasher if its origin pos is OOB too
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.value5
-		object.ypos = object.value6
-		if object.outOfBounds == 1
+		object.xpos = object.originPos.x
+		object.ypos = object.originPos.y
+		if object.outOfBounds == true
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
-				object.value0 = 0
+				object.timer = 0
 				object.frame = 0
-				object.state = 0
+				object.state = FLASHER_PAUSED
 				object.priority = PRIORITY_ACTIVE_BOUNDS
 			end if
 		else
+			// Object origin is within bounds, move the Flasher back and continue as normal
 			object.xpos = temp0
 			object.ypos = temp1
 		end if
@@ -218,25 +283,35 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone06")
-	if checkResult == 1
+	
+	if checkResult == true
 		LoadSpriteSheet("MCZ/Objects.gif")
+		
+		// Normal frame
 		SpriteFrame(-16, -8, 23, 15, 1, 1)
+
+		// Lighting Frames
 		SpriteFrame(-16, -8, 23, 15, 25, 1)
 		SpriteFrame(-16, -8, 24, 16, 1, 17)
 		SpriteFrame(-16, -12, 28, 24, 1, 34)
 		SpriteFrame(-16, -16, 32, 32, 1, 59)
 	else
+		// Note - even if these are spriteframes for MBZ, they're broken with values copied directly from MCZ's sheet
+		// Using these sheet positions results in some of Eggman's head frames
 		LoadSpriteSheet("MBZ/Objects.gif")
+
 		SpriteFrame(-16, -8, 23, 15, 1, 1)
 		SpriteFrame(-16, -8, 23, 15, 25, 1)
 		SpriteFrame(-16, -8, 24, 16, 1, 17)
 		SpriteFrame(-16, -12, 28, 24, 1, 34)
 		SpriteFrame(-16, -16, 32, 32, 1, 59)
 	end if
+	
 	foreach (TypeName[Flasher], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value5 = object[arrayPos0].xpos
-		object[arrayPos0].value6 = object[arrayPos0].ypos
+		object[arrayPos0].originPos.x = object[arrayPos0].xpos
+		object[arrayPos0].originPos.y = object[arrayPos0].ypos
 	next
+	
 	SetTableValue(TypeName[Flasher], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Flasher_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Flasher_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -244,10 +319,17 @@ event ObjectStartup
 end event
 
 event RSDKDraw
-	DrawSprite(0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == true
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-16, -8, 23, 15, 1, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		// Decomp note - using "fixed" SpriteFrame here for editor purposes
+		SpriteFrame(-16, -8, 23, 15, 125, 501)
+	end if
 end event
