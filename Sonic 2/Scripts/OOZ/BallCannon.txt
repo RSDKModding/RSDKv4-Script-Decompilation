@@ -6,7 +6,26 @@
 // ----------------------------------
 
 // Aliases
-private alias 52 : TYPE_BALLCANNON
+private alias object.value0 : object.timer
+private alias object.value1 : object.tablePos
+private alias object.value2 : object.enterFrameTable
+private alias object.value3 : object.fireFrameTable
+private alias object.value4 : object.rotateFrameTable
+private alias object.value5 : object.activePlayers
+private alias object.value6 : object.lastCannon
+
+// States
+private alias 0 : BALLCANNON_IDLE
+private alias 1 : BALLCANNON_ENTERED
+private alias 2 : BALLCANNON_ROTATE
+private alias 3 : BALLCANNON_FIREPLAYER
+private alias 4 : BALLCANNON_EXITED
+
+// Player Aliases
+private alias object.value1  : player.timer
+private alias object.value5  : player.customRollAnimSpeed
+private alias object.value17 : debugMode.currentSelection
+private alias object.value35 : player.jumpAbilityState
 
 // Function declarations
 reserve function BallCannon_DebugDraw
@@ -14,106 +33,115 @@ reserve function BallCannon_DebugSpawn
 
 // Static Values
 private value BallCannon_value36 = 0;
+private alias BallCannon_value36 : BallCannon_startDebugID
 
 // Tables
-private table BallCannon_table0
-	0, 0, 1, 0, 2, 0
+private table BallCannon_enterFrameTableU
+	0, FLIP_NONE, 1, FLIP_NONE, 2, FLIP_NONE
 end table
 
-private table BallCannon_table1
-	0, 2, 1, 2, 2, 2
+private table BallCannon_enterFrameTableD
+	0, FLIP_Y, 1, FLIP_Y, 2, FLIP_Y
 end table
 
-private table BallCannon_table2
-	3, 1, 4, 1, 5, 1
+private table BallCannon_enterFrameTableL
+	3, FLIP_X, 4, FLIP_X, 5, FLIP_X
 end table
 
-private table BallCannon_table3
-	3, 0, 4, 0, 5, 0
+private table BallCannon_enterFrameTableR
+	3, FLIP_NONE, 4, FLIP_NONE, 5, FLIP_NONE
 end table
 
-private table BallCannon_table4
+private table BallCannon_rotateFrameTableL
 	6, 7, 8, 9, 10, 11, 12, 13
 end table
 
-private table BallCannon_table5
+private table BallCannon_rotateFrameTableR
 	13, 12, 11, 10, 9, 8, 7, 6
 end table
 
 function BallCannon_DebugDraw
-	temp0 = object[0].value17
-	temp0 -= BallCannon_value36
+	temp0 = debugMode[0].currentSelection
+	temp0 -= BallCannon_startDebugID
 	DrawSprite(temp0)
 end function
 
 
 function BallCannon_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= BallCannon_value36
+	temp0 = debugMode[0].currentSelection
+	temp0 -= BallCannon_startDebugID
 	CreateTempObject(TypeName[Ball Cannon], temp0, object.xpos, object.ypos)
-	object[tempObjectPos].drawOrder = 4
-	object[tempObjectPos].value2 = BallCannon_table0
-	object[tempObjectPos].value3 = BallCannon_table3
-	object[tempObjectPos].value4 = BallCannon_table5
-	object[tempObjectPos].xvel = 0x100000
-	object[tempObjectPos].yvel = 0
-	object[tempObjectPos].value6 = 1
+	object[tempObjectPos].drawOrder 		= 4
+	object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableU
+	object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableR
+	object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableR
+	object[tempObjectPos].xvel 				= 0x100000
+	object[tempObjectPos].yvel 				= 0
+	object[tempObjectPos].lastCannon 		= true
+
 	switch object[tempObjectPos].propertyValue
 	case 0
-		object[tempObjectPos].value2 = BallCannon_table0
-		object[tempObjectPos].value3 = BallCannon_table3
-		object[tempObjectPos].value4 = BallCannon_table5
-		object[tempObjectPos].xvel = 0x100000
-		object[tempObjectPos].yvel = 0
+		object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableU
+		object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableR
+		object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableR
+		object[tempObjectPos].xvel 				= 0x100000
+		object[tempObjectPos].yvel 				= 0
 		break
+
 	case 1
-		object[tempObjectPos].value2 = BallCannon_table3
-		object[tempObjectPos].value3 = BallCannon_table1
-		object[tempObjectPos].value4 = BallCannon_table5
-		object[tempObjectPos].xvel = 0
-		object[tempObjectPos].yvel = 0x100000
+		object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableR
+		object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableD
+		object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableR
+		object[tempObjectPos].xvel 				= 0
+		object[tempObjectPos].yvel 				= 0x100000
 		break
+
 	case 2
-		object[tempObjectPos].value2 = BallCannon_table1
-		object[tempObjectPos].value3 = BallCannon_table2
-		object[tempObjectPos].value4 = BallCannon_table5
-		object[tempObjectPos].xvel = -0x100000
-		object[tempObjectPos].yvel = 0
+		object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableD
+		object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableL
+		object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableR
+		object[tempObjectPos].xvel 				= -0x100000
+		object[tempObjectPos].yvel 				= 0
 		break
+
 	case 3
-		object[tempObjectPos].value2 = BallCannon_table2
-		object[tempObjectPos].value3 = BallCannon_table0
-		object[tempObjectPos].value4 = BallCannon_table5
-		object[tempObjectPos].xvel = 0
-		object[tempObjectPos].yvel = -0x100000
+		object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableL
+		object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableU
+		object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableR
+		object[tempObjectPos].xvel 				= 0
+		object[tempObjectPos].yvel 				= -0x100000
 		break
+
 	case 4
-		object[tempObjectPos].value2 = BallCannon_table3
-		object[tempObjectPos].value3 = BallCannon_table0
-		object[tempObjectPos].value4 = BallCannon_table4
-		object[tempObjectPos].xvel = 0
-		object[tempObjectPos].yvel = -0x100000
+		object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableR
+		object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableU
+		object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableL
+		object[tempObjectPos].xvel 				= 0
+		object[tempObjectPos].yvel 				= -0x100000
 		break
+
 	case 5
-		object[tempObjectPos].value2 = BallCannon_table1
-		object[tempObjectPos].value3 = BallCannon_table3
-		object[tempObjectPos].value4 = BallCannon_table4
-		object[tempObjectPos].xvel = 0x100000
-		object[tempObjectPos].yvel = 0
+		object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableD
+		object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableR
+		object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableL
+		object[tempObjectPos].xvel 				= 0x100000
+		object[tempObjectPos].yvel 				= 0
 		break
+
 	case 6
-		object[tempObjectPos].value2 = BallCannon_table2
-		object[tempObjectPos].value3 = BallCannon_table1
-		object[tempObjectPos].value4 = BallCannon_table4
-		object[tempObjectPos].xvel = 0
-		object[tempObjectPos].yvel = 0x100000
+		object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableL
+		object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableD
+		object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableL
+		object[tempObjectPos].xvel 				= 0
+		object[tempObjectPos].yvel 				= 0x100000
 		break
+
 	case 7
-		object[tempObjectPos].value2 = BallCannon_table0
-		object[tempObjectPos].value3 = BallCannon_table2
-		object[tempObjectPos].value4 = BallCannon_table4
-		object[tempObjectPos].xvel = -0x100000
-		object[tempObjectPos].yvel = 0
+		object[tempObjectPos].enterFrameTable 	= BallCannon_enterFrameTableU
+		object[tempObjectPos].fireFrameTable 	= BallCannon_enterFrameTableL
+		object[tempObjectPos].rotateFrameTable 	= BallCannon_rotateFrameTableL
+		object[tempObjectPos].xvel 				= -0x100000
+		object[tempObjectPos].yvel 				= 0
 		break
 	end switch
 end function
@@ -121,103 +149,107 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 1
-		if object.value0 == 0
-			if object.value1 == 6
-				object.value1 = 0
-				object.value0 = 3
+	case BALLCANNON_ENTERED
+		if object.timer == 0
+			if object.tablePos == 6
+				object.tablePos = 0
+				object.timer = 3
 				object.state++
 			else
-				GetTableValue(object.frame, object.value1, object.value2)
-				object.value1++
-				GetTableValue(object.direction, object.value1, object.value2)
-				object.value1++
+				GetTableValue(object.frame, object.tablePos, object.enterFrameTable)
+				object.tablePos++
+				GetTableValue(object.direction, object.tablePos, object.enterFrameTable)
+				object.tablePos++
 			end if
 		end if
-		object.value0++
-		object.value0 &= 3
+		object.timer++
+		object.timer &= 3
 		break
-	case 2
-		if object.value0 == 0
-			if object.value1 == 8
-				object.value1 = 5
-				object.value0 = 1
+
+	case BALLCANNON_ROTATE
+		if object.timer == 0
+			if object.tablePos == 8
+				object.tablePos = 5
+				object.timer = 1
 				object.state++
 			else
-				GetTableValue(object.frame, object.value1, object.value4)
+				GetTableValue(object.frame, object.tablePos, object.rotateFrameTable)
 				object.direction = FLIP_NONE
-				object.value1++
+				object.tablePos++
 			end if
 		end if
-		object.value0++
-		object.value0 &= 1
+		object.timer++
+		object.timer &= 1
 		break
-	case 3
-		if object.value0 == 0
-			if object.value1 < 0
-				object.value1 = 0
+
+	case BALLCANNON_FIREPLAYER
+		if object.timer == 0
+			if object.tablePos < 0
+				object.tablePos = 0
 				object.state++
 				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 					temp0 = 1
 					temp0 <<= currentPlayer
-					temp0 &= object.value5
+					temp0 &= object.activePlayers
 					if temp0 != 0
-						if object.value6 == 1
-							object[currentPlayer].state = PlayerObject_HandleAir
-							object[currentPlayer].gravity = GRAVITY_AIR
-							object[currentPlayer].value35 = 0
-							object[currentPlayer].tileCollisions = 1
+						if object.lastCannon == true
+							object[currentPlayer].state 		 	= PlayerObject_HandleAir
+							object[currentPlayer].gravity 		 	= GRAVITY_AIR
+							player[currentPlayer].jumpAbilityState	= 0
+							object[currentPlayer].tileCollisions 	= true
 						end if
-						object[currentPlayer].visible = 1
-						object[currentPlayer].value1 = 0
+						object[currentPlayer].visible = true
+						player[currentPlayer].timer = 0
 						object[currentPlayer].speed = object.xvel
 						object[currentPlayer].xvel = object.xvel
 						object[currentPlayer].yvel = object.yvel
 					end if
 				next
 			else
-				GetTableValue(object.direction, object.value1, object.value3)
-				object.value1--
-				GetTableValue(object.frame, object.value1, object.value3)
-				object.value1--
+				GetTableValue(object.direction, object.tablePos, object.fireFrameTable)
+				object.tablePos--
+				GetTableValue(object.frame, object.tablePos, object.fireFrameTable)
+				object.tablePos--
 			end if
 		end if
-		object.value0++
-		object.value0 &= 3
+		object.timer++
+		object.timer &= 3
 		break
-	case 4
-		object.value0++
-		if object.value0 == 16
-			object.value0 = 0
-			object.value5 = 0
-			object.state = 0
+
+	case BALLCANNON_EXITED
+		object.timer++
+		if object.timer == 16
+			object.timer = 0
+			object.activePlayers = 0
+			object.state = BALLCANNON_IDLE
 		end if
 		break
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
+		if checkResult == true
 			temp0 = 1
 			temp0 <<= currentPlayer
-			temp0 &= object.value5
+			temp0 &= object.activePlayers
 			if temp0 == 0
 				object[currentPlayer].state = PlayerObject_Blank
 				object[currentPlayer].animation = ANI_JUMPING
-				object[currentPlayer].animationSpeed = 240
-				object[currentPlayer].value5 = 240
+				object[currentPlayer].animationSpeed = 0xF0
+				player[currentPlayer].customRollAnimSpeed = 0xF0
 				object[currentPlayer].xpos = object.xpos
 				object[currentPlayer].ypos = object.ypos
 				object[currentPlayer].speed = 0
 				object[currentPlayer].xvel = 0
 				object[currentPlayer].yvel = 0
-				object[currentPlayer].visible = 0
-				object[currentPlayer].tileCollisions = 0
+				object[currentPlayer].visible = false
+				object[currentPlayer].tileCollisions = false
 				temp0 = 1
 				temp0 <<= currentPlayer
-				object.value5 |= temp0
-				object.value0 = 0
-				object.value1 = 0
-				object.state = 1
+				object.activePlayers |= temp0
+				object.timer = 0
+				object.tablePos = 0
+				object.state = BALLCANNON_ENTERED
 				if object.priority != PRIORITY_XBOUNDS_DESTROY
 					object.priority = PRIORITY_ACTIVE
 				end if
@@ -225,15 +257,16 @@ event ObjectMain
 			end if
 		end if
 	next
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		if object.priority != PRIORITY_XBOUNDS_DESTROY
 			object.priority = PRIORITY_ACTIVE_BOUNDS
-			object.value1 = 0
-			object.value5 = 0
-			object.value0 = 0
-			GetTableValue(object.frame, 0, object.value2)
-			GetTableValue(object.direction, 1, object.value2)
-			object.state = 0
+			object.tablePos = 0
+			object.activePlayers = 0
+			object.timer = 0
+			GetTableValue(object.frame, 0, object.enterFrameTable)
+			GetTableValue(object.direction, 1, object.enterFrameTable)
+			object.state = BALLCANNON_IDLE
 		end if
 	end if
 end event
@@ -246,109 +279,120 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone07")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("OOZ/Objects.gif")
-		SpriteFrame(-24, -40, 48, 64, 133, 142)
-		SpriteFrame(-24, -32, 48, 56, 133, 85)
-		SpriteFrame(-24, -24, 48, 48, 133, 93)
-		SpriteFrame(-24, -24, 64, 48, 1, 101)
-		SpriteFrame(-24, -24, 56, 48, 1, 150)
-		SpriteFrame(-24, -24, 48, 48, 1, 150)
-		SpriteFrame(-24, -24, 48, 48, 316, 1)
-		SpriteFrame(-24, -24, 48, 48, 365, 1)
-		SpriteFrame(-24, -24, 48, 48, 414, 1)
-		SpriteFrame(-24, -24, 48, 48, 463, 1)
-		SpriteFrame(-24, -24, 48, 48, 316, 50)
-		SpriteFrame(-24, -24, 48, 48, 365, 50)
-		SpriteFrame(-24, -24, 48, 48, 414, 50)
-		SpriteFrame(-24, -24, 48, 48, 463, 50)
+		SpriteFrame(-24, -40, 48, 64, 133, 142)	// Enter Frame 1 (V) - #0
+		SpriteFrame(-24, -32, 48, 56, 133, 85)	// Enter Frame 2 (V) - #1
+		SpriteFrame(-24, -24, 48, 48, 133, 93)	// Enter Frame 3 (V) - #2
+		SpriteFrame(-24, -24, 64, 48, 1, 101)	// Enter Frame 1 (H) - #3
+		SpriteFrame(-24, -24, 56, 48, 1, 150)	// Enter Frame 2 (H) - #4
+		SpriteFrame(-24, -24, 48, 48, 1, 150)	// Enter Frame 3 (H) - #5
+		SpriteFrame(-24, -24, 48, 48, 316, 1) 	// Rotate Frame 1 	 - #6
+		SpriteFrame(-24, -24, 48, 48, 365, 1) 	// Rotate Frame 2 	 - #7
+		SpriteFrame(-24, -24, 48, 48, 414, 1) 	// Rotate Frame 3 	 - #8
+		SpriteFrame(-24, -24, 48, 48, 463, 1) 	// Rotate Frame 4 	 - #9
+		SpriteFrame(-24, -24, 48, 48, 316, 50)	// Rotate Frame 5 	 - #10
+		SpriteFrame(-24, -24, 48, 48, 365, 50)	// Rotate Frame 6 	 - #11
+		SpriteFrame(-24, -24, 48, 48, 414, 50)	// Rotate Frame 7 	 - #12
+		SpriteFrame(-24, -24, 48, 48, 463, 50)	// Rotate Frame 8 	 - #13
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
-		SpriteFrame(-24, -40, 48, 64, 813, 861)
-		SpriteFrame(-24, -32, 48, 56, 764, 869)
-		SpriteFrame(-24, -24, 48, 48, 764, 877)
-		SpriteFrame(-24, -24, 64, 48, 763, 926)
-		SpriteFrame(-24, -24, 56, 48, 771, 975)
-		SpriteFrame(-24, -24, 48, 48, 771, 975)
-		SpriteFrame(-24, -24, 48, 48, 828, 926)
-		SpriteFrame(-24, -24, 48, 48, 877, 926)
-		SpriteFrame(-24, -24, 48, 48, 926, 926)
-		SpriteFrame(-24, -24, 48, 48, 975, 926)
-		SpriteFrame(-24, -24, 48, 48, 828, 975)
-		SpriteFrame(-24, -24, 48, 48, 877, 975)
-		SpriteFrame(-24, -24, 48, 48, 926, 975)
-		SpriteFrame(-24, -24, 48, 48, 975, 975)
+		SpriteFrame(-24, -40, 48, 64, 813, 861)	// Enter Frame 1 (V) - #0
+		SpriteFrame(-24, -32, 48, 56, 764, 869)	// Enter Frame 2 (V) - #1
+		SpriteFrame(-24, -24, 48, 48, 764, 877)	// Enter Frame 3 (V) - #2
+		SpriteFrame(-24, -24, 64, 48, 763, 926)	// Enter Frame 1 (H) - #3
+		SpriteFrame(-24, -24, 56, 48, 771, 975)	// Enter Frame 2 (H) - #4
+		SpriteFrame(-24, -24, 48, 48, 771, 975)	// Enter Frame 3 (H) - #5
+		SpriteFrame(-24, -24, 48, 48, 828, 926)	// Rotate Frame 1 	 - #6
+		SpriteFrame(-24, -24, 48, 48, 877, 926)	// Rotate Frame 2 	 - #7
+		SpriteFrame(-24, -24, 48, 48, 926, 926)	// Rotate Frame 3 	 - #8
+		SpriteFrame(-24, -24, 48, 48, 975, 926)	// Rotate Frame 4 	 - #9
+		SpriteFrame(-24, -24, 48, 48, 828, 975)	// Rotate Frame 5 	 - #10
+		SpriteFrame(-24, -24, 48, 48, 877, 975)	// Rotate Frame 6 	 - #11
+		SpriteFrame(-24, -24, 48, 48, 926, 975)	// Rotate Frame 7 	 - #12
+		SpriteFrame(-24, -24, 48, 48, 975, 975)	// Rotate Frame 8 	 - #13
 	end if
+
 	foreach (TypeName[Ball Cannon], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue > 7
-			object[arrayPos0].value6 = 1
+			object[arrayPos0].lastCannon = true
 			object[arrayPos0].propertyValue &= 7
 		end if
+
 		switch object[arrayPos0].propertyValue
 		case 0
-			object[arrayPos0].value2 = BallCannon_table0
-			object[arrayPos0].value3 = BallCannon_table3
-			object[arrayPos0].value4 = BallCannon_table5
+			object[arrayPos0].enterFrameTable = BallCannon_enterFrameTableU
+			object[arrayPos0].fireFrameTable = BallCannon_enterFrameTableR
+			object[arrayPos0].rotateFrameTable = BallCannon_rotateFrameTableR
 			object[arrayPos0].xvel = 0x100000
 			object[arrayPos0].yvel = 0
 			break
+
 		case 1
-			object[arrayPos0].value2 = BallCannon_table3
-			object[arrayPos0].value3 = BallCannon_table1
-			object[arrayPos0].value4 = BallCannon_table5
+			object[arrayPos0].enterFrameTable = BallCannon_enterFrameTableR
+			object[arrayPos0].fireFrameTable = BallCannon_enterFrameTableD
+			object[arrayPos0].rotateFrameTable = BallCannon_rotateFrameTableR
 			object[arrayPos0].xvel = 0
 			object[arrayPos0].yvel = 0x100000
 			break
+
 		case 2
-			object[arrayPos0].value2 = BallCannon_table1
-			object[arrayPos0].value3 = BallCannon_table2
-			object[arrayPos0].value4 = BallCannon_table5
+			object[arrayPos0].enterFrameTable = BallCannon_enterFrameTableD
+			object[arrayPos0].fireFrameTable = BallCannon_enterFrameTableL
+			object[arrayPos0].rotateFrameTable = BallCannon_rotateFrameTableR
 			object[arrayPos0].xvel = -0x100000
 			object[arrayPos0].yvel = 0
 			break
+
 		case 3
-			object[arrayPos0].value2 = BallCannon_table2
-			object[arrayPos0].value3 = BallCannon_table0
-			object[arrayPos0].value4 = BallCannon_table5
+			object[arrayPos0].enterFrameTable = BallCannon_enterFrameTableL
+			object[arrayPos0].fireFrameTable = BallCannon_enterFrameTableU
+			object[arrayPos0].rotateFrameTable = BallCannon_rotateFrameTableR
 			object[arrayPos0].xvel = 0
 			object[arrayPos0].yvel = -0x100000
 			break
+
 		case 4
-			object[arrayPos0].value2 = BallCannon_table3
-			object[arrayPos0].value3 = BallCannon_table0
-			object[arrayPos0].value4 = BallCannon_table4
+			object[arrayPos0].enterFrameTable = BallCannon_enterFrameTableR
+			object[arrayPos0].fireFrameTable = BallCannon_enterFrameTableU
+			object[arrayPos0].rotateFrameTable = BallCannon_rotateFrameTableL
 			object[arrayPos0].xvel = 0
 			object[arrayPos0].yvel = -0x100000
 			break
+
 		case 5
-			object[arrayPos0].value2 = BallCannon_table1
-			object[arrayPos0].value3 = BallCannon_table3
-			object[arrayPos0].value4 = BallCannon_table4
+			object[arrayPos0].enterFrameTable = BallCannon_enterFrameTableD
+			object[arrayPos0].fireFrameTable = BallCannon_enterFrameTableR
+			object[arrayPos0].rotateFrameTable = BallCannon_rotateFrameTableL
 			object[arrayPos0].xvel = 0x100000
 			object[arrayPos0].yvel = 0
 			break
+
 		case 6
-			object[arrayPos0].value2 = BallCannon_table2
-			object[arrayPos0].value3 = BallCannon_table1
-			object[arrayPos0].value4 = BallCannon_table4
+			object[arrayPos0].enterFrameTable = BallCannon_enterFrameTableL
+			object[arrayPos0].fireFrameTable = BallCannon_enterFrameTableD
+			object[arrayPos0].rotateFrameTable = BallCannon_rotateFrameTableL
 			object[arrayPos0].xvel = 0
 			object[arrayPos0].yvel = 0x100000
 			break
+
 		case 7
-			object[arrayPos0].value2 = BallCannon_table0
-			object[arrayPos0].value3 = BallCannon_table2
-			object[arrayPos0].value4 = BallCannon_table4
+			object[arrayPos0].enterFrameTable = BallCannon_enterFrameTableU
+			object[arrayPos0].fireFrameTable = BallCannon_enterFrameTableL
+			object[arrayPos0].rotateFrameTable = BallCannon_rotateFrameTableL
 			object[arrayPos0].xvel = -0x100000
 			object[arrayPos0].yvel = 0
 			break
 		end switch
+
 		object[arrayPos0].drawOrder = 4
 		object[arrayPos0].propertyValue = 0
-		GetTableValue(object[arrayPos0].frame, 0, object[arrayPos0].value2)
-		GetTableValue(object[arrayPos0].direction, 1, object[arrayPos0].value2)
+		GetTableValue(object[arrayPos0].frame, 0, object[arrayPos0].enterFrameTable)
+		GetTableValue(object[arrayPos0].direction, 1, object[arrayPos0].enterFrameTable)
 	next
+
 	temp0 = 0
-	BallCannon_value36 = DebugMode_ObjCount
+	BallCannon_startDebugID = DebugMode_ObjCount
 	while temp0 < 4
 		SetTableValue(TypeName[Ball Cannon], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(BallCannon_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -358,11 +402,139 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+		case 1 // noControlLock
+			GetBit(checkResult, object.propertyValue, 3)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			editor.variableValue &= 7
+			object.propertyValue &= 0xF8
+
+			object.propertyValue |= editor.variableValue
+			break
+		case 1 // noControlLock
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 3, checkResult)
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	temp0 = object.propertyValue
+	temp0 &= 7
+
+	switch temp0
+	case 0
+		object.enterFrameTable 	= BallCannon_enterFrameTableU
+		object.fireFrameTable 	= BallCannon_enterFrameTableR
+		break
+
+	case 1
+		object.enterFrameTable 	= BallCannon_enterFrameTableR
+		object.fireFrameTable 	= BallCannon_enterFrameTableD
+		break
+
+	case 2
+		object.enterFrameTable 	= BallCannon_enterFrameTableD
+		object.fireFrameTable 	= BallCannon_enterFrameTableL
+		break
+
+	case 3
+		object.enterFrameTable 	= BallCannon_enterFrameTableL
+		object.fireFrameTable 	= BallCannon_enterFrameTableU
+		break
+
+	case 4
+		object.enterFrameTable 	= BallCannon_enterFrameTableR
+		object.fireFrameTable 	= BallCannon_enterFrameTableU
+		break
+
+	case 5
+		object.enterFrameTable 	= BallCannon_enterFrameTableD
+		object.fireFrameTable 	= BallCannon_enterFrameTableR
+		break
+
+	case 6
+		object.enterFrameTable 	= BallCannon_enterFrameTableL
+		object.fireFrameTable 	= BallCannon_enterFrameTableD
+		break
+
+	case 7
+		object.enterFrameTable 	= BallCannon_enterFrameTableU
+		object.fireFrameTable 	= BallCannon_enterFrameTableL
+		break
+	end switch
+	GetTableValue(object.frame, 0, object.enterFrameTable)
+	GetTableValue(object.direction, 1, object.enterFrameTable)
+
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("OOZ/Objects.gif")
+		SpriteFrame(-24, -40, 48, 64, 133, 142)	// Enter Frame 1 (V) - #0
+		SpriteFrame(-24, -32, 48, 56, 133, 85)	// Enter Frame 2 (V) - #1
+		SpriteFrame(-24, -24, 48, 48, 133, 93)	// Enter Frame 3 (V) - #2
+		SpriteFrame(-24, -24, 64, 48, 1, 101)	// Enter Frame 1 (H) - #3
+		SpriteFrame(-24, -24, 56, 48, 1, 150)	// Enter Frame 2 (H) - #4
+		SpriteFrame(-24, -24, 48, 48, 1, 150)	// Enter Frame 3 (H) - #5
+		SpriteFrame(-24, -24, 48, 48, 316, 1) 	// Rotate Frame 1 	 - #6
+		SpriteFrame(-24, -24, 48, 48, 365, 1) 	// Rotate Frame 2 	 - #7
+		SpriteFrame(-24, -24, 48, 48, 414, 1) 	// Rotate Frame 3 	 - #8
+		SpriteFrame(-24, -24, 48, 48, 463, 1) 	// Rotate Frame 4 	 - #9
+		SpriteFrame(-24, -24, 48, 48, 316, 50)	// Rotate Frame 5 	 - #10
+		SpriteFrame(-24, -24, 48, 48, 365, 50)	// Rotate Frame 6 	 - #11
+		SpriteFrame(-24, -24, 48, 48, 414, 50)	// Rotate Frame 7 	 - #12
+		SpriteFrame(-24, -24, 48, 48, 463, 50)	// Rotate Frame 8 	 - #13
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -40, 48, 64, 813, 861)	// Enter Frame 1 (V) - #0
+		SpriteFrame(-24, -32, 48, 56, 764, 869)	// Enter Frame 2 (V) - #1
+		SpriteFrame(-24, -24, 48, 48, 764, 877)	// Enter Frame 3 (V) - #2
+		SpriteFrame(-24, -24, 64, 48, 763, 926)	// Enter Frame 1 (H) - #3
+		SpriteFrame(-24, -24, 56, 48, 771, 975)	// Enter Frame 2 (H) - #4
+		SpriteFrame(-24, -24, 48, 48, 771, 975)	// Enter Frame 3 (H) - #5
+		SpriteFrame(-24, -24, 48, 48, 828, 926)	// Rotate Frame 1 	 - #6
+		SpriteFrame(-24, -24, 48, 48, 877, 926)	// Rotate Frame 2 	 - #7
+		SpriteFrame(-24, -24, 48, 48, 926, 926)	// Rotate Frame 3 	 - #8
+		SpriteFrame(-24, -24, 48, 48, 975, 926)	// Rotate Frame 4 	 - #9
+		SpriteFrame(-24, -24, 48, 48, 828, 975)	// Rotate Frame 5 	 - #10
+		SpriteFrame(-24, -24, 48, 48, 877, 975)	// Rotate Frame 6 	 - #11
+		SpriteFrame(-24, -24, 48, 48, 926, 975)	// Rotate Frame 7 	 - #12
+		SpriteFrame(-24, -24, 48, 48, 975, 975)	// Rotate Frame 8 	 - #13
+	end if
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Up -> Right", 0)
+	AddEnumVariable("Right -> Down", 1)
+	AddEnumVariable("Down -> Left", 2)
+	AddEnumVariable("Left -> Up", 3)
+	AddEnumVariable("Right -> Up", 4)
+	AddEnumVariable("Down -> Right", 5)
+	AddEnumVariable("Left -> Down", 6)
+	AddEnumVariable("Up -> Left", 7)
+
+	AddEditorVariable("noControlLock")
+	SetActiveVariable("noControlLock")
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
 end event

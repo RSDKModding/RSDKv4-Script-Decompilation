@@ -6,28 +6,57 @@
 // ----------------------------------
 
 // Aliases
-private alias 43 : TYPE_TORNADO
+private alias object.value0 : object.timer
+private alias object.value1 : object.stood
+private alias object.value2 : object.gravityForce
+private alias object.value3 : object.storedPos.y
+private alias object.value4 : object.lastPos.y
+private alias object.value5 : object.collisionOffset.y
+private alias object.value6 : object.pilotFrame
+private alias object.value7 : object.pilotFrameDelay
+private alias object.value8 : object.pilotAnimPos
+
+// States
+private alias 0 : TORNADO_IDLE
+private alias 1 : TORNADO_JUMP_RECOIL
+private alias 2 : TORNADO_JUMP_REBOUND
+private alias 3 : TORNADO_LAND
+
+// Static Values
 
 // SCZSetup aliases
 private alias SCZSetup_value35 : SCZSetup_scrollVelocity.x
 private alias SCZSetup_value36 : SCZSetup_scrollVelocity.y
 
-// Static Values
-
 // Tables
-public table Tornado_table40
-	5, 32, 6, 8, 7, 8, 8, 8, 7, 8, 6, 16, 9, 32, 6, 16
+private table Tornado_TailsPilotFrameTable
+	5, 32
+	6, 8
+	7, 8
+	8, 8
+	7, 8
+	6, 16
+	9, 32
+	6, 16
 end table
 
-public table Tornado_table39
-	10, 9, 11, 9, 10, 9, 11, 9, 10, 9, 11, 9, 10, 9, 11, 9
+private table Tornado_SonicPilotFrameTable
+	10, 9
+	11, 9
+	10, 9
+	11, 9
+	10, 9
+	11, 9
+	10, 9
+	11, 9
 end table
 
 
 event ObjectMain
-	object.value4 = object.ypos
+	object.lastPos.y = object.ypos
 	object.drawOrder = 4
-	if options.touchControls == 1
+
+	if options.touchControls == true
 		CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
 		if checkResult > -1
 			arrayPos0 = checkResult
@@ -35,88 +64,101 @@ event ObjectMain
 			temp0 -= saveRAM[39]
 			temp1 = touchscreen[arrayPos0].ypos
 			temp1 -= saveRAM[40]
+
 			ATan2(temp2, temp0, temp1)
 			temp2 += 16
 			temp2 &= 255
 			temp2 >>= 5
 			switch temp2
 			case 0
-				inputDown.right = 1
+				inputDown.right = true
 				break
+
 			case 1
-				inputDown.right = 1
-				inputDown.down = 1
+				inputDown.right = true
+				inputDown.down = true
 				break
+
 			case 2
-				inputDown.down = 1
+				inputDown.down = true
 				break
+
 			case 3
-				inputDown.down = 1
-				inputDown.left = 1
+				inputDown.down = true
+				inputDown.left = true
 				break
+
 			case 4
-				inputDown.left = 1
+				inputDown.left = true
 				break
+
 			case 5
-				inputDown.left = 1
-				inputDown.up = 1
+				inputDown.left = true
+				inputDown.up = true
 				break
+
 			case 6
-				inputDown.up = 1
+				inputDown.up = true
 				break
+
 			case 7
-				inputDown.up = 1
-				inputDown.right = 1
+				inputDown.up = true
+				inputDown.right = true
 				break
 			end switch
 		end if
 	end if
+
 	switch object.state
-	case 0
+	case TORNADO_IDLE
 		if object[0].yvel < 0
-			if object[0].jumpPress == 1
-				object.value2 = 0x20000
-				object.value3 = object.ypos
+			if object[0].jumpPress == true
+				object.gravityForce = 0x20000
+				object.storedPos.y = object.ypos
 				object.state++
 			end if
 		end if
 		break
-	case 1
-		object.value2 -= 0x2000
-		object.ypos += object.value2
-		if object.value2 < 0
+
+	case TORNADO_JUMP_RECOIL // jump force pushes tornado downwards
+		object.gravityForce -= 0x2000
+		object.ypos += object.gravityForce
+		if object.gravityForce < 0
 			object.state++
 		end if
 		break
-	case 2
-		object.value2 -= 0x1000
-		object.ypos += object.value2
-		if object.ypos <= object.value3
-			object.ypos = object.value3
-			object.value2 = 0
-			object.state = 0
+
+	case TORNADO_JUMP_REBOUND // tornado returns to its original position
+		object.gravityForce -= 0x1000
+		object.ypos += object.gravityForce
+		if object.ypos <= object.storedPos.y
+			object.ypos = object.storedPos.y
+			object.gravityForce = 0
+			object.state = TORNADO_IDLE
 		end if
 		break
-	case 3
-		object.value2 -= 0x2000
-		object.ypos += object.value2
-		object.value0++
-		if object.value0 == 24
-			object.value2 = 0
-			object.state = 0
+
+	case TORNADO_LAND
+		object.gravityForce -= 0x2000
+		object.ypos += object.gravityForce
+		object.timer++
+		if object.timer == 24
+			object.gravityForce = 0
+			object.state = TORNADO_IDLE
 		end if
 		break
 	end switch
 
-	if object.value1 == 1
+	if object.stood == true
 		object.xpos += SCZSetup_scrollVelocity.x
 		object.ypos += SCZSetup_scrollVelocity.y
-		if inputDown.up == 1
+		if inputDown.up == true
 			object.yvel = -0x10000
 		else
 			object.yvel = 0
 		end if
-		if inputDown.down == 1
+
+		if inputDown.down == true
 			object.yvel = 0x10000
 		end if
 	else
@@ -139,28 +181,30 @@ event ObjectMain
 	end if
 
 	temp0 = object.ypos
-	object.value4 &= -0x10000
-	object.value5 = object.ypos
-	object.value5 &= -0x10000
-	object.value5 -= object.value4
-	object.ypos = object.value4
-	object.value1 = 0
+	object.lastPos.y &= -0x10000
+	object.collisionOffset.y = object.ypos
+	object.collisionOffset.y &= -0x10000
+	object.collisionOffset.y -= object.lastPos.y
+	object.ypos = object.lastPos.y
+
+	object.stood = false
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		temp2 = object[currentPlayer].yvel
 		BoxCollisionTest(C_PLATFORM, object.entityPos, -20, -8, 20, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
+		if checkResult == true
 			object[currentPlayer].xpos += SCZSetup_scrollVelocity.x
-			object[currentPlayer].ypos += object.value5
+			object[currentPlayer].ypos += object.collisionOffset.y
 			if temp2 > 0x10000
-				object.value0 = 0
-				object.value2 = 0x20000
-				object.state = 3
+				object.timer = 0
+				object.gravityForce = 0x20000
+				object.state = TORNADO_LAND
 			end if
-			object.value1 |= 1
+			object.stood |= true
 		end if
 	next
 
 	object.ypos = temp0
+
 	temp0 = object[0].xpos
 	temp0 -= object.xpos
 	Abs(temp0)
@@ -195,46 +239,48 @@ event ObjectMain
 
 	object.frame++
 	object.frame &= 3
-	if object.value7 < 2
-		if stage.playerListPos == 1
-			GetTableValue(object.value6, object.value8, Tornado_table39)
-			object.value8++
-			GetTableValue(object.value7, object.value8, Tornado_table39)
-			object.value8++
+	if object.pilotFrameDelay <= 1
+		if stage.playerListPos == PlayerName[TAILS]
+			GetTableValue(object.pilotFrame, object.pilotAnimPos, Tornado_SonicPilotFrameTable)
+			object.pilotAnimPos++
+
+			GetTableValue(object.pilotFrameDelay, object.pilotAnimPos, Tornado_SonicPilotFrameTable)
+			object.pilotAnimPos++
 		else
-			GetTableValue(object.value6, object.value8, Tornado_table40)
-			object.value8++
-			GetTableValue(object.value7, object.value8, Tornado_table40)
-			object.value8++
+			GetTableValue(object.pilotFrame, object.pilotAnimPos, Tornado_TailsPilotFrameTable)
+			object.pilotAnimPos++
+
+			GetTableValue(object.pilotFrameDelay, object.pilotAnimPos, Tornado_TailsPilotFrameTable)
+			object.pilotAnimPos++
 		end if
-		object.value8 &= 15
+		object.pilotAnimPos &= 15
 	else
-		object.value7--
+		object.pilotFrameDelay--
 	end if
 end event
 
 
 event ObjectDraw
-	DrawSprite(object.frame)
-	DrawSprite(4)
-	DrawSprite(object.value6)
+	DrawSprite(object.frame) 		// propeller
+	DrawSprite(4)					// tornado
+	DrawSprite(object.pilotFrame) 	// pilot
 end event
 
 
 event ObjectStartup
 	LoadSpriteSheet("SCZ/Objects.gif")
-	SpriteFrame(21, 8, 4, 24, 378, 215)
-	SpriteFrame(21, 11, 4, 18, 383, 218)
-	SpriteFrame(21, 16, 4, 8, 388, 223)
-	SpriteFrame(21, 11, 4, 18, 393, 218)
-	SpriteFrame(-95, -16, 116, 64, 261, 191)
-	SpriteFrame(-45, -8, 21, 16, 261, 174)
-	SpriteFrame(-45, -8, 21, 16, 283, 174)
-	SpriteFrame(-45, -8, 21, 16, 305, 174)
-	SpriteFrame(-45, -8, 21, 16, 327, 174)
-	SpriteFrame(-47, -8, 23, 16, 349, 174)
-	SpriteFrame(-50, -8, 24, 16, 294, 157)
-	SpriteFrame(-50, -8, 24, 16, 319, 157)
+	SpriteFrame(21, 8, 4, 24, 378, 215)			// propeller 1 - #0
+	SpriteFrame(21, 11, 4, 18, 383, 218)		// propeller 2 - #1
+	SpriteFrame(21, 16, 4, 8, 388, 223)			// propeller 3 - #2
+	SpriteFrame(21, 11, 4, 18, 393, 218)		// propeller 4 - #3
+	SpriteFrame(-95, -16, 116, 64, 261, 191) 	// tornado - #4
+	SpriteFrame(-45, -8, 21, 16, 261, 174)		// pilot (tails) 1 - #5
+	SpriteFrame(-45, -8, 21, 16, 283, 174)		// pilot (tails) 2 - #6
+	SpriteFrame(-45, -8, 21, 16, 305, 174)		// pilot (tails) 3 - #7
+	SpriteFrame(-45, -8, 21, 16, 327, 174)		// pilot (tails) 4 - #8
+	SpriteFrame(-47, -8, 23, 16, 349, 174)		// pilot (tails) 5 - #9
+	SpriteFrame(-50, -8, 24, 16, 294, 157)		// pilot (sonic) 6 - #10
+	SpriteFrame(-50, -8, 24, 16, 319, 157)		// pilot (sonic) 2 - #11
 
 	// Bye bye player 2
 	object[1].type = TypeName[Blank Object]

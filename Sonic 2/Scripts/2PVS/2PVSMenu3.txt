@@ -5,60 +5,102 @@
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// Slot 0 = 2PVSSetup
+// Slot 1 = 2PVSMenu (should be this entity)
+// Slot 2 = other 2PVSMenu (the other player's 2PVSMenu3 that we got from ReceiveEntity)
+
 // Aliases
-private alias 11 : TYPE_2PVSMENU3
+private alias object.value0 : object.timer
+private alias object.value1 : object.iconSheet
+private alias object.value2 : object.textSheet
+private alias object.value3 : object.selection
+private alias object.value4 : object.selectionTimer
+private alias object.value5 : object.selectedCharacter
+private alias object.value6 : object.vsSendReceieveValue
+
+// States
+private alias 0 : 2PVSMENU3_SETUP
+private alias 1 : 2PVSMENU3_SETUPROOM
+private alias 2 : 2PVSMENU3_FINISHROOMSETUP
+private alias 3 : 2PVSMENU3_SELECTING
+private alias 4 : 2PVSMENU3_STAGESELECTED
+private alias 5 : 2PVSMENU3_SHOWSELSTAGE
+private alias 6 : 2PVSMENU3_TOSELECTEDSTAGE
+private alias 7 : 2PVSMENU3_TOMAINMENU
+private alias 8 : 2PVSMENU3_NONE
+
+// Selections
+private alias 0 : 2PVSMENU3_SEL_NONE
+private alias 1 : 2PVSMENU3_SEL_EHZ
+private alias 2 : 2PVSMENU3_SEL_CPZ
+private alias 3 : 2PVSMENU3_SEL_ARZ
+private alias 4 : 2PVSMENU3_SEL_CNZ
+private alias 5 : 2PVSMENU3_SEL_HTZ
+private alias 6 : 2PVSMENU3_SEL_MCZ
+private alias 7 : 2PVSMENU3_SEL_OOZ
+private alias 8 : 2PVSMENU3_SEL_SS
+
+// ZoneButton Aliases
+private alias object.value1 : zoneButton.zoneDetailsWidth
+private alias object.value2 : zoneButton.disabled
+
+// 2PVSSetup States
+private alias 3 : 2PVSSETUP_TOREGULARSTAGE
+private alias 4 : 2PVSSETUP_TOSPECIALSTAGE
 
 // Function declarations
-reserve function 2PVSMenu3_Function7
-reserve function 2PVSMenu3_Function8
+reserve function 2PVSMenu3_SetupIcons
+reserve function 2PVSMenu3_HandleIconMovement
 
-// Static Values
+function 2PVSMenu3_SetupIcons
+	object[10].alpha = 0x100
+	object[11].alpha = 0x100
+	object[12].alpha = 0x100
+	object[13].alpha = 0x100
+	object[14].alpha = 0x100
+	object[15].alpha = 0x100
+	object[16].alpha = 0x100
+	object[17].alpha = 0x100
 
-// Tables
-
-function 2PVSMenu3_Function7
-	object[10].alpha = 256
-	object[11].alpha = 256
-	object[12].alpha = 256
-	object[13].alpha = 256
-	object[14].alpha = 256
-	object[15].alpha = 256
-	object[16].alpha = 256
-	object[17].alpha = 256
-	object[+1].value5 = vs.player2Type
-	object[+1].value5 += 2
-	object.state = 3
-	if options.physicalControls == 0
-		object.value3 = 0
+	object[+1].selectedCharacter = vs.player2Type
+	object[+1].selectedCharacter += 2
+	object.state = 2PVSMENU3_SELECTING
+	if options.physicalControls == false
+		object.selection = 2PVSMENU3_SEL_NONE
 	else
-		object.value3 = 1
+		object.selection = 2PVSMENU3_SEL_EHZ
 	end if
 end function
 
 
-function 2PVSMenu3_Function8
+function 2PVSMenu3_HandleIconMovement
 	object[10].xpos = -108
 	object[10].xpos *= object.scale
 	object[10].xpos >>= 8
 	object[14].xpos = object[10].xpos
+
 	object[11].xpos = -36
 	object[11].xpos *= object.scale
 	object[11].xpos >>= 8
 	object[15].xpos = object[11].xpos
+
 	object[12].xpos = 36
 	object[12].xpos *= object.scale
 	object[12].xpos >>= 8
 	object[16].xpos = object[12].xpos
+
 	object[13].xpos = 108
 	object[13].xpos *= object.scale
 	object[13].xpos >>= 8
 	object[17].xpos = object[13].xpos
+
 	object[10].ypos = -28
 	object[10].ypos *= object.scale
 	object[10].ypos >>= 8
 	object[11].ypos = object[10].ypos
 	object[12].ypos = object[10].ypos
 	object[13].ypos = object[10].ypos
+
 	object[14].ypos = 28
 	object[14].ypos *= object.scale
 	object[14].ypos >>= 8
@@ -70,123 +112,156 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case 2PVSMENU3_SETUP
 		LoadSpriteSheet("LevelSelect/Icons.gif")
-		object.value1 = object.spriteSheet
+		object.iconSheet = object.spriteSheet
+
 		LoadSpriteSheet("LevelSelect/Text.gif")
-		object.value2 = object.spriteSheet
+		object.textSheet = object.spriteSheet
+
 		if engine.deviceType == RETRO_STANDARD
-			options.physicalControls = 1
+			options.physicalControls = true
 		end if
+
 		menu1.selection = -1
-		object.scale = 256
-		object.value5 = stage.playerListPos
-		object.value5 += 2
+		object.scale = 0x100
+		object.selectedCharacter = stage.playerListPos
+		object.selectedCharacter += 2
 		SetupMenu(MENU_1, 0, 3, 2)
-		AddMenuEntry(MENU_1, "MATCH:", 1)
-		AddMenuEntry(MENU_1, "", 1)
-		AddMenuEntry(MENU_1, "OF", 1)
+		AddMenuEntry(MENU_1, "MATCH:", true)
+		AddMenuEntry(MENU_1, "", true)
+		AddMenuEntry(MENU_1, "OF", true)
+
 		arrayPos0 = 10
+		// EHZ
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 1, -108, -28)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		arrayPos0++
+
+		// CPZ
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 2, -36, -28)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		arrayPos0++
+
+		// ARZ
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 3, 36, -28)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		arrayPos0++
+
+		// CNZ
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 4, 108, -28)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		arrayPos0++
+
+		// HTZ
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 5, -108, 28)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		arrayPos0++
+
+		// MCZ
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 6, -36, 28)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		arrayPos0++
+
+		// OOZ
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 7, 36, 28)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		arrayPos0++
+
+		// Special Stage
 		ResetObjectEntity(arrayPos0, TypeName[Zone Button], 8, 108, 28)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
-		object[2].state = 3
-		if options.vsMode == 1
-			CallFunction(2PVSMenu3_Function7)
+
+		object[2].state = 2PVSMENU3_SELECTING
+		if options.vsMode == true // we prolly got here from results screen
+			CallFunction(2PVSMenu3_SetupIcons)
 		else
-			object.state = 1
-			object.value6 = 0
-			object.value0 = 0
+			object.state  = 2PVSMENU3_SETUPROOM
+			object.vsSendReceieveValue = false
+			object.timer  = 0
 			vs.randomValue = 313
 		end if
 		break
-	case 1
+
+	case 2PVSMENU3_SETUPROOM
+		// if ReceiveValue isn't set do some dummy stuff
 		if ReceiveValue == -1
-			options.vsMode = 1
-			object.state = 2
+			options.vsMode = true
+			object.state = 2PVSMENU3_FINISHROOMSETUP
 			if vs.gameLength == 0
 				vs.gameLength = 4
 			end if
+
 			if vs.itemMode == 0
 				vs.itemMode = 1
 			end if
 		end if
-		CallNativeFunction2(ReceiveValue, object.value6, true)
-		if object.value6 > 1
-			vs.gameLength = object.value6
+
+		CallNativeFunction2(ReceiveValue, object.vsSendReceieveValue, true)
+		if object.vsSendReceieveValue > 1
+			vs.gameLength = object.vsSendReceieveValue
 			vs.gameLength >>= 4
 			vs.gameLength &= 15
-			vs.itemMode = object.value6
+
+			vs.itemMode = object.vsSendReceieveValue
 			vs.itemMode >>= 8
 			vs.itemMode &= 15
-			vs.playerID = object.value6
+
+			vs.playerID = object.vsSendReceieveValue
 			vs.playerID >>= 12
 			vs.playerID &= 15
-			options.vsMode = 1
-			object.state = 2
+
+			options.vsMode = true
+			object.state = 2PVSMENU3_FINISHROOMSETUP
 		end if
-		if object.value6 == 1
-			object.state = 7
+
+		if object.vsSendReceieveValue == true
+			object.state = 2PVSMENU3_TOMAINMENU
 		end if
 		break
-	case 2
+
+	case 2PVSMENU3_FINISHROOMSETUP
 		object.animationTimer++
 		object.animationTimer &= 15
-		if object.value0 < 120
-			object.value0++
-			if object.value0 == 60
+		if object.timer < 120
+			object.timer++
+			if object.timer == 60
 				CallNativeFunction2(TransmitGlobal, "vs.player2Type", stage.playerListPos)
 			end if
 		else
+			// if ReceiveValue isn't set do some dummy stuff
 			if ReceiveValue == -1
-				if inputPress.buttonC == 1
+				if inputPress.buttonC == true
 					Rand(vs.player2Type, 3)
 				end if
 			end if
+
 			if vs.player2Type > -1
 				PlaySfx(SfxName[Star Post], false)
-				object.value0 = 0
-				CallFunction(2PVSMenu3_Function7)
+				object.timer = 0
+				CallFunction(2PVSMenu3_SetupIcons)
 			end if
 		end if
 		break
-	case 3
+
+	case 2PVSMENU3_SELECTING
 		CallNativeFunction2(ReceiveEntity, 2, true)
 		if object[2].type != TypeName[Blank Object]
 			if object[2].type != TypeName[2P VS Menu 3]
 				ResetObjectEntity(2, TypeName[Blank Object], 0, 0, 0)
 			end if
 		end if
+
 		object[2].type = TypeName[Blank Object]
-		if object[2].state == 3
-			if options.physicalControls == 0
+		if object[2].state == 2PVSMENU3_SELECTING
+			if options.physicalControls == false
 				CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 				if checkResult == -1
-					if object.value3 > 0
-						arrayPos0 = object.value3
+					if object.selection > 2PVSMENU3_SEL_NONE
+						arrayPos0 = object.selection
 						arrayPos0 += 9
-						if object[arrayPos0].value2 == 0
-							object.state = 4
+						if zoneButton[arrayPos0].disabled == false
+							object.state = 2PVSMENU3_STAGESELECTED
 							PlaySfx(SfxName[Menu Select], false)
 							CallNativeFunction2(SendEntity, 1, true)
 						else
@@ -194,91 +269,102 @@ event ObjectMain
 						end if
 					end if
 				end if
-				if object.state != 4
-					object.value3 = 0
-					if inputPress.left == 1
-						options.physicalControls = 1
-						object.value3 = 8
+
+				if object.state != 2PVSMENU3_STAGESELECTED
+					object.selection = 2PVSMENU3_SEL_NONE
+					if inputPress.left == true
+						options.physicalControls = true
+						object.selection = 2PVSMENU3_SEL_SS
 					end if
-					if inputPress.right == 1
-						options.physicalControls = 1
-						object.value3 = 1
+
+					if inputPress.right == true
+						options.physicalControls = true
+						object.selection = 2PVSMENU3_SEL_EHZ
 					end if
+
 					if inputPress.up == 1
-						options.physicalControls = 1
-						object.value3 = 5
+						options.physicalControls = true
+						object.selection = 2PVSMENU3_SEL_HTZ
 					end if
-					if inputPress.down == 1
-						options.physicalControls = 1
-						object.value3 = 1
+
+					if inputPress.down == true
+						options.physicalControls = true
+						object.selection = 2PVSMENU3_SEL_EHZ
 					end if
 				end if
 			else
-				if inputPress.left == 1
-					object.value3--
-					if object.value3 < 1
-						object.value3 = 8
+				if inputPress.left == true
+					object.selection--
+					if object.selection < 2PVSMENU3_SEL_EHZ
+						object.selection = 2PVSMENU3_SEL_SS
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if inputPress.right == 1
-					object.value3++
-					if object.value3 > 8
-						object.value3 = 1
+
+				if inputPress.right == true
+					object.selection++
+					if object.selection > 2PVSMENU3_SEL_SS
+						object.selection = 2PVSMENU3_SEL_EHZ
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if inputPress.up == 1
-					object.value3 -= 4
-					if object.value3 < 1
-						object.value3 += 8
+
+				if inputPress.up == true
+					object.selection -= 4
+					if object.selection < 2PVSMENU3_SEL_EHZ
+						object.selection += 2PVSMENU3_SEL_SS
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if inputPress.down == 1
-					object.value3 += 4
-					if object.value3 > 8
-						object.value3 -= 8
+
+				if inputPress.down == true
+					object.selection += 4
+					if object.selection > 2PVSMENU3_SEL_SS
+						object.selection -= 2PVSMENU3_SEL_SS
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if inputPress.start == 1
-					arrayPos0 = object.value3
+
+				if inputPress.start == true
+					arrayPos0 = object.selection
 					arrayPos0 += 9
-					if object[arrayPos0].value2 == 0
-						object.state = 4
+					if zoneButton[arrayPos0].disabled == false
+						object.state = 2PVSMENU3_STAGESELECTED
 						PlaySfx(SfxName[Menu Select], false)
 						CallNativeFunction2(SendEntity, 1, true)
 					else
 						PlaySfx(SfxName[Fail], false)
 					end if
 				end if
-				if inputPress.buttonA == 1
-					arrayPos0 = object.value3
+
+				if inputPress.buttonA == true
+					arrayPos0 = object.selection
 					arrayPos0 += 9
-					if object[arrayPos0].value2 == 0
-						object.state = 4
+					if zoneButton[arrayPos0].disabled == false
+						object.state = 2PVSMENU3_STAGESELECTED
 						PlaySfx(SfxName[Menu Select], false)
 						CallNativeFunction2(SendEntity, 1, true)
 					else
 						PlaySfx(SfxName[Fail], false)
 					end if
 				end if
-				if object.state != 4
+
+				if object.state != 2PVSMENU3_STAGESELECTED
 					CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 					if checkResult > -1
-						options.physicalControls = 0
-						object.value3 = 0
+						options.physicalControls = false
+						object.selection = 2PVSMENU3_SEL_MCZ
 					end if
 				end if
 			end if
 		else
-			object.state = 4
-			object.value3 = object[2].value3
+			object.state = 2PVSMENU3_STAGESELECTED
+			object.selection = object[2].selection
 			PlaySfx(SfxName[Menu Select], false)
 		end if
 		break
-	case 4
+
+	case 2PVSMENU3_STAGESELECTED
 		if object.scale > 0
 			object.scale -= 8
 		end if
@@ -290,6 +376,7 @@ event ObjectMain
 		object[15].alpha = object.scale
 		object[16].alpha = object.scale
 		object[17].alpha = object.scale
+
 		object[10].drawOrder = 3
 		object[11].drawOrder = 3
 		object[12].drawOrder = 3
@@ -298,134 +385,157 @@ event ObjectMain
 		object[15].drawOrder = 3
 		object[16].drawOrder = 3
 		object[17].drawOrder = 3
-		arrayPos0 = object.value3
+
+		arrayPos0 = object.selection
 		arrayPos0 += 9
-		object[arrayPos0].alpha = 256
+		object[arrayPos0].alpha = 0x100
 		object[arrayPos0].drawOrder = 4
-		arrayPos0 = object.value3
+
+		arrayPos0 = object.selection
 		arrayPos0 += 9
-		CallFunction(2PVSMenu3_Function8)
-		if object.value4 < 32
-			object.value4++
+		CallFunction(2PVSMenu3_HandleIconMovement)
+		if object.selectionTimer < 32
+			object.selectionTimer++
 		else
-			object.value4 = 0
-			object.state = 5
+			object.selectionTimer = 0
+			object.state = 2PVSMENU3_SHOWSELSTAGE
 		end if
 		break
-	case 5
-		arrayPos0 = object.value3
+
+	case 2PVSMENU3_SHOWSELSTAGE
+		arrayPos0 = object.selection
 		arrayPos0 += 9
-		if object[arrayPos0].value1 < 224
-			object[arrayPos0].value1 += 8
+		if zoneButton[arrayPos0].zoneDetailsWidth < 224
+			zoneButton[arrayPos0].zoneDetailsWidth += 8
 		else
-			if object.value3 < 8
-				temp0 = object.value3
+			if object.selection < 2PVSMENU3_SEL_SS
+				temp0 = object.selection
 				temp0--
 				temp0 <<= 1
 				vs.listPos = temp0
-				vs.activeList = 1
+				vs.activeList = REGULAR_STAGE
 			else
 				vs.listPos = 4
-				vs.activeList = 3
+				vs.activeList = SPECIAL_STAGE
 			end if
-			SetBit(vs.stageMask, object[arrayPos0].propertyValue, 1)
-			object.state = 6
+
+
+			// We selected this stage, so lets remember that for next time we come back here
+			SetBit(vs.stageMask, object[arrayPos0].propertyValue, true)
+
+			object.state = 2PVSMENU3_TOSELECTEDSTAGE
 			if vs.playerID == 0
-				object.value6 = vs.listPos
-				object.value6 <<= 4
-				object.value6 += vs.activeList
-				CallNativeFunction2(SendValue, object.value6, true)
+				object.vsSendReceieveValue = vs.listPos
+				object.vsSendReceieveValue <<= 4
+				object.vsSendReceieveValue += vs.activeList
+				CallNativeFunction2(SendValue, object.vsSendReceieveValue, true)
 			else
-				object.value6 = 0
+				object.vsSendReceieveValue = 0
 			end if
 		end if
 		break
-	case 6
-		object.value0++
-		if object.value0 >= 60
+
+	case 2PVSMENU3_TOSELECTEDSTAGE
+		object.timer++
+		if object.timer >= 60
 			if vs.playerID == 0
 				stage.activeList = vs.activeList
 				stage.listPos = vs.listPos
 				if stage.activeList == REGULAR_STAGE
-					object[0].state = 3
+					object[0].state = 2PVSSETUP_TOREGULARSTAGE
 				else
 					PlaySfx(SfxName[Warp], false)
-					object[0].state = 4
+					object[0].state = 2PVSSETUP_TOSPECIALSTAGE
 				end if
-				object.state = 8
+				object.state = 2PVSMENU3_NONE
 			else
-				CallNativeFunction2(ReceiveValue, object.value6, true)
-				if object.value6 > 0
-					vs.activeList = object.value6
-					vs.activeList &= 15
-					vs.listPos = object.value6
+				CallNativeFunction2(ReceiveValue, object.vsSendReceieveValue, true)
+				if object.vsSendReceieveValue > 0
+					vs.activeList = object.vsSendReceieveValue
+					vs.activeList &= 0x0F
+
+					vs.listPos = object.vsSendReceieveValue
 					vs.listPos >>= 4
+
 					stage.activeList = vs.activeList
 					stage.listPos = vs.listPos
 					if stage.activeList == REGULAR_STAGE
-						object[0].state = 3
+						object[0].state = 2PVSSETUP_TOREGULARSTAGE
 					else
 						PlaySfx(SfxName[Warp], false)
-						object[0].state = 4
+						object[0].state = 2PVSSETUP_TOSPECIALSTAGE
 					end if
-					object.state = 8
+					object.state = 2PVSMENU3_NONE
 				end if
 			end if
 		end if
 		break
 		
-	case 7
+	case 2PVSMENU3_TOMAINMENU
 		StopMusic()
 		options.vsMode = false
 		engine.state = ENGINE_RESETGAME
-		SetScreenFade(0, 0, 0, 255)
+		SetScreenFade(0x00, 0x00, 0x00, 0xFF)
 		break
 	end switch
 end event
 
 
 event ObjectDraw
-	object.spriteSheet = object.value1
+	// STAGE SELECT
+	object.spriteSheet = object.iconSheet
 	DrawSpriteScreenXY(0, screen.xcenter, 17)
 	DrawSpriteScreenXY(1, screen.xcenter, 17)
+
 	temp0 = screen.xcenter
 	temp0 -= 64
 	if vs.playerID == 0
-		DrawSpriteScreenXY(object.value5, temp0, 56)
+		DrawSpriteScreenXY(object.selectedCharacter, temp0, 56)
 		DrawSpriteScreenXY(7, temp0, 56)
 	else
-		if object.state > 2
-			DrawSpriteScreenXY(object[+1].value5, temp0, 56)
+		if object.state > 2PVSMENU3_FINISHROOMSETUP
+			// Player 1 Character
+			DrawSpriteScreenXY(object[+1].selectedCharacter, temp0, 56)
 		else
+			// Waiting For...
 			if object.animationTimer < 8
 				DrawSpriteScreenXY(19, temp0, 56)
 			end if
 		end if
+		// 1P
 		DrawSpriteScreenXY(5, temp0, 56)
 	end if
+
 	temp0 = screen.xcenter
 	temp0 += 64
 	if vs.playerID == 1
-		DrawSpriteScreenXY(object.value5, temp0, 56)
+		DrawSpriteScreenXY(object.selectedCharacter, temp0, 56)
 		DrawSpriteScreenXY(8, temp0, 56)
 	else
-		if object.state > 2
-			DrawSpriteScreenXY(object[+1].value5, temp0, 56)
+		if object.state > 2PVSMENU3_FINISHROOMSETUP
+			// Player 2 Character
+			DrawSpriteScreenXY(object[+1].selectedCharacter, temp0, 56)
 		else
+			// Waiting For...
 			if object.animationTimer < 8
 				DrawSpriteScreenXY(19, temp0, 56)
 			end if
 		end if
+		// 2P
 		DrawSpriteScreenXY(6, temp0, 56)
 	end if
+
+	// MATCH x of y
 	temp0 = screen.xcenter
 	temp0 -= 24
 	temp2 = vs.match
 	temp2++
 	DrawNumbers(9, temp0, 69, temp2, 6, 8, 0)
+
 	temp0 += 40
 	DrawNumbers(9, temp0, 69, vs.gameLength, 6, 8, 0)
-	object.spriteSheet = object.value2
+
+	object.spriteSheet = object.textSheet
 	DrawMenu(MENU_1, screen.xcenter, 52)
 end event
 
@@ -433,26 +543,27 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("LevelSelect/Icons.gif")
 	LoadSpriteSheet("LevelSelect/Text.gif")
-	SpriteFrame(-96, 0, 80, 14, 83, 335)
-	SpriteFrame(0, 0, 96, 14, 1, 264)
-	SpriteFrame(-12, -20, 24, 40, 1, 279)
-	SpriteFrame(-16, -20, 32, 40, 54, 279)
-	SpriteFrame(-14, -20, 27, 40, 26, 279)
-	SpriteFrame(-8, 24, 16, 7, 218, 124)
-	SpriteFrame(-8, 24, 16, 7, 218, 132)
-	SpriteFrame(-8, 24, 16, 7, 98, 136)
-	SpriteFrame(-8, 24, 16, 7, 115, 136)
-	SpriteFrame(0, 0, 8, 7, 175, 140)
-	SpriteFrame(0, 0, 8, 7, 183, 140)
-	SpriteFrame(0, 0, 8, 7, 191, 140)
-	SpriteFrame(0, 0, 8, 7, 199, 140)
-	SpriteFrame(0, 0, 8, 7, 207, 140)
-	SpriteFrame(0, 0, 8, 7, 215, 140)
-	SpriteFrame(0, 0, 8, 7, 223, 140)
-	SpriteFrame(0, 0, 8, 7, 231, 140)
-	SpriteFrame(0, 0, 8, 7, 239, 140)
-	SpriteFrame(0, 0, 8, 7, 247, 140)
-	SpriteFrame(-28, -3, 56, 15, 44, 362)
+	SpriteFrame(-96, 0, 80, 14, 83, 335)	// STAGE text 		- #0
+	SpriteFrame(0, 0, 96, 14, 1, 264)		// SELECT text 		- #1
+	SpriteFrame(-12, -20, 24, 40, 1, 279) 	// Sonic 			- #2
+	SpriteFrame(-16, -20, 32, 40, 54, 279)	// Tails 			- #3
+	SpriteFrame(-14, -20, 27, 40, 26, 279)	// Knuckles 		- #4
+	SpriteFrame(-8, 24, 16, 7, 218, 124)	// 1P 				- #5
+	SpriteFrame(-8, 24, 16, 7, 218, 132)	// 2P 				- #6
+	SpriteFrame(-8, 24, 16, 7, 98, 136)		// 1P (Selected) 	- #7
+	SpriteFrame(-8, 24, 16, 7, 115, 136)	// 2P (Selected) 	- #8
+	SpriteFrame(0, 0, 8, 7, 175, 140)		// 0 				- #9
+	SpriteFrame(0, 0, 8, 7, 183, 140)		// 1 				- #10
+	SpriteFrame(0, 0, 8, 7, 191, 140)		// 2 				- #11
+	SpriteFrame(0, 0, 8, 7, 199, 140)		// 3 				- #12
+	SpriteFrame(0, 0, 8, 7, 207, 140)		// 4 				- #13
+	SpriteFrame(0, 0, 8, 7, 215, 140)		// 5 				- #14
+	SpriteFrame(0, 0, 8, 7, 223, 140)		// 6 				- #15
+	SpriteFrame(0, 0, 8, 7, 231, 140)		// 7 				- #16
+	SpriteFrame(0, 0, 8, 7, 239, 140)		// 8 				- #17
+	SpriteFrame(0, 0, 8, 7, 247, 140)		// 9 				- #18
+	SpriteFrame(-28, -3, 56, 15, 44, 362)	// WAITING FOR text - #19
+
 	foreach (TypeName[2P VS Menu 3], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 	next
@@ -460,9 +571,11 @@ end event
 
 event RSDKDraw
 	DrawSprite(0)
+	DrawSprite(1)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LevelSelect/Icons.gif")
+	SpriteFrame(-96, 0, 80, 14, 83, 335)	// STAGE text 		- #0
+	SpriteFrame(0, 0, 96, 14, 1, 264)		// SELECT text 		- #1
 end event
