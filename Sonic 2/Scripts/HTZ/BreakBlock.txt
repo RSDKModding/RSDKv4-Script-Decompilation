@@ -6,63 +6,41 @@
 // ----------------------------------
 
 // Aliases
-private alias 0 : BREAKBLOCK_BLOCK
-private alias 1 : BREAKBLOCK_FRAGMENT
-
-
-// Player aliases
-private alias object.value16 : player.isSidekick
-private alias object.value19 : player.scoreBonus
-
-// Debug Mode aliases
-private alias object.value17 : debugMode.currentSelection
+private alias 54 : TYPE_BREAKBLOCK
 
 // Function declarations
 reserve function BreakBlock_DebugDraw
 reserve function BreakBlock_DebugSpawn
 
-
 // Static Values
 public value BreakBlock_value39 = 0;
 public value BreakBlock_value38 = 0;
 
-private alias BreakBlock_value39 : BreakBlock_debugStart
-private alias BreakBlock_value38 : BreakBlock_groundOffset
-
-
 // Tables
-public table BreakBlock_fragmentVels
-	-0x10000, -0x80000
-	 0x10000, -0x80000
-	-0xE000,  -0x70000
-	 0xE000,  -0x70000
-	-0xC000,  -0x60000
-	 0xC000,  -0x60000
-	-0xA000,  -0x50000
-	 0xA000,  -0x50000
-	-0x8000,  -0x40000
-	 0x8000,  -0x40000
+public table BreakBlock_table45
+	-0x10000, -0x80000, 0x10000, -0x80000, -0xE000, -0x70000, 0xE000, -0x70000, -0xC000, -0x60000, 0xC000, -0x60000, -0xA000, -0x50000, 0xA000, -0x50000
+	-0x8000, -0x40000, 0x8000, -0x40000
 end table
 
 
 function BreakBlock_DebugDraw
-	temp0 = debugMode.currentSelection
-	temp0 -= BreakBlock_debugStart
+	temp0 = object.value17
+	temp0 -= BreakBlock_value39
 	DrawSprite(temp0)
 end function
 
 
 function BreakBlock_DebugSpawn
-	temp0 = debugMode.currentSelection
-	temp0 -= BreakBlock_debugStart
-	temp0 |= 128 // Set it to be on PATH_B
+	temp0 = object.value17
+	temp0 -= BreakBlock_value39
+	temp0 |= 128
 	CreateTempObject(TypeName[Break Block], temp0, object.xpos, object.ypos)
 end function
 
 
 event ObjectMain
 	switch object.state
-	case BREAKBLOCK_BLOCK
+	case 0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp1 = object.propertyValue
 			temp1 &= 127
@@ -76,16 +54,15 @@ event ObjectMain
 			temp1 = temp0
 			FlipSign(temp0)
 			if object[currentPlayer].animation != ANI_JUMPING
-				temp0 += BreakBlock_groundOffset
+				temp0 += BreakBlock_value38
 			end if
-
 			BoxCollisionTest(C_BOX, object.entityPos, -16, temp0, 16, temp1, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == true
+			if checkResult == 1
 				if object[currentPlayer].animation == ANI_JUMPING
 					GetBit(temp3, object.propertyValue, 7)
 					CheckEqual(object[currentPlayer].collisionPlane, PATH_B)
 					temp3 |= checkResult
-					if temp3 == true
+					if temp3 == 1
 						object[currentPlayer].yvel = 0
 						object[currentPlayer].gravity = GRAVITY_AIR
 						temp0 += 8
@@ -100,28 +77,25 @@ event ObjectMain
 						while temp3 < 5
 							CreateTempObject(TypeName[Break Block], temp4, object.xpos, temp0)
 							object[tempObjectPos].ixpos -= 8
-							GetTableValue(object[tempObjectPos].xvel, temp5, BreakBlock_fragmentVels)
+							GetTableValue(object[tempObjectPos].xvel, temp5, BreakBlock_table45)
 							temp5++
-							GetTableValue(object[tempObjectPos].yvel, temp5, BreakBlock_fragmentVels)
+							GetTableValue(object[tempObjectPos].yvel, temp5, BreakBlock_table45)
 							temp5++
-							object[tempObjectPos].state = BREAKBLOCK_FRAGMENT
+							object[tempObjectPos].state = 1
 							object[tempObjectPos].drawOrder = 5
-
 							CreateTempObject(TypeName[Break Block], temp4, object.xpos, temp0)
 							object[tempObjectPos].ixpos += 8
-							GetTableValue(object[tempObjectPos].xvel, temp5, BreakBlock_fragmentVels)
+							GetTableValue(object[tempObjectPos].xvel, temp5, BreakBlock_table45)
 							temp5++
-							GetTableValue(object[tempObjectPos].yvel, temp5, BreakBlock_fragmentVels)
+							GetTableValue(object[tempObjectPos].yvel, temp5, BreakBlock_table45)
 							temp5++
-							object[tempObjectPos].state = BREAKBLOCK_FRAGMENT
+							object[tempObjectPos].state = 1
 							object[tempObjectPos].drawOrder = 5
 							temp0 += 0x100000
-
 							temp3++
 							temp4++
 						loop
-
-						CreateTempObject(TypeName[Object Score], player[currentPlayer].scoreBonus, object.xpos, object.ypos)
+						CreateTempObject(TypeName[Object Score], object[currentPlayer].value19, object.xpos, object.ypos)
 						object[tempObjectPos].drawOrder = 5
 						object.propertyValue++
 						object.ypos += 0x80000
@@ -133,11 +107,11 @@ event ObjectMain
 
 						// global variable "array" (yes, this is actually how its done)
 						arrayPos0 = VarName[player.score]
-						if player[currentPlayer].isSidekick == false
+						if object[currentPlayer].value16 == 0
 							arrayPos0 += currentPlayer
 						end if
 
-						switch player[currentPlayer].scoreBonus
+						switch object[currentPlayer].value19
 						case 0
 							global[arrayPos0] += 100
 							break
@@ -171,8 +145,8 @@ event ObjectMain
 						end switch
 
 						if object[currentPlayer].gravity == GRAVITY_AIR
-							if player[currentPlayer].scoreBonus < 15
-								player[currentPlayer].scoreBonus++
+							if object[currentPlayer].value19 < 15
+								object[currentPlayer].value19++
 							end if
 						end if
 						PlaySfx(SfxName[Block Break], false)
@@ -181,16 +155,14 @@ event ObjectMain
 			end if
 		next
 		break
-
-	case BREAKBLOCK_FRAGMENT
+	case 1
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x1800
-		if object.outOfBounds == true
+		if object.outOfBounds == 1
 			object.type = TypeName[Blank Object]
 		end if
 		break
-
 	end switch
 end event
 
@@ -204,7 +176,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone05")
-	if checkResult == true
+	if checkResult == 1
 		LoadSpriteSheet("HTZ/Objects.gif")
 		SpriteFrame(-16, -40, 32, 80, 69, 1)
 		SpriteFrame(-16, -32, 32, 64, 69, 17)
@@ -216,7 +188,7 @@ event ObjectStartup
 		SpriteFrame(-8, -8, 16, 16, 69, 33)
 		SpriteFrame(-8, -8, 16, 16, 69, 49)
 		SpriteFrame(-8, -8, 16, 16, 69, 65)
-		BreakBlock_groundOffset = 0
+		BreakBlock_value38 = 0
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-16, -40, 32, 80, 105, 687)
@@ -229,11 +201,10 @@ event ObjectStartup
 		SpriteFrame(-8, -8, 16, 16, 105, 719)
 		SpriteFrame(-8, -8, 16, 16, 105, 735)
 		SpriteFrame(-8, -8, 16, 16, 105, 751)
-		BreakBlock_groundOffset = -8
+		BreakBlock_value38 = -8
 	end if
-
 	temp0 = 0
-	BreakBlock_debugStart = DebugMode_ObjCount
+	BreakBlock_value39 = DebugMode_ObjCount
 	while temp0 < 5
 		SetTableValue(TypeName[Break Block], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(BreakBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -243,72 +214,11 @@ event ObjectStartup
 	loop
 end event
 
-event RSDKEdit
-	if editor.returnVariable == true
-		switch editor.variableID
-		case EDIT_VAR_PROPVAL // property value
-			checkResult = object.propertyValue
-			break
-		case 0 // size
-			checkResult = object.propertyValue
-			checkResult &= 127
-			break
-		case 1 // collisionPlane
-			GetBit(checkResult, object.propertyValue, 7)
-			break
-		end switch
-	else
-		switch editor.variableID
-		case EDIT_VAR_PROPVAL // property value
-			object.propertyValue = editor.variableValue
-			break
-		case 0 // size
-			// odd math, but it hopefully works..?
-			temp0 = editor.variableValue
-			temp0 &= 127
-			object.propertyValue &= 128
-			object.propertyValue |= temp0
-			break
-		case 1 // collisionPlane
-			CheckNotEqual(editor.variableValue, false)
-			SetBit(object.propertyValue, 7, checkResult)
-			break
-		end switch
-	end if
-end event
-
 event RSDKDraw
-	DrawSprite(object.propertyValue)
+	DrawSprite(0)
 end event
 
 event RSDKLoad
-	CheckCurrentStageFolder("Zone05")
-	if checkResult == true
-		LoadSpriteSheet("HTZ/Objects.gif")
-		SpriteFrame(-16, -40, 32, 80, 69, 1)
-		SpriteFrame(-16, -32, 32, 64, 69, 17)
-		SpriteFrame(-16, -24, 32, 48, 69, 33)
-		SpriteFrame(-16, -16, 32, 32, 69, 49)
-		SpriteFrame(-16, -8, 32, 16, 69, 65)
-	else
-		LoadSpriteSheet("MBZ/Objects.gif")
-		SpriteFrame(-16, -40, 32, 80, 105, 687)
-		SpriteFrame(-16, -32, 32, 64, 105, 703)
-		SpriteFrame(-16, -24, 32, 48, 105, 719)
-		SpriteFrame(-16, -16, 32, 32, 105, 735)
-		SpriteFrame(-16, -8, 32, 16, 105, 751)
-	end if
-	
-	AddEditorVariable("size")
-	SetActiveVariable("size")
-	AddEnumVariable("1 Block",  0)
-	AddEnumVariable("2 Blocks", 1)
-	AddEnumVariable("3 Blocks", 2)
-	AddEnumVariable("4 Blocks", 3)
-	AddEnumVariable("5 Blocks", 4)
-
-	AddEditorVariable("collisionPlane")
-	SetActiveVariable("collisionPlane")
-	AddEnumVariable("Plane A", 0)
-	AddEnumVariable("Plane B", 1)
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
 end event
