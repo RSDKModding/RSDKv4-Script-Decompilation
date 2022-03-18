@@ -6,15 +6,17 @@
 // ----------------------------------
 
 // Aliases
-private alias 48 : TYPE_HFAN
+private alias object.value0 : object.timer
+private alias object.value1 : object.fanOffset.x
+
+// States
+private alias 0 : HFAN_DEACTIVATE
+private alias 1 : HFAN_IDLE
+private alias 2 : HFAN_ACTIVE
 
 // Function declarations
 reserve function HFan_DebugDraw
 reserve function HFan_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function HFan_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
@@ -30,7 +32,7 @@ end function
 
 event ObjectMain
 	switch object.state
-	case 0
+	case HFAN_DEACTIVATE
 		if object.speed > 0
 			object.speed--
 		else
@@ -41,42 +43,46 @@ event ObjectMain
 		object.animationTimer += object.speed
 		object.animationTimer %= 288
 		break
-	case 1
-		object.value0++
-		if object.value0 == 30
-			object.value0 = 0
+
+	case HFAN_IDLE
+		object.timer++
+		if object.timer == 30
+			object.timer = 0
 			object.speed = 48
 			object.state++
 		end if
 		break
-	case 2
+
+	case HFAN_ACTIVE
 		object.frame = object.animationTimer
 		object.frame /= 48
 		object.animationTimer += object.speed
 		object.animationTimer %= 288
-		object.value0++
-		if object.value0 == 180
-			object.value0 = 0
-			object.state = 0
+
+		object.timer++
+		if object.timer == 180
+			object.timer = 0
+			object.state = HFAN_DEACTIVATE
 		end if
-		object.value1 = object.xpos
+
+		object.fanOffset.x = object.xpos
 		if object.direction == FLIP_NONE
-			object.value1 -= 0xA00000
+			object.fanOffset.x -= 0xA00000
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_TOUCH, object.entityPos, -160, -112, 32, 112, currentPlayer, 0, 0, 0, 0)
-				if checkResult == 1
-					temp0 = object.value1
+				if checkResult == true
+					temp0 = object.fanOffset.x
 					temp0 -= object[currentPlayer].xpos
 					temp0 >>= 4
 					object[currentPlayer].xpos += temp0
 				end if
 			next
 		else
-			object.value1 += 0xA00000
+			object.fanOffset.x += 0xA00000
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_TOUCH, object.entityPos, -32, -112, 160, 112, currentPlayer, 0, 0, 0, 0)
-				if checkResult == 1
-					temp0 = object.value1
+				if checkResult == true
+					temp0 = object.fanOffset.x
 					temp0 -= object[currentPlayer].xpos
 					temp0 >>= 4
 					object[currentPlayer].xpos += temp0
@@ -101,9 +107,11 @@ event ObjectStartup
 	SpriteFrame(-12, -16, 24, 32, 487, 157)
 	SpriteFrame(-12, -16, 24, 32, 487, 190)
 	SpriteFrame(-12, -16, 24, 32, 487, 223)
+
 	foreach (TypeName[H Fan], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].speed = 36
 	next
+
 	SetTableValue(TypeName[H Fan], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(HFan_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(HFan_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -111,10 +119,12 @@ event ObjectStartup
 end event
 
 event RSDKDraw
-	DrawSprite(0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("OOZ/Objects.gif")
+	SpriteFrame(-12, -16, 24, 32, 462, 157)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

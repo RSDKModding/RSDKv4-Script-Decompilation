@@ -6,35 +6,34 @@
 // ----------------------------------
 
 // Aliases
-private alias 40 : TYPE_CONTINUESETUP
-
-public alias object.value0 : continue.fadeValue
+private alias object.value0 : object.timer
 
 event ObjectMain
 	switch object.state
 	case 0
-		continue.fadeValue = 320
-		SetScreenFade(0, 0, 0, continue.fadeValue)
+		object.timer = 320
+		SetScreenFade(0, 0, 0, object.timer)
 		object.state++
 		break
 
 	case 1
-		if continue.fadeValue > 0
-			continue.fadeValue -= 8
+		if object.timer > 0
+			object.timer -= 8
 		else
 			PlayMusic(0)
 			object.state++
 			object[-1].state++ // Tell the Continue Screen object to start counting
 		end if
-		SetScreenFade(0, 0, 0, continue.fadeValue)
+		SetScreenFade(0, 0, 0, object.timer)
 		break
 
 	case 2
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 		if checkResult > -1
-			inputPress.start = 1
+			inputPress.start = true
 		end if
-		if inputPress.start == 1
+
+		if inputPress.start == true
 			object[0].animation = ANI_CONTINUE_UP
 			object[0].speed = 0
 			PlaySfx(SfxName[Charge], false)
@@ -62,6 +61,7 @@ event ObjectMain
 				object[1].speed = 0
 				PlaySfx(SfxName[Charge], false)
 			end if
+
 			if object[0].speed > 0x20000
 				object[1].speed += 0x2000
 				if object[1].speed == 0x90000
@@ -76,6 +76,7 @@ event ObjectMain
 		if music.volume > 0
 			music.volume--
 		end if
+
 		temp0 = screen.xsize
 		temp0 += 32
 		if object[1].type == TypeName[Blank Object]
@@ -83,6 +84,7 @@ event ObjectMain
 		else
 			temp1 = object[1].xpos
 		end if
+
 		temp1 >>= 16
 		if temp1 >= temp0
 			object.state++
@@ -93,13 +95,14 @@ event ObjectMain
 		if music.volume > 0
 			music.volume--
 		end if
-		continue.fadeValue += 4
-		SetScreenFade(0, 0, 0, continue.fadeValue)
-		if continue.fadeValue == 384
+		object.timer += 4
+		SetScreenFade(0, 0, 0, object.timer)
+
+		if object.timer == 384
 			player.continues--
 			player.lives = 3
-			fadeColor = 0
-			continue.fadeValue = 0
+			fadeColor = 0x000000
+			object.timer = 0
 			starPostID = 0
 			object.direction = FLIP_NONE
 			stage.activeList = recStageList
@@ -109,11 +112,11 @@ event ObjectMain
 		break
 
 	case 6
-		continue.fadeValue += 4
-		SetScreenFade(0, 0, 0, continue.fadeValue)
-		if continue.fadeValue == 384
-			fadeColor = 0
-			continue.fadeValue = 0
+		object.timer += 4
+		SetScreenFade(0, 0, 0, object.timer)
+		if object.timer == 384
+			fadeColor = 0x000000
+			object.timer = 0
 			starPostID = 0
 			object.direction = FLIP_NONE
 			engine.state = ENGINE_RESETGAME
@@ -122,7 +125,7 @@ event ObjectMain
 
 	end switch
 
-	options.touchControls = 0
+	options.touchControls = false
 end event
 
 
@@ -144,19 +147,18 @@ event ObjectStartup
 
 	// Different starting offsets based on P1
 	switch stage.playerListPos
-	case 0
-	case 3
+	case PlayerName[SONIC]
+	case PlayerName[SONIC AND TAILS]
 		object[0].ypos = 0xAC0000
 		break
 
-	case 1
+	case PlayerName[TAILS]
 		object[0].ypos = 0xAC0000
 		break
 
-	case 2
+	case PlayerName[KNUCKLES]
 		object[0].ypos = 0xB00000
 		break
-
 	end switch
 
 	object[0].animation = ANI_CONTINUE
@@ -176,18 +178,15 @@ event ObjectStartup
 	stage.newXBoundary2 = screen.xsize
 	stage.newYBoundary2 = screen.ysize
 
-	SetMusicTrack("Continue.ogg", 0, 0)
+	SetMusicTrack("Continue.ogg", 0, false)
 
-	stage.pauseEnabled = 0
-
+	stage.pauseEnabled = false
 	if player.continues == 0
-
-		// Player was most likely brought here from the debug stage select, give them three continues
+		// Player was most likely brought here from the dev menu stage select, give them three continues
 		player.continues = 3
-
 	end if
 
-	options.touchControls = 0
+	options.touchControls = false
 end event
 
 event RSDKDraw

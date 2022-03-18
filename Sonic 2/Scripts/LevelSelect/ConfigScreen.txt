@@ -6,385 +6,488 @@
 // ----------------------------------
 
 // Aliases
-private alias 7 : TYPE_CONFIGSCREEN
+private alias object.value0 : object.timer
+private alias object.value1 : object.bgBoxSize.x
+private alias object.value2 : object.bgBoxSize.y
+private alias object.value3 : object.selection
+private alias object.value4 : object.playerID
 
+private alias object.value5  : object.prevPlayerSelected
+private alias object.value6  : object.prevItemsSelected
+private alias object.value7  : object.nextPlayerSelected
+private alias object.value8  : object.nextItemsSelected
+private alias object.value9  : object.flightOnSelected
+private alias object.value10 : object.spdCapOnSelected
+private alias object.value11 : object.flightOffSelected
+private alias object.value12 : object.spdCapOffSelected
+private alias object.value13 : object.okSelected
 
-// Static Values
+// States
+private alias 0 : CONFIGSCREEN_SETUP
+private alias 1 : CONFIGSCREEN_ENTERMENU
+private alias 2 : CONFIGSCREEN_APPEAR
+private alias 3 : CONFIGSCREEN_SELECTING
+private alias 4 : CONFIGSCREEN_SELECTEDDELAY
+private alias 5 : CONFIGSCREEN_DISAPPEAR
+private alias 6 : CONFIGSCREEN_EXITMENU
 
-// Tables
+// Selection IDs
+private alias 0 : CONFIGSCREEN_SEL_NONE
+private alias 1 : CONFIGSCREEN_SEL_PLAYER
+private alias 2 : CONFIGSCREEN_SEL_ITEMS
+private alias 3 : CONFIGSCREEN_SEL_FLIGHT
+private alias 4 : CONFIGSCREEN_SEL_SPDCAP
+private alias 5 : CONFIGSCREEN_SEL_OK
+
+// Player IDs
+private alias 0 : CONFIGSCREEN_PLAYER_ST
+private alias 1 : CONFIGSCREEN_PLAYER_S
+private alias 2 : CONFIGSCREEN_PLAYER_T
+private alias 3 : CONFIGSCREEN_PLAYER_K
+private alias 4 : CONFIGSCREEN_PLAYER_KT
+
+// Shield Types
+private alias 0 : CONFIGSCREEN_SHIELD_S2
+private alias 1 : CONFIGSCREEN_SHIELD_S3
+private alias 2 : CONFIGSCREEN_SHIELD_RAND_S2
+private alias 3 : CONFIGSCREEN_SHIELD_RAND_S3
+
+// MenuControl aliases
+private alias MenuControl_value2 : MenuControl_optionsMenuOpen
 
 event ObjectMain
 	switch object.state
-	case 0
+	case CONFIGSCREEN_SETUP
 		object.inkEffect = INK_ALPHA
-		object.alpha = 0
+		object.alpha 	 = 0x00
 		object.drawOrder = 6
 		object.state++
 		break
-	case 1
+
+	case CONFIGSCREEN_ENTERMENU
 		temp0 = 198
-		temp0 -= object.value1
+		temp0 -= object.bgBoxSize.x
 		temp0 >>= 3
-		object.value1 += temp0
+		object.bgBoxSize.x += temp0
+
 		temp0 = 216
-		temp0 -= object.value2
+		temp0 -= object.bgBoxSize.y
 		temp0 >>= 3
-		object.value2 += temp0
-		if object.value1 >= 188
-			object.value1 = 188
-			object.value2 = 208
+		object.bgBoxSize.y += temp0
+
+		if object.bgBoxSize.x >= 188
+			object.bgBoxSize.x = 188
+			object.bgBoxSize.y = 208
 			object.state++
 		end if
 		break
-	case 2
-		if object.alpha < 256
-			object.alpha += 16
+
+	case CONFIGSCREEN_APPEAR
+		if object.alpha < 0x100
+			object.alpha += 0x10
 		else
-			if options.physicalControls == 1
-				object.value3 = 1
+			if options.physicalControls == true
+				object.selection = CONFIGSCREEN_SEL_PLAYER
 			else
-				object.value3 = 0
+				object.selection = CONFIGSCREEN_SEL_NONE
 			end if
 			object.state++
 		end if
 		break
-	case 3
-		if options.physicalControls == 1
-			if inputPress.up == 1
-				object.value3--
-				if object.value3 < 1
-					object.value3 = 5
+
+	case CONFIGSCREEN_SELECTING
+		if options.physicalControls == true
+			if inputPress.up == true
+				object.selection--
+				if object.selection < CONFIGSCREEN_SEL_PLAYER
+					object.selection = CONFIGSCREEN_SEL_OK
 				end if
 				PlaySfx(SfxName[Menu Move], false)
 			end if
-			if inputPress.down == 1
-				object.value3++
-				if object.value3 > 5
-					object.value3 = 1
+
+			if inputPress.down == true
+				object.selection++
+				if object.selection > CONFIGSCREEN_SEL_OK
+					object.selection = CONFIGSCREEN_SEL_PLAYER
 				end if
+
 				PlaySfx(SfxName[Menu Move], false)
 			end if
-			switch object.value3
-			case 1
-				if inputPress.left == 1
-					object.value4--
-					if object.value4 < 0
-						object.value4 = 4
+
+			switch object.selection
+			case CONFIGSCREEN_SEL_PLAYER
+				if inputPress.left == true
+					object.playerID--
+					if object.playerID < CONFIGSCREEN_PLAYER_ST
+						object.playerID = CONFIGSCREEN_PLAYER_KT
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if inputPress.right == 1
-					object.value4++
-					if object.value4 > 4
-						object.value4 = 0
+
+				if inputPress.right == true
+					object.playerID++
+					if object.playerID > CONFIGSCREEN_PLAYER_KT
+						object.playerID = CONFIGSCREEN_PLAYER_ST
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				switch object.value4
-				case 0
-					stage.playerListPos = 0
-					stage.player2Enabled = 1
+
+				switch object.playerID
+				case CONFIGSCREEN_PLAYER_ST
+					stage.playerListPos  = PlayerName[SONIC]
+					stage.player2Enabled = true
 					break
-				case 1
-					stage.playerListPos = 0
-					stage.player2Enabled = 0
+
+				case CONFIGSCREEN_PLAYER_S
+					stage.playerListPos  = PlayerName[SONIC]
+					stage.player2Enabled = false
 					break
-				case 2
-					stage.playerListPos = 1
-					stage.player2Enabled = 0
+
+				case CONFIGSCREEN_PLAYER_T
+					stage.playerListPos  = PlayerName[TAILS]
+					stage.player2Enabled = false
 					break
-				case 3
-					stage.playerListPos = 2
-					stage.player2Enabled = 0
+
+				case CONFIGSCREEN_PLAYER_K
+					stage.playerListPos  = PlayerName[KNUCKLES]
+					stage.player2Enabled = false
 					break
-				case 4
-					stage.playerListPos = 2
-					stage.player2Enabled = 1
+
+				case CONFIGSCREEN_PLAYER_KT
+					stage.playerListPos  = PlayerName[KNUCKLES]
+					stage.player2Enabled = true
 					break
 				end switch
 				break
-			case 2
-				if inputPress.left == 1
+
+			case CONFIGSCREEN_SEL_ITEMS
+				if inputPress.left == true
 					options.shieldType--
-					if options.shieldType < 0
-						options.shieldType = 3
+					if options.shieldType < CONFIGSCREEN_SHIELD_S2
+						options.shieldType = CONFIGSCREEN_SHIELD_RAND_S3
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if inputPress.right == 1
+
+				if inputPress.right == true
 					options.shieldType++
-					if options.shieldType > 3
-						options.shieldType = 0
+					if options.shieldType > CONFIGSCREEN_SHIELD_RAND_S3
+						options.shieldType = CONFIGSCREEN_SHIELD_S2
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
 				break
-			case 3
-				if inputPress.left == 1
+
+			case CONFIGSCREEN_SEL_FLIGHT
+				if inputPress.left == true
 					options.tailsFlight ^= 1
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if inputPress.right == 1
+
+				if inputPress.right == true
 					options.tailsFlight ^= 1
 					PlaySfx(SfxName[Menu Move], false)
 				end if
 				break
-			case 4
-				if inputPress.left == 1
+
+			case CONFIGSCREEN_SEL_SPDCAP
+				if inputPress.left == true
 					options.airSpeedCap ^= 1
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if inputPress.right == 1
+
+				if inputPress.right == true
 					options.airSpeedCap ^= 1
 					PlaySfx(SfxName[Menu Move], false)
 				end if
 				break
-			case 5
-				if inputPress.buttonA == 1
-					object.state = 4
+
+			case CONFIGSCREEN_SEL_OK
+				if inputPress.buttonA == true
+					object.state = CONFIGSCREEN_SELECTEDDELAY
 					PlaySfx(SfxName[Menu Select], false)
 				end if
-				if inputPress.start == 1
-					object.state = 4
+
+				if inputPress.start == true
+					object.state = CONFIGSCREEN_SELECTEDDELAY
 					PlaySfx(SfxName[Menu Select], false)
 				end if
 				break
 			end switch
-			if inputPress.buttonB == 1
-				object.state = 5
+
+			if inputPress.buttonB == true
+				object.state = CONFIGSCREEN_DISAPPEAR
 				PlaySfx(SfxName[Menu Back], false)
 			end if
-			if object.state == 3
+
+			if object.state == CONFIGSCREEN_SELECTING
 				CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 				if checkResult > -1
-					options.physicalControls = 0
-					object.value3 = 0
+					options.physicalControls = false
+					object.selection = CONFIGSCREEN_SEL_NONE
 				end if
 			end if
 		else
 			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 			if checkResult > -1
+				// Prev Player & Item Mode
 				temp0 = screen.xcenter
 				temp0 -= 26
 				temp1 = temp0
 				temp1 += 38
 				CheckTouchRect(temp0, 36, temp1, 68)
 				if checkResult > -1
-					object.value5 = 1
+					object.prevPlayerSelected = true
 				else
-					object.value5 = 0
+					object.prevPlayerSelected = false
 				end if
 				CheckTouchRect(temp0, 76, temp1, 108)
 				if checkResult > -1
-					object.value6 = 1
+					object.prevItemsSelected = true
 				else
-					object.value6 = 0
+					object.prevItemsSelected = false
 				end if
+
+				// Next Player & Item Mode
 				temp0 = screen.xcenter
 				temp0 += 58
 				temp1 = temp0
 				temp1 += 38
 				CheckTouchRect(temp0, 36, temp1, 68)
 				if checkResult > -1
-					object.value7 = 1
+					object.nextPlayerSelected = true
 				else
-					object.value7 = 0
+					object.nextPlayerSelected = false
 				end if
 				CheckTouchRect(temp0, 76, temp1, 108)
 				if checkResult > -1
-					object.value8 = 1
+					object.nextItemsSelected = true
 				else
-					object.value8 = 0
+					object.nextItemsSelected = false
 				end if
+
+				// Flight on/Speed Cap on
 				temp0 = screen.xcenter
 				temp0 -= 16
 				temp1 = temp0
 				temp1 += 54
 				CheckTouchRect(temp0, 116, temp1, 148)
 				if checkResult > -1
-					object.value9 = 1
+					object.flightOnSelected = true
 				else
-					object.value9 = 0
+					object.flightOnSelected = false
 				end if
 				CheckTouchRect(temp0, 156, temp1, 188)
 				if checkResult > -1
-					object.value10 = 1
+					object.spdCapOnSelected = true
 				else
-					object.value10 = 0
+					object.spdCapOnSelected = false
 				end if
+
+				// Flight on/Speed Cap off
 				temp0 = screen.xcenter
 				temp0 += 38
 				temp1 = temp0
 				temp1 += 54
 				CheckTouchRect(temp0, 116, temp1, 148)
 				if checkResult > -1
-					object.value11 = 1
+					object.flightOffSelected = true
 				else
-					object.value11 = 0
+					object.flightOffSelected = false
 				end if
 				CheckTouchRect(temp0, 156, temp1, 188)
 				if checkResult > -1
-					object.value12 = 1
+					object.spdCapOffSelected = true
 				else
-					object.value12 = 0
+					object.spdCapOffSelected = false
 				end if
+
+				// OK button
 				temp0 = screen.xcenter
 				temp0 -= 27
 				temp1 = temp0
 				temp1 += 54
 				CheckTouchRect(temp0, 192, temp1, 218)
 				if checkResult > -1
-					object.value13 = 1
+					object.okSelected = true
 				else
-					object.value13 = 0
+					object.okSelected = false
 				end if
 			else
-				if object.value5 == 1
-					object.value5 = 0
-					object.value4--
-					if object.value4 < 0
-						object.value4 = 4
+				if object.prevPlayerSelected == true
+					object.prevPlayerSelected = false
+					object.playerID--
+					if object.playerID < CONFIGSCREEN_PLAYER_ST
+						object.playerID = CONFIGSCREEN_PLAYER_KT
 					end if
-					switch object.value4
-					case 0
-						stage.playerListPos = 0
-						stage.player2Enabled = 1
+
+					switch object.playerID
+					case CONFIGSCREEN_PLAYER_ST
+						stage.playerListPos  = PlayerName[SONIC]
+						stage.player2Enabled = true
 						break
-					case 1
-						stage.playerListPos = 0
-						stage.player2Enabled = 0
+
+					case CONFIGSCREEN_PLAYER_S
+						stage.playerListPos  = PlayerName[SONIC]
+						stage.player2Enabled = false
 						break
-					case 2
-						stage.playerListPos = 1
-						stage.player2Enabled = 0
+
+					case CONFIGSCREEN_PLAYER_T
+						stage.playerListPos  = PlayerName[TAILS]
+						stage.player2Enabled = false
 						break
-					case 3
-						stage.playerListPos = 2
-						stage.player2Enabled = 0
+
+					case CONFIGSCREEN_PLAYER_K
+						stage.playerListPos  = PlayerName[KNUCKLES]
+						stage.player2Enabled = false
 						break
-					case 4
-						stage.playerListPos = 2
-						stage.player2Enabled = 1
+
+					case CONFIGSCREEN_PLAYER_KT
+						stage.playerListPos  = PlayerName[KNUCKLES]
+						stage.player2Enabled = true
 						break
 					end switch
+
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if object.value6 == 1
-					object.value6 = 0
+
+				if object.prevItemsSelected == true
+					object.prevItemsSelected = false
 					options.shieldType--
-					if options.shieldType < 0
-						options.shieldType = 3
+					if options.shieldType < CONFIGSCREEN_SHIELD_S2
+						options.shieldType = CONFIGSCREEN_SHIELD_RAND_S3
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if object.value7 == 1
-					object.value7 = 0
-					object.value4++
-					if object.value4 > 4
-						object.value4 = 0
+				
+				if object.nextPlayerSelected == true
+					object.nextPlayerSelected = false
+					object.playerID++
+					if object.playerID > CONFIGSCREEN_PLAYER_KT
+						object.playerID = CONFIGSCREEN_PLAYER_ST
 					end if
-					switch object.value4
-					case 0
-						stage.playerListPos = 0
-						stage.player2Enabled = 1
+
+					switch object.playerID
+					case CONFIGSCREEN_PLAYER_ST
+						stage.playerListPos  = PlayerName[SONIC]
+						stage.player2Enabled = true
 						break
-					case 1
-						stage.playerListPos = 0
-						stage.player2Enabled = 0
+
+					case CONFIGSCREEN_PLAYER_S
+						stage.playerListPos  = PlayerName[SONIC]
+						stage.player2Enabled = false
 						break
-					case 2
-						stage.playerListPos = 1
-						stage.player2Enabled = 0
+
+					case CONFIGSCREEN_PLAYER_T
+						stage.playerListPos  = PlayerName[TAILS]
+						stage.player2Enabled = false
 						break
-					case 3
-						stage.playerListPos = 2
-						stage.player2Enabled = 0
+
+					case CONFIGSCREEN_PLAYER_K
+						stage.playerListPos  = PlayerName[KNUCKLES]
+						stage.player2Enabled = false
 						break
-					case 4
-						stage.playerListPos = 2
-						stage.player2Enabled = 1
+
+					case CONFIGSCREEN_PLAYER_KT
+						stage.playerListPos  = PlayerName[KNUCKLES]
+						stage.player2Enabled = true
 						break
 					end switch
+
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if object.value8 == 1
-					object.value8 = 0
+
+				if object.nextItemsSelected == true
+					object.nextItemsSelected = false
 					options.shieldType++
-					if options.shieldType > 3
-						options.shieldType = 0
+					if options.shieldType > CONFIGSCREEN_SHIELD_RAND_S3
+						options.shieldType = CONFIGSCREEN_SHIELD_S2
 					end if
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if object.value9 == 1
-					object.value9 = 0
-					options.tailsFlight = 1
+
+				if object.flightOnSelected == true
+					object.flightOnSelected = false
+					options.tailsFlight = true
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if object.value11 == 1
-					object.value11 = 0
-					options.tailsFlight = 0
+
+				if object.flightOffSelected == true
+					object.flightOffSelected = false
+					options.tailsFlight = false
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if object.value10 == 1
-					object.value10 = 0
-					options.airSpeedCap = 1
+
+				if object.spdCapOnSelected == true
+					object.spdCapOnSelected = false
+					options.airSpeedCap = true
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if object.value12 == 1
-					object.value12 = 0
-					options.airSpeedCap = 0
+
+				if object.spdCapOffSelected == true
+					object.spdCapOffSelected = false
+					options.airSpeedCap = false
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-				if object.value13 == 1
-					object.value13 = 0
-					object.state = 4
+
+				if object.okSelected == true
+					object.okSelected = false
+					object.state = CONFIGSCREEN_SELECTEDDELAY
 					PlaySfx(SfxName[Menu Select], false)
 				end if
 			end if
-			if inputPress.buttonB == 1
-				object.state = 5
+
+			if inputPress.buttonB == true
+				object.state = CONFIGSCREEN_DISAPPEAR
 				PlaySfx(SfxName[Menu Back], false)
 			end if
-			if object.state == 3
-				if inputPress.up == 1
-					options.physicalControls = 1
-					object.value3 = 5
+
+			if object.state == CONFIGSCREEN_SELECTING
+				if inputPress.up == true
+					options.physicalControls = true
+					object.selection = CONFIGSCREEN_SEL_OK
 				end if
-				if inputPress.down == 1
-					options.physicalControls = 1
-					object.value3 = 1
+
+				if inputPress.down == true
+					options.physicalControls = true
+					object.selection = CONFIGSCREEN_SEL_PLAYER
 				end if
 			end if
 		end if
 		break
-	case 4
-		if object.value0 < 32
-			object.value0++
+
+	case CONFIGSCREEN_SELECTEDDELAY
+		if object.timer < 32
+			object.timer++
 		else
-			object.value0 = 0
+			object.timer = 0
 			object.state++
 		end if
 		break
-	case 5
+
+	case CONFIGSCREEN_DISAPPEAR
 		if object.alpha > 0
 			object.alpha -= 16
 		else
 			object.state++
 		end if
 		break
-	case 6
+
+	case CONFIGSCREEN_EXITMENU
 		temp0 = 0
-		temp0 -= object.value1
+		temp0 -= object.bgBoxSize.x
 		temp0 >>= 3
-		object.value1 += temp0
+		object.bgBoxSize.x += temp0
+
 		temp0 = 0
-		temp0 -= object.value2
+		temp0 -= object.bgBoxSize.y
 		temp0 >>= 3
-		object.value2 += temp0
-		if object.value1 < 4
-			object.value1 = 0
-			object.value2 = 0
-			MenuControl_value2 = 0
+		object.bgBoxSize.y += temp0
+
+		if object.bgBoxSize.x < 4
+			object.bgBoxSize.x = 0
+			object.bgBoxSize.y = 0
+			MenuControl_optionsMenuOpen = false
 			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 		end if
 		break
@@ -393,141 +496,166 @@ end event
 
 
 event ObjectDraw
-	temp0 = object.value1
+	temp0 = object.bgBoxSize.x
 	temp0 >>= 1
 	FlipSign(temp0)
 	temp0 += screen.xcenter
-	temp1 = object.value2
+	temp1 = object.bgBoxSize.y
 	temp1 >>= 1
 	FlipSign(temp1)
 	temp1 += screen.ycenter
-	DrawRect(temp0, temp1, object.value1, object.value2, 0, 0, 96, 255)
+	DrawRect(temp0, temp1, object.bgBoxSize.x, object.bgBoxSize.y, 0x00, 0x00, 0x60, 0xFF)
+
 	temp0 += 2
 	temp1 += 2
-	temp2 = object.value1
+	temp2 = object.bgBoxSize.x
 	temp2 -= 4
-	temp3 = object.value2
+	temp3 = object.bgBoxSize.y
 	temp3 -= 4
-	DrawRect(temp0, temp1, temp2, temp3, 0, 32, 192, 255)
+	DrawRect(temp0, temp1, temp2, temp3, 0x00, 0x20, 0xC0, 0xFF)
+
 	DrawSpriteScreenFX(0, FX_INK, screen.xcenter, 25)
-	if object.value3 == 1
+	if object.selection == CONFIGSCREEN_SEL_PLAYER
 		DrawSpriteScreenFX(2, FX_INK, screen.xcenter, 49)
 	else
 		DrawSpriteScreenFX(1, FX_INK, screen.xcenter, 49)
 	end if
-	if object.value3 == 2
+
+	if object.selection == CONFIGSCREEN_SEL_ITEMS
 		DrawSpriteScreenFX(4, FX_INK, screen.xcenter, 89)
 	else
 		DrawSpriteScreenFX(3, FX_INK, screen.xcenter, 89)
 	end if
-	if object.value3 == 3
+
+	if object.selection == CONFIGSCREEN_SEL_FLIGHT
 		DrawSpriteScreenFX(6, FX_INK, screen.xcenter, 129)
 	else
 		DrawSpriteScreenFX(5, FX_INK, screen.xcenter, 129)
 	end if
-	if object.value3 == 4
+
+	if object.selection == CONFIGSCREEN_SEL_SPDCAP
 		DrawSpriteScreenFX(8, FX_INK, screen.xcenter, 169)
 	else
 		DrawSpriteScreenFX(7, FX_INK, screen.xcenter, 169)
 	end if
-	if object.value5 == 1
+
+	if object.prevPlayerSelected == true
 		DrawSpriteScreenFX(10, FX_INK, screen.xcenter, 43)
 	else
 		DrawSpriteScreenFX(9, FX_INK, screen.xcenter, 43)
 	end if
-	if object.value7 == 1
+
+	if object.nextPlayerSelected == true
 		DrawSpriteScreenFX(12, FX_INK, screen.xcenter, 43)
 	else
 		DrawSpriteScreenFX(11, FX_INK, screen.xcenter, 43)
 	end if
-	if object.value6 == 1
+	
+	if object.prevItemsSelected == true
 		DrawSpriteScreenFX(10, FX_INK, screen.xcenter, 83)
 	else
 		DrawSpriteScreenFX(9, FX_INK, screen.xcenter, 83)
 	end if
-	if object.value8 == 1
+
+	if object.nextItemsSelected == true
 		DrawSpriteScreenFX(12, FX_INK, screen.xcenter, 83)
 	else
 		DrawSpriteScreenFX(11, FX_INK, screen.xcenter, 83)
 	end if
-	if object.value9 == 1
+
+	if object.flightOnSelected == true
 		DrawSpriteScreenFX(14, FX_INK, screen.xcenter, 123)
 	else
 		DrawSpriteScreenFX(13, FX_INK, screen.xcenter, 123)
 	end if
-	if object.value11 == 1
+
+	if object.flightOffSelected == true
 		DrawSpriteScreenFX(16, FX_INK, screen.xcenter, 123)
 	else
 		DrawSpriteScreenFX(15, FX_INK, screen.xcenter, 123)
 	end if
-	if options.tailsFlight == 1
+
+	if options.tailsFlight == true
 		DrawSpriteScreenFX(19, FX_INK, screen.xcenter, 123)
 	else
 		DrawSpriteScreenFX(20, FX_INK, screen.xcenter, 123)
 	end if
-	if object.value10 == 1
+
+	if object.spdCapOnSelected == true
 		DrawSpriteScreenFX(14, FX_INK, screen.xcenter, 163)
 	else
 		DrawSpriteScreenFX(13, FX_INK, screen.xcenter, 163)
 	end if
-	if object.value12 == 1
+
+	if object.spdCapOffSelected == true
 		DrawSpriteScreenFX(16, FX_INK, screen.xcenter, 163)
 	else
 		DrawSpriteScreenFX(15, FX_INK, screen.xcenter, 163)
 	end if
-	if options.airSpeedCap == 1
+
+	if options.airSpeedCap == true
 		DrawSpriteScreenFX(19, FX_INK, screen.xcenter, 163)
 	else
 		DrawSpriteScreenFX(20, FX_INK, screen.xcenter, 163)
 	end if
-	temp0 = object.value0
+
+	temp0 = object.timer
 	temp0 >>= 1
 	temp0 &= 1
 	temp0 += 17
-	if object.value13 == 1
+	if object.okSelected == true
 		temp0 = 18
 	end if
 	DrawSpriteScreenFX(temp0, FX_INK, screen.xcenter, 195)
-	if options.physicalControls == 1
-		if object.value3 == 5
-			if object.state != 4
+
+	if options.physicalControls == true
+		if object.selection == CONFIGSCREEN_SEL_OK
+			if object.state != CONFIGSCREEN_SELECTEDDELAY
 				DrawSpriteScreenFX(21, FX_INK, screen.xcenter, 195)
 			end if
 		end if
 	end if
-	switch object.value4
-	case 0
+
+	switch object.playerID
+	case CONFIGSCREEN_PLAYER_ST
 		DrawSpriteScreenFX(22, FX_INK, screen.xcenter, 41)
 		DrawSpriteScreenFX(23, FX_INK, screen.xcenter, 41)
 		break
-	case 1
+
+	case CONFIGSCREEN_PLAYER_S
 		DrawSpriteScreenFX(24, FX_INK, screen.xcenter, 41)
 		break
-	case 2
+
+	case CONFIGSCREEN_PLAYER_T
 		DrawSpriteScreenFX(25, FX_INK, screen.xcenter, 41)
 		break
-	case 3
+
+	case CONFIGSCREEN_PLAYER_K
 		DrawSpriteScreenFX(26, FX_INK, screen.xcenter, 41)
 		break
-	case 4
+
+	case CONFIGSCREEN_PLAYER_KT
 		DrawSpriteScreenFX(27, FX_INK, screen.xcenter, 41)
 		DrawSpriteScreenFX(28, FX_INK, screen.xcenter, 41)
 		break
 	end switch
+
 	switch options.shieldType
-	case 0
+	case CONFIGSCREEN_SHIELD_S2
 		DrawSpriteScreenFX(29, FX_INK, screen.xcenter, 86)
 		break
-	case 1
+
+	case CONFIGSCREEN_SHIELD_S3
 		DrawSpriteScreenFX(30, FX_INK, screen.xcenter, 78)
 		break
-	case 2
+
+	case CONFIGSCREEN_SHIELD_RAND_S2
 		DrawSpriteScreenFX(31, FX_INK, screen.xcenter, 86)
 		break
-	case 3
+
+	case CONFIGSCREEN_SHIELD_RAND_S3
 		DrawSpriteScreenFX(30, FX_INK, screen.xcenter, 78)
 		DrawSpriteScreenFX(32, FX_INK, screen.xcenter, 78)
-		break
 		break
 	end switch
 end event
@@ -535,39 +663,44 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("LevelSelect/Icons.gif")
-	SpriteFrame(-52, 0, 104, 7, 103, 430)
-	SpriteFrame(-82, 0, 48, 7, 158, 454)
-	SpriteFrame(-82, 0, 48, 7, 207, 454)
-	SpriteFrame(-82, 0, 40, 7, 158, 446)
-	SpriteFrame(-82, 0, 40, 7, 207, 446)
-	SpriteFrame(-82, 0, 48, 7, 158, 438)
-	SpriteFrame(-82, 0, 48, 7, 207, 438)
-	SpriteFrame(-82, 0, 56, 7, 46, 378)
-	SpriteFrame(-82, 0, 56, 7, 199, 462)
-	SpriteFrame(-16, 0, 20, 20, 138, 22)
-	SpriteFrame(-16, 0, 20, 20, 138, 64)
-	SpriteFrame(64, 0, 20, 20, 159, 22)
-	SpriteFrame(64, 0, 20, 20, 159, 64)
-	SpriteFrame(-8, 0, 40, 20, 1, 411)
-	SpriteFrame(-8, 0, 40, 20, 42, 411)
-	SpriteFrame(44, 0, 40, 20, 1, 432)
-	SpriteFrame(44, 0, 40, 20, 42, 432)
-	SpriteFrame(-20, 0, 40, 20, 1, 320)
-	SpriteFrame(-20, 0, 40, 20, 42, 320)
-	SpriteFrame(-10, -2, 42, 22, 1, 362)
-	SpriteFrame(42, -2, 42, 22, 1, 362)
-	SpriteFrame(-22, -2, 42, 22, 1, 362)
-	SpriteFrame(16, 0, 16, 23, 46, 386)
-	SpriteFrame(36, 0, 16, 23, 63, 386)
-	SpriteFrame(26, 0, 16, 23, 46, 386)
-	SpriteFrame(26, 0, 16, 23, 63, 386)
-	SpriteFrame(26, 0, 16, 23, 80, 386)
-	SpriteFrame(16, 0, 16, 23, 80, 386)
-	SpriteFrame(36, 0, 16, 23, 63, 386)
-	SpriteFrame(26, 0, 16, 14, 207, 314)
-	SpriteFrame(17, 0, 34, 30, 207, 314)
-	SpriteFrame(26, 0, 16, 14, 228, 299)
-	SpriteFrame(17, 0, 16, 14, 228, 299)
+	SpriteFrame(-52, 0, 104, 7, 103, 430)	// GAME CONFIG text - #0
+
+	SpriteFrame(-82, 0, 48, 7, 158, 454)	// PLAYER text 				- #1
+	SpriteFrame(-82, 0, 48, 7, 207, 454)	// PLAYER text (Selected)	- #2
+	SpriteFrame(-82, 0, 40, 7, 158, 446)	// ITEMS text 				- #3
+	SpriteFrame(-82, 0, 40, 7, 207, 446)	// ITEMS text (Selected) 	- #4
+	SpriteFrame(-82, 0, 48, 7, 158, 438)	// FLIGHT text 				- #5
+	SpriteFrame(-82, 0, 48, 7, 207, 438)	// FLIGHT text (Selected) 	- #6
+	SpriteFrame(-82, 0, 56, 7, 46, 378)		// AIR CAP text 			- #7
+	SpriteFrame(-82, 0, 56, 7, 199, 462)	// AIR CAP text (Selected) 	- #8
+
+	SpriteFrame(-16, 0, 20, 20, 138, 22)	// Left				- #9
+	SpriteFrame(-16, 0, 20, 20, 138, 64)	// Left (Selected)	- #10
+	SpriteFrame(64, 0, 20, 20, 159, 22)		// Right			- #11
+	SpriteFrame(64, 0, 20, 20, 159, 64)		// Right (Selected)	- #12
+
+	SpriteFrame(-8, 0, 40, 20, 1, 411)		// ON 				- #13
+	SpriteFrame(-8, 0, 40, 20, 42, 411)		// ON (Selected) 	- #14
+	SpriteFrame(44, 0, 40, 20, 1, 432)		// OFF 				- #15
+	SpriteFrame(44, 0, 40, 20, 42, 432)		// OFF (Selected) 	- #16
+	SpriteFrame(-20, 0, 40, 20, 1, 320) 	// OK 				- #17
+	SpriteFrame(-20, 0, 40, 20, 42, 320) 	// OK (Selected) 	- #18
+	SpriteFrame(-10, -2, 42, 22, 1, 362)	// Back 			- #19
+	SpriteFrame(42, -2, 42, 22, 1, 362) 	// Back (Selected) 	- #20
+	SpriteFrame(-22, -2, 42, 22, 1, 362)	// Selection Box	- #21
+
+	SpriteFrame(16, 0, 16, 23, 46, 386)		// Sonic (Alone) 		- #22
+	SpriteFrame(36, 0, 16, 23, 63, 386)		// Tails (Alone) 		- #23
+	SpriteFrame(26, 0, 16, 23, 46, 386)		// Sonic (& Tails) 		- #24
+	SpriteFrame(26, 0, 16, 23, 63, 386)		// Tails 	(& Sonic) 	- #25
+	SpriteFrame(26, 0, 16, 23, 80, 386)		// Knuckles (Alone) 	- #26
+	SpriteFrame(16, 0, 16, 23, 80, 386)		// Knuckles (& Tails) 	- #27
+	SpriteFrame(36, 0, 16, 23, 63, 386)		// Tails 	(& Knux) 	- #28
+
+	SpriteFrame(26, 0, 16, 14, 207, 314)	// Shields (S2)	- #29
+	SpriteFrame(17, 0, 34, 30, 207, 314)	// Shields (S3)	- #30
+	SpriteFrame(26, 0, 16, 14, 228, 299)	// Random (S2)	- #31
+	SpriteFrame(17, 0, 16, 14, 228, 299)	// Random (S3)	- #32
 end event
 
 event RSDKDraw

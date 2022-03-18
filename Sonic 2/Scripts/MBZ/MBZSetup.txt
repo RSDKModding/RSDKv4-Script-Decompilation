@@ -6,9 +6,29 @@
 // ----------------------------------
 
 // Aliases
-private alias object.value10 : MBZSetup.isDimming
+private alias object.value1  : object.lavaPalTimer
+private alias object.value2  : object.paletteTimer
+private alias object.value3  : object.lavaPalIndex1
+private alias object.value4  : object.lavaPalIndex2
+private alias object.value5  : object.lavaPalIndex3
+private alias object.value6  : object.lavaPalIndex4
+private alias object.value7  : object.oilAniTileDelay
+private alias object.value8  : object.oilAniTileFrame
+private alias object.value9  : object.deformTimer
+private alias object.value10 : object.isDimming
 
 private alias 3 : SHIELD_FIRE
+
+// Player Aliases
+private alias object.value1  : player.timer
+private alias object.value14 : player.skidding
+private alias object.value18 : player.sortedDrawOrder
+private alias object.value37 : player.shield
+
+// Tile Flags
+private alias 0 : TILE_NORMAL
+private alias 1 : TILE_OILPOOL
+private alias 3 : TILE_LAVA
 
 // Tracks
 private alias 0 : TRACK_STAGE
@@ -33,14 +53,14 @@ private alias 1 : MUSICEVENT_FLAG_SPEEDUP
 private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 
 // Function declarations
-reserve function MBZSetup_HandleGround
+reserve function MBZSetup_HandlePlayerOilPool
 
 // These two are unused
 reserve function MBZSetup_SpeedUpMusic
 reserve function MBZSetup_SlowDownMusic
 
 // Static Values
-// All but value 41 are unused
+// Any of these without aliases listed below are considered unused
 public value ZoneSetup_value33 = 0
 public value ZoneSetup_value34 = 0
 public value ZoneSetup_value35 = 0
@@ -51,10 +71,16 @@ public value ZoneSetup_value39 = 0
 public value ZoneSetup_value40 = 0
 public value ZoneSetup_value41 = 0
 
+private alias ZoneSetup_value33 : CPZSetup_rotatingStairTimer
+private alias ZoneSetup_value34 : Water_flashTimer
+private alias ZoneSetup_value35 : CPZSetup_hasAchievement
+private alias ZoneSetup_value36 : CPZSetup_enteredWater
+private alias ZoneSetup_value41 : MBZSetup_unknownTimer
+
 // Tables
 
 // Palette cycle for the stage
-public table MBZSetup_PalCycle
+private table MBZSetup_lavaPalCycle
 	0xE00000, 0xE06000, 0xE0A000, 0xE0E000, 0xE0E000, 0xE00000, 0xE06000, 0xE0A000, 0xE0C020, 0xE0E000, 0xE00000, 0xE06000, 0xE06000, 0xE0E040, 0xE0E080, 0xE02000
 	0xE04000, 0xE08000, 0xE0E060, 0xE0E0A0, 0xE0E080, 0xE02000, 0xE06000, 0xE0E040, 0xE0C020, 0xE0E000, 0xE00000, 0xE06000, 0xE06000, 0xE0C020, 0xE0E000, 0xE00000
 	0xE00000, 0xE06000, 0xE0A000, 0xE0E000, 0xE0C000, 0xC00000, 0xE04000, 0xE08000, 0xE06000, 0xC0A000, 0xA00000, 0xE02000, 0xC00000, 0xC04000, 0xE08000, 0x800000
@@ -62,7 +88,7 @@ public table MBZSetup_PalCycle
 end table
 
 // Stage deformation data
-public table MBZSetup_DeformationTable
+private table MBZSetup_deformationTable
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
 	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
@@ -71,7 +97,7 @@ end table
 
 
 // Modified version of PlayerObject_HandleGround
-function MBZSetup_HandleGround
+function MBZSetup_HandlePlayerOilPool
 	if object.animation != ANI_SKIDDING
 		temp7 = true
 	else
@@ -88,22 +114,22 @@ function MBZSetup_HandleGround
 
 		if object.speed == 0
 			if object.collisionMode == CMODE_FLOOR
-				if object.value1 < 240
+				if player.timer < 240
 					object.animation = ANI_STOPPED
-					object.value1++
+					player.timer++
 				else
 					object.animation = ANI_WAITING
-					if stage.playerListPos == 2
-						object.value1++
-						if object.value1 == 834
-							object.value1 = 0
+					if stage.playerListPos == PlayerName[KNUCKLES]
+						player.timer++
+						if player.timer == 834
+							player.timer = 0
 							object.animation = ANI_STOPPED
 						end if
 					end if
 				end if
 			end if
 		else
-			object.value1 = 0
+			player.timer = 0
 			if object.speed > 0
 				if object.speed < 0x5F5C2
 					object.animation = ANI_WALKING
@@ -131,30 +157,34 @@ function MBZSetup_HandleGround
 			end if
 		end if
 
-		if object.value14 > 0
-			if temp7 == 1
+		if player.skidding > 0
+			if temp7 == true
 				PlaySfx(SfxName[Skidding], false)
 			end if
+
 			object.animation = ANI_SKIDDING
 			object.animationSpeed = 0
-			object.value14--
+			player.skidding--
 			if ringTimer == 0
 				CreateTempObject(TypeName[Dust Puff], 0, object.xpos, object.ypos)
 				object[tempObjectPos].iypos += object.collisionBottom
-				object[tempObjectPos].drawOrder = object.value18
+				object[tempObjectPos].drawOrder = player.sortedDrawOrder
 			end if
+
 			if object.speed > 0
 				object.direction = FLIP_NONE
 			else
 				object.direction = FLIP_X
 			end if
 		end if
+
 		if object.collisionMode == CMODE_FLOOR
 			if object.pushing == 2
 				object.animation = ANI_PUSHING
 				object.animationSpeed = 0
 			end if
 		end if
+
 		if object.jumpPress == true
 			CallFunction(PlayerObject_StartJump)
 		end if
@@ -174,17 +204,19 @@ function MBZSetup_SpeedUpMusic
 	temp0 &= checkResult
 	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
-			SwapMusicTrack("MarathonBase_F.ogg", 0, 0x7AA16, 0x1EF0)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436)
+			SwapMusicTrack("MarathonBase_F.ogg", TRACK_STAGE, 502294, 7920)
 			break
-		case 2
-			SetMusicTrack("MarathonBase_F.ogg", 0, 0x7AA16)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 0x76E4, 8000)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("MarathonBase_F.ogg", TRACK_STAGE, 502294)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436, 8000)
 			break
-		case 4
-			SetMusicTrack("MarathonBase_F.ogg", 0, 0x7AA16)
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
+
+		case TRACK_BOSS
+			SetMusicTrack("MarathonBase_F.ogg", TRACK_STAGE, 502294)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436)
 			break
 		end switch
 	else
@@ -204,17 +236,19 @@ function MBZSetup_SlowDownMusic
 	temp0 &= checkResult
 	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
-			SwapMusicTrack("MarathonBase.ogg", 0, 0x9B442, 0x316A)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
+			SwapMusicTrack("MarathonBase.ogg", TRACK_STAGE, 635970, 12650)
 			break
-		case 2
-			SetMusicTrack("MarathonBase.ogg", 0, 0x9B442)
-			SwapMusicTrack("Invincibility.ogg", 2, 0x9A68, 12500)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("MarathonBase.ogg", TRACK_STAGE, 635970)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528, 12500)
 			break
-		case 4
-			SetMusicTrack("MarathonBase.ogg", 0, 0x9B442)
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
+
+		case TRACK_BOSS
+			SetMusicTrack("MarathonBase.ogg", TRACK_STAGE, 635970)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
 			break
 		end switch
 	else
@@ -224,73 +258,84 @@ end function
 
 
 event ObjectMain
-
 	// Pulsing palette
-	object.value1++
-	if object.value1 == 12
-		object.value1 = 0
-		object.value3 += 4
-		object.value3 &= 63
-		GetTableValue(temp0, object.value3, MBZSetup_PalCycle)
+	object.lavaPalTimer++
+	if object.lavaPalTimer == 12
+		object.lavaPalTimer = 0
+
+		object.lavaPalIndex1 += 4
+		object.lavaPalIndex1 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex1, MBZSetup_lavaPalCycle)
 		SetPaletteEntry(0, 96, temp0)
-		object.value4 += 4
-		object.value4 &= 63
-		GetTableValue(temp0, object.value4, MBZSetup_PalCycle)
+
+		object.lavaPalIndex2 += 4
+		object.lavaPalIndex2 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex2, MBZSetup_lavaPalCycle)
 		SetPaletteEntry(0, 97, temp0)
-		object.value5 += 4
-		object.value5 &= 63
-		GetTableValue(temp0, object.value5, MBZSetup_PalCycle)
+
+		object.lavaPalIndex3 += 4
+		object.lavaPalIndex3 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex3, MBZSetup_lavaPalCycle)
 		SetPaletteEntry(0, 98, temp0)
-		object.value6 += 4
-		object.value6 &= 63
-		GetTableValue(temp0, object.value6, MBZSetup_PalCycle)
+
+		object.lavaPalIndex4 += 4
+		object.lavaPalIndex4 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex4, MBZSetup_lavaPalCycle)
 		SetPaletteEntry(0, 99, temp0)
 	end if
 
 	// Cycling palette
-	object.value2++
-	if object.value2 == 4
-		object.value2 = 0
-		RotatePalette(0, 100, 105, 0)
+	object.paletteTimer++
+	if object.paletteTimer == 4
+		object.paletteTimer = 0
+		RotatePalette(0, 100, 105, false)
 	end if
 
 	// Ani Tiles
-	if object.value7 < 2
-		temp0 = object.value8
+	if object.oilAniTileDelay < 2
+		temp0 = object.oilAniTileFrame
 		temp0 += 462
 		Copy16x16Tile(408, temp0)
+
 		temp0++
 		Copy16x16Tile(409, temp0)
+
 		temp0++
 		Copy16x16Tile(410, temp0)
+
 		temp0++
 		Copy16x16Tile(411, temp0)
+
 		temp0 += 21
 		Copy16x16Tile(412, temp0)
+
 		temp0++
 		Copy16x16Tile(413, temp0)
+
 		temp0++
 		Copy16x16Tile(414, temp0)
+
 		temp0++
 		Copy16x16Tile(415, temp0)
-		object.value7 = 18
-		object.value8 += 4
-		object.value8 %= 24
+
+		object.oilAniTileDelay = 18
+		object.oilAniTileFrame += 4
+		object.oilAniTileFrame %= 24
 	else
-		object.value7--
+		object.oilAniTileDelay--
 	end if
 
 	// Clouds scrolling
-	object.value9++
-	if object.value9 > 7
+	object.deformTimer++
+	if object.deformTimer > 7
 		tileLayer[1].deformationOffset++
-		object.value9 = 0
+		object.deformTimer = 0
 	end if
 
 	GetTableValue(temp0, 21, StageSetup_oscillationTable)
 	if temp0 == 0
-		ZoneSetup_value41++
-		ZoneSetup_value41 &= 3
+		MBZSetup_unknownTimer++
+		MBZSetup_unknownTimer &= 3
 	end if
 
 	// Randomize the animals
@@ -320,9 +365,13 @@ event ObjectMain
 		// "Angle" is actually used to hold flags and such, same goes for other stages
 		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
 		switch temp0
-		case 1
+		default
+		case TILE_NORMAL
+			break
+
+		case TILE_OILPOOL
 			if object[currentPlayer].yvel > -1
-				object[currentPlayer].state = MBZSetup_HandleGround
+				object[currentPlayer].state = MBZSetup_HandlePlayerOilPool
 				if object[currentPlayer].animation == ANI_JUMPING
 					object[currentPlayer].animation = ANI_WALKING
 				end if
@@ -332,18 +381,18 @@ event ObjectMain
 			end if
 			break
 
-		case 3
+		case TILE_LAVA
 			// Lava tile
 			// Only harm the player if they don't have a flame shield
-			if object[currentPlayer].value37 != SHIELD_FIRE
+			if player[currentPlayer].shield != SHIELD_FIRE
 				CallFunction(PlayerObject_Hit)
 			end if
 			break
 		end switch
 	next
 
-	if MBZSetup.isDimming == true
-		if object.alpha < 128
+	if object.isDimming == true
+		if object.alpha < 0x80
 			object.alpha += 4
 		end if
 	else
@@ -352,36 +401,38 @@ event ObjectMain
 		end if
 	end if
 
-	MBZSetup.isDimming = false
+	object.isDimming = false
 end event
 
 
 event ObjectDraw
-	DrawRect(0, 0, 512, 240, 0, 32, 80, object.alpha)
+	DrawRect(0, 0, 512, 240, 0x00, 0x20, 0x50, object.alpha)
 end event
 
 
 event ObjectStartup
-	SetMusicTrack("DeathEgg.ogg", 0, 1)
-	SetPaletteEntry(0, 192, 0)
+	SetMusicTrack("DeathEgg.ogg", TRACK_STAGE, true)
+	SetPaletteEntry(0, 192, 0x000000)
 	object[10].type = TypeName[MBZ Setup]
 	object[10].priority = PRIORITY_ACTIVE
-	object[10].value3 = 0
-	object[10].value4 = 1
-	object[10].value5 = 2
-	object[10].value6 = 3
+	object[10].lavaPalIndex1 = 0
+	object[10].lavaPalIndex2 = 1
+	object[10].lavaPalIndex3 = 2
+	object[10].lavaPalIndex4 = 3
 	object[10].drawOrder = 1
+
 	arrayPos0 = 0
 	while arrayPos0 < 576
 		temp0 = arrayPos0
 		temp0 &= 63
-		GetTableValue(stage.deformationData2[arrayPos0], temp0, MBZSetup_DeformationTable)
+		GetTableValue(stage.deformationData2[arrayPos0], temp0, MBZSetup_deformationTable)
 		arrayPos0++
 	loop
-	ZoneSetup_value33 = 0
-	ZoneSetup_value34 = 0
-	ZoneSetup_value35 = 0
-	ZoneSetup_value36 = 0
+
+	CPZSetup_rotatingStairTimer = 0
+	Water_flashTimer = 0
+	CPZSetup_hasAchievement = false
+	CPZSetup_enteredWater = 0
 	ZoneSetup_value37 = 0
 	ZoneSetup_value38 = 0
 	ZoneSetup_value39 = 0
