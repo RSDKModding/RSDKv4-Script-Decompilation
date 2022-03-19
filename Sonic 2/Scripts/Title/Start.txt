@@ -6,116 +6,135 @@
 // ----------------------------------
 
 // Aliases
-private alias 7 : TYPE_STARTMESSAGE
+private alias object.value0 : object.timer
+private alias object.value4 : object.attractTimer
 
-private alias object.value0 : start.fadeValue
-private alias object.value4 : start.demoCountdown
+// States
+private alias 0 : START_AWAITACTION
+private alias 1 : START_NEWGAME
+private alias 2 : START_LEVELSELECT
+private alias 3 : START_CONTINUESCREEN
+private alias 4 : START_ATTRACTMODE
 
 event ObjectMain
 	switch object.state
-	case 0
+	case START_AWAITACTION
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
-		if inputPress.start == 1
-			checkResult = 1
+		if inputPress.start == true
+			checkResult = true
 		end if
-		if inputPress.buttonA == 1
-			checkResult = 1
+
+		if inputPress.buttonA == true
+			checkResult = true
 		end if
-		if inputPress.buttonB == 1
-			checkResult = 1
+
+		if inputPress.buttonB == true
+			checkResult = true
 		end if
-		if inputPress.buttonC == 1
-			checkResult = 1
+
+		if inputPress.buttonC == true
+			checkResult = true
 		end if
+
 		if checkResult > -1
-			if options.stageSelectFlag == 1
+			if options.stageSelectFlag == true
 				if checkResult > 0
-					object.state = 2
+					object.state = START_LEVELSELECT
 				else
-					object.state = 1
+					object.state = START_NEWGAME
 				end if
 			else
-				object.state = 1
+				object.state = START_NEWGAME
 			end if
+
 			PlaySfx(SfxName[Menu Select], false)
 			StopMusic()
 		else
-			start.demoCountdown++
-			if start.demoCountdown == 420
-				object.state = 4
+			object.attractTimer++
+			if object.attractTimer == 420
+				object.state = START_ATTRACTMODE
 			end if
 		end if
 		break
 
-	case 1
-		start.fadeValue += 8
-		if start.fadeValue == 320
-			options.attractMode = 0
-			player.lives = 3
-			player.continues = 0
-			player.score = 0
-			player.scoreBonus = 50000
-			starPostID = 0
-			specialStage.listPos = 0
-			specialStage.emeralds = 0b00000000
-			specialStage.nextZone = 0
-			stage.activeList = REGULAR_STAGE
-			stage.listPos = 0
+	case START_NEWGAME
+		object.timer += 8
+		if object.timer == 320
+			options.attractMode 	= false
+			player.lives 			= 3
+			player.continues 		= 0
+			player.score 			= 0
+			player.scoreBonus 		= 50000
+			starPostID 				= 0
+			specialStage.listPos 	= 0
+			specialStage.emeralds 	= 0b00000000
+			specialStage.nextZone 	= 0
+
+			// New Game - to EHZ1 you go!
+			stage.activeList 		= REGULAR_STAGE
+			stage.listPos 			= 0
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, start.fadeValue)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
 		
-	case 2
-		start.fadeValue += 8
-		if start.fadeValue == 320
-			options.attractMode = 0
-			player.lives = 3
-			player.continues = 0
-			player.score = 0
-			player.scoreBonus = 50000
-			starPostID = 0
-			specialStage.listPos = 0
-			specialStage.emeralds = 0b00000000
-			specialStage.nextZone = 0
-			stage.activeList = PRESENTATION_STAGE
-			stage.listPos = 5
+	case START_LEVELSELECT
+		object.timer += 8
+		if object.timer == 320
+			options.attractMode 	= false
+			player.lives 			= 3
+			player.continues 		= 0
+			player.score 			= 0
+			player.scoreBonus 		= 50000
+			starPostID 				= 0
+			specialStage.listPos 	= 0
+			specialStage.emeralds 	= 0b00000000
+			specialStage.nextZone 	= 0
+
+			// Level Select
+			stage.activeList 	= PRESENTATION_STAGE
+			stage.listPos 		= 5
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, start.fadeValue)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
 
-	case 3
-		start.fadeValue += 8
-		if start.fadeValue == 320
+	case START_CONTINUESCREEN
+		object.timer += 8
+		if object.timer == 320
+			// Continue Screen...?
 			options.attractMode = false
-			stage.listPos = 4
+			stage.listPos 		= 4
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, start.fadeValue)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
 
-	case 4
-		start.fadeValue += 8
-		if start.fadeValue == 320
-			player.lives = 3
-			player.continues = 0
-			player.score = 0
-			player.scoreBonus = 50000
-			starPostID = 0
-			specialStage.listPos = 0
-			specialStage.emeralds = 0b00000000
-			specialStage.nextZone = 0
+	case START_ATTRACTMODE
+		object.timer += 8
+		if object.timer == 320
+			player.lives 			= 3
+			player.continues 		= 0
+			player.score 			= 0
+			player.scoreBonus 		= 50000
+			starPostID 				= 0
+			specialStage.listPos 	= 0
+			specialStage.emeralds 	= 0b00000000
+			specialStage.nextZone 	= 0
+
+			// Attract Mode timee
 			stage.activeList = REGULAR_STAGE
 			stage.listPos = attract.stage
 			stage.listPos <<= 1
+
 			attract.stage++
 			attract.stage &= 3
 			options.attractMode = true
 			credits.screen = 0
+
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, start.fadeValue)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
 	end switch
 end event
@@ -126,6 +145,7 @@ event ObjectDraw
 	if object.animationTimer > 59
 		object.animationTimer = 0
 	end if
+
 	if object.animationTimer > 29
 		DrawSpriteScreenXY(0, screen.xcenter, object.ypos)
 	end if
@@ -135,11 +155,12 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("Title/Title.gif")
 	switch engine.deviceType
-	case 0
-		SpriteFrame(-49, -1, 98, 9, 1, 380)
+	case RETRO_STANDARD
+		SpriteFrame(-49, -1, 98, 9, 1, 380)		// Press Button 	- #0
 		break
-	case 1
-		SpriteFrame(-57, -1, 114, 9, 1, 390)
+
+	case RETRO_MOBILE
+		SpriteFrame(-57, -1, 114, 9, 1, 390)	// Touch To Start 	- #0
 		break
 	end switch
 end event
@@ -149,6 +170,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Title/Title.gif")
+	SpriteFrame(-49, -1, 98, 9, 1, 380)		// Press Button 	- #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
