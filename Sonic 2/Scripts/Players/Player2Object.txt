@@ -36,6 +36,12 @@ private alias object.value45 : player.autoJumpTimer
 private alias object.value46 : player.targetLeaderPos.x
 private alias object.value47 : player.targetLeaderPos.y
 
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 2 : TRACK_INVINCIBLE
+private alias 5 : TRACK_GAMEOVER
+private alias 7 : TRACK_SUPER
+
 // Function declarations
 reserve function Player2Object_ProcessP2InputLag
 reserve function Player2Object_ProcessP2Input
@@ -164,7 +170,7 @@ function Player2Object_ProcessP2InputLag
 			CheckEqual(player[0].prevGravity, 0)
 			temp0 &= checkResult
 
-			if temp0 == 0
+			if temp0 == false
 				GetTableValue(player.targetLeaderPos.x, Player2Object_nextLeaderPosID, Player2Object_leaderPosBufferX)
 				GetTableValue(player.targetLeaderPos.y, Player2Object_nextLeaderPosID, Player2Object_leaderPosBufferY)
 			else
@@ -576,12 +582,12 @@ function Player2Object_ProcessPlayer2_VS
 			currentPlayer = object.entityPos
 			CallFunction(PlayerObject_UpdatePhysicsState)
 
-			temp0 = 0
+			temp0 = false
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				temp0 += player[currentPlayer].speedShoesTimer
 			next
 
-			if temp0 == 0
+			if temp0 == false
 				if SlowDownMusic != 0
 					CallFunction(SlowDownMusic)
 				end if
@@ -606,14 +612,14 @@ function Player2Object_ProcessPlayer2_VS
 	if player.invincibleTimer > 0
 		player.invincibleTimer--
 		if player.invincibleTimer == 0
-			temp0 = 0
+			temp0 = false
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				temp0 += player[currentPlayer].invincibleTimer
 			next
 			
-			if temp0 == 0
-				if music.currentTrack == 2
-					PlayMusic(0)
+			if temp0 == false
+				if music.currentTrack == TRACK_INVINCIBLE
+					PlayMusic(TRACK_STAGE)
 				end if
 			end if
 
@@ -693,8 +699,9 @@ event ObjectMain
 		CheckEqual(object.gravity, GRAVITY_GROUND)
 		player.prevGravity |= checkResult
 		player.prevGravity ^= 1
-		if temp0 == 1
-			if player.prevGravity == 0
+
+		if temp0 == GRAVITY_AIR
+			if player.prevGravity == GRAVITY_GROUND
 				player.scoreBonus = 0
 				if object.animation == ANI_JUMPING
 					if object.down == false
@@ -725,9 +732,9 @@ end event
 event ObjectDraw
 	if object.animation != object.prevAnimation
 		object.prevAnimation = object.animation
-		object.frame = 0
-		object.animationTimer = 0
-		object.animationSpeed = 0
+		object.frame 			= 0
+		object.animationTimer 	= 0
+		object.animationSpeed 	= 0
 	end if
 
 	if object.propertyValue == PlayerName[TAILS]
@@ -787,7 +794,7 @@ event ObjectDraw
 			CheckEqual(object.yvel, 0)
 			temp1 &= checkResult
 			temp2 = object.rotation
-			if temp1 == 0
+			if temp1 == false
 				ATan2(object.rotation, object.xvel, object.yvel)
 				object.rotation += 0x10
 				object.rotation &= 0xFF
@@ -882,8 +889,8 @@ end event
 
 
 event ObjectStartup
-	Player2Object_nextLeaderPosID 		= 1
-	Player2Object_lastLeaderPosID 		= 0
+	Player2Object_nextLeaderPosID	= 1
+	Player2Object_lastLeaderPosID	= 0
 	Player2Object_stateUp 			= 0
 	Player2Object_stateDown 		= 0
 	Player2Object_stateLeft 		= 0
@@ -899,50 +906,51 @@ event ObjectStartup
 		vs.restartX2 = object[0].xpos
 		vs.restartY2 = object[0].ypos
 
-		object[1].groupID = GROUP_PLAYERS
-		object[1].state = PlayerObject_HandleAir
-		object[1].priority = PRIORITY_ACTIVE
-		object[1].drawOrder = -1
-		player[1].sortedDrawOrder = 4
-		player[1].rollingDeceleration = 0x2000
-		player[1].spindashFunction = PlayerObject_StartSpindash
+		object[1].groupID 				= GROUP_PLAYERS
+		object[1].state 				= PlayerObject_HandleAir
+		object[1].priority 				= PRIORITY_ACTIVE
+		object[1].drawOrder 			= -1
+		player[1].sortedDrawOrder 		= 4
+		player[1].rollingDeceleration 	= 0x2000
+		player[1].spindashFunction 		= PlayerObject_StartSpindash
 
 		currentPlayer = 1
 		CallFunction(PlayerObject_UpdatePhysicsState)
 
-		player[1].hitboxTop = HITBOX_AUTO
-		player[1].hitboxBottom = HITBOX_AUTO
-		player[1].hitboxLeft = HITBOX_AUTO
-		player[1].hitboxRight = HITBOX_AUTO
+		player[1].hitboxTop 	= HITBOX_AUTO
+		player[1].hitboxBottom 	= HITBOX_AUTO
+		player[1].hitboxLeft 	= HITBOX_AUTO
+		player[1].hitboxRight 	= HITBOX_AUTO
+
 		switch vs.player2Type
-		case 0
+		case PlayerName[SONIC]
 			LoadAnimation("Sonic.ani")
 			object[1].propertyValue = PlayerName[SONIC]
-			player[1].jumpOffset = -5
-			player[1].jumpAbility = PlayerObject_JumpAbility_Sonic
-			ANI_PEELOUT = ANI_RUNNING
+			player[1].jumpOffset 	= -5
+			player[1].jumpAbility 	= PlayerObject_JumpAbility_Sonic
+			ANI_PEELOUT 			= ANI_RUNNING
 			break
 
-		case 1
+		case PlayerName[TAILS]
 			LoadAnimation("Tails.ani")
 			object[1].propertyValue = PlayerName[TAILS]
-			player[1].jumpOffset = -1
-			player[1].jumpAbility = PlayerObject_JumpAbility_Tails
-			stage.player2Enabled = 0
+			player[1].jumpOffset 	= -1
+			player[1].jumpAbility 	= PlayerObject_JumpAbility_Tails
+			stage.player2Enabled 	= false
 			break
 
-		case 2
+		case PlayerName[KNUCKLES]
 			LoadAnimation("Knuckles.ani")
 			object[1].propertyValue = PlayerName[KNUCKLES]
-			player[1].jumpOffset = -5
-			player[1].jumpAbility = PlayerObject_JumpAbility_Knux
-			ANI_PEELOUT = ANI_RUNNING
+			player[1].jumpOffset 	= -5
+			player[1].jumpAbility 	= PlayerObject_JumpAbility_Knux
+			ANI_PEELOUT 			= ANI_RUNNING
 			break
 		end switch
 
-		stage.player2Enabled = false
-		playerCount = 2
-		temp7 = true
+		stage.player2Enabled 	= false
+		playerCount 			= 2
+		temp7 					= true
 	end if
 
 	if stage.player2Enabled == true
@@ -952,22 +960,23 @@ event ObjectStartup
 		end if
 
 		LoadAnimation("Tails.ani")
-		object[1].groupID = GROUP_PLAYERS
-		object[1].propertyValue = PlayerName[TAILS]
-		object[1].state = PlayerObject_HandleAir
-		object[1].priority = PRIORITY_ACTIVE
-		object[1].controlMode = 0
-		object[1].drawOrder = -1
-		player[1].sortedDrawOrder = 4
+		object[1].groupID 			= GROUP_PLAYERS
+		object[1].propertyValue 	= PlayerName[TAILS]
+		object[1].state 			= PlayerObject_HandleAir
+		object[1].priority 			= PRIORITY_ACTIVE
+		object[1].controlMode 		= 0
+		object[1].drawOrder 		= -1
+		player[1].sortedDrawOrder 	= 4
 
 		currentPlayer = 1
 		CallFunction(PlayerObject_UpdatePhysicsState)
 		
-		player[1].rollingDeceleration = 0x2000
-		player[1].jumpOffset = -1
-		player[1].isSidekick = true
-		player[1].jumpAbility = Player2Object_JumpAbility_P2
-		player[1].spindashFunction = PlayerObject_StartSpindash
+		player[1].rollingDeceleration 	= 0x2000
+		player[1].jumpOffset 			= -1
+		player[1].isSidekick 			= true
+		player[1].jumpAbility 			= Player2Object_JumpAbility_P2
+		player[1].spindashFunction 		= PlayerObject_StartSpindash
+
 		CheckCurrentStageFolder("Continue")
 		if checkResult == true
 			player[1].p2InputFunction = Player2Object_NoInput
@@ -982,10 +991,10 @@ event ObjectStartup
 			temp0++
 		loop
 
-		player[1].hitboxTop = HITBOX_AUTO
-		player[1].hitboxBottom = HITBOX_AUTO
-		player[1].hitboxLeft = HITBOX_AUTO
-		player[1].hitboxRight = HITBOX_AUTO
+		player[1].hitboxTop 	= HITBOX_AUTO
+		player[1].hitboxBottom 	= HITBOX_AUTO
+		player[1].hitboxLeft 	= HITBOX_AUTO
+		player[1].hitboxRight 	= HITBOX_AUTO
 		temp7 = true
 	end if
 
