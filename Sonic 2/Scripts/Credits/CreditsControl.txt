@@ -6,55 +6,67 @@
 // ----------------------------------
 
 // Aliases
-private alias 1 : TYPE_CREDITSCONTROL
+public alias object.value0 : object.timer
+public alias object.value3 : object.timer2
 
-public alias object.value0 : creditsControl.timer
+// States
+private alias 0 : CREDITSCONTROL_SETUP
+private alias 1 : CREDITSCONTROL_FADEIN
+private alias 2 : CREDITSCONTROL_SHOWSCREEN
+private alias 3 : CREDITSCONTROL_FADEOUT
+private alias 4 : CREDITSCONTROL_FADEINTOEND
+private alias 5 : CREDITSCONTROL_SHOWEND
+private alias 6 : CREDITSCONTROL_FADETOMENU
 
 event ObjectMain
 	switch object.state
-	case 0
-		creditsControl.timer = 320
-		SetScreenFade(0, 0, 0, creditsControl.timer)
+	case CREDITSCONTROL_SETUP
+		object.timer = 320
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		object.state++
 		if credits.screen == 0
 			PlayMusic(0)
 		end if
 		break
-	case 1
-		if creditsControl.timer > 0
-			creditsControl.timer -= 8
+
+	case CREDITSCONTROL_FADEIN
+		if object.timer > 0
+			object.timer -= 8
 		else
-			object.alpha = 128
+			object.alpha = 0x80
 			object.state++
 		end if
-		SetScreenFade(0, 0, 0, creditsControl.timer)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
-	case 2
-		creditsControl.timer++
-		if creditsControl.timer == 356
-			creditsControl.timer = 0
+
+	case CREDITSCONTROL_SHOWSCREEN
+		object.timer++
+		if object.timer == 356
+			object.timer = 0
 			object.state++
 		end if
 		break
-	case 3
-		if creditsControl.timer < 256
-			if object.value3 == 21
-				creditsControl.timer += 4
+
+	case CREDITSCONTROL_FADEOUT
+		if object.timer < 256
+			if object.timer2 == 21
+				object.timer += 4
 			else
-				creditsControl.timer += 8
+				object.timer += 8
 			end if
-			SetScreenFade(0, 0, 0, creditsControl.timer)
+
+			SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		else
-			object.value3++
-			if object.value3 == 22
-				object.state = 4
+			object.timer2++
+			if object.timer2 == 22
+				object.state = CREDITSCONTROL_FADEINTOEND
 				screen.yoffset += 256
 			else
-				object.state = 1
+				object.state = CREDITSCONTROL_FADEIN
 				if specialStage.emeralds >= 0b01111111
-					if object.value3 == 21
-						screen.yoffset = 0x1400
-						screen.yoffset += 0x40C
+					if object.timer2 == 21
+						screen.yoffset = 5120
+						screen.yoffset += 1036
 					else
 						screen.yoffset += 256
 					end if
@@ -62,50 +74,57 @@ event ObjectMain
 					screen.yoffset += 256
 				end if
 			end if
-			SetScreenFade(0, 0, 0, 255)
+
+			SetScreenFade(0x00, 0x00, 0x00, 255)
 		end if
 		break
-	case 4
-		if creditsControl.timer > 0
-			creditsControl.timer -= 8
+
+	case CREDITSCONTROL_FADEINTOEND
+		if object.timer > 0
+			object.timer -= 8
 		else
-			object.alpha = 128
+			object.alpha = 0x80
 			object.state++
 		end if
-		SetScreenFade(0, 0, 0, creditsControl.timer)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
-	case 5
-		creditsControl.timer++
-		if creditsControl.timer == 0x4B0
-			creditsControl.timer = 0
+
+	case CREDITSCONTROL_SHOWEND
+		object.timer++
+		if object.timer == 0x4B0
+			object.timer = 0
 			object.state++
 		end if
-		if inputPress.start == 1
-			creditsControl.timer = 0
+
+		if inputPress.start == true
+			object.timer = 0
 			object.state++
 		end if
-		if creditsControl.timer > 60
+
+		if object.timer > 60
 			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 			if checkResult > -1
-				creditsControl.timer = 0
+				object.timer = 0
 				object.state++
 			end if
 		end if
 		break
-	case 6
-		if creditsControl.timer < 256
-			creditsControl.timer += 8
-			SetScreenFade(0, 0, 0, creditsControl.timer)
+		
+	case CREDITSCONTROL_FADETOMENU
+		if object.timer < 256
+			object.timer += 8
+			SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		else
-			stage.activeList = PRESENTATION_STAGE
-			stage.listPos = 0
+			stage.activeList 	= PRESENTATION_STAGE
+			stage.listPos 		= 0
 			StopMusic()
 			options.attractMode = false
-			engine.state = ENGINE_ENDGAME
-			SetScreenFade(0, 0, 0, 255)
+			engine.state 		= ENGINE_ENDGAME
+			SetScreenFade(0x00, 0x00, 0x00, 0xFF)
 		end if
 		break
 	end switch
+
 	temp0 = screen.xcenter
 	FlipSign(temp0)
 	temp0 += 256
@@ -114,9 +133,11 @@ end event
 
 
 event ObjectStartup
-	SetMusicTrack("Credits.ogg", 0, 0)
-	options.touchControls = 0
-	screen.yoffset = -8
+	SetMusicTrack("Credits.ogg", 0, false)
+
+	options.touchControls 	= false
+	screen.yoffset 			= -8
+
 	foreach (TypeName[Credits Control], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 	next
