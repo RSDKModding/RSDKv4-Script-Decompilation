@@ -6,63 +6,104 @@
 // ----------------------------------
 
 // Aliases
-private alias 40 : TYPE_ENDINGSETUP
+private alias object.value0  : object.timer
+private alias object.value2  : object.palFadeBlendPercent
+private alias object.value3  : object.tornadoTimer
+// Values 4-13 are unused...
+private alias object.value14 : object.paletteTimer
+private alias object.value15 : object.paletteIndex1
+private alias object.value16 : object.paletteIndex2
+private alias object.value17 : object.paletteIndex3
+private alias object.value18 : object.paletteIndex4
+private alias object.value19 : object.paletteIndex5
+private alias object.value20 : object.palFadeSrcPalB
 
+// States
+private alias 0 : ENDSETUP_SETUP
+private alias 1 : ENDSETUP_FADEINFRAME
+private alias 2 : ENDSETUP_DISPLAYFRAME
+private alias 3 : ENDSETUP_FADEOUTFRAME
+private alias 4 : ENDSETUP_ENTERPLAYER
+private alias 5 : ENDSETUP_PLAYERFALLING
+private alias 6 : ENDSETUP_SETUPSKY
+private alias 7 : ENDSETUP_SPAWNCLOUDS
+
+// Player Aliases
+private alias object.value0  : player.rings
+private alias object.value7  : player.invincibleTimer
+private alias object.value8  : player.blinkTimer
+private alias object.value18 : player.sortedDrawOrder
 
 // Static Values
 public value EndingSetup_value33 = 0;
 public value EndingSetup_value34 = 0;
 
+private alias EndingSetup_value33 : EndingSetup_scrollVelocity.x
+private alias EndingSetup_value34 : EndingSetup_scrollVelocity.y
+
 // Tables
-public table EndingSetup_table38
+public table EndingSetup_paletteCycle1
 	0xE00000, 0xC00000, 0xA00000, 0x800000, 0x600000, 0x400000, 0x200000, 0x400000, 0x600000, 0x800000, 0xA00000, 0xC00000, 0xE00000, 0xE02000, 0xE04000, 0xE02000
 end table
 
-public table EndingSetup_table39
-	0xE000, 0x20C000, 0x40A000, 0x608000, 0x806000, 0xA04000, 0xC02000, 0xE00000, 0xC00020, 0xA00040, 0x800060, 0x600080, 0x4000A0, 0x2000C0, 224, 0x20C0
-	0x40A0, 0x6080, 0x8060, 0xA040, 0xC020
+public table EndingSetup_paletteCycle2
+	0x00E000, 0x20C000, 0x40A000, 0x608000, 0x806000, 0xA04000, 0xC02000, 0xE00000, 0xC00020, 0xA00040, 0x800060, 0x600080, 0x4000A0, 0x2000C0, 0x0000E0, 0x0020C0
+	0x0040A0, 0x006080, 0x008060, 0x00A040, 0x00C020
 end table
 
-public table EndingSetup_table40
-	0x40E0, 192, 192, 0x60E0, 0x20C0, 192, 0x40E0, 0x40E0, 192, 0x20C0, 0x60E0, 0x20C0, 192, 0x40E0, 0x40C0, 192
-	0x20C0, 0x40E0, 192, 192, 0x60E0, 0x20C0, 192, 0x40E0, 0x20E0, 192, 0x20C0
+public table EndingSetup_paletteCycle3
+	0x0040E0, 0x0000C0, 0x0000C0, 0x0060E0, 0x0020C0, 0x0000C0, 0x0040E0, 0x0040E0, 0x0000C0, 0x0020C0, 0x0060E0, 0x0020C0, 0x0000C0, 0x0040E0, 0x0040C0, 0x0000C0
+	0x0020C0, 0x0040E0, 0x0000C0, 0x0000C0, 0x0060E0, 0x0020C0, 0x0000C0, 0x0040E0, 0x0020E0, 0x0000C0, 0x0020C0
 end table
 
-private table EndingSetup_table0
-	0xE000, 0xA000, 0x6000, 0x2000, 0, 32, 96, 0x20A0, 0x60E0, 0x20A0, 96, 32, 0, 0x200000, 0x600000, 0xA00000, 0xE00000, 0xE04000, 0xE00000, 0xA00000, 0x600000, 0x200000, 0, 0x202000, 0x606000, 0xA0A000, 0xE0E000, 0xA0A000, 0x606000, 0x202000, 0, 0x2000, 0x6000, 0xA000, 
+// Unused..?
+// It's a long list of colors likely meant for a palette cycle but it doesn't match any other palette cycles
+// Strangely, this table can also be found in CPZSetup AND DEZSetup, also unused
+private table EndingSetup_unusedPalette
+	0x00E000, 0x00A000, 0x006000, 0x002000, 0x000000, 0x000020, 0x000060, 0x0020A0, 0x0060E0, 0x0020A0, 0x000060, 0x000020, 0x000000, 0x200000, 0x600000, 0xA00000
+	0xE00000, 0xE04000, 0xE00000, 0xA00000, 0x600000, 0x200000, 0x000000, 0x202000, 0x606000, 0xA0A000, 0xE0E000, 0xA0A000, 0x606000, 0x202000, 0x000000, 0x002000
+	0x006000, 0x00A000
 end table
 
 event ObjectMain
-	object.value14++
-	if object.value14 == 8
-		object.value14 = 0
-		object.value15++
-		object.value15 &= 15
-		GetTableValue(temp0, object.value15, EndingSetup_table38)
+	object.paletteTimer++
+	if object.paletteTimer == 8
+		object.paletteTimer = 0
+
+		object.paletteIndex1++
+		object.paletteIndex1 &= 15
+		GetTableValue(temp0, object.paletteIndex1, EndingSetup_paletteCycle1)
 		SetPaletteEntry(0, 175, temp0)
-		object.value16++
-		object.value16 %= 21
-		GetTableValue(temp0, object.value16, EndingSetup_table39)
+
+		object.paletteIndex2++
+		object.paletteIndex2 %= 21
+		GetTableValue(temp0, object.paletteIndex2, EndingSetup_paletteCycle2)
 		SetPaletteEntry(0, 191, temp0)
-		object.value17 += 3
-		object.value17 %= 27
-		GetTableValue(temp0, object.value17, EndingSetup_table40)
+
+		object.paletteIndex3 += 3
+		object.paletteIndex3 %= 27
+		GetTableValue(temp0, object.paletteIndex3, EndingSetup_paletteCycle3)
 		SetPaletteEntry(0, 188, temp0)
-		object.value18 += 3
-		object.value18 %= 27
-		GetTableValue(temp0, object.value18, EndingSetup_table40)
+
+		object.paletteIndex4 += 3
+		object.paletteIndex4 %= 27
+		GetTableValue(temp0, object.paletteIndex4, EndingSetup_paletteCycle3)
 		SetPaletteEntry(0, 189, temp0)
-		object.value19 += 3
-		object.value19 %= 27
-		GetTableValue(temp0, object.value19, EndingSetup_table40)
+
+		object.paletteIndex5 += 3
+		object.paletteIndex5 %= 27
+		GetTableValue(temp0, object.paletteIndex5, EndingSetup_paletteCycle3)
 		SetPaletteEntry(0, 190, temp0)
 	end if
+
 	switch object.state
-	case 0
-		EndingSetup_value33 = -0x6000
-		EndingSetup_value34 = -0x10000
-		object.state = 1
+	case ENDSETUP_SETUP
+		EndingSetup_scrollVelocity.x = -0x6000
+		EndingSetup_scrollVelocity.y = -0x10000
+
+		object.state 		= ENDSETUP_FADEINFRAME
 		object[0].animation = ANI_FANROTATE
+
 		temp0 = 0
 		while temp0 < 256
 			// Set up palettes for the fades
@@ -71,30 +112,33 @@ event ObjectMain
 			SetPaletteEntry(3, temp0, 0xFFFFFF)
 			temp0++
 		loop
+
 		PlayMusic(0) // Start the music!
+
 		if specialStage.emeralds >= 0b01111111
-			CheckEqual(stage.playerListPos, 1)
+			CheckEqual(stage.playerListPos, PlayerName[TAILS])
 			temp0 = checkResult
-			CheckEqual(options.superTails, 0)
+			CheckEqual(options.superTails, false)
 			temp0 &= checkResult
-			if temp0 == 0
-				PlayerObject_SuperState = 1
-				object[0].value18 = 5
-				if stage.playerListPos == 2
-					object[0].animation = ANI_GLIDING
+			if temp0 == false
+				PlayerObject_SuperState 	= SUPERSTATE_SUPER
+				player[0].sortedDrawOrder 	= 5
+				if stage.playerListPos == PlayerName[KNUCKLES]
+					object[0].animation 	= ANI_GLIDING
 					object[0].prevAnimation = ANI_GLIDING
-					object[0].frame = 2
+					object[0].frame 		= 2
 				else
 					object[0].animation = ANI_FLYING
 				end if
-				object[0].speed = 0x100000
-				object[0].value7 = 60
-				object[0].value8 = 0
-				object[0].visible = 1
-				object[0].value0 = 0xFFFF
+				object[0].speed 			= 0x100000
+				player[0].invincibleTimer 	= 60
+				player[0].blinkTimer 		= 0
+				object[0].visible 			= true
+				player[0].rings 			= 0xFFFF
+
 				switch stage.playerListPos
-				case 0
-				case 3
+				case PlayerName[SONIC]
+				case PlayerName[SONIC AND TAILS]
 					object[0].animation = ANI_RUNNING
 					arrayPos0 = stage.entityPos
 					stage.entityPos = 0
@@ -104,79 +148,91 @@ event ObjectMain
 				end switch
 			end if
 		end if
-		object.value20 = 3
-		SetPaletteFade(1, 0, object.value20, object.value2, 0, 255)
+
+		object.palFadeSrcPalB = 3
+		SetPaletteFade(1, 0, object.palFadeSrcPalB, object.palFadeBlendPercent, 0, 255)
+
 		if stage.playerListPos != PlayerName[SONIC]
 			if stage.playerListPos != PlayerName[SONIC AND TAILS]
-				stage.activeLayer[0] = 1
-				object[0].xpos = 0xD40000
-				object[0].ypos = 0x1050000
-				object.frame = 4
-				object.value2 = 976
-				object.state = 4
+				stage.activeLayer[0] 		= 1
+				object[0].xpos 				= 0xD40000
+				object[0].ypos 				= 0x1050000
+				object.frame 				= 4
+				object.palFadeBlendPercent 	= 976
+				object.state 				= ENDSETUP_ENTERPLAYER
 			end if
 		end if
+
 		SetActivePalette(1, 0, screen.ysize)
 		break
-	case 1
-		object.value2 -= 8
-		SetPaletteFade(1, 0, object.value20, object.value2, 0, 255)
-		if object.value2 <= 0
-			object.value0 = 360
-			object.state = 2
+
+	case ENDSETUP_FADEINFRAME
+		object.palFadeBlendPercent -= 8
+		SetPaletteFade(1, 0, object.palFadeSrcPalB, object.palFadeBlendPercent, 0, 255)
+		if object.palFadeBlendPercent <= 0
+			object.timer = 360
+			object.state = ENDSETUP_DISPLAYFRAME
 		end if
 		break
-	case 2
-		object.value0--
-		if object.value0 == 0
-			object.state = 3
+
+	case ENDSETUP_DISPLAYFRAME
+		object.timer--
+		if object.timer == 0
+			object.state = ENDSETUP_FADEOUTFRAME
 			if object.frame == 3
-				object.value20 = 3
+				object.palFadeSrcPalB = 3
 			else
-				object.value20 = 2
+				object.palFadeSrcPalB = 2
 			end if
 		end if
 		break
-	case 3
-		object.value2 += 8
-		SetPaletteFade(1, 0, object.value20, object.value2, 0, 255)
-		if object.value2 >= 736
+
+	case ENDSETUP_FADEOUTFRAME
+		object.palFadeBlendPercent += 8
+		SetPaletteFade(1, 0, object.palFadeSrcPalB, object.palFadeBlendPercent, 0, 255)
+		if object.palFadeBlendPercent >= 736
 			object.frame++
 			if object.frame == 4
 				stage.activeLayer[0] = 1
-				object[0].xpos = 0xD40000
-				object[0].ypos = 0x1050000
-				object.state = 4
+				object[0].xpos 	= 0xD40000
+				object[0].ypos 	= 0x1050000
+				object.state 	= ENDSETUP_ENTERPLAYER
 			else
-				object.state = 1
+				object.state 	= ENDSETUP_FADEINFRAME
 			end if
 		end if
 		break
-	case 4
-		object.value2 -= 8
-		temp0 = object.value2
+
+	case ENDSETUP_ENTERPLAYER
+		object.palFadeBlendPercent -= 8
+		temp0 = object.palFadeBlendPercent
 		temp0 -= 512
 		if temp0 < 0
 			temp0 = 0
 		end if
-		SetPaletteFade(1, 0, object.value20, temp0, 0, 63)
-		SetPaletteFade(1, 0, object.value20, object.value2, 64, 255)
-		if object.value2 <= 0
-			object.state = 5
+
+		SetPaletteFade(1, 0, object.palFadeSrcPalB, temp0, 0, 63)
+		SetPaletteFade(1, 0, object.palFadeSrcPalB, object.palFadeBlendPercent, 64, 255)
+		if object.palFadeBlendPercent <= 0
+			object.state = ENDSETUP_PLAYERFALLING
 			SetActivePalette(0, 0, screen.ysize)
 		end if
-	case 5
-		object.value3++
+		// [Fallthrough]
+	case ENDSETUP_PLAYERFALLING
+		object.tornadoTimer++
+
 		object[0].ypos += 0x10000
 		if object[0].ypos >= 0x1E00000
-			object.state = 6
+			object.state = ENDSETUP_SETUPSKY
 		end if
 		break
-	case 6
-		object.value3++
-		object.value0--
-		if object.value0 < 0
-			Rand(object.value0, 32)
+
+	case ENDSETUP_SETUPSKY
+		object.tornadoTimer++
+
+		object.timer--
+		if object.timer < 0
+			Rand(object.timer, 32)
 			temp0 = screen.ysize
 			temp0 += screen.cameraY
 			temp0 += 16
@@ -191,9 +247,11 @@ event ObjectMain
 			end if
 			object[tempObjectPos].drawOrder = object[tempObjectPos].frame
 			object[tempObjectPos].drawOrder++
+
 			temp0 = screen.xsize
 			Rand(object[tempObjectPos].xpos, temp0)
 			object[tempObjectPos].xpos <<= 16
+			
 			temp0 = screen.ysize
 			temp0 += screen.cameraY
 			temp0 += 16
@@ -206,44 +264,51 @@ event ObjectMain
 				FlipSign(object[tempObjectPos].frame)
 				object[tempObjectPos].frame += 2
 			end if
+
 			object[tempObjectPos].drawOrder = object[tempObjectPos].frame
 			object[tempObjectPos].drawOrder++
+
 			temp0 = screen.xsize
 			Rand(object[tempObjectPos].xpos, temp0)
 			object[tempObjectPos].xpos += temp0
 			object[tempObjectPos].xpos <<= 16
 		end if
+
 		temp0 = 488
-		if stage.playerListPos != 0
-			if stage.playerListPos != 3
-				temp0 = 0xA30
+		if stage.playerListPos != PlayerName[SONIC]
+			if stage.playerListPos != PlayerName[SONIC AND TAILS]
+				temp0 = 2608
 			end if
 		end if
-		if object.value3 == temp0
+
+		if object.tornadoTimer == temp0
 			object[33].type = TypeName[Tornado]
 			object[33].priority = PRIORITY_ACTIVE
 			object[33].ypos = screen.ycenter
 			object[33].ypos += screen.cameraY
 			object[33].ypos += 21
-			if stage.playerListPos != 1
+			if stage.playerListPos != PlayerName[TAILS]
 				object[33].ypos += 4
 			end if
 			object[33].ypos <<= 16
 			object[33].inkEffect = INK_ALPHA
 			object[33].alpha = 0
 		end if
-		if EndingSetup_value34 >= 0
-			object.state = 7
+
+		if EndingSetup_scrollVelocity.y >= 0
+			object.state = ENDSETUP_SPAWNCLOUDS
 		end if
 		break
-	case 7
-		object.value0--
-		if object.value0 < 0
-			Rand(object.value0, 32)
+
+	case ENDSETUP_SPAWNCLOUDS
+		object.timer--
+		if object.timer < 0
+			Rand(object.timer, 32)
 			temp0 = screen.xsize
 			temp0 += 16
 			temp0 <<= 17
 			CreateTempObject(TypeName[Cloud], 0, temp0, 0)
+
 			Rand(object[tempObjectPos].frame, 4)
 			if object[tempObjectPos].frame == 3
 				object[tempObjectPos].frame = 2
@@ -251,9 +316,11 @@ event ObjectMain
 				FlipSign(object[tempObjectPos].frame)
 				object[tempObjectPos].frame += 2
 			end if
+
 			object[tempObjectPos].drawOrder = object[tempObjectPos].frame
 			object[tempObjectPos].drawOrder++
 			object[tempObjectPos].priority = PRIORITY_ACTIVE
+
 			temp0 = screen.ysize
 			Rand(object[tempObjectPos].ypos, temp0)
 			object[tempObjectPos].ypos += screen.cameraY
@@ -262,7 +329,8 @@ event ObjectMain
 		end if
 		break
 	end switch
-	options.touchControls = 0
+
+	options.touchControls = false
 end event
 
 
@@ -279,25 +347,27 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("Ending/Objects.gif")
-	SpriteFrame(-48, -36, 96, 72, 318, 1)
-	SpriteFrame(-48, -36, 96, 72, 415, 1)
-	SpriteFrame(-48, -36, 96, 72, 318, 74)
-	SpriteFrame(-48, -36, 96, 72, 415, 74)
-	SetMusicTrack("Ending.ogg", 0, 0)
+	SpriteFrame(-48, -36, 96, 72, 318, 1)  // Ending Cutscene Image 1 - #0
+	SpriteFrame(-48, -36, 96, 72, 415, 1)  // Ending Cutscene Image 2 - #1
+	SpriteFrame(-48, -36, 96, 72, 318, 74) // Ending Cutscene Image 3 - #2
+	SpriteFrame(-48, -36, 96, 72, 415, 74) // Ending Cutscene Image 4 - #3
+
+	SetMusicTrack("Ending.ogg", 0, false)
 
 	// No badniks appear in this stage, so no animals should appear, either
 	animalType1 = TypeName[Blank Object]
 	animalType2 = TypeName[Blank Object]
 
 	// Remove P2
-	object[1].type = TypeName[Blank Object]
-	playerCount = 1
+	object[1].type 	= TypeName[Blank Object]
+	playerCount 	= 1
 
-	object[10].type = TypeName[Ending Setup]
-	object[10].priority = PRIORITY_ACTIVE
-	object[10].value18 = 1
-	object[10].value19 = 2
-	object[10].value2 = 256
+	object[10].type 				= TypeName[Ending Setup]
+	object[10].priority 			= PRIORITY_ACTIVE
+	object[10].paletteIndex4 		= 1
+	object[10].paletteIndex5 		= 2
+	object[10].palFadeBlendPercent 	= 0x100
+
 	object[0].state = PlayerObject_Blank
 end event
 
@@ -306,6 +376,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Ending/Objects.gif")
+	SpriteFrame(-48, -36, 96, 72, 318, 1)  // Ending Cutscene Image 1 - #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
