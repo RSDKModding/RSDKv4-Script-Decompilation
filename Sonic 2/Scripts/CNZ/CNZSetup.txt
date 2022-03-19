@@ -6,15 +6,20 @@
 // ----------------------------------
 
 // Aliases
-private alias 40 : TYPE_CNZSETUP
+private alias object.value1 : object.paletteTimer
+private alias object.value2 : object.paletteIndex1
+private alias object.value3 : object.paletteIndex2
+private alias object.value4 : object.paletteIndex3
+private alias object.value5 : object.deformTimer
+private alias object.value6 : object.sonicPlateFrameID
+private alias object.value7 : object.tailsPlateFrameID
 
-// Function declarations
-reserve function CNZSetup_Function97
-reserve function CNZSetup_Function98
-reserve function CNZSetup_Function99
-reserve function CNZSetup_Function100
-reserve function CNZSetup_Function101
-reserve function CNZSetup_Function102
+// Player Aliases
+private alias object.value1  : player.timer
+private alias object.value5  : player.customRollAnimSpeed
+private alias object.value14 : player.skidding
+private alias object.value29 : player.rollingFriction
+private alias object.value31 : player.rollingDeceleration	// Passive rolling deceleration - Without the player holding the opposite direction
 
 // Tracks
 private alias 0 : TRACK_STAGE
@@ -38,8 +43,16 @@ private alias 0 : MUSICEVENT_FLAG_NOCHANGE
 private alias 1 : MUSICEVENT_FLAG_SPEEDUP
 private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 
+// Function declarations
+reserve function CNZSetup_TubeSwitch_Ground
+reserve function CNZSetup_TubeSwitch_Air
+reserve function CNZSetup_SpeedUpMusic1P
+reserve function CNZSetup_SlowDownMusic1P
+reserve function CNZSetup_SpeedUpMusic2P
+reserve function CNZSetup_SlowDownMusic2P
+
 // Tables
-public table CNZSetup_table39
+public table CNZSetup_palCycleTable
 	0xE08000, 0xE0A000, 0xC0E000
 	0xE0E0E0, 0xA0E000, 0x40E000
 	0x00C060, 0x40C0C0, 0x0080E0
@@ -48,7 +61,7 @@ public table CNZSetup_table39
 	0xE00000, 0xE04000, 0xE06000
 end table
 
-public table CNZSetup_table41
+public table CNZSetup_sonicPlateAniTileTable
 	390, 391, 394, 395
 	398, 399, 402, 403
 	406, 407, 410, 411
@@ -59,7 +72,7 @@ public table CNZSetup_table41
 	446, 447, 450, 451
 end table
 
-public table CNZSetup_table42
+public table CNZSetup_tailsPlateAniTileTable
 	388, 389, 392, 393
 	396, 397, 400, 401
 	404, 405, 408, 409
@@ -70,7 +83,7 @@ public table CNZSetup_table42
 	444, 445, 448, 449
 end table
 
-public table CNZSetup_table40
+public table CNZSetup_aniTileIndexTable
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	1, 2, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4
@@ -79,7 +92,7 @@ public table CNZSetup_table40
 	255
 end table
 
-public table CNZSetup_table38
+public table CNZSetup_deformationTable
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
 	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
@@ -516,18 +529,18 @@ private table CNZSetup_replay_attract_K
 	0b00100000, 1
 end table
 
-function CNZSetup_Function97
+function CNZSetup_TubeSwitch_Ground
 	if object.gravity == GRAVITY_AIR
-		object.state = CNZSetup_Function98
-		object.value1 = 0
+		object.state = CNZSetup_TubeSwitch_Air
+		player.timer = 0
 		CallFunction(PlayerObject_HandleAirMovement)
 	else
 		temp1 = 0
 		GetBit(temp0, object.direction, 0)
-		if temp0 == 0
-			if object.left == 1
+		if temp0 == false
+			if object.left == true
 				if object.speed > 0
-					object.speed -= object.value31
+					object.speed -= player.rollingDeceleration
 				else
 					object.direction ^= FLIP_X
 					object.speed = -0x8000
@@ -540,9 +553,9 @@ function CNZSetup_Function97
 				end if
 			end if
 		else
-			if object.right == 1
+			if object.right == true
 				if object.speed < 0
-					object.speed += object.value31
+					object.speed += player.rollingDeceleration
 				else
 					object.direction ^= FLIP_X
 					object.speed = 0x8000
@@ -555,8 +568,9 @@ function CNZSetup_Function97
 				end if
 			end if
 		end if
+
 		if object.speed > 0
-			object.speed -= object.value29
+			object.speed -= player.rollingFriction
 			Sin256(temp0, object.angle)
 			if temp0 > 0
 				Sin256(temp0, object.angle)
@@ -568,7 +582,7 @@ function CNZSetup_Function97
 			temp0 >>= 8
 			object.speed += temp0
 		else
-			object.speed += object.value29
+			object.speed += player.rollingFriction
 			Sin256(temp0, object.angle)
 			if temp0 < 0
 				Sin256(temp0, object.angle)
@@ -580,48 +594,51 @@ function CNZSetup_Function97
 			temp0 >>= 8
 			object.speed += temp0
 		end if
+
 		CallFunction(PlayerObject_RollAnimSpd)
-		object.animationSpeed = object.value5
+		object.animationSpeed = player.customRollAnimSpeed
 		CallFunction(PlayerObject_ResetOnFloor)
 	end if
 end function
 
 
-function CNZSetup_Function98
+function CNZSetup_TubeSwitch_Air
 	CallFunction(PlayerObject_AirAcceleration)
 	if object.gravity == GRAVITY_AIR
 		CallFunction(PlayerObject_HandleAirMovement)
 	else
-		object.state = CNZSetup_Function97
+		object.state = CNZSetup_TubeSwitch_Ground
 		CallFunction(PlayerObject_ResetOnFloor)
-		object.value14 = 0
+		player.skidding = 0
 	end if
 	object.animation = ANI_JUMPING
 end function
 
 
-function CNZSetup_Function99
+function CNZSetup_SpeedUpMusic1P
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, 2)
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 30897)
-			SwapMusicTrack("CasinoNight_F.ogg", 0, 0xC488, 8000)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
+			SwapMusicTrack("CasinoNight_F.ogg", TRACK_STAGE, 50312, 8000)
 			break
-		case 2
-			SetMusicTrack("CasinoNight_F.ogg", 0, 0xC488)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 30897, 8000)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("CasinoNight_F.ogg", TRACK_STAGE, 50312)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897, 8000)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("CasinoNight_F.ogg", 0, 0xC488)
-			SetMusicTrack("Invincibility_F.ogg", 2, 30897)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("CasinoNight_F.ogg", TRACK_STAGE, 50312)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
 			break
 		end switch
 	else
@@ -630,28 +647,30 @@ function CNZSetup_Function99
 end function
 
 
-function CNZSetup_Function100
+function CNZSetup_SlowDownMusic1P
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, 2)
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 38679)
-			SwapMusicTrack("CasinoNight.ogg", 0, 0xF564, 12500)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
+			SwapMusicTrack("CasinoNight.ogg", TRACK_STAGE, 62820, 12500)
 			break
-		case 2
-			SetMusicTrack("CasinoNight.ogg", 0, 0xF564)
-			SwapMusicTrack("Invincibility.ogg", 2, 38679, 12500)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("CasinoNight.ogg", TRACK_STAGE, 62820)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679, 12500)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("CasinoNight.ogg", 0, 0xF564)
-			SetMusicTrack("Invincibility.ogg", 2, 38679)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("CasinoNight.ogg", TRACK_STAGE, 62820)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
 			break
 		end switch
 	else
@@ -660,28 +679,30 @@ function CNZSetup_Function100
 end function
 
 
-function CNZSetup_Function101
+function CNZSetup_SpeedUpMusic2P
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, 2)
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 30897)
-			SwapMusicTrack("CasinoNight2_F.ogg", 0, 0x12BAE, 8000)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
+			SwapMusicTrack("CasinoNight2_F.ogg", TRACK_STAGE, 76718, 8000)
 			break
-		case 2
-			SetMusicTrack("CasinoNight2_F.ogg", 0, 0x12BAE)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 30897, 8000)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("CasinoNight2_F.ogg", TRACK_STAGE, 76718)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897, 8000)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("CasinoNight2_F.ogg", 0, 0x12BAE)
-			SetMusicTrack("Invincibility_F.ogg", 2, 30897)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("CasinoNight2_F.ogg", TRACK_STAGE, 76718)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
 			break
 		end switch
 	else
@@ -690,28 +711,30 @@ function CNZSetup_Function101
 end function
 
 
-function CNZSetup_Function102
+function CNZSetup_SlowDownMusic2P
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, 2)
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 38679)
-			SwapMusicTrack("CasinoNight2.ogg", 0, 0x1767C, 12500)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
+			SwapMusicTrack("CasinoNight2.ogg", TRACK_STAGE, 95868, 12500)
 			break
-		case 2
-			SetMusicTrack("CasinoNight2.ogg", 0, 0x1767C)
-			SwapMusicTrack("Invincibility.ogg", 2, 38679, 12500)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("CasinoNight2.ogg", TRACK_STAGE, 95868)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679, 12500)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("CasinoNight2.ogg", 0, 0x1767C)
-			SetMusicTrack("Invincibility.ogg", 2, 38679)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("CasinoNight2.ogg", TRACK_STAGE, 95868)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
 			break
 		end switch
 	else
@@ -721,67 +744,82 @@ end function
 
 
 event ObjectMain
-	object.value5++
-	if object.value5 > 7
+	object.deformTimer++
+	if object.deformTimer > 7
 		tileLayer[1].deformationOffset++
-		object.value5 = 0
+		object.deformTimer = 0
 	end if
-	object.value1++
-	if object.value1 == 8
-		object.value1 = 0
-		RotatePalette(0, 165, 167, 1)
-		RotatePalette(0, 171, 173, 1)
-		RotatePalette(0, 178, 180, 0)
-		object.value2++
-		object.value2 %= 18
-		GetTableValue(temp0, object.value2, CNZSetup_table39)
+
+	object.paletteTimer++
+	if object.paletteTimer == 8
+		object.paletteTimer = 0
+		RotatePalette(0, 165, 167, true)
+		RotatePalette(0, 171, 173, true)
+		RotatePalette(0, 178, 180, false)
+
+		object.paletteIndex1++
+		object.paletteIndex1 %= 18
+		GetTableValue(temp0, object.paletteIndex1, CNZSetup_palCycleTable)
 		SetPaletteEntry(0, 187, temp0)
-		object.value3++
-		object.value3 %= 18
-		GetTableValue(temp0, object.value3, CNZSetup_table39)
+
+		object.paletteIndex2++
+		object.paletteIndex2 %= 18
+		GetTableValue(temp0, object.paletteIndex2, CNZSetup_palCycleTable)
 		SetPaletteEntry(0, 186, temp0)
-		object.value4++
-		object.value4 %= 18
-		GetTableValue(temp0, object.value4, CNZSetup_table39)
+
+		object.paletteIndex3++
+		object.paletteIndex3 %= 18
+		GetTableValue(temp0, object.paletteIndex3, CNZSetup_palCycleTable)
 		SetPaletteEntry(0, 185, temp0)
 	end if
+
 	if object.animationTimer < 2
-		GetTableValue(temp0, object.value6, CNZSetup_table40)
-		if temp0 == 255
-			object.value6 = 0
-			GetTableValue(temp0, object.value6, CNZSetup_table40)
+		GetTableValue(temp0, object.sonicPlateFrameID, CNZSetup_aniTileIndexTable)
+		if temp0 == 0xFF
+			object.sonicPlateFrameID = 0
+			GetTableValue(temp0, object.sonicPlateFrameID, CNZSetup_aniTileIndexTable)
 		end if
+
 		temp0 <<= 2
-		GetTableValue(temp1, temp0, CNZSetup_table41)
+		GetTableValue(temp1, temp0, CNZSetup_sonicPlateAniTileTable)
 		Copy16x16Tile(760, temp1)
+
 		temp0++
-		GetTableValue(temp1, temp0, CNZSetup_table41)
+		GetTableValue(temp1, temp0, CNZSetup_sonicPlateAniTileTable)
 		Copy16x16Tile(761, temp1)
+
 		temp0++
-		GetTableValue(temp1, temp0, CNZSetup_table41)
+		GetTableValue(temp1, temp0, CNZSetup_sonicPlateAniTileTable)
 		Copy16x16Tile(762, temp1)
+
 		temp0++
-		GetTableValue(temp1, temp0, CNZSetup_table41)
+		GetTableValue(temp1, temp0, CNZSetup_sonicPlateAniTileTable)
 		Copy16x16Tile(763, temp1)
-		object.value6++
-		GetTableValue(temp0, object.value7, CNZSetup_table40)
-		if temp0 == 255
-			object.value7 = 0
-			GetTableValue(temp0, object.value7, CNZSetup_table40)
+
+		object.sonicPlateFrameID++
+
+		GetTableValue(temp0, object.tailsPlateFrameID, CNZSetup_aniTileIndexTable)
+		if temp0 == 0xFF
+			object.tailsPlateFrameID = 0
+			GetTableValue(temp0, object.tailsPlateFrameID, CNZSetup_aniTileIndexTable)
 		end if
+
 		temp0 <<= 2
-		GetTableValue(temp1, temp0, CNZSetup_table42)
+		GetTableValue(temp1, temp0, CNZSetup_tailsPlateAniTileTable)
 		Copy16x16Tile(764, temp1)
+
 		temp0++
-		GetTableValue(temp1, temp0, CNZSetup_table42)
+		GetTableValue(temp1, temp0, CNZSetup_tailsPlateAniTileTable)
 		Copy16x16Tile(765, temp1)
+
 		temp0++
-		GetTableValue(temp1, temp0, CNZSetup_table42)
+		GetTableValue(temp1, temp0, CNZSetup_tailsPlateAniTileTable)
 		Copy16x16Tile(766, temp1)
 		temp0++
-		GetTableValue(temp1, temp0, CNZSetup_table42)
+		GetTableValue(temp1, temp0, CNZSetup_tailsPlateAniTileTable)
 		Copy16x16Tile(767, temp1)
-		object.value7++
+
+		object.tailsPlateFrameID++
 		object.animationTimer = 6
 	else
 		object.animationTimer--
@@ -791,47 +829,55 @@ end event
 
 event ObjectStartup
 	if options.vsMode == false
-		SetMusicTrack("CasinoNight.ogg", 0, 0xF564)
-		SpeedUpMusic = CNZSetup_Function99
-		SlowDownMusic = CNZSetup_Function100
+		SetMusicTrack("CasinoNight.ogg", TRACK_STAGE, 62820)
+		SpeedUpMusic = CNZSetup_SpeedUpMusic1P
+		SlowDownMusic = CNZSetup_SlowDownMusic1P
 	else
-		SetMusicTrack("CasinoNight2.ogg", 0, 0x1767C)
-		SpeedUpMusic = CNZSetup_Function101
-		SlowDownMusic = CNZSetup_Function102
+		SetMusicTrack("CasinoNight2.ogg", TRACK_STAGE, 95868)
+		SpeedUpMusic = CNZSetup_SpeedUpMusic2P
+		SlowDownMusic = CNZSetup_SlowDownMusic2P
 	end if
-	SetPaletteEntry(0, 192, 0)
+
+	SetPaletteEntry(0, 192, 0x000000)
+
 	animalType1 = TypeName[Flicky]
 	animalType2 = TypeName[Becky]
+
 	arrayPos0 = 0
 	while arrayPos0 < 576
 		temp0 = arrayPos0
-		temp0 &= 63
-		GetTableValue(stage.deformationData2[arrayPos0], temp0, CNZSetup_table38)
+		temp0 &= 0x3F
+		GetTableValue(stage.deformationData2[arrayPos0], temp0, CNZSetup_deformationTable)
 		arrayPos0++
 	loop
-	object[10].type = TypeName[CNZ Setup]
-	object[10].priority = PRIORITY_ACTIVE
-	object[10].value3 = 1
-	object[10].value4 = 2
-	object[10].value7 = 70
-	if options.attractMode == 1
+
+	object[10].type 				= TypeName[CNZ Setup]
+	object[10].priority 			= PRIORITY_ACTIVE
+	object[10].paletteIndex2 		= 1
+	object[10].paletteIndex3 		= 2
+	object[10].tailsPlateFrameID 	= 70
+
+	if options.attractMode == true
 		switch stage.playerListPos
-		case 0
-			PlayerObject_ReplayTable = CNZSetup_replay_attract_S
-			PlayerObject_ReplaySize = 142
-			PlayerObject_ReplayLength = 0x708
+		case PlayerName[SONIC]
+			PlayerObject_ReplayTable 	= CNZSetup_replay_attract_S
+			PlayerObject_ReplaySize 	= 142
+			PlayerObject_ReplayLength 	= 1800
 			break
-		case 1
-			PlayerObject_ReplayTable = CNZSetup_replay_attract_T
-			PlayerObject_ReplaySize = 522
-			PlayerObject_ReplayLength = 0x708
+
+		case PlayerName[TAILS]
+			PlayerObject_ReplayTable 	= CNZSetup_replay_attract_T
+			PlayerObject_ReplaySize 	= 522
+			PlayerObject_ReplayLength 	= 1800
 			break
-		case 2
-			PlayerObject_ReplayTable = CNZSetup_replay_attract_K
-			PlayerObject_ReplaySize = 178
-			PlayerObject_ReplayLength = 0x708
+
+		case PlayerName[KNUCKLES]
+			PlayerObject_ReplayTable 	= CNZSetup_replay_attract_K
+			PlayerObject_ReplaySize 	= 178
+			PlayerObject_ReplayLength 	= 1800
 			break
 		end switch
+
 		CallFunction(PlayerObject_InitReplay)
 	end if
 end event
@@ -843,4 +889,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

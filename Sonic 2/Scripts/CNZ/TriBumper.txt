@@ -6,17 +6,24 @@
 // ----------------------------------
 
 // Aliases
-private alias 64 : TYPE_TRIBUMPER
+
+// Types
+private alias 0 : TRIBUMPER_SMALL_L
+private alias 1 : TRIBUMPER_SMALL_R
+private alias 2 : TRIBUMPER_LARGE_U
+private alias 3 : TRIBUMPER_LARGE_D
+private alias 4 : TRIBUMPER_LARGE_L
+private alias 5 : TRIBUMPER_LARGE_R
+
+// Player Aliases
+private alias object.value1  : player.timer
+private alias object.value36 : player.flyCarryTimer		// Tails assist lockout timer
 
 // Function declarations
-reserve function TriBumper_Function139
-reserve function TriBumper_Function140
+reserve function TriBumper_SetPlayerVelocity
+reserve function TriBumper_HandleBump
 
-// Static Values
-
-// Tables
-
-function TriBumper_Function139
+function TriBumper_SetPlayerVelocity
 	ATan2(temp0, object[currentPlayer].xvel, object[currentPlayer].yvel)
 	temp0 -= temp3
 	temp1 = temp0
@@ -35,10 +42,11 @@ function TriBumper_Function139
 end function
 
 
-function TriBumper_Function140
+function TriBumper_HandleBump
 	if object[currentPlayer].state == PlayerObject_HandleFlyCarry
-		object[1].value36 = 30
+		player[1].flyCarryTimer = 30
 	end if
+
 	CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
 	temp2 = checkResult
 	CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
@@ -51,9 +59,10 @@ function TriBumper_Function140
 	temp2 |= checkResult
 	if object[currentPlayer].animation != ANI_GLIDING
 		object[currentPlayer].speed = object[currentPlayer].xvel
-		object[currentPlayer].value1 = 0
+		player[currentPlayer].timer = 0
 	end if
-	if temp2 == 0
+
+	if temp2 == false
 		object[currentPlayer].state = PlayerObject_HandleAir
 		if object[currentPlayer].animation != ANI_JUMPING
 			if object[currentPlayer].animation != ANI_RUNNING
@@ -62,30 +71,30 @@ function TriBumper_Function140
 		end if
 	end if
 	object[currentPlayer].gravity = GRAVITY_AIR
-	object[currentPlayer].tileCollisions = 1
+	object[currentPlayer].tileCollisions = true
 	PlaySfx(SfxName[CNZ Bumper], false)
 end function
 
 
 event ObjectMain
 	switch object.propertyValue
-	case 0
+	case TRIBUMPER_SMALL_L
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -32, -32, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				temp0 = object.ypos
 				temp0 -= object[currentPlayer].ypos
 				FlipSign(temp0)
 				if temp0 >= 0x200000
 					object[currentPlayer].yvel = 0xA0000
-					CallFunction(TriBumper_Function140)
+					CallFunction(TriBumper_HandleBump)
 				else
 					temp0 = object.xpos
 					temp0 -= object[currentPlayer].xpos
 					FlipSign(temp0)
 					if temp0 >= 0x200000
 						object[currentPlayer].xvel = 0xA0000
-						CallFunction(TriBumper_Function140)
+						CallFunction(TriBumper_HandleBump)
 					else
 						temp0 = object.xpos
 						temp0 -= object[currentPlayer].xpos
@@ -99,30 +108,31 @@ event ObjectMain
 						temp0 -= temp1
 						if temp0 < 0
 							temp3 = 32
-							CallFunction(TriBumper_Function139)
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
 						end if
 					end if
 				end if
 			end if
 		next
 		break
-	case 1
+
+	case TRIBUMPER_SMALL_R
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -32, -32, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				temp0 = object.ypos
 				temp0 -= object[currentPlayer].ypos
 				FlipSign(temp0)
 				if temp0 >= 0x200000
 					object[currentPlayer].yvel = 0xA0000
-					CallFunction(TriBumper_Function140)
+					CallFunction(TriBumper_HandleBump)
 				else
 					temp0 = object.xpos
 					temp0 -= object[currentPlayer].xpos
 					if temp0 >= 0x200000
 						object[currentPlayer].xvel = -0xA0000
-						CallFunction(TriBumper_Function140)
+						CallFunction(TriBumper_HandleBump)
 					else
 						temp0 = object.xpos
 						temp0 -= object[currentPlayer].xpos
@@ -137,146 +147,150 @@ event ObjectMain
 						temp0 -= temp1
 						if temp0 < 0
 							temp3 = 96
-							CallFunction(TriBumper_Function139)
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
 						end if
 					end if
 				end if
 			end if
 		next
 		break
-	case 2
+
+	case TRIBUMPER_LARGE_U
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -64, -8, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				temp0 = object.ypos
 				temp0 -= object[currentPlayer].ypos
 				FlipSign(temp0)
 				if temp0 >= 0x80000
 					object[currentPlayer].yvel = 0xA00
-					CallFunction(TriBumper_Function140)
+					CallFunction(TriBumper_HandleBump)
 				else
 					temp0 = object.xpos
 					temp0 -= object[currentPlayer].xpos
 					if temp0 >= 0x400000
 						object[currentPlayer].xvel = -0xA0000
-						CallFunction(TriBumper_Function140)
+						CallFunction(TriBumper_HandleBump)
 					else
 						FlipSign(temp0)
 						if temp0 >= 0x400000
 							object[currentPlayer].xvel = 0xA0000
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_HandleBump)
 						else
 							if temp0 < 0
 								temp3 = 56
 							else
 								temp3 = 72
 							end if
-							CallFunction(TriBumper_Function139)
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
 						end if
 					end if
 				end if
 			end if
 		next
 		break
-	case 3
+
+	case TRIBUMPER_LARGE_D
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -64, -8, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				temp0 = object.ypos
 				temp0 -= object[currentPlayer].ypos
 				if temp0 >= 0x80000
 					object[currentPlayer].yvel = -0xA0000
-					CallFunction(TriBumper_Function140)
+					CallFunction(TriBumper_HandleBump)
 				else
 					temp0 = object.xpos
 					temp0 -= object[currentPlayer].xpos
 					if temp0 >= 0x400000
 						object[currentPlayer].xvel = -0xA0000
-						CallFunction(TriBumper_Function140)
+						CallFunction(TriBumper_HandleBump)
 					else
 						FlipSign(temp0)
 						if temp0 >= 0x400000
 							object[currentPlayer].xvel = 0xA0000
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_HandleBump)
 						else
 							if temp0 < 0
 								temp3 = 200
 							else
 								temp3 = 184
 							end if
-							CallFunction(TriBumper_Function139)
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
 						end if
 					end if
 				end if
 			end if
 		next
 		break
-	case 4
+
+	case TRIBUMPER_LARGE_L
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -64, 8, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				temp0 = object.xpos
 				temp0 -= object[currentPlayer].xpos
 				FlipSign(temp0)
 				if temp0 >= 0x80000
 					object[currentPlayer].xvel = 0xA0000
-					CallFunction(TriBumper_Function140)
+					CallFunction(TriBumper_HandleBump)
 				else
 					temp0 = object.ypos
 					temp0 -= object[currentPlayer].ypos
 					if temp0 >= 0x400000
 						object[currentPlayer].yvel = -0xA0000
-						CallFunction(TriBumper_Function140)
+						CallFunction(TriBumper_HandleBump)
 					else
 						FlipSign(temp0)
 						if temp0 >= 0x400000
 							object[currentPlayer].yvel = 0xA0000
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_HandleBump)
 						else
 							if temp0 < 0
 								temp3 = 8
 							else
 								temp3 = 248
 							end if
-							CallFunction(TriBumper_Function139)
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
 						end if
 					end if
 				end if
 			end if
 		next
 		break
-	case 5
+
+	case TRIBUMPER_LARGE_R
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -64, 8, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
+			if checkResult == true
 				temp0 = object.xpos
 				temp0 -= object[currentPlayer].xpos
 				if temp0 >= 0x80000
 					object[currentPlayer].xvel = 0xA0000
-					CallFunction(TriBumper_Function140)
+					CallFunction(TriBumper_HandleBump)
 				else
 					temp0 = object.ypos
 					temp0 -= object[currentPlayer].ypos
 					if temp0 >= 0x400000
 						object[currentPlayer].yvel = -0xA0000
-						CallFunction(TriBumper_Function140)
+						CallFunction(TriBumper_HandleBump)
 					else
 						FlipSign(temp0)
 						if temp0 >= 0x400000
 							object[currentPlayer].yvel = 0xA0000
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_HandleBump)
 						else
 							if temp0 < 0
 								temp3 = 120
 							else
 								temp3 = 136
 							end if
-							CallFunction(TriBumper_Function139)
-							CallFunction(TriBumper_Function140)
+							CallFunction(TriBumper_SetPlayerVelocity)
+							CallFunction(TriBumper_HandleBump)
 						end if
 					end if
 				end if
@@ -286,6 +300,30 @@ event ObjectMain
 	end switch
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult %= 6
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			editor.variableValue %= 6
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
 	DrawSprite(0)
 end event
@@ -293,4 +331,13 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Small (Facing Left)", TRIBUMPER_SMALL_L)
+	AddEnumVariable("Small (Facing Right)", TRIBUMPER_SMALL_R)
+	AddEnumVariable("Large (Facing Up)", TRIBUMPER_LARGE_U)
+	AddEnumVariable("Large (Facing Down)", TRIBUMPER_LARGE_D)
+	AddEnumVariable("Large (Facing Left)", TRIBUMPER_LARGE_L)
+	AddEnumVariable("Large (Facing Right)", TRIBUMPER_LARGE_R)
 end event

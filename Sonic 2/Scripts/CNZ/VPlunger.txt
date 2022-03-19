@@ -6,15 +6,15 @@
 // ----------------------------------
 
 // Aliases
-private alias 46 : TYPE_VPLUNGER
+private alias object.value1 : object.compression
+private alias object.value2 : object.active
+
+// Player Aliases
+private alias object.value1  : player.timer
 
 // Function declarations
 reserve function VPlunger_DebugDraw
 reserve function VPlunger_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function VPlunger_DebugDraw
 	DrawSprite(5)
@@ -23,81 +23,84 @@ end function
 
 function VPlunger_DebugSpawn
 	CreateTempObject(TypeName[V Plunger], 0, object.xpos, object.ypos)
-	object[tempObjectPos].ypos &= -0x10000
+	object[tempObjectPos].ypos &= 0xFFFF0000
 	object[tempObjectPos].inkEffect = INK_ALPHA
 end function
 
 
 event ObjectMain
-	if object.value2 == 1
-		if object.value1 < 0x210000
-			object.value1 += 0x4000
+	if object.active == true
+		if object.compression < 0x210000
+			object.compression += 0x4000
 		end if
 	else
-		if object.value1 > 0
-			object.value1 -= 0x20000
-			if object.value1 < 0
-				object.value1 = 0
+		if object.compression > 0
+			object.compression -= 0x20000
+			if object.compression < 0
+				object.compression = 0
 			end if
 		else
 			object.priority = PRIORITY_ACTIVE_BOUNDS
 		end if
 	end if
-	temp2 = object.value2
-	object.value2 = 0
+
+	temp2 = object.active
+	object.active = false
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		CheckEqual(object[currentPlayer].state, PlayerObject_Death)
 		temp7 = checkResult
 		CheckEqual(object[currentPlayer].state, PlayerObject_Hurt)
 		temp7 |= checkResult
-		if temp7 == 0
-			temp0 = object.value1
+		if temp7 == false
+			temp0 = object.compression
 			temp0 >>= 16
 			temp0 -= 28
 			BoxCollisionTest(C_BOX, object.entityPos, -11, temp0, 11, 28, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
 			temp1 = temp0
 			temp0 -= 2
 			BoxCollisionTest(C_TOUCH, object.entityPos, -11, temp0, 11, temp1, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object[currentPlayer].state = PlayerObject_Blank
-				object[currentPlayer].gravity = GRAVITY_GROUND
-				object[currentPlayer].scrollTracking = 0
-				object[currentPlayer].animation = ANI_JUMPING
-				object[currentPlayer].xpos = object.xpos
-				object[currentPlayer].ypos = object[currentPlayer].collisionBottom
+			if checkResult == true
+				object[currentPlayer].state 			= PlayerObject_Blank
+				object[currentPlayer].gravity 			= GRAVITY_GROUND
+				object[currentPlayer].scrollTracking 	= false
+				object[currentPlayer].animation 		= ANI_JUMPING
+				object[currentPlayer].xpos 				= object.xpos
+				object[currentPlayer].ypos 				= object[currentPlayer].collisionBottom
 				FlipSign(object[currentPlayer].ypos)
-				object[currentPlayer].ypos <<= 16
-				object[currentPlayer].ypos -= 0x1C0000
-				object[currentPlayer].ypos += object.value1
-				object[currentPlayer].ypos &= -0x10000
-				object[currentPlayer].ypos += object.ypos
-				object[currentPlayer].xvel = 0
-				object[currentPlayer].yvel = 1
-				object.value2 |= object[currentPlayer].jumpHold
+				object[currentPlayer].ypos 		   	  <<= 16
+				object[currentPlayer].ypos 		   	   -= 0x1C0000
+				object[currentPlayer].ypos 		   	   += object.compression
+				object[currentPlayer].ypos 		   	   &= 0xFFFF0000
+				object[currentPlayer].ypos 		   	   += object.ypos
+				object[currentPlayer].xvel 				= 0
+				object[currentPlayer].yvel 				= 1
+				object.active 					   		|= object[currentPlayer].jumpHold
 			end if
 		end if
 	next
-	if object.value1 > 0x60000
-		if temp2 == 1
-			if object.value2 == 0
+
+	if object.compression > 0x60000
+		if temp2 == true
+			if object.active == false
 				object.priority = PRIORITY_ACTIVE
 				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 					CheckEqual(object[currentPlayer].state, PlayerObject_Death)
 					temp7 = checkResult
 					CheckEqual(object[currentPlayer].state, PlayerObject_Hurt)
 					temp7 |= checkResult
-					if temp7 == 0
+					if temp7 == false
 						if object[currentPlayer].state == PlayerObject_Blank
 							BoxCollisionTest(C_TOUCH, object.entityPos, -11, -28, 11, 28, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-							if checkResult == 1
-								object[currentPlayer].state = PlayerObject_HandleAir
-								object[currentPlayer].gravity = GRAVITY_AIR
-								object[currentPlayer].value1 = 0
-								object[currentPlayer].xvel = 0
-								object[currentPlayer].speed = 0
-								object[currentPlayer].yvel = object.value1
-								object[currentPlayer].yvel *= 3
-								object[currentPlayer].yvel >>= 2
+							if checkResult == true
+								object[currentPlayer].state 	= PlayerObject_HandleAir
+								object[currentPlayer].gravity 	= GRAVITY_AIR
+								player[currentPlayer].timer 	= 0
+								object[currentPlayer].xvel 		= 0
+								object[currentPlayer].speed 	= 0
+								object[currentPlayer].yvel 		= object.compression
+								object[currentPlayer].yvel 	   *= 3
+								object[currentPlayer].yvel 	   >>= 2
 								FlipSign(object[currentPlayer].yvel)
 								PlaySfx(SfxName[Plunger], false)
 							end if
@@ -107,12 +110,15 @@ event ObjectMain
 			end if
 		end if
 	end if
-	temp0 = object.value1
+
+	// Fading for yellow plunger
+	temp0 = object.compression
 	temp0 >>= 15
 	object.angle += temp0
 	Sin(temp1, object.angle)
 	temp1 >>= 4
-	temp0 = object.value1
+
+	temp0 = object.compression
 	temp0 >>= 13
 	temp0 -= 64
 	temp0 += temp1
@@ -121,39 +127,46 @@ end event
 
 
 event ObjectDraw
-	temp0 = object.value1
+	// Spring & Base
+	temp0 = object.compression
 	temp0 >>= 20
 	DrawSprite(temp0)
+
+	// Plunger (Red)
 	temp0 = -0x1C0000
-	temp0 += object.value1
+	temp0 += object.compression
 	temp0 += object.ypos
 	DrawSpriteXY(3, object.xpos, temp0)
+
+	// Plunger (Yellow)
 	DrawSpriteFX(4, FX_INK, object.xpos, temp0)
 end event
 
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone04")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("CNZ/Objects.gif")
-		SpriteFrame(-11, -12, 22, 40, 147, 50)
-		SpriteFrame(-11, 4, 22, 24, 147, 66)
-		SpriteFrame(-11, 20, 22, 8, 147, 82)
-		SpriteFrame(-11, 0, 22, 16, 147, 34)
-		SpriteFrame(-11, 0, 22, 16, 170, 34)
-		SpriteFrame(-11, -28, 22, 56, 147, 34)
+		SpriteFrame(-11, -12, 22, 40, 147, 50)	// Spring & Base			- #0
+		SpriteFrame(-11, 4, 22, 24, 147, 66)	// Spring & Base (Shorter)	- #1
+		SpriteFrame(-11, 20, 22, 8, 147, 82)	// Base						- #2
+		SpriteFrame(-11, 0, 22, 16, 147, 34)	// Plunger (Red)			- #3
+		SpriteFrame(-11, 0, 22, 16, 170, 34)	// Plunger (Yellow)			- #4
+		SpriteFrame(-11, -28, 22, 56, 147, 34)	// Plunger (Full Sprite)	- #5
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
-		SpriteFrame(-11, -12, 22, 40, 189, 354)
-		SpriteFrame(-11, 4, 22, 24, 189, 370)
-		SpriteFrame(-11, 20, 22, 8, 189, 386)
-		SpriteFrame(-11, 0, 22, 16, 189, 338)
-		SpriteFrame(-11, 0, 22, 16, 166, 338)
-		SpriteFrame(-11, -28, 22, 56, 189, 338)
+		SpriteFrame(-11, -12, 22, 40, 189, 354)	// Spring & Base			- #0
+		SpriteFrame(-11, 4, 22, 24, 189, 370)  	// Spring & Base (Shorter)	- #1
+		SpriteFrame(-11, 20, 22, 8, 189, 386)  	// Base						- #2
+		SpriteFrame(-11, 0, 22, 16, 189, 338)  	// Plunger (Red)			- #3
+		SpriteFrame(-11, 0, 22, 16, 166, 338)  	// Plunger (Yellow)			- #4
+		SpriteFrame(-11, -28, 22, 56, 189, 338)	// Plunger (Full Sprite)	- #5
 	end if
+
 	foreach (TypeName[V Plunger], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].inkEffect = INK_ALPHA
 	next
+
 	SetTableValue(TypeName[V Plunger], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(VPlunger_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(VPlunger_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -161,10 +174,28 @@ event ObjectStartup
 end event
 
 event RSDKDraw
-	DrawSprite(0)
+	DrawSprite(5)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone04")
+	if checkResult == true
+		LoadSpriteSheet("CNZ/Objects.gif")
+		SpriteFrame(-11, -12, 22, 40, 147, 50)	// Spring & Base			- #0
+		SpriteFrame(-11, 4, 22, 24, 147, 66)	// Spring & Base (Shorter)	- #1
+		SpriteFrame(-11, 20, 22, 8, 147, 82)	// Base						- #2
+		SpriteFrame(-11, 0, 22, 16, 147, 34)	// Plunger (Red)			- #3
+		SpriteFrame(-11, 0, 22, 16, 170, 34)	// Plunger (Yellow)			- #4
+		SpriteFrame(-11, -28, 22, 56, 147, 34)	// Plunger (Full Sprite)	- #5
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-11, -12, 22, 40, 189, 354)	// Spring & Base			- #0
+		SpriteFrame(-11, 4, 22, 24, 189, 370)  	// Spring & Base (Shorter)	- #1
+		SpriteFrame(-11, 20, 22, 8, 189, 386)  	// Base						- #2
+		SpriteFrame(-11, 0, 22, 16, 189, 338)  	// Plunger (Red)			- #3
+		SpriteFrame(-11, 0, 22, 16, 166, 338)  	// Plunger (Yellow)			- #4
+		SpriteFrame(-11, -28, 22, 56, 189, 338)	// Plunger (Full Sprite)	- #5
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

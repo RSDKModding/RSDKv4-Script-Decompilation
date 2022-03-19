@@ -38,7 +38,10 @@ public alias 3 : SUPERSTATE_END
 private alias 2 : MODE_TIMEATTACK
 
 // Tracks
+private alias 0 : TRACK_STAGE
+private alias 2 : TRACK_INVINCIBLE
 private alias 5 : TRACK_GAMEOVER
+private alias 7 : TRACK_SUPER
 
 // Variables
 private alias object.type			 :	player.type
@@ -143,12 +146,25 @@ private alias object.value45 : player.autoJumpTimer
 private alias object.value46 : player.targetLeaderPos.x
 private alias object.value47 : player.targetLeaderPos.y
 
-// Death Event related values
+// DeathEvent Aliases
 private alias object.drawOrder : deathEvent.drawOrder
 private alias object.state	   : deathEvent.state
 private alias object.value1	   : deathEvent.leftTextPos
 private alias object.value2	   : deathEvent.rightTextPos
 private alias object.value3	   : deathEvent.timer
+
+// DeathEvent States
+private alias 0 : DEATHEVENT_GAMEOVER
+private alias 1 : DEATHEVENT_TIMEOVER
+private alias 2 : DEATHEVENT_DEATH
+private alias 3 : DEATHEVENT_DEATH_TA
+
+// VSGame Aliases
+private alias object.state  : vsGame.state
+private alias object.value0 : vsGame.timer
+
+// VSGame States
+private alias 2 : VSGAME_FADEOUT
 
 // Function declarations
 reserve function PlayerObject_ProcessPlayer
@@ -671,8 +687,8 @@ function PlayerObject_ProcessSuperState
 			LoadAnimation("Sonic.ani")
 		end if
 
-		if music.currentTrack == 7
-			PlayMusic(0)
+		if music.currentTrack == TRACK_SUPER
+			PlayMusic(TRACK_STAGE)
 		end if
 
 		player.invincibleTimer = 0
@@ -1014,6 +1030,7 @@ function PlayerObject_Kill
 			if player[1].type == TypeName[Player 2 Object]
 				player[1].priority = PRIORITY_ACTIVE_PAUSED
 			end if
+
 			screen.cameraEnabled = false
 			stage.state = STAGE_FROZEN
 		end if
@@ -1079,7 +1096,7 @@ function PlayerObject_ProcessPlayer
 			if stage.debugMode == true
 				CheckTouchRect(0, 0, 112, 56)
 				if checkResult > -1
-					inputDown.buttonB = 1
+					inputDown.buttonB = true
 				end if
 
 				if touchDebug == false
@@ -1090,7 +1107,7 @@ function PlayerObject_ProcessPlayer
 
 			CheckTouchRect(240, 0, screen.xsize, 40)
 			if checkResult > -1
-				if options.vsMode == 0
+				if options.vsMode == false
 					PlaySfx(SfxName[Menu Back], false)
 					StopSfx(SfxName[Flying])
 					StopSfx(SfxName[Tired])
@@ -1173,11 +1190,12 @@ function PlayerObject_ProcessPlayer
 			CallFunction(PlayerObject_UpdatePhysicsState)
 
 			// if any player has speed shoes, continue the music
-			temp0 = 0
+			temp0 = false
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				temp0 += player[currentPlayer].speedShoesTimer
 			next
-			if temp0 == 0
+
+			if temp0 == false
 				if SlowDownMusic != 0
 					CallFunction(SlowDownMusic)
 				end if
@@ -1209,9 +1227,9 @@ function PlayerObject_ProcessPlayer
 				temp0 += player[currentPlayer].invincibleTimer
 			next
 
-			if temp0 == 0
-				if music.currentTrack == 2
-					PlayMusic(0)
+			if temp0 == false
+				if music.currentTrack == TRACK_INVINCIBLE
+					PlayMusic(TRACK_STAGE)
 				end if
 			end if
 
@@ -1789,7 +1807,7 @@ function PlayerObject_SuperTransform
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 
 		PlaySfx(SfxName[Transform], false)
-		PlayMusic(7)
+		PlayMusic(TRACK_SUPER)
 
 		PlayerObject_SuperState = SUPERSTATE_SUPER
 		player[currentPlayer].invincibleTimer = 60
@@ -1920,7 +1938,7 @@ function PlayerObject_JumpAbility_Sonic
 				case SHIELD_FIRE
 					PlaySfx(SfxName[Fire Dash], false)
 					GetBit(temp0, object.direction, 0)
-					if temp0 == 0
+					if temp0 == false
 						object.xvel = 0x80000
 					else
 						object.xvel = -0x80000
@@ -1933,6 +1951,7 @@ function PlayerObject_JumpAbility_Sonic
 						player.scrollDelay = 15
 						screen.cameraStyle = 4
 					end if
+
 					if object.state == PlayerObject_RollingJump
 						object.state = PlayerObject_HandleAir
 					end if
@@ -2662,9 +2681,9 @@ function PlayerObject_StartFlyCarry
 		PlayerObject_flyCarryBuddyXPos = object.xpos
 		PlayerObject_flyCarryBuddyYPos = object.ypos
 		temp4 = object.xpos
-		temp4 &= -0x10000
+		temp4 &= 0xFFFF0000
 		temp5 = object.ypos
-		temp5 &= -0x10000
+		temp5 &= 0xFFFF0000
 		temp5 += 0x1F0000
 		object.xpos = temp2
 		object.ypos = temp3
@@ -2672,9 +2691,9 @@ function PlayerObject_StartFlyCarry
 		object.yvel = temp7
 		stage.entityPos = 0
 		temp0 = object.xpos
-		temp0 &= -0x10000
+		temp0 &= 0xFFFF0000
 		temp1 = object.ypos
-		temp1 &= -0x10000
+		temp1 &= 0xFFFF0000
 		object.xvel = temp4
 		object.yvel = temp5
 		object.xvel -= temp0
@@ -2688,9 +2707,9 @@ function PlayerObject_StartFlyCarry
 		PlayerObject_flyCarryLeaderXPos = player[0].xpos
 		PlayerObject_flyCarryLeaderYPos = player[0].ypos
 		temp2 = player[0].xpos
-		temp2 &= -0x10000
+		temp2 &= 0xFFFF0000
 		temp3 = player[0].ypos
-		temp3 &= -0x10000
+		temp3 &= 0xFFFF0000
 		CheckNotEqual(temp4, temp2)
 		temp6 = checkResult
 		CheckNotEqual(temp5, temp3)
@@ -2714,11 +2733,11 @@ function PlayerObject_HandleFlyCarry
 	end if
 
 	temp0 = player[1].xpos
-	temp0 &= -0x10000
+	temp0 &= 0xFFFF0000
 	temp2 = object.xpos
-	temp2 &= -0x10000
+	temp2 &= 0xFFFF0000
 	if object.xpos == PlayerObject_flyCarryLeaderXPos
-		PlayerObject_flyCarryBuddyXPos &= -0x10000
+		PlayerObject_flyCarryBuddyXPos &= 0xFFFF0000
 		temp1 = temp0
 		temp1 -= PlayerObject_flyCarryBuddyXPos
 		temp2 += temp1
@@ -3203,7 +3222,8 @@ function PlayerObject_KnuxGlideSlide
 					player.timer = 0
 				end if
 			end if
-			if object.jumpHold == 0
+
+			if object.jumpHold == false
 				object.speed = 0
 				player.timer = 0
 			end if
@@ -3312,7 +3332,8 @@ function PlayerObject_KnuxWallClimb
 					object.xpos = temp3
 				end if
 			end if
-			if temp0 == 0
+
+			if temp0 == false
 				object.xpos = temp2
 				object.animation = ANI_LEDGEPULLUP
 				object.yvel = 0
@@ -3324,7 +3345,7 @@ function PlayerObject_KnuxWallClimb
 					object.xpos += 0x10000
 				end if
 			else
-				if temp1 == 0
+				if temp1 == false
 					object.animation = ANI_GLIDING_DROP
 					object.prevAnimation = ANI_GLIDING_DROP
 					object.frame = 2
@@ -3593,13 +3614,13 @@ function PlayerObject_Death
 	end if
 
 	if object.controlMode != -1
-		object.yvel = -0x70000
-		object.controlMode = -1
+		object.yvel 		= -0x70000
+		object.controlMode 	= -1
 	end if
 
 	if player.blinkTimer != 0
-		player.blinkTimer = 0
-		object.visible = true
+		player.blinkTimer 	= 0
+		object.visible 		= true
 	end if
 
 	object.yvel += 0x3800
@@ -3625,41 +3646,42 @@ function PlayerObject_Death
 
 			if options.vsMode == false
 				stage.timeEnabled = false
+
 				object.type = TypeName[Death Event]
-				deathEvent.drawOrder = 6
-				deathEvent.leftTextPos = screen.xcenter
+				deathEvent.drawOrder 	= 6
+				deathEvent.leftTextPos 	= screen.xcenter
 				deathEvent.leftTextPos -= 264
 				deathEvent.rightTextPos = screen.xcenter
 				deathEvent.rightTextPos += 200
 				if options.gameMode == MODE_TIMEATTACK
 					deathEvent.timer = 0
-					deathEvent.state = 3
+					deathEvent.state = DEATHEVENT_DEATH_TA
 				else
 					if global[arrayPos0] == true
 						deathEvent.timer = -2880
-						deathEvent.state = 0
-						PlayMusic(5)
+						deathEvent.state = DEATHEVENT_GAMEOVER
+						PlayMusic(TRACK_GAMEOVER)
 						stage.pauseEnabled = false
 					else
 						deathEvent.timer = 0
-						deathEvent.state = 2
+						deathEvent.state = DEATHEVENT_DEATH
 						if stage.timeOver == true
 							deathEvent.timer = -2880
-							deathEvent.state = 1
-							PlayMusic(5)
+							deathEvent.state = DEATHEVENT_TIMEOVER
+							PlayMusic(TRACK_GAMEOVER)
 							stage.pauseEnabled = false
 						end if
 					end if
 				end if
 			else
-				if global[arrayPos0] == 0
+				if global[arrayPos0] == 0 // player.lives
 					player.type = TypeName[Death Event]
-					deathEvent.state = 0
+					deathEvent.state = DEATHEVENT_GAMEOVER
 				end if
 
 				if stage.timeOver == true
 					player.type = TypeName[Death Event]
-					deathEvent.state = 1
+					deathEvent.state = DEATHEVENT_TIMEOVER
 				end if
 
 				if object.type == TypeName[Death Event]
@@ -3669,14 +3691,14 @@ function PlayerObject_Death
 					deathEvent.rightTextPos = screen.xcenter
 					deathEvent.rightTextPos += 200
 					deathEvent.timer = -2880
-					PlayMusic(5)
-					stage.pauseEnabled = 0
+					PlayMusic(TRACK_GAMEOVER)
+					stage.pauseEnabled = false
 				else
-					object.state = PlayerObject_HandleAir
-					player.rings = 0
-					object.priority = PRIORITY_ACTIVE
-					object.gravity = GRAVITY_AIR
-					object.animation = ANI_HURT
+					object.state 		= PlayerObject_HandleAir
+					player.rings 		= 0
+					object.priority 	= PRIORITY_ACTIVE
+					object.gravity 		= GRAVITY_AIR
+					object.animation 	= ANI_HURT
 					if object.entityPos == 0
 						object.xpos = vs.restartX1
 						object.ypos = vs.restartY1
@@ -3684,20 +3706,20 @@ function PlayerObject_Death
 						object.xpos = vs.restartX2
 						object.ypos = vs.restartY2
 					end if
-					object.direction = FLIP_NONE
-					object.tileCollisions = true
-					object.interaction = true
-					object.visible = true
-					object.controlMode = 0
-					object.scrollTracking = true
-					object.drawOrder = DRAWORDER_PLAYER
-					player.sortedDrawOrder = 4
-					object.collisionPlane = PATH_A
+					object.direction 		= FLIP_NONE
+					object.tileCollisions 	= true
+					object.interaction 		= true
+					object.visible 			= true
+					object.controlMode 		= 0
+					object.scrollTracking 	= true
+					object.drawOrder 		= DRAWORDER_PLAYER
+					player.sortedDrawOrder 	= 4
+					object.collisionPlane 	= PATH_A
 
 					if object.entityPos == screen.cameraTarget
 						CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
-						object[tempObjectPos].value0 = 384
-						object[tempObjectPos].state = 2
+						vsGame[tempObjectPos].timer = 384
+						vsGame[tempObjectPos].state = VSGAME_FADEOUT
 						screen.cameraX = object.ixpos
 						screen.cameraY = object.iypos
 						screen.cameraEnabled = true
@@ -3716,12 +3738,12 @@ function PlayerObject_Drown
 		end if
 	end if
 
-	object.controlMode = -1
-	object.yvel += player.gravityStrength
-	object.animation = ANI_DROWNING
+	object.controlMode 	= -1
+	object.yvel 	   += player.gravityStrength
+	object.animation 	= ANI_DROWNING
 	if object.entityPos == screen.cameraTarget
-		temp0 = screen.cameraY
-		temp0 += 272
+		temp0   = screen.cameraY
+		temp0  += 272
 		temp0 <<= 16
 		if object.ypos > temp0
 			object.ypos = temp0
@@ -3738,33 +3760,34 @@ function PlayerObject_Drown
 			end if
 
 			if options.vsMode == false
-				stage.timeEnabled = false
-				object.type = TypeName[Death Event]
-				deathEvent.drawOrder = 6
-				deathEvent.leftTextPos = screen.xcenter
+				stage.timeEnabled 		= false
+
+				object.type 			= TypeName[Death Event]
+				deathEvent.drawOrder 	= 6
+				deathEvent.leftTextPos 	= screen.xcenter
 				deathEvent.leftTextPos -= 264
 				deathEvent.rightTextPos = screen.xcenter
 				deathEvent.rightTextPos += 200
 				if options.gameMode == MODE_TIMEATTACK
 					deathEvent.timer = 0
-					deathEvent.state = 3
+					deathEvent.state = DEATHEVENT_DEATH_TA
 				else
 					if global[arrayPos0] == 0
 						deathEvent.timer = -2880
-						deathEvent.state = 0
+						deathEvent.state = DEATHEVENT_GAMEOVER
 						PlayMusic(TRACK_GAMEOVER)
 						stage.pauseEnabled = false
 					else
 						deathEvent.timer = 0
-						deathEvent.state = 2
+						deathEvent.state = DEATHEVENT_DEATH
 					end if
 				end if
 			else
-				object.state = PlayerObject_HandleAir
-				player.rings = 0
-				object.priority = PRIORITY_ACTIVE
-				object.gravity = GRAVITY_AIR
-				object.animation = ANI_HURT
+				object.state 		= PlayerObject_HandleAir
+				player.rings 		= 0
+				object.priority 	= PRIORITY_ACTIVE
+				object.gravity 		= GRAVITY_AIR
+				object.animation 	= ANI_HURT
 				if object.entityPos == 0
 					object.xpos = vs.restartX1
 					object.ypos = vs.restartY1
@@ -3773,19 +3796,19 @@ function PlayerObject_Drown
 					object.ypos = vs.restartY2
 				end if
 
-				object.direction = FLIP_NONE
-				object.tileCollisions = true
-				object.interaction = true
-				object.visible = true
-				object.controlMode = 0
-				object.scrollTracking = true
-				object.drawOrder = DRAWORDER_PLAYER
-				player.sortedDrawOrder = 4
-				object.collisionPlane = PATH_A
+				object.direction 		= FLIP_NONE
+				object.tileCollisions 	= true
+				object.interaction 		= true
+				object.visible 			= true
+				object.controlMode 		= 0
+				object.scrollTracking 	= true
+				object.drawOrder 		= DRAWORDER_PLAYER
+				player.sortedDrawOrder 	= 4
+				object.collisionPlane 	= PATH_A
 				if object.entityPos == screen.cameraTarget
 					CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
-					object[tempObjectPos].value0 = 384
-					object[tempObjectPos].state = 2
+					vsGame[tempObjectPos].timer = 384
+					vsGame[tempObjectPos].state = VSGAME_FADEOUT
 					screen.cameraX = object.ixpos
 					screen.cameraY = object.iypos
 					screen.cameraEnabled = true
@@ -4041,7 +4064,7 @@ event ObjectMain
 				player.prevGravity |= checkResult
 				player.prevGravity ^= 1
 
-				if temp0 == GRAVITY_GROUND
+				if temp0 == GRAVITY_AIR
 					if player.prevGravity == GRAVITY_GROUND
 						player.scoreBonus = 0
 						if object.animation == ANI_JUMPING
@@ -4155,37 +4178,37 @@ event ObjectStartup
 		screen.cameraX = player[0].ixpos
 		screen.cameraY = player[0].iypos
 
-		player[0].groupID = GROUP_PLAYERS
-		player[0].state = PlayerObject_HandleAir
-		player[0].priority = PRIORITY_ACTIVE
-		player[0].drawOrder = DRAWORDER_PLAYER
-		player[0].sortedDrawOrder = 4
-		player[0].rollingDeceleration = 0x2000
-		player[0].spindashFunction = PlayerObject_StartSpindash
-		player[0].hitboxLeft 	= HITBOX_AUTO
-		player[0].hitboxTop 	= HITBOX_AUTO
-		player[0].hitboxRight 	= HITBOX_AUTO
-		player[0].hitboxBottom 	= HITBOX_AUTO
+		player[0].groupID 				= GROUP_PLAYERS
+		player[0].state 				= PlayerObject_HandleAir
+		player[0].priority 				= PRIORITY_ACTIVE
+		player[0].drawOrder 			= DRAWORDER_PLAYER
+		player[0].sortedDrawOrder 		= 4
+		player[0].rollingDeceleration 	= 0x2000
+		player[0].spindashFunction 		= PlayerObject_StartSpindash
+		player[0].hitboxLeft 			= HITBOX_AUTO
+		player[0].hitboxTop 			= HITBOX_AUTO
+		player[0].hitboxRight 			= HITBOX_AUTO
+		player[0].hitboxBottom 			= HITBOX_AUTO
 
 		// Reset things for Super Sonic
-		PlayerObject_SuperState = SUPERSTATE_NONE
+		PlayerObject_SuperState 		= SUPERSTATE_NONE
 		PlayerObject_SuperRingLossTimer = 0
-		PlayerObject_SuperBlendClr = 0
-		PlayerObject_SuperBlendTimer = 0
+		PlayerObject_SuperBlendClr 		= 0
+		PlayerObject_SuperBlendTimer 	= 0
 
 		switch stage.playerListPos
 		case PlayerName[SONIC]
 			LoadAnimation("SuperSonic.ani")
 			LoadAnimation("Sonic.ani")
 			CallFunction(PlayerObject_ProcessSuperPalS)
-			player[0].character = PlayerName[SONIC]
-			player[0].jumpOffset = -5
-			player[0].jumpAbility = PlayerObject_JumpAbility_Sonic
-			ANI_PEELOUT = ANI_RUNNING
+			player[0].character 	= PlayerName[SONIC]
+			player[0].jumpOffset 	= -5
+			player[0].jumpAbility 	= PlayerObject_JumpAbility_Sonic
+			ANI_PEELOUT 			= ANI_RUNNING
 			break
 
 		case PlayerName[TAILS]
-			player[0].type = TypeName[Tails Object]
+			player[0].type 		= TypeName[Tails Object]
 			player[0].character = PlayerName[TAILS]
 			CallFunction(PlayerObject_ProcessSuperPalT)
 			LoadAnimation("Tails.ani")
@@ -4207,10 +4230,10 @@ event ObjectStartup
 		case PlayerName[KNUCKLES]
 			LoadAnimation("Knuckles.ani")
 			CallFunction(PlayerObject_ProcessSuperPalK)
-			player[0].character = PlayerName[KNUCKLES]
-			player[0].jumpOffset = -5
-			player[0].jumpAbility = PlayerObject_JumpAbility_Knux
-			ANI_PEELOUT = ANI_RUNNING
+			player[0].character 	= PlayerName[KNUCKLES]
+			player[0].jumpOffset 	= -5
+			player[0].jumpAbility 	= PlayerObject_JumpAbility_Knux
+			ANI_PEELOUT 			= ANI_RUNNING
 
 			if options.saveSlot > 0
 				stage.player2Enabled = false
