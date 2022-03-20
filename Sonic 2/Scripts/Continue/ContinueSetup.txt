@@ -8,81 +8,105 @@
 // Aliases
 private alias object.value0 : object.timer
 
+private alias 0 : CONTINUE_INIT
+private alias 1 : CONTINUE_FADEIN
+private alias 2 : CONTINUE_DISPLAY
+private alias 3 : CONTINUE_REVUP
+private alias 4 : CONTINUE_RUN
+private alias 5 : CONTINUE_ACCEPTED
+private alias 6 : CONTINUE_TIMEDOUT
+
+// Player aliases
+private alias object.type		 : player.type
+private alias object.state		 : player.state
+private alias object.animation	 : player.animation
+private alias object.xpos		 : player.xpos
+private alias object.ypos		 : player.ypos
+private alias object.xvel		 : player.xvel
+private alias object.speed		 : player.speed
+private alias object.controlMode : player.controlMode
+
+
 event ObjectMain
 	switch object.state
-	case 0
+	case CONTINUE_INIT
 		object.timer = 320
-		SetScreenFade(0, 0, 0, object.timer)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		object.state++
 		break
 
-	case 1
+	case CONTINUE_FADEIN
 		if object.timer > 0
 			object.timer -= 8
 		else
 			PlayMusic(0)
 			object.state++
-			object[-1].state++ // Tell the Continue Screen object to start counting
+
+			// Tell the Continue Screen object to start counting
+			object[-1].state++
 		end if
-		SetScreenFade(0, 0, 0, object.timer)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
 
-	case 2
+	case CONTINUE_DISPLAY
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 		if checkResult > -1
 			inputPress.start = true
 		end if
 
 		if inputPress.start == true
-			object[0].animation = ANI_CONTINUE_UP
-			object[0].speed = 0
+			player[0].animation = ANI_CONTINUE_UP
+			player[0].speed = 0
 			PlaySfx(SfxName[Charge], false)
 			object.state++
-			object[-1].state++ // Tell the Continue Screen object to stop counting
+
+			// Tell the Continue Screen object to stop counting
+			object[-1].state++
 		end if
 		break
 
-	case 3
+	case CONTINUE_REVUP
 		if music.volume > 0
+			// Fade out music
 			music.volume--
 		end if
 
-		object[0].speed += 0x2000
-		if object[0].speed == 0x90000
-			object[0].xvel = 0x100000
-			if object[1].type == TypeName[Blank Object]
+		player[0].speed += 0x2000
+		if player[0].speed == 0x90000
+			player[0].xvel = 0x100000
+			if player[1].type == TypeName[Blank Object]
 				object.state++
 			end if
 		end if
 
-		if object[1].type != TypeName[Blank Object]
-			if object[0].speed == 0x20000
-				object[1].animation = ANI_CONTINUE_UP
-				object[1].speed = 0
+		if player[1].type != TypeName[Blank Object]
+			if player[0].speed == 0x20000
+				player[1].animation = ANI_CONTINUE_UP
+				player[1].speed = 0
 				PlaySfx(SfxName[Charge], false)
 			end if
 
-			if object[0].speed > 0x20000
-				object[1].speed += 0x2000
-				if object[1].speed == 0x90000
-					object[1].xvel = 0x100000
+			if player[0].speed > 0x20000
+				player[1].speed += 0x2000
+				if player[1].speed == 0x90000
+					player[1].xvel = 0x100000
 					object.state++
 				end if
 			end if
 		end if
 		break
 
-	case 4
+	case CONTINUE_RUN
 		if music.volume > 0
 			music.volume--
 		end if
 
 		temp0 = screen.xsize
 		temp0 += 32
-		if object[1].type == TypeName[Blank Object]
-			temp1 = object[0].xpos
+		if player[1].type == TypeName[Blank Object]
+			temp1 = player[0].xpos
 		else
-			temp1 = object[1].xpos
+			temp1 = player[1].xpos
 		end if
 
 		temp1 >>= 16
@@ -91,12 +115,14 @@ event ObjectMain
 		end if
 		break
 
-	case 5
+	case CONTINUE_ACCEPTED
 		if music.volume > 0
 			music.volume--
 		end if
+
 		object.timer += 4
-		SetScreenFade(0, 0, 0, object.timer)
+
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 
 		if object.timer == 384
 			player.continues--
@@ -111,9 +137,9 @@ event ObjectMain
 		end if
 		break
 
-	case 6
+	case CONTINUE_TIMEDOUT
 		object.timer += 4
-		SetScreenFade(0, 0, 0, object.timer)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		if object.timer == 384
 			fadeColor = 0x000000
 			object.timer = 0
@@ -125,11 +151,14 @@ event ObjectMain
 
 	end switch
 
+	// Hide touch controls
 	options.touchControls = false
 end event
 
 
 event ObjectDraw
+	// Clear all old frames
+	// (This level doesn't have a background so this is needed to prevent old frame smear)
 	ClearScreen(1)
 end event
 
@@ -140,39 +169,53 @@ event ObjectStartup
 		object[arrayPos0].drawOrder = 0
 	next
 
-	object[0].xpos = screen.xcenter
-	object[0].xpos <<= 16
-	object[0].animation = ANI_FANROTATE
-	object[0].state = PlayerObject_HandleContRun
+	// Put the player in the middle of the screen
+	player[0].xpos = screen.xcenter
+	player[0].xpos <<= 16
+
+	// Set the player's animation, although it gets set to ANI_CONTINUE a few lines below again anyways
+	player[0].animation = ANI_FANROTATE
+
+	player[0].state = PlayerObject_HandleContRun
 
 	// Different starting offsets based on P1
 	switch stage.playerListPos
 	case PlayerName[SONIC]
 	case PlayerName[SONIC AND TAILS]
-		object[0].ypos = 0xAC0000
+		player[0].ypos = 0xAC0000
 		break
 
 	case PlayerName[TAILS]
-		object[0].ypos = 0xAC0000
+		player[0].ypos = 0xAC0000
 		break
 
 	case PlayerName[KNUCKLES]
-		object[0].ypos = 0xB00000
+		player[0].ypos = 0xB00000
 		break
+
 	end switch
 
-	object[0].animation = ANI_CONTINUE
+	// Set the proper P1 animation here
+	player[0].animation = ANI_CONTINUE
 
-	if object[1].type != TypeName[Blank Object]
-		object[1].xpos = screen.xcenter
-		object[1].xpos <<= 16
-		object[1].animation = ANI_FANROTATE
-		object[1].state = PlayerObject_HandleContRun
-		object[0].xpos -= 0x100000
-		object[1].xpos += 0x100000
-		object[1].ypos = object[0].ypos
-		object[1].ypos += 0x40000
-		object[1].animation = ANI_BORED
+	if player[1].type != TypeName[Blank Object]
+		// Move P2 to the center of the screen too
+		player[1].xpos = screen.xcenter
+		player[1].xpos <<= 16
+
+		// Set P2's animation, and then...
+		player[1].animation = ANI_FANROTATE
+
+		player[1].state = PlayerObject_HandleContRun
+
+		// Move the players a bit to make room for two
+		player[0].xpos -= 0x100000
+		player[1].xpos += 0x100000
+		player[1].ypos = player[0].ypos
+		player[1].ypos += 0x40000
+
+		// ...now set P2's animation *again*...?
+		player[1].animation = ANI_BORED
 	end if
 
 	stage.newXBoundary2 = screen.xsize
@@ -181,19 +224,30 @@ event ObjectStartup
 	SetMusicTrack("Continue.ogg", 0, false)
 
 	stage.pauseEnabled = false
+
 	if player.continues == 0
-		// Player was most likely brought here from the dev menu stage select, give them three continues
+		// Player was most likely brought here from the dev menu, give them three free continues
 		player.continues = 3
 	end if
 
 	options.touchControls = false
+
+#platform: USE_DECOMP
+	// Not in the original game, but this fixes an issue where
+	// pressing start to continue also pauses the entire game
+	player[0].controlMode = -1
+#endplatform
+
 end event
+
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
+
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
 end event

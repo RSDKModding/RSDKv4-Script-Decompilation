@@ -126,40 +126,42 @@ event ObjectMain
 			stage.listPos = specialStage.nextZone
 			stage.activeList = REGULAR_STAGE
 			switch specialStage.emeralds
-			case 0x3F
+			case 0b00111111 // 6 emeralds
 				if options.superStates == false
 					object.frame = 3
 					specialStage.listPos++
 					specialStage.listPos %= 6
-					temp0 = 1
+					temp0 = true
 				else
 					object.frame = 2
 					specialStage.listPos = 6
-					temp0 = 1
+					temp0 = true
 				end if
 				break
 
-			case 0x7F
+			case 0x01111111 // 7 emeralds
 				object.frame = 3
 				specialStage.listPos++
 				specialStage.listPos %= 7
-				temp0 = 1
+				temp0 = true
 				break
 
 			default
 				object.frame = 2
-				temp0 = 0
-				while temp0 == 0
+				temp0 = false
+				while temp0 == false
 					specialStage.listPos++
 					if specialStage.listPos > 5
 						specialStage.listPos = 0
 					end if
+
 					GetBit(temp1, specialStage.emeralds, specialStage.listPos)
-					if temp1 == 0
-						temp0 = 1
+					if temp1 == false
+						temp0 = true
 					end if
 				loop
 				break
+
 			end switch
 
 			if PlayerObject_isWinner == false
@@ -257,7 +259,7 @@ event ObjectMain
 		object.continuePos += 32
 
 		if stage.debugMode == false
-			if specialStage.emeralds >= 0x3F
+			if specialStage.emeralds >= 0x00111111
 				CallNativeFunction2(SetAchievement, AchievementName[Chaos Connoisseur], 100)
 			end if
 		end if
@@ -283,7 +285,7 @@ event ObjectMain
 		break
 
 	case SPECIALFINISH_ENTERRESULTS
-		if object.emeraldAlpha < 256
+		if object.emeraldAlpha < 0x100
 			object.emeraldAlpha += 8
 		end if
 
@@ -312,7 +314,7 @@ event ObjectMain
 		break
 
 	case SPECIALFINISH_ENTEREMERALDS
-		if object.emeraldAlpha < 256
+		if object.emeraldAlpha < 0x100
 			object.emeraldAlpha += 8
 		end if
 
@@ -348,7 +350,7 @@ event ObjectMain
 			if object.hasContinue == false
 				object.state++
 				if PlayerObject_isWinner == true
-					if specialStage.emeralds == 0x7F
+					if specialStage.emeralds == 0x01111111
 						object.state = SPECIALFINISH_SUPERMSG_DELAY
 					end if
 				end if
@@ -445,7 +447,7 @@ event ObjectMain
 		break
 
 	case SPECIALFINISH_SHOWCONTINUE
-		if specialStage.emeralds == 0x7F
+		if specialStage.emeralds == 0x01111111
 			CallFunction(SpecialFinish_DisplaySuperMessage)
 		end if
 
@@ -628,7 +630,7 @@ event ObjectDraw
 		temp0 = 0
 		temp1 = 19
 		temp3 = screen.xcenter
-		if specialStage.emeralds == 0x7F
+		if specialStage.emeralds == 0x01111111
 			temp3 += 12
 		end if
 
@@ -648,33 +650,36 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("Special/Objects.gif")
-	SpriteFrame(-32, 0, 56, 56, 63, 401)
-	SpriteFrame(-99, 0, 197, 16, 120, 401)
-	SpriteFrame(-112, 0, 223, 16, 156, 418)
+
+	SpriteFrame(-32, 0, 56, 56, 63, 401)    // 0  - Oval
+	SpriteFrame(-99, 0, 197, 16, 120, 401)  // 1  - "SPEICAL STAGE" large text
+	SpriteFrame(-112, 0, 223, 16, 156, 418) // 2  - "CHAOS EMERALDS" large text
 
 	switch stage.playerListPos
 	case PlayerName[SONIC]
 	case PlayerName[SONIC AND TAILS]
-		SpriteFrame(-127, 0, 254, 16, 156, 435)
+		SpriteFrame(-127, 0, 254, 16, 156, 435) // 3  - "SONIC GOT THEM ALL"
 		break
 
 	case PlayerName[TAILS]
 		if options.region == 0
-			SpriteFrame(-127, 0, 254, 16, 156, 452)
+			SpriteFrame(-127, 0, 254, 16, 156, 452) // 3  - "TAILS GOT THEM ALL"
 		else
-			SpriteFrame(-127, 0, 254, 16, 156, 469)
+			SpriteFrame(-127, 0, 254, 16, 156, 469) // 3  - "MILES GOT THEM ALL"
 		end if
 		break
 
 	case PlayerName[KNUCKLES]
-		SpriteFrame(-149, 0, 298, 16, 156, 486)
+		SpriteFrame(-149, 0, 298, 16, 156, 486) // 3  - "KNUCKLES GOT THEM ALL"
 		break
+
 	end switch
 
-	SpriteFrame(0, 0, 44, 16, 35, 458)
-	SpriteFrame(0, 0, 85, 16, 35, 475)
-	SpriteFrame(0, 0, 69, 16, 35, 492)
+	SpriteFrame(0, 0, 44, 16, 35, 458) // 4  - "SCORE" small text
+	SpriteFrame(0, 0, 85, 16, 35, 475) // 5  - "RING BONUS" small text
+	SpriteFrame(0, 0, 69, 16, 35, 492) // 6  - "CONTINUE" small text
 
+	// 7-8 - Character icons, dependant on the main character
 	switch stage.playerListPos
 	case PlayerName[SONIC]
 	case PlayerName[SONIC AND TAILS]
@@ -691,8 +696,10 @@ event ObjectStartup
 		SpriteFrame(-8, -11, 16, 23, 467, 376)
 		SpriteFrame(-8, -11, 16, 23, 484, 376)
 		break
+
 	end switch
 
+	// 9-18 - Numbers
 	SpriteFrame(0, 0, 8, 11, 120, 418)
 	SpriteFrame(0, 0, 8, 11, 129, 418)
 	SpriteFrame(0, 0, 8, 11, 138, 418)
@@ -703,6 +710,8 @@ event ObjectStartup
 	SpriteFrame(0, 0, 8, 11, 147, 430)
 	SpriteFrame(0, 0, 8, 11, 120, 442)
 	SpriteFrame(0, 0, 8, 11, 129, 442)
+
+	// 19-24 - Chaos Emeralds
 	SpriteFrame(-28, -4, 24, 24, 176, 276)
 	SpriteFrame(-4, -4, 24, 24, 201, 276)
 	if options.superStates == false
@@ -714,39 +723,42 @@ event ObjectStartup
 	SpriteFrame(-76, -4, 24, 24, 276, 276)
 	SpriteFrame(44, -4, 24, 24, 301, 276)
 	SpriteFrame(-100, -4, 24, 24, 401, 276)
+
+	// Texts
 	switch stage.playerListPos
 	case PlayerName[SONIC]
 	case PlayerName[SONIC AND TAILS]
-		SpriteFrame(-113, -12, 53, 16, 411, 435)
-		SpriteFrame(-51, -12, 70, 16, 156, 435)
-		SpriteFrame(28, -12, 85, 16, 411, 452)
-		SpriteFrame(-77, 12, 76, 16, 411, 469)
-		SpriteFrame(8, 12, 70, 16, 156, 435)
+		SpriteFrame(-113, -12, 53, 16, 411, 435) // "NOW"
+		SpriteFrame(-51, -12, 70, 16, 156, 435)  // "SONIC"
+		SpriteFrame(28, -12, 85, 16, 411, 452)   // "CAN BE"
+		SpriteFrame(-77, 12, 76, 16, 411, 469)   // "SUPER"
+		SpriteFrame(8, 12, 70, 16, 156, 435)     // "SONIC" (different offset)
 		break
 
 	case PlayerName[TAILS]
 		if options.region == 0
-			SpriteFrame(-113, -12, 53, 16, 411, 435)
-			SpriteFrame(-51, -12, 70, 16, 156, 452)
-			SpriteFrame(28, -12, 85, 16, 411, 452)
-			SpriteFrame(-77, 12, 76, 16, 411, 469)
-			SpriteFrame(8, 12, 70, 16, 156, 452)
+			SpriteFrame(-113, -12, 53, 16, 411, 435) // "NOW"
+			SpriteFrame(-51, -12, 70, 16, 156, 452) // "TAILS"
+			SpriteFrame(28, -12, 85, 16, 411, 452)  // "CAN BE"
+			SpriteFrame(-77, 12, 76, 16, 411, 469)  // "SUPER"
+			SpriteFrame(8, 12, 70, 16, 156, 452)    // "TAILS" (different offset)
 		else
-			SpriteFrame(-113, -12, 53, 16, 411, 435)
-			SpriteFrame(-51, -12, 70, 16, 156, 469)
-			SpriteFrame(28, -12, 85, 16, 411, 452)
-			SpriteFrame(-77, 12, 76, 16, 411, 469)
-			SpriteFrame(8, 12, 70, 16, 156, 469)
+			SpriteFrame(-113, -12, 53, 16, 411, 435) // "NOW"
+			SpriteFrame(-51, -12, 70, 16, 156, 469)  // "MILES"
+			SpriteFrame(28, -12, 85, 16, 411, 452)   // "CAN BE"
+			SpriteFrame(-77, 12, 76, 16, 411, 469)   // "SUPER"
+			SpriteFrame(8, 12, 70, 16, 156, 469)     // "MILES" (different offset)
 		end if
 		break
 
 	case PlayerName[KNUCKLES]
-		SpriteFrame(-134, -12, 53, 16, 411, 435)
-		SpriteFrame(-73, -12, 113, 16, 156, 486)
-		SpriteFrame(50, -12, 85, 16, 411, 452)
-		SpriteFrame(-99, 12, 76, 16, 411, 469)
-		SpriteFrame(-14, 12, 113, 16, 156, 486)
+		SpriteFrame(-134, -12, 53, 16, 411, 435) // "NOW"
+		SpriteFrame(-73, -12, 113, 16, 156, 486) // "KNUCKLES"
+		SpriteFrame(50, -12, 85, 16, 411, 452)   // "CAN BE"
+		SpriteFrame(-99, 12, 76, 16, 411, 469)   // "SUPER"
+		SpriteFrame(-14, 12, 113, 16, 156, 486)  // "KNUCKLES" (different offset)
 		break
+
 	end switch
 end event
 

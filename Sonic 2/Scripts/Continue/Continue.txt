@@ -9,14 +9,26 @@
 private alias object.value0 : object.timerSeconds
 private alias object.value1 : object.timerFrames
 
+private alias 1 : STATE_COUNTING
+
+// Continue Setup states
+private alias 2 : CONTINUE_DISPLAY
+private alias 4 : CONTINUE_RUN
+private alias 6 : CONTINUE_TIMEDOUT
+
 event ObjectMain
-	if object.state == 1
+	if object.state == STATE_COUNTING
 		object.timerFrames--
+
 		if object.timerFrames <= 0
 			if object.timerSeconds == 0
+				// Make this object stop counting
 				object.state++
-				object[+1].state = 6 // Tell the main object that time is up
+
+				// Tell the main object that time is up
+				object[+1].state = CONTINUE_TIMEDOUT
 			else
+				// Time's not up yet, progress to the next second
 				object.timerSeconds--
 				object.timerFrames = 60
 			end if
@@ -26,13 +38,18 @@ end event
 
 
 event ObjectDraw
+	// Draw the constant sprites ("Continue" & stars)
 	DrawSprite(0)
 	DrawSprite(1)
 
+	// Draw the countdown
 	temp0 = object.xpos
 	temp0 >>= 16
 	DrawNumbers(2, temp0, 126, object.timerSeconds, 2, 8, 1)
 
+	// Draw the continue line of mini-Sonics
+
+	// First find the base X pos to draw them at
 	temp0 = player.continues
 	temp1 = temp0
 	temp0 -= 2
@@ -40,28 +57,36 @@ event ObjectDraw
 	temp0 >>= 1
 	FlipSign(temp0)
 	temp0 += screen.xcenter
-	GetBit(object.frame, oscillation, 4)
 
+	// Then get the sprite to use
+	GetBit(object.frame, oscillation, 4)
 	object.frame += 12
-	temp3 = 1
+
+	temp3 = true
+
+	// (temp1 is number of mini-Sonics to draw)
 	while temp1 > 1
-		temp2 = 1
-		if temp3 == 1
-			temp3 = 0
-			if object[+1].state >= 4
-				if object[+1].state != 6
-					temp2 = 0
+		temp2 = true
+
+		if temp3 == true
+			temp3 = false
+			if object[+1].state >= CONTINUE_RUN
+				if object[+1].state != CONTINUE_TIMEDOUT
+					// Don't draw
+					temp2 = false
 				end if
 			else
-				if object[+1].state > 2
+				if object[+1].state > CONTINUE_DISPLAY
+					// Flash
 					GetBit(temp2, oscillation, 0)
 				end if
 			end if
 		end if
 
-		if temp2 == 1
+		if temp2 == true
 			DrawSpriteScreenXY(object.frame, temp0, 100)
 		end if
+
 		temp0 += 21
 		temp1--
 	loop
@@ -71,8 +96,13 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("Continue/Objects.gif")
 
+	// 0 - "CONTINUE" text
 	SpriteFrame(-59, 64, 119, 16, 1, 1)
+
+	// 1 - Stars
 	SpriteFrame(-21, 128, 41, 9, 1, 42)
+
+	// 2-11 - Numbers
 	SpriteFrame(0, 0, 8, 11, 1, 52)
 	SpriteFrame(0, 0, 8, 11, 10, 52)
 	SpriteFrame(0, 0, 8, 11, 19, 52)
@@ -83,21 +113,28 @@ event ObjectStartup
 	SpriteFrame(0, 0, 8, 11, 64, 52)
 	SpriteFrame(0, 0, 8, 11, 73, 52)
 	SpriteFrame(0, 0, 8, 11, 82, 52)
+
+	// Character icons are dependant on the main player
 	switch stage.playerListPos
 	case PlayerName[SONIC]
 	case PlayerName[SONIC AND TAILS]
+		// 12-13 - Sonic foot tapping
 		SpriteFrame(-8, -11, 16, 23, 1, 18)
 		SpriteFrame(-8, -11, 16, 23, 18, 18)
 		break
 
 	case PlayerName[TAILS]
+		// 12-13 - Tails tapping his foot
 		SpriteFrame(-8, -11, 16, 23, 35, 18)
 		SpriteFrame(-8, -11, 16, 23, 52, 18)
 		break
+
 	case PlayerName[KNUCKLES]
+		// 12-13 - Knuckles foot tapping (- he has a hole in his feet!)
 		SpriteFrame(-8, -11, 16, 23, 69, 18)
 		SpriteFrame(-8, -11, 16, 23, 86, 18)
 		break
+
 	end switch
 
 	foreach (TypeName[Continue Screen], arrayPos0, ALL_ENTITIES)
@@ -115,6 +152,6 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Continue/Objects.gif")
+	SpriteFrame(-59, 64, 119, 16, 1, 1)
 end event

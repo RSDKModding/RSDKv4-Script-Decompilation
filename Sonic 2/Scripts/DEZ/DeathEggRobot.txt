@@ -6,210 +6,541 @@
 // ----------------------------------
 
 // Aliases
-private alias 46 : TYPE_DEATHEGGROBOT
+private alias object.value0  : object.timer
 
+private alias object.value1  : object.headOffset.x
+private alias object.value2  : object.headOffset.y
+private alias object.value3  : object.movementCycle
+private alias object.value4  : object.subState
+private alias object.value5  : object.boundsM
+private alias object.value6  : object.health
+private alias object.value7  : object.invincibilityTimer
+private alias object.value8  : object.exploding
+private alias object.value9  : object.bombs // Offset used when spawning bombs
+
+private alias object.value10 : object.flameSprite
+private alias object.value11 : object.flameTimer
+private alias object.value12 : object.flameAnimSpeed
+private alias object.value13 : object.flameState
+
+// Values used for the managing the following cutscene
+private alias object.value14 : object.screenShake
+private alias object.value15 : object.checkpoint // Offset to use for the One Way Doors checkpoints when making Sonic run away
+private alias object.value16 : object.fadeValue
+
+
+private alias 0  : DERMAIN_INIT
+private alias 1  : DERMAIN_AWAITEGGMAN
+private alias 2  : DERMAIN_RAISEHEAD
+private alias 3  : DERMAIN_CLOSEHEAD
+private alias 4  : DERMAIN_SUBPAUSE
+private alias 5  : DERMAIN_RAISE
+private alias 6  : DERMAIN_READYPAUSE
+private alias 7  : DERMAIN_NEXTPHASE
+private alias 8  : DERMAIN_WALKING
+private alias 9  : DERMAIN_ASCEND // Includes being in the sky and landing, too
+private alias 10 : DERMAIN_ARMSHOOT
+private alias 11 : DERMAIN_EXPLODING
+
+// The Death Egg Robot manages the ending cutscene too
+private alias 12 : DERMAIN_SCREENSHAKE
+private alias 13 : DERMAIN_CORRDIOREXPLODE
+private alias 14 : DERMAIN_FADEOUT
+
+
+// Substates used by complete states
+
+// DERMAIN_WALKING substates
+private alias 0 : WALKING_INIT
+private alias 1 : WALKING_WALKAHEAD
+private alias 2 : WALKING_PAUSE
+private alias 3 : WALKING_BACKSTEP
+
+// DERMAIN_ASCEND substates
+private alias 0 : ASCEND_INIT
+private alias 1 : ASCEND_JUMP
+private alias 2 : ASCEND_RISE
+private alias 3 : ASCEND_CREATETARGET
+private alias 4 : ASCEND_OFFSCREEN
+private alias 5 : ASCEND_FALL
+private alias 6 : ASCEND_LAND
+private alias 7 : ASCEND_BOMBPAUSE
+
+// DERMAIN_ARMSHOOT substates
+private alias 0 : ARMSHOOT_INIT
+private alias 1 : ARMSHOOT_BENDDOWN
+private alias 2 : ARMSHOOT_LARMSHOT
+private alias 3 : ARMSHOOT_SHOOTRARM
+private alias 4 : ARMSHOOT_RARMSHOT
+private alias 5 : ARMSHOOT_GETUP
+
+// entityPos offset aliases
+// (primarily used for movement tables)
+private alias  5 : OFFSET_SHOULDER
+private alias  4 : OFFSET_FOOT_FRONT
+private alias  3 : OFFSET_HAND_FRONT
+private alias  2 : OFFSET_ARM
+private alias  1 : OFFSET_LEG_FRONT
+private alias  0 : OFFSET_DERMAIN
+private alias -1 : OFFSET_FOOT_BACK
+private alias -2 : OFFSET_HAND_BACK
+private alias -3 : OFFSET_LEG_BACK
+
+// Player aliases
+private alias object.state 			: player.state
+private alias object.xpos 			: player.xpos
+private alias object.xvel 			: player.xvel
+private alias object.speed 			: player.speed
+private alias object.animation 		: player.animation
+private alias object.collisionRight : player.collisionRight
+private alias object.value40 		: player.hitboxLeft
+private alias object.value38 		: player.hitboxTop
+private alias object.value41 		: player.hitboxRight
+private alias object.value39 		: player.hitboxBottom
+
+// Shared DER appendages states
+private alias 1 : BODYPART_DESTROYED
+private alias 2 : BODYPART_ACTIVE
+
+// DER Bomb aliases
+private alias object.value1 : DERBomb.originPos.y
+
+// DER Hand aliases
+private alias object.value0 : DERHand.timer
+private alias object.value1 : DERHand.originPos.y
+
+private alias 3 : DERHAND_FIRE
+
+// One Way Door aliases
+// (Used in cutscene)
+private alias object.state : oneWayDoor.isOpen
 
 // Game Modes
-private alias 0 : MODE_NOSAVE
 private alias 1 : MODE_NORMAL
-private alias 2 : MODE_TIMEATTACK
 
-// Music Events
+// Reserved object slots
+private alias 0  : SLOT_PLAYER1
 private alias 25 : SLOT_MUSICEVENT_CHANGE
 private alias 26 : SLOT_MUSICEVENT_BOSS
 
-private alias  0 : MUSICEVENT_FADETOBOSS
-private alias  1 : MUSICEVENT_FADETOSTAGE
-private alias  2 : MUSICEVENT_TRANSITION
+// Music Events
+private alias 0 : MUSICEVENT_FADETOBOSS
+private alias 2 : MUSICEVENT_TRANSITION
 
-private alias 0 : MUSICEVENT_FLAG_NOCHANGE
-private alias 1 : MUSICEVENT_FLAG_SPEEDUP
-private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 
 // Function declarations
-reserve function DeathEggRobot_Function101
-reserve function DeathEggRobot_Function102
-reserve function DeathEggRobot_Function103
-reserve function DeathEggRobot_Function104
+reserve function DeathEggRobot_restoreBodyParts
+reserve function DeathEggRobot_checkAnimEX
+reserve function DeathEggRobot_animateBody
+reserve function DeathEggRobot_CreateBombs
 
-// Static Values
 
-// Tables
-private table DeathEggRobot_table55
-	8, 9, 10, 9
+// Tables (and lots of them!)
+
+// The cycle DER should follow
+private table DeathEggRobot_phaseOrder
+	DERMAIN_WALKING
+	DERMAIN_ASCEND
+	DERMAIN_ARMSHOOT
+	DERMAIN_ASCEND
 end table
 
-private table DeathEggRobot_table46
-	0, 0, 1, 2, 3, -1, 0
+// These DeathEggRobot_anim_* tables are root animation tables, used when calling animateBody
+// The first entry in them gets replaced with a table ID, the rest of the numbers in them are animation flags
+
+private table DeathEggRobot_anim_bendDown
+	0 // DeathEggRobot_anim_sub_bend gets placed here
+	0, 1, 2, 3, -1, 0
 end table
 
-private table DeathEggRobot_table47
-	0, 5, 6, 7, 8, -1, 0
+private table DeathEggRobot_anim_getUp
+	0 // DeathEggRobot_anim_sub_bend gets placed here
+	5, 6, 7, 8, -1, 0
 end table
 
-private table DeathEggRobot_table48
-	0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 192
+private table DeathEggRobot_anim_land
+	0 // DeathEggRobot_anim_sub_bend gets placed here
+	0, 1, 2, 3, 4, 5, 6, 7, 8, 192
 end table
 
-private table DeathEggRobot_table52
+// This is the anim sub-table used for the above proper anim tables
+// (confusing system, I know)
+private table DeathEggRobot_anim_sub_bend
 	0, 0, 0, 0, 0, 0, 0, 0, 0
 end table
 
-private table DeathEggRobot_table49
-	0, 0, 1, 2, 192
+
+private table DeathEggRobot_anim_jump
+	0 // DeathEggRobot_anim_sub_jump gets placed here
+	0, 1, 2, 192
 end table
 
-private table DeathEggRobot_table53
+// Also an anim sub-table
+private table DeathEggRobot_anim_sub_jump
 	0, 0, 0
 end table
 
-private table DeathEggRobot_table50
-	0, 0, 1, 2, 3, 64, 4, 5, 6, 7, 8, 64, 9, 10, 1, 2
-	3, 64, 4, 5, 6, 7, 8, 64, 192
+private table DeathEggRobot_anim_stepAhead
+	0 // DeathEggRobot_anim_sub_walk gets placed here
+	0, 1, 2, 3, 64, 4, 5, 6, 7, 8, 64, 9, 10, 1, 2, 3, 64, 4, 5, 6, 7, 8, 64, 192
 end table
 
-private table DeathEggRobot_table51
-	0, 136, 135, 134, 133, 11, 64, 192
+private table DeathEggRobot_anim_stepBack
+	0 // DeathEggRobot_anim_sub_walk gets placed here
+	136, 135, 134, 133, 11, 64, 192
 end table
 
-private table DeathEggRobot_table54
+
+// The last anim sub-table, also placed in a weird spot
+private table DeathEggRobot_anim_sub_walk
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 end table
 
-private table DeathEggRobot_table60
-	0, 8, 0, 0, 0
+
+// All the way over here for some reason, this frame was likely added after the entire object had already been completed
+private table DeathEggRobot_bend_frame_5
+	0
+	8
+	OFFSET_DERMAIN, 0, 0
 end table
 
-private table DeathEggRobot_table56
-	0, 16, 0, 0, 0
+// Similar story here to the above
+private table DeathEggRobot_jump_frame_2
+	0
+	16
+	OFFSET_DERMAIN, 0, 0
 end table
 
-private table DeathEggRobot_table0
-	6, 4, -0x40000, 0x3C0000, 3, -0xC0000, 0x80000, 2, 0xC0000, -0x80000, 1, 0x40000, 0x240000, -1, -0x40000, 0x3C0000, -2, -0xC0000, 0x80000, -3, 0x40000, 0x240000
+// Holds the base positions of all DER body parts
+// Format of the table:
+//  - First number is how many "entries" there are
+// Then each entry consists of
+//   -> Object entity pos (relative to the current Death Egg Robot object)
+//   -> X offset (from this object's pos, will automatically get flipped when facing the other way)
+//   -> Y offset (from this object's pos)
+private table DeathEggRobot_bodyPartsOrigin
+	6
+	OFFSET_FOOT_FRONT, -0x40000,  0x3C0000
+	OFFSET_HAND_FRONT, -0xC0000,  0x080000
+	OFFSET_ARM,         0xC0000, -0x080000
+	OFFSET_LEG_FRONT,   0x40000,  0x240000
+	OFFSET_FOOT_BACK,  -0x40000,  0x3C0000
+	OFFSET_HAND_BACK,  -0xC0000,  0x080000
+	OFFSET_LEG_BACK,    0x40000,  0x240000
 end table
 
-private table DeathEggRobot_table1
-	5, 8, 0, -0x2000, 0xC00, 3, -0x2000, 0xC00, 2, -0x2000, 0xC00, -2, -0x2000, 0xC00, 1, -0x800, 0x400, -3, -0x800, 0x400
+
+// All these remaining DeathEggRobot_*_frame_* tables are individual animation entries
+// The format they follow is pretty similar to the above
+//  - First number is how many "entries" in the table there are (not counting the next number)
+//  - Second number is the delay for this frame in the animation
+// Then, the rest of the table is individual component entries, each entry comprised of 3 numbers
+// All offsets are relative to the main DER object
+//  - First number is the offset (entityPos-wise) for the target component
+//  - Second number is X offset for the component to move
+//  - Third number is the Y offset
+
+// These first few are for the animations in which the DER bends down, like when jumping or shooting arms
+
+private table DeathEggRobot_bend_frame_1
+	5
+	8
+	OFFSET_DERMAIN,    -0x2000,  0x0C00
+	OFFSET_HAND_FRONT, -0x2000,  0x0C00
+	OFFSET_ARM,        -0x2000,  0x0C00
+	OFFSET_HAND_BACK,  -0x2000,  0x0C00
+	OFFSET_LEG_FRONT,  -0x0800,  0x0400
+	OFFSET_LEG_BACK,   -0x0800,  0x0400
 end table
 
-private table DeathEggRobot_table2
-	5, 8, 0, -0x1400, 0x1400, 3, -0x1400, 0x1400, 2, -0x1400, 0x1400, -2, -0x1400, 0x1400, 1, -0x600, 0x600, -3, -0x600, 0x600
+private table DeathEggRobot_bend_frame_2
+	5
+	8
+	OFFSET_DERMAIN,    -0x1400,  0x1400
+	OFFSET_HAND_FRONT, -0x1400,  0x1400
+	OFFSET_ARM,        -0x1400,  0x1400
+	OFFSET_HAND_BACK,  -0x1400,  0x1400
+	OFFSET_LEG_FRONT,  -0x0600,  0x0600
+	OFFSET_LEG_BACK,   -0x0600,  0x0600
 end table
 
-private table DeathEggRobot_table3
-	5, 8, 0, -0x800, 0x1400, 3, -0x800, 0x1400, 2, -0x800, 0x1400, -2, -0x800, 0x1400, 1, -512, 0x400, -3, -512, 0x400
+private table DeathEggRobot_bend_frame_3
+	5
+	8
+	OFFSET_DERMAIN,    -0x0800,  0x1400
+	OFFSET_HAND_FRONT, -0x0800,  0x1400
+	OFFSET_ARM,        -0x0800,  0x1400
+	OFFSET_HAND_BACK,  -0x0800,  0x1400
+	OFFSET_LEG_FRONT,  -0x0200,  0x0400
+	OFFSET_LEG_BACK,   -0x0200,  0x0400
 end table
 
-private table DeathEggRobot_table4
-	5, 8, 0, -0x400, 0xC00, 3, -0x400, 0xC00, 2, -0x400, 0xC00, -2, -0x400, 0xC00, 1, 0, 512, -3, 0, 512
+private table DeathEggRobot_bend_frame_4
+	5
+	8
+	OFFSET_DERMAIN,    -0x0400,  0x0C00
+	OFFSET_HAND_FRONT, -0x0400,  0x0C00
+	OFFSET_ARM,        -0x0400,  0x0C00
+	OFFSET_HAND_BACK,  -0x0400,  0x0C00
+	OFFSET_LEG_FRONT,   0x0000,  0x0200
+	OFFSET_LEG_BACK,    0x0000,  0x0200
 end table
 
-private table DeathEggRobot_table5
-	5, 8, 0, 0x400, -0x1800, 3, 0x400, -0x1800, 2, 0x400, -0x1800, -2, 0x400, -0x1800, 1, 512, -0x600, -3, 512, -0x600
+// frame5 is all the way at the top, separate from these for some reason
+// Perhaps it was added late in dev or something
+
+private table DeathEggRobot_bend_frame_6
+	5
+	8
+	OFFSET_DERMAIN,     0x0400, -0x1800
+	OFFSET_HAND_FRONT,  0x0400, -0x1800
+	OFFSET_ARM,         0x0400, -0x1800
+	OFFSET_HAND_BACK,   0x0400, -0x1800
+	OFFSET_LEG_FRONT,   0x0200, -0x0600
+	OFFSET_LEG_BACK,    0x0200, -0x0600
 end table
 
-private table DeathEggRobot_table6
-	5, 8, 0, 0xC00, -0x1800, 3, 0xC00, -0x1800, 2, 0xC00, -0x1800, -2, 0xC00, -0x1800, 1, 0x400, -0x400, -3, 0x400, -0x400
+private table DeathEggRobot_bend_frame_7
+	5
+	8
+	OFFSET_DERMAIN,     0x0C00, -0x1800
+	OFFSET_HAND_FRONT,  0x0C00, -0x1800
+	OFFSET_ARM,         0x0C00, -0x1800
+	OFFSET_HAND_BACK,   0x0C00, -0x1800
+	OFFSET_LEG_FRONT,   0x0400, -0x0400
+	OFFSET_LEG_BACK,    0x0400, -0x0400
 end table
 
-private table DeathEggRobot_table7
-	5, 8, 0, 0x1800, -0xC00, 3, 0x1800, -0xC00, 2, 0x1800, -0xC00, -2, 0x1800, -0xC00, 1, 0x400, -0x400, -3, 0x400, -0x400
+private table DeathEggRobot_bend_frame_8
+	5
+	8
+	OFFSET_DERMAIN,     0x1800, -0x0C00
+	OFFSET_HAND_FRONT,  0x1800, -0x0C00
+	OFFSET_ARM,         0x1800, -0x0C00
+	OFFSET_HAND_BACK,   0x1800, -0x0C00
+	OFFSET_LEG_FRONT,   0x0400, -0x0400
+	OFFSET_LEG_BACK,    0x0400, -0x0400
 end table
 
-private table DeathEggRobot_table8
-	5, 8, 0, 0x1800, -0x400, 3, 0x1800, -0x400, 2, 0x1800, -0x400, -2, 0x1800, -0x400, 1, 0x600, -512, -3, 0x600, -512
+private table DeathEggRobot_bend_frame_9
+	5
+	8
+	OFFSET_DERMAIN,     0x1800, -0x0400
+	OFFSET_HAND_FRONT,  0x1800, -0x0400
+	OFFSET_ARM,         0x1800, -0x0400
+	OFFSET_HAND_BACK,   0x1800, -0x0400
+	OFFSET_LEG_FRONT,   0x0600, -0x0200
+	OFFSET_LEG_BACK,    0x0600, -0x0200
 end table
 
-private table DeathEggRobot_table9
-	5, 16, 0, 0, 0x400, 3, 0, 0x400, 2, 0, 0x400, -2, 0, 0x400, 1, 0, 0x400, -3, 0, 0x400
+// These next couple of tables are frames for the jumping animation
+
+private table DeathEggRobot_jump_frame_1
+	5
+	16
+	OFFSET_DERMAIN,     0x0000, 0x0400
+	OFFSET_HAND_FRONT,  0x0000, 0x0400
+	OFFSET_ARM,         0x0000, 0x0400
+	OFFSET_HAND_BACK,   0x0000, 0x0400
+	OFFSET_LEG_FRONT,   0x0000, 0x0400
+	OFFSET_LEG_BACK,    0x0000, 0x0400
 end table
 
-private table DeathEggRobot_table10
-	5, 8, 0, 0, -0x800, 3, 0, -0x800, 2, 0, -0x800, -2, 0, -0x800, 1, 0, -0x800, -3, 0, -0x800
+// frame2 is all the way near the end of the list, it seems it was added in post after everything else was done
+
+private table DeathEggRobot_jump_frame_3
+	5
+	8
+	OFFSET_DERMAIN,     0x0000, -0x0800
+	OFFSET_HAND_FRONT,  0x0000, -0x0800
+	OFFSET_ARM,         0x0000, -0x0800
+	OFFSET_HAND_BACK,   0x0000, -0x0800
+	OFFSET_LEG_FRONT,   0x0000, -0x0800
+	OFFSET_LEG_BACK,    0x0000, -0x0800
 end table
 
-private table DeathEggRobot_table11
-	6, 32, 1, -0x800, -0x800, 4, -0x800, -0x800, 0, 0, -0x400, 3, 0x400, -0x500, 2, 768, -0x500, -2, -0x400, -0x500, -3, 0, -512
+// And finally, these last tables are frames for the walking animation
+
+private table DeathEggRobot_walk_frame_1
+	6
+	32
+	OFFSET_LEG_FRONT,  -0x0800, -0x0800
+	OFFSET_FOOT_FRONT, -0x0800, -0x0800
+	OFFSET_DERMAIN,     0x0000, -0x0400
+	OFFSET_HAND_FRONT,  0x0400, -0x0500
+	OFFSET_ARM,         0x0300, -0x0500
+	OFFSET_HAND_BACK,  -0x0400, -0x0500
+	OFFSET_LEG_BACK,    0x0000, -0x0200
 end table
 
-private table DeathEggRobot_table12
-	6, 16, 1, -0x1000, -0x400, 4, -0x1000, -0x400, 0, -0x1000, -0x400, 3, -0xC00, -0x500, 2, -0xD00, -0x500, -2, -0x1400, -0x500, -3, -0x800, 0
+private table DeathEggRobot_walk_frame_2
+	6
+	16
+	OFFSET_LEG_FRONT,  -0x1000, -0x0400
+	OFFSET_FOOT_FRONT, -0x1000, -0x0400
+	OFFSET_DERMAIN,    -0x1000, -0x0400
+	OFFSET_HAND_FRONT, -0x0C00, -0x0500
+	OFFSET_ARM,        -0x0D00, -0x0500
+	OFFSET_HAND_BACK,  -0x1400, -0x0500
+	OFFSET_LEG_BACK,   -0x0800,  0x0000
 end table
 
-private table DeathEggRobot_table13
-	5, 16, 1, -0x800, 0x400, 4, -0x800, 0x400, 0, -0x800, 0x400, 3, -0x400, 768, 2, -0x500, 768, -2, -0xC00, 768
+private table DeathEggRobot_walk_frame_3
+	5
+	16
+	OFFSET_LEG_FRONT,  -0x0800,  0x0400
+	OFFSET_FOOT_FRONT, -0x0800,  0x0400
+	OFFSET_DERMAIN,    -0x0800,  0x0400
+	OFFSET_HAND_FRONT, -0x0400,  0x0300
+	OFFSET_ARM,        -0x0500,  0x0300
+	OFFSET_HAND_BACK,  -0x0C00,  0x0300
 end table
 
-private table DeathEggRobot_table14
-	6, 16, 1, -0x400, 0x1000, 4, -0x800, 0x1000, 0, 0, 0x800, 3, -0x800, 0xA00, 2, -0x600, 0xA00, -2, 0x800, 0xA00, -3, 0, 0x800
+private table DeathEggRobot_walk_frame_4
+	6
+	16
+	OFFSET_LEG_FRONT,  -0x0400, 0x1000
+	OFFSET_FOOT_FRONT, -0x0800, 0x1000
+	OFFSET_DERMAIN,     0x0000, 0x0800
+	OFFSET_HAND_FRONT, -0x0800, 0x0A00
+	OFFSET_ARM,        -0x0600, 0x0A00
+	OFFSET_HAND_BACK,   0x0800, 0x0A00
+	OFFSET_LEG_BACK,    0x0000, 0x0800
 end table
 
-private table DeathEggRobot_table15
-	6, 32, 1, -512, -512, 0, -0xC00, -0x400, 3, -0x1000, -768, 2, -0xF00, -768, -2, -0x800, -768, -3, -0x1400, -0x600, -1, -0x1800, -0x400
+private table DeathEggRobot_walk_frame_5
+	6
+	32
+	OFFSET_LEG_FRONT,  -0x0200, -0x0200
+	OFFSET_DERMAIN,    -0x0C00, -0x0400
+	OFFSET_HAND_FRONT, -0x1000, -0x0300
+	OFFSET_ARM,        -0x0F00, -0x0300
+	OFFSET_HAND_BACK,  -0x0800, -0x0300
+	OFFSET_LEG_BACK,   -0x1400, -0x0600
+	OFFSET_FOOT_BACK,  -0x1800, -0x0400
 end table
 
-private table DeathEggRobot_table16
-	4, 32, -3, -0x800, -0x400, -1, -0x800, -0x400, 3, -0x400, -256, 2, -768, -256, -2, 0x400, -256
+private table DeathEggRobot_walk_frame_6
+	4
+	32
+	OFFSET_LEG_BACK,   -0x0800, -0x0400
+	OFFSET_FOOT_BACK,  -0x0800, -0x0400
+	OFFSET_HAND_FRONT, -0x0400, -0x0100
+	OFFSET_ARM,        -0x0300, -0x0100
+	OFFSET_HAND_BACK,   0x0400, -0x0100
 end table
 
-private table DeathEggRobot_table17
-	6, 16, -3, -0x1000, -0x400, -1, -0x1000, -0x400, 0, -0x1000, -0x400, 3, -0x1400, -0x500, 2, -0x1300, -0x500, -2, -0xC00, -0x500, 1, -0x800, 0
+private table DeathEggRobot_walk_frame_7
+	6
+	16
+	OFFSET_LEG_BACK,   -0x1000, -0x0400
+	OFFSET_FOOT_BACK,  -0x1000, -0x0400
+	OFFSET_DERMAIN,    -0x1000, -0x0400
+	OFFSET_HAND_FRONT, -0x1400, -0x0500
+	OFFSET_ARM,        -0x1300, -0x0500
+	OFFSET_HAND_BACK,  -0x0C00, -0x0500
+	OFFSET_LEG_FRONT,  -0x0800,  0x0000
 end table
 
-private table DeathEggRobot_table18
-	5, 16, -3, -0x800, 0x400, -1, -0x800, 0x400, 0, -0x800, 0x400, 3, -0xC00, 768, 2, -0xB00, 768, -2, -0x400, 768
+private table DeathEggRobot_walk_frame_8
+	5
+	16
+	OFFSET_LEG_BACK,   -0x0800, 0x0400
+	OFFSET_FOOT_BACK,  -0x0800, 0x0400
+	OFFSET_DERMAIN,    -0x0800, 0x0400
+	OFFSET_HAND_FRONT, -0x0C00, 0x0300
+	OFFSET_ARM,        -0x0B00, 0x0300
+	OFFSET_HAND_BACK,  -0x0400, 0x0300
 end table
 
-private table DeathEggRobot_table19
-	6, 16, -3, -0x400, 0x1000, -1, -0x800, 0x1000, 0, 0, 0x800, 3, 0x800, 0xA00, 2, 0x600, 0xA00, -2, -0x800, 0xA00, 1, 0, 0x800
+private table DeathEggRobot_walk_frame_9
+	6
+	16
+	OFFSET_LEG_BACK,   -0x0400, 0x1000
+	OFFSET_FOOT_BACK,  -0x0800, 0x1000
+	OFFSET_DERMAIN,     0x0000, 0x0800
+	OFFSET_HAND_FRONT,  0x0800, 0x0A00
+	OFFSET_ARM,         0x0600, 0x0A00
+	OFFSET_HAND_BACK,  -0x0800, 0x0A00
+	OFFSET_LEG_FRONT,   0x0000, 0x0800
 end table
 
-private table DeathEggRobot_table20
-	6, 32, -3, -512, -512, 0, -0xC00, -0x400, 3, -0x800, -768, 2, -0x900, -768, -2, -0xF00, -768, 1, -0x1400, -0x600, 4, -0x1800, -0x400
+private table DeathEggRobot_walk_frame_10
+	6
+	32
+	OFFSET_LEG_BACK,   -0x0200, -0x0200
+	OFFSET_DERMAIN,    -0x0C00, -0x0400
+	OFFSET_HAND_FRONT, -0x0800, -0x0300
+	OFFSET_ARM,        -0x0900, -0x0300
+	OFFSET_HAND_BACK,  -0x0F00, -0x0300
+	OFFSET_LEG_FRONT,  -0x1400, -0x0600
+	OFFSET_FOOT_FRONT, -0x1800, -0x0400
 end table
 
-private table DeathEggRobot_table21
-	4, 32, 1, -0x800, -0x600, 4, -0x800, -0x400, 3, 0x400, -256, 2, 768, -256, -2, -0x400, -256
+private table DeathEggRobot_walk_frame_11
+	4
+	32
+	OFFSET_LEG_FRONT,  -0x0800, -0x0600
+	OFFSET_FOOT_FRONT, -0x0800, -0x0400
+	OFFSET_HAND_FRONT,  0x0400, -0x0100
+	OFFSET_ARM,         0x0300, -0x0100
+	OFFSET_HAND_BACK,  -0x0400, -0x0100
 end table
 
-private table DeathEggRobot_table22
-	6, 16, -3, 0, 0x800, -1, 0, 0x800, 0, 0, 0x800, 3, 0, 0x800, 2, 0, 0x800, -2, 0, 0x800, 1, 0, 0x800
+private table DeathEggRobot_walk_frame_12
+	6
+	16
+	OFFSET_LEG_BACK,    0x0000,  0x0800
+	OFFSET_FOOT_BACK,   0x0000,  0x0800
+	OFFSET_DERMAIN,     0x0000,  0x0800
+	OFFSET_HAND_FRONT,  0x0000,  0x0800
+	OFFSET_ARM,         0x0000,  0x0800
+	OFFSET_HAND_BACK,   0x0000,  0x0800
+	OFFSET_LEG_FRONT,   0x0000,  0x0800
 end table
 
-function DeathEggRobot_Function101
+function DeathEggRobot_restoreBodyParts
+	// Restores all the body parts back to their normal positions, used for cleanup quite often
+
 	temp7 = 0
-	GetTableValue(temp6, temp7, temp0)
+	GetTableValue(temp6, temp7, temp0) // Get tntry count
 	temp7++
 	while temp6 >= 0
-		GetTableValue(temp1, temp7, temp0)
+		GetTableValue(temp1, temp7, temp0) // Object entity pos offset
 		temp7++
 		arrayPos0 = object.entityPos
 		arrayPos0 += temp1
-		GetTableValue(temp1, temp7, temp0)
+
+		GetTableValue(temp1, temp7, temp0) // Object xpos offset
 		temp7++
-		GetTableValue(temp2, temp7, temp0)
+
+		GetTableValue(temp2, temp7, temp0) // Object ypos offset
 		temp7++
+
 		object[arrayPos0].xpos = object.xpos
 		if object.direction == FLIP_NONE
 			object[arrayPos0].xpos += temp1
 		else
 			object[arrayPos0].xpos -= temp1
 		end if
+
 		object[arrayPos0].ypos = object.ypos
 		object[arrayPos0].ypos += temp2
+
 		temp6--
 	loop
 end function
 
 
-function DeathEggRobot_Function102
-	temp7 = 1
-	while temp7 == 1
-		temp7 = 0
+function DeathEggRobot_checkAnimEX
+	temp7 = true
+	while temp7 == true
+		temp7 = false
 		temp0 &= 63
 		temp1 >>= 6
 		switch temp1
 		case 1
+			// Used when the legs are moving
 			if object.animationTimer == 0
 				object.frame++
 				PlaySfx(SfxName[Crusher], false)
@@ -217,33 +548,47 @@ function DeathEggRobot_Function102
 				temp1 = temp0
 				temp1 &= 192
 				if temp1 != 0
-					temp7 = 1
+					temp7 = true
 				end if
 			end if
 			break
+
 		case 2
-			temp4 = 1
+			// Flip flag
+			temp4 = true
 			break
+
 		case 3
+			// Stop the object from animating (for this frame, at least)
 			object.frame = 1
-			checkResult = 1
+			checkResult = true
 			break
+
 		end switch
 	loop
 end function
 
 
-function DeathEggRobot_Function103
+function DeathEggRobot_animateBody
+	// Precondition - when this function is called, temp6 is holding an animation table
+	// This table is, itself, holding another table, where that table being held also contains a long string of tables
+	// Far too many tables to wrap your head around, to say the least
+
+	// What this function itself does is move and animate the body
+
 	GetTableValue(temp5, 0, temp6)
+
 	GetTableValue(temp0, object.frame, temp6)
 	temp1 = temp0
-	temp4 = 0
+	temp4 = false
 	temp1 &= 192
-	checkResult = 0
+
+	checkResult = false
 	if temp0 != 0
-		CallFunction(DeathEggRobot_Function102)
+		CallFunction(DeathEggRobot_checkAnimEX)
 	end if
-	if checkResult == 0
+
+	if checkResult == false
 		GetTableValue(temp2, temp0, temp5)
 		temp7 = 0
 		GetTableValue(temp0, temp7, temp2)
@@ -255,6 +600,7 @@ function DeathEggRobot_Function103
 			object.animationTimer = 0
 			object.frame++
 		end if
+
 		while temp0 >= 0
 			GetTableValue(temp5, temp7, temp2)
 			temp7++
@@ -264,13 +610,13 @@ function DeathEggRobot_Function103
 			temp7++
 			temp1 <<= 4
 			if object.direction == FLIP_NONE
-				if temp4 == 0
+				if temp4 == false
 					object[arrayPos0].xpos += temp1
 				else
 					object[arrayPos0].xpos -= temp1
 				end if
 			else
-				if temp4 == 0
+				if temp4 == false
 					object[arrayPos0].xpos -= temp1
 				else
 					object[arrayPos0].xpos += temp1
@@ -279,7 +625,7 @@ function DeathEggRobot_Function103
 			GetTableValue(temp1, temp7, temp2)
 			temp7++
 			temp1 <<= 4
-			if temp4 == 0
+			if temp4 == false
 				object[arrayPos0].ypos += temp1
 			else
 				object[arrayPos0].ypos -= temp1
@@ -290,11 +636,17 @@ function DeathEggRobot_Function103
 end function
 
 
-function DeathEggRobot_Function104
+function DeathEggRobot_CreateBombs
 	arrayPos0 = object[-7].entityPos
-	arrayPos0 += object.value9
-	object.value9 += 2
-	object.value9 &= 3
+
+	// Offset the entity pos based on the last bombs used, in case there's more than one pair active
+	arrayPos0 += object.bombs
+
+	// Cpdate the value with a cap of 3, there should only ever be 4 bombs max active at one point 
+	object.bombs += 2
+	object.bombs &= 3
+
+	// Create bomb 1
 	object[arrayPos0].type = TypeName[DER Bomb]
 	object[arrayPos0].xpos = object.xpos
 	if object.direction == FLIP_NONE
@@ -307,9 +659,12 @@ function DeathEggRobot_Function104
 	object[arrayPos0].ypos = object.ypos
 	object[arrayPos0].ypos -= 0x140000
 	object[arrayPos0].yvel = -0x80000
-	object[arrayPos0].value1 = object[arrayPos0].ypos
+	DERBomb[arrayPos0].originPos.y = object[arrayPos0].ypos
 	object[arrayPos0].priority = PRIORITY_ACTIVE
+
 	arrayPos0++
+
+	// And now create bomb 2
 	object[arrayPos0].type = TypeName[DER Bomb]
 	object[arrayPos0].xpos = object.xpos
 	if object.direction == FLIP_NONE
@@ -322,175 +677,218 @@ function DeathEggRobot_Function104
 	object[arrayPos0].ypos = object.ypos
 	object[arrayPos0].ypos -= 0x140000
 	object[arrayPos0].yvel = -0xA0000
-	object[arrayPos0].value1 = object[arrayPos0].ypos
+	DERBomb[arrayPos0].originPos.y = object[arrayPos0].ypos
 	object[arrayPos0].priority = PRIORITY_ACTIVE
 end function
 
 
 event ObjectMain
 	switch object.state
-	case 0
+	case DERMAIN_INIT
 		temp0 = stage.curYBoundary2
 		temp0 -= screen.ysize
 		stage.newYBoundary1 = temp0
+
 		temp0 = object.xpos
 		temp0 >>= 16
 		temp0 += 68
 		stage.newXBoundary2 = temp0
-		temp0 -= 512
+
+		temp0 -= 0x200
 		stage.newXBoundary1 = temp0
 		object.priority = PRIORITY_ACTIVE
+
+		// Setup all the body parts
+		// - Order is important, as it also controls the order the sprites should be drawn
+		// - Back-most appendages are behind this object in entityPos, frontwise are, well, in-front in terms of both draw order and entityPos too
+
 		object[+5].type = TypeName[DER Shoulder]
 		object[+5].priority = PRIORITY_ACTIVE
+
+		// Front foot
 		object[+4].type = TypeName[DER Foot]
 		object[+4].priority = PRIORITY_ACTIVE
+
+		// Front hand
 		object[+3].type = TypeName[DER Hand]
 		object[+3].priority = PRIORITY_ACTIVE
+
 		object[+2].type = TypeName[DER Arm]
 		object[+2].priority = PRIORITY_ACTIVE
+
+		// Front leg
 		object[+1].type = TypeName[DER Leg]
 		object[+1].priority = PRIORITY_ACTIVE
+
+		// Back foot
 		object[-1].type = TypeName[DER Foot]
 		object[-1].priority = PRIORITY_ACTIVE
+
+		// Back hand
 		object[-2].type = TypeName[DER Hand]
 		object[-2].priority = PRIORITY_ACTIVE
+
+		// Back leg
 		object[-3].type = TypeName[DER Leg]
 		object[-3].priority = PRIORITY_ACTIVE
-		object.value5 = object.xpos
-		object.value5 -= 0xC00000
-		object.value6 = 12
-		temp0 = DeathEggRobot_table0
-		CallFunction(DeathEggRobot_Function101)
+
+		object.boundsM = object.xpos
+		object.boundsM -= 0xC00000
+
+		object.health = 12
+		temp0 = DeathEggRobot_bodyPartsOrigin
+		CallFunction(DeathEggRobot_restoreBodyParts)
 		object.frame = 1
-		object.value10 = 5
-		SetMusicTrack("FinalBoss.ogg", 4, 1)
-		object.state = 1
+		object.flameSprite = 5
+		SetMusicTrack("FinalBoss.ogg", 4, true)
+		object.state = DERMAIN_AWAITEGGMAN
 		break
-	case 1
+
+	case DERMAIN_AWAITEGGMAN
 		break
-	case 2
-		object.value2 -= 0x10000
-		if object.value2 <= -0x240000
-			object.state = 3
+
+	case DERMAIN_RAISEHEAD
+		object.headOffset.y -= 0x10000
+		if object.headOffset.y <= -0x240000
+			object.state = DERMAIN_CLOSEHEAD
 		end if
 		break
-	case 3
-		object.value1 -= 0x7800
+
+	case DERMAIN_CLOSEHEAD
+		object.headOffset.x -= 0x7800
 		object.rotation -= 4
 		if object.rotation <= 0
-			object.state = 4
+			object.state = DERMAIN_SUBPAUSE
 		end if
 		break
-	case 4
-		object.value0++
-		if object.value0 == 112
-			vs.bossAttack = 0
+
+	case DERMAIN_SUBPAUSE
+		object.timer++
+		if object.timer == 112
+			vs.bossAttack = false
 			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
 			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
 		end if
-		if object.value0 == 180
-			object.value0 = 0
+
+		if object.timer == 180
+			object.timer = 0
 			PlaySfx(SfxName[Large Wall], false)
-			object.value10 = 5
-			object.value12 = 4
-			object.value13 = 1
-			object.state = 5
+			object.flameSprite = 5
+			object.flameAnimSpeed = 4
+			object.flameState = 1
+			object.state = DERMAIN_RAISE
 		end if
 		break
-	case 5
+
+	case DERMAIN_RAISE
 		object.ypos -= 0x10000
-		object.value0++
-		if object.value0 == 30
+		object.timer++
+		if object.timer == 30
 			PlaySfx(SfxName[Large Wall], false)
 		end if
-		if object.value0 == 120
-			object.value0 = 0
-			object[+5].state = 2
-			object[+4].state = 2
-			object[+3].state = 2
-			object[+2].state = 2
-			object[+1].state = 2
-			object[-1].state = 2
-			object[-2].state = 2
-			object[-3].state = 2
-			object.value13 = 2
-			object.state = 6
+
+		if object.timer == 120
+			object.timer = 0
+
+			// Tell the rest of the body to get ready
+			object[+5].state = BODYPART_ACTIVE
+			object[+4].state = BODYPART_ACTIVE
+			object[+3].state = BODYPART_ACTIVE
+			object[+2].state = BODYPART_ACTIVE
+			object[+1].state = BODYPART_ACTIVE
+			object[-1].state = BODYPART_ACTIVE
+			object[-2].state = BODYPART_ACTIVE
+			object[-3].state = BODYPART_ACTIVE
+
+			object.flameState = 2
+			object.state = DERMAIN_READYPAUSE
 		end if
-		temp0 = DeathEggRobot_table0
-		CallFunction(DeathEggRobot_Function101)
+
+		temp0 = DeathEggRobot_bodyPartsOrigin
+		CallFunction(DeathEggRobot_restoreBodyParts)
 		break
-	case 6
-		object.value0++
-		if object.value0 == 32
-			object.value0 = 0
-			object.state = 7
+
+	case DERMAIN_READYPAUSE
+		object.timer++
+		if object.timer == 32
+			object.timer = 0
+			object.state = DERMAIN_NEXTPHASE
 		end if
 		break
-	case 7
-		object.value0 = 32
-		object.value4 = 0
-		GetTableValue(object.state, object.value3, DeathEggRobot_table55)
-		if object.state == 9
-			object.value10 = 5
-			object.value12 = 16
-			object.value13 = 1
+
+	case DERMAIN_NEXTPHASE
+		object.timer = 32
+		object.subState = 0
+		GetTableValue(object.state, object.movementCycle, DeathEggRobot_phaseOrder)
+		if object.state == DERMAIN_ASCEND
+			object.flameSprite = 5
+			object.flameAnimSpeed = 16
+			object.flameState = 1
 		end if
-		object.value3++
-		object.value3 &= 3
+		object.movementCycle++
+		object.movementCycle &= 3
 		break
-	case 8
-		switch object.value4
-		case 0
-			object.value0--
-			if object.value0 < 0
-				object.value4 = 1
+
+	case DERMAIN_WALKING
+		switch object.subState
+		case WALKING_INIT
+			object.timer--
+			if object.timer < 0
+				object.subState = WALKING_WALKAHEAD
 			end if
 			break
-		case 1
-			temp6 = DeathEggRobot_table50
-			CallFunction(DeathEggRobot_Function103)
-			if checkResult == 1
-				object.value0 = 64
-				object.value4 = 2
+
+		case WALKING_WALKAHEAD
+			temp6 = DeathEggRobot_anim_stepAhead
+			CallFunction(DeathEggRobot_animateBody)
+			if checkResult == true
+				object.timer = 64
+				object.subState = WALKING_PAUSE
 			end if
 			break
-		case 2
-			object.value0--
-			if object.value0 < 0
-				object.value4 = 3
+
+		case WALKING_PAUSE
+			object.timer--
+			if object.timer < 0
+				object.subState = WALKING_BACKSTEP
 			end if
 			break
-		case 3
-			temp6 = DeathEggRobot_table51
-			CallFunction(DeathEggRobot_Function103)
-			if checkResult == 1
-				object.value0 = 64
-				object.state = 7
+
+		case WALKING_BACKSTEP
+			temp6 = DeathEggRobot_anim_stepBack
+			CallFunction(DeathEggRobot_animateBody)
+			if checkResult == true
+				object.timer = 64
+				object.state = DERMAIN_NEXTPHASE
 			end if
 			break
+
 		end switch
 		break
-	case 9
-		switch object.value4
-		case 0
-			object.value0--
-			if object.value0 < 0
-				object.value4 = 1
+
+	case DERMAIN_ASCEND
+		switch object.subState
+		case ASCEND_INIT
+			object.timer--
+			if object.timer < 0
+				object.subState = ASCEND_JUMP
 			end if
 			break
-		case 1
-			temp6 = DeathEggRobot_table49
-			CallFunction(DeathEggRobot_Function103)
-			if checkResult == 1
-				object.value0 = 128
+
+		case ASCEND_JUMP
+			temp6 = DeathEggRobot_anim_jump
+			CallFunction(DeathEggRobot_animateBody)
+			if checkResult == true
+				object.timer = 128
 				PlaySfx(SfxName[Thruster], false)
-				object.value4 = 2
+				object.subState = ASCEND_RISE
 			end if
 			break
-		case 2
-			object.value0--
-			if object.value0 < 0
-				object.value4 = 3
+
+		case ASCEND_RISE
+			object.timer--
+			if object.timer < 0
+				object.subState = ASCEND_CREATETARGET
 			else
 				object.ypos -= 0x20000
 				temp0 = oscillation
@@ -498,27 +896,31 @@ event ObjectMain
 				if temp0 == 0
 					PlaySfx(SfxName[Thruster], false)
 				end if
-				temp0 = DeathEggRobot_table0
-				CallFunction(DeathEggRobot_Function101)
+				temp0 = DeathEggRobot_bodyPartsOrigin
+				CallFunction(DeathEggRobot_restoreBodyParts)
 			end if
 			break
-		case 3
-			object.value0--
-			if object.value0 < 0
-				object.value0 = 0
-				object.value4 = 4
+
+		case ASCEND_CREATETARGET
+			// Because the timer isn't reset between this and the previous substate, this state only lasts for a single frame
+			object.timer--
+			if object.timer < 0
+				object.timer = 0
+				object.subState = ASCEND_OFFSCREEN
 				object[+6].type = TypeName[DER Target]
-				object[+6].xpos = object[0].xpos
-				object[+6].ypos = object[0].ypos
+				object[+6].xpos = object[SLOT_PLAYER1].xpos
+				object[+6].ypos = object[SLOT_PLAYER1].ypos
 			end if
 			break
-		case 4
-			if object.value0 != 0
-				if object.xpos < object.value5
+
+		case ASCEND_OFFSCREEN
+			if object.timer != 0
+				if object.xpos < object.boundsM
 					object.direction = FLIP_X
 				else
 					object.direction = FLIP_NONE
 				end if
+
 				object[+5].direction = object.direction
 				object[+4].direction = object.direction
 				object[+3].direction = object.direction
@@ -527,148 +929,166 @@ event ObjectMain
 				object[-1].direction = object.direction
 				object[-2].direction = object.direction
 				object[-3].direction = object.direction
-				object.value0 = 32
-				temp0 = DeathEggRobot_table0
-				CallFunction(DeathEggRobot_Function101)
-				object.value4 = 5
+
+				object.timer = 32
+				temp0 = DeathEggRobot_bodyPartsOrigin
+				CallFunction(DeathEggRobot_restoreBodyParts)
+				object.subState = ASCEND_FALL
 			end if
 			break
-		case 5
-			object.value0--
-			if object.value0 < 0
-				object.value0 = 64
+
+		case ASCEND_FALL
+			object.timer--
+			if object.timer < 0
+				object.timer = 64
 				PlaySfx(SfxName[Ledge Break], false)
-				object.value14 = 64
-				object.value13 = 2
-				object.value4 = 6
+				object.screenShake = 64
+				object.flameState = 2
+				object.subState = ASCEND_LAND
 			else
 				object.ypos += 0x80000
-				temp0 = DeathEggRobot_table0
-				CallFunction(DeathEggRobot_Function101)
+				temp0 = DeathEggRobot_bodyPartsOrigin
+				CallFunction(DeathEggRobot_restoreBodyParts)
 			end if
 			break
-		case 6
-			temp6 = DeathEggRobot_table48
-			CallFunction(DeathEggRobot_Function103)
-			if checkResult == 1
-				temp0 = DeathEggRobot_table0
-				CallFunction(DeathEggRobot_Function101)
-				temp0 = 0
+
+		case ASCEND_LAND
+			temp6 = DeathEggRobot_anim_land
+			CallFunction(DeathEggRobot_animateBody)
+			if checkResult == true
+				temp0 = DeathEggRobot_bodyPartsOrigin
+				CallFunction(DeathEggRobot_restoreBodyParts)
+
+				temp0 = false
+
 				if object.direction == FLIP_NONE
-					if object[0].xpos > object.xpos
-						temp0 = 1
+					if object[SLOT_PLAYER1].xpos > object.xpos
+						temp0 = true
 					end if
 				else
-					if object[0].xpos < object.xpos
-						temp0 = 1
+					if object[SLOT_PLAYER1].xpos < object.xpos
+						temp0 = true
 					end if
 				end if
-				if temp0 == 0
-					object.state = 7
+
+				if temp0 == false
+					object.state = DERMAIN_NEXTPHASE
 				else
-					object.value0 = 96
-					object.value4 = 7
-					CallFunction(DeathEggRobot_Function104)
+					object.timer = 96
+					object.subState = ASCEND_BOMBPAUSE
+					CallFunction(DeathEggRobot_CreateBombs)
 				end if
 			end if
 			break
-		case 7
-			object.value0--
-			if object.value0 < 0
-				object.state = 7
+
+		case ASCEND_BOMBPAUSE
+			object.timer--
+			if object.timer < 0
+				object.state = DERMAIN_NEXTPHASE
 			end if
 			break
+
 		end switch
 		break
-	case 10
-		switch object.value4
-		case 0
-			object.value0--
-			if object.value0 < 0
-				object.value4 = 1
+
+	case DERMAIN_ARMSHOOT
+		switch object.subState
+		case ARMSHOOT_INIT
+			object.timer--
+			if object.timer < 0
+				object.subState = ARMSHOOT_BENDDOWN
 			end if
 			break
-		case 1
-			temp6 = DeathEggRobot_table46
-			CallFunction(DeathEggRobot_Function103)
-			if checkResult == 1
-				temp0 = 0
+
+		case ARMSHOOT_BENDDOWN
+			temp6 = DeathEggRobot_anim_bendDown
+			CallFunction(DeathEggRobot_animateBody)
+			if checkResult == true
+				temp0 = false
 				if object.direction == FLIP_NONE
-					if object[0].xpos > object.xpos
-						temp0 = 1
+					if object[SLOT_PLAYER1].xpos > object.xpos
+						temp0 = true
 					end if
 				else
-					if object[0].xpos < object.xpos
-						temp0 = 1
+					if object[SLOT_PLAYER1].xpos < object.xpos
+						temp0 = true
 					end if
 				end if
-				if temp0 == 0
-					object.value0 = 64
-					object[+3].state = 3
-					object[+3].value0 = 16
-					object[+3].value1 = object[+3].ypos
-					object.value4 = 2
+
+				if temp0 == false
+					object.timer = 64
+					object[+3].state = DERHAND_FIRE
+					DERHand[+3].timer = 16
+					DERHand[+3].originPos.y = object[+3].ypos
+					object.subState = ARMSHOOT_LARMSHOT
 				else
-					object.value0 = 32
-					object.value4 = 4
-					CallFunction(DeathEggRobot_Function104)
+					object.timer = 32
+					object.subState = ARMSHOOT_RARMSHOT
+					CallFunction(DeathEggRobot_CreateBombs)
 				end if
 			end if
 			break
-		case 2
-			object.value0--
-			if object.value0 < 0
-				object.value4 = 3
+
+		case ARMSHOOT_LARMSHOT
+			object.timer--
+			if object.timer < 0
+				object.subState = ARMSHOOT_SHOOTRARM
 			end if
 			break
-		case 3
-			object.value0--
-			if object.value0 < 0
-				object.value0 = 64
-				object[-2].state = 3
-				object[-2].value0 = 16
-				object[-2].value1 = object[-2].ypos
-				object.value4 = 4
+
+		case ARMSHOOT_SHOOTRARM
+			object.timer--
+			if object.timer < 0
+				object.timer = 64
+				object[-2].state = DERHAND_FIRE
+				DERHand[-2].timer = 16
+				DERHand[-2].originPos.y = object[-2].ypos
+				object.subState = ARMSHOOT_RARMSHOT
 			end if
 			break
-		case 4
-			object.value0--
-			if object.value0 < 0
-				object.value4 = 5
+
+		case ARMSHOOT_RARMSHOT
+			object.timer--
+			if object.timer < 0
+				object.subState = ARMSHOOT_GETUP
 			end if
 			break
-		case 5
-			temp6 = DeathEggRobot_table47
-			CallFunction(DeathEggRobot_Function103)
-			if checkResult == 1
-				object.state = 7
+
+		case ARMSHOOT_GETUP
+			temp6 = DeathEggRobot_anim_getUp
+			CallFunction(DeathEggRobot_animateBody)
+			if checkResult == true
+				object.state = DERMAIN_NEXTPHASE
 			end if
 			break
+
 		end switch
 		break
-	case 11
-		object.value0++
-		if object.value0 == 120
-			object.value0 = 0
-			object.value8 = 0
+
+	case DERMAIN_EXPLODING
+		object.timer++
+		if object.timer == 120
+			object.timer = 0
+			object.exploding = false
 			object.state++
-			options.touchControls = 0
-			object[0].controlMode = -1
-			object[0].jumpPress = 0
-			object[0].jumpHold = 0
-			object[0].up = 0
-			object[0].down = 0
-			object[0].left = 0
-			object[0].right = 1
+			options.touchControls = false
+			object[SLOT_PLAYER1].controlMode = -1
+			object[SLOT_PLAYER1].jumpPress   = false
+			object[SLOT_PLAYER1].jumpHold    = false
+			object[SLOT_PLAYER1].up          = false
+			object[SLOT_PLAYER1].down        = false
+			object[SLOT_PLAYER1].left        = false
+			object[SLOT_PLAYER1].right       = true
 			stage.deathBoundary = 0x7FFF0000
 			temp0 = tileLayer[0].xsize
 			temp0 <<= 7
 			stage.newXBoundary2 = temp0
 		end if
+
 		object.ypos += object.yvel
 		object.yvel += 0x3800
 		ObjectTileCollision(CSIDE_FLOOR, 0, 36, 0)
-		if checkResult == 1
+		if checkResult == true
 			object.yvel >>= 2
 			FlipSign(object.yvel)
 			if object.yvel > -0x10000
@@ -676,42 +1096,47 @@ event ObjectMain
 			end if
 		end if
 		break
-	case 12
-		object.value0++
-		if object.value0 == 30
-			object.value14 = 0xFFFF
+
+	case DERMAIN_SCREENSHAKE
+		object.timer++
+		if object.timer == 30
+			object.screenShake = 0xFFFF
 		end if
-		temp0 = object.value14
+
+		temp0 = object.screenShake
 		temp0 %= 40
 		if temp0 == 8
 			PlaySfx(SfxName[Rumble], false)
 		end if
-		object[0].right = 1
-		if object[0].xpos > object[+7].xpos
-			object.value0 = -15
-			object.state = 13
-			if object.value14 == 0
-				object.value14 = 0xFFFF
+
+		object[SLOT_PLAYER1].right = true
+		if object[SLOT_PLAYER1].xpos > object[+7].xpos
+			object.timer = -15
+			object.state = DERMAIN_CORRDIOREXPLODE
+			if object.screenShake == 0
+				object.screenShake = 0xFFFF
 			end if
 		end if
-		temp0 = object.value15
+
+		temp0 = object.checkpoint
 		arrayPos0 = object[+8].entityPos
-		arrayPos0 += object.value15
+		arrayPos0 += object.checkpoint
 		temp1 = object[arrayPos0].xpos
-		if object[0].xpos > temp1
-			object.value15++
+		if object[SLOT_PLAYER1].xpos > temp1
+			object.checkpoint++
 			temp0++
 			arrayPos0++
 		end if
 		
 		while temp0 < 7
-			object[arrayPos0].state = 1
+			oneWayDoor[arrayPos0].isOpen = true
 			arrayPos0++
 			temp0++
 		end if
 		break
-	case 13
-		temp0 = object.value14
+
+	case DERMAIN_CORRDIOREXPLODE
+		temp0 = object.screenShake
 		temp0 %= 40
 		if temp0 == 8
 			PlaySfx(SfxName[Rumble], false)
@@ -719,12 +1144,12 @@ event ObjectMain
 		Rand(temp0, 96)
 		temp0 -= 48
 		temp0 <<= 16
-		temp0 += object[0].xpos
+		temp0 += object[SLOT_PLAYER1].xpos
 		temp0 -= 0x400000
 		Rand(temp1, 96)
 		temp1 -= 48
 		temp1 <<= 16
-		temp1 += object[0].ypos
+		temp1 += object[SLOT_PLAYER1].ypos
 		CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
 		object[tempObjectPos].drawOrder = 5
 		temp0 = oscillation
@@ -732,9 +1157,10 @@ event ObjectMain
 		if temp0 == 0
 			PlaySfx(SfxName[Explosion], false)
 		end if
-		object.value0++
+		object.timer++
+
 		if object.propertyValue == 0
-			switch object.value0
+			switch object.timer
 			case 120
 			case 180
 			case 240
@@ -742,46 +1168,53 @@ event ObjectMain
 				break
 
 			case 270
-				object.state = 14
+				object.state = DERMAIN_FADEOUT
 				break
+
 			end switch
 		else
-			if object.value0 > 140
+			if object.timer > 140
 				PlaySfx(SfxName[Large Explosion], false)
 				ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 			end if
 		end if
-		object[0].right = 1
-		temp0 = object.value15
+
+		object[SLOT_PLAYER1].right = true
+
+		temp0 = object.checkpoint
 		arrayPos0 = object[+8].entityPos
-		arrayPos0 += object.value15
+		arrayPos0 += object.checkpoint
 		temp1 = object[arrayPos0].xpos
-		if object[0].xpos > temp1
-			object.value15++
+		if object[SLOT_PLAYER1].xpos > temp1
+			object.checkpoint++
 			temp0++
 			arrayPos0++
 		end if
 
 		while temp0 < 7
-			object[arrayPos0].state = 1
+			oneWayDoor[arrayPos0].isOpen = true
 			arrayPos0++
 			temp0++
 		end if
-	case 14
-		if object.value0 >= 120
+		//[Fallthrough]
+	case DERMAIN_FADEOUT
+		if object.timer >= 120
 			music.volume--
-			object.value16 += 2
+			object.fadeValue += 2
+
 			if object.propertyValue == 0
-				SetScreenFade(255, 255, 255, object.value16)
+				SetScreenFade(255, 255, 255, object.fadeValue)
 			end if
-			if object.value16 >= 768
+
+			if object.fadeValue >= 0x300
 				if stage.debugMode == false
-					if options.stageSelectFlag == 0
+					if options.stageSelectFlag == false
 						CallNativeFunction2(SetLeaderboard, 22, player.score)
 					end if
 				end if
 
 				if options.gameMode == MODE_NORMAL
+					// Mark the current save as a completed one
 					arrayPos1 = options.saveSlot
 					arrayPos1 <<= 3
 					arrayPos1 += 4
@@ -789,64 +1222,89 @@ event ObjectMain
 					WriteSaveRAM()
 				end if
 
+				// Start the Ending proper
 				stage.activeList = PRESENTATION_STAGE
-				stage.listPos = 1
+				stage.listPos = StageName[P - ENDING]
 				LoadStage()
 			end if
 		end if
 		break
+
 	end switch
 
 	if object.state > 5
-		if object.value6 != 0
-			if object.value7 > 0
-				object.value7--
-				GetBit(temp0, object.value7, 0)
-				if temp0 == 1
+		if object.health != 0
+			if object.invincibilityTimer > 0
+				object.invincibilityTimer--
+				GetBit(temp0, object.invincibilityTimer, 0)
+				if temp0 == true
 					SetPaletteEntry(0, 192, 0xE0E0E0)
 				else
-					SetPaletteEntry(0, 192, 0)
+					SetPaletteEntry(0, 192, 0x000000)
 				end if
 			end if
+
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-				if object.value7 == 0
-					BoxCollisionTest(C_TOUCH, object.entityPos, -32, -60, 32, 32, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-					if checkResult == 1
+				if object.invincibilityTimer == 0
+					BoxCollisionTest(C_TOUCH, object.entityPos, -32, -60, 32, 32, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+
+					if checkResult == true
 						CallFunction(PlayerObject_CheckHit)
-						if checkResult == 1
-							object.value6--
-							if object.value6 == 0
+
+						if checkResult == true
+							object.health--
+
+							if object.health == 0
 								player.score += 1000
-								object.value8 = 1
-								object.state = 11
-								object.value0 = 0
-								object[+5].state = 1
+								object.exploding = true
+								object.state = DERMAIN_EXPLODING
+								object.timer = 0
+
+								// Make all the body parts fall off
+
+								// Shoulder
+								object[+5].state = BODYPART_DESTROYED
 								object[+5].xvel = 0x20000
 								object[+5].yvel = -0x40000
-								object[+4].state = 1
+
+								// Front foot
+								object[+4].state = BODYPART_DESTROYED
 								object[+4].xvel = -0x10000
 								object[+4].yvel = -0x10000
-								object[+3].state = 1
+
+								// Front hand
+								object[+3].state = BODYPART_DESTROYED
 								object[+3].xvel = 0x30000
 								object[+3].yvel = -0x30000
-								object[+2].state = 1
+
+								// Front arm
+								object[+2].state = BODYPART_DESTROYED
 								object[+2].xvel = -0x10000
 								object[+2].yvel = -0x40000
-								object[+1].state = 1
+
+								// Front leg
+								object[+1].state = BODYPART_DESTROYED
 								object[+1].xvel = 0x18000
 								object[+1].yvel = -0x20000
-								object[-1].state = 1
+
+								// Back foot
+								object[-1].state = BODYPART_DESTROYED
 								object[-1].xvel = -0x20000
 								object[-1].yvel = -0x30000
-								object[-2].state = 1
+
+								// Back hand
+								object[-2].state = BODYPART_DESTROYED
 								object[-2].xvel = 0
 								object[-2].yvel = -0x40000
-								object[-3].state = 1
+
+								// Back leg
+								object[-3].state = BODYPART_DESTROYED
 								object[-3].xvel = 0x10000
 								object[-3].yvel = -0x30000
-								object.value13 = 3
+
+								object.flameState = 3
 							else
-								object.value7 = 60
+								object.invincibilityTimer = 60
 								PlaySfx(SfxName[Boss Hit], false)
 							end if
 						end if
@@ -856,7 +1314,8 @@ event ObjectMain
 						else
 							BoxCollisionTest(C_TOUCH, object.entityPos, -64, 16, -48, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 						end if
-						if checkResult == 1
+
+						if checkResult == true
 							CallFunction(PlayerObject_FireHit)
 						end if
 					end if
@@ -864,7 +1323,8 @@ event ObjectMain
 			next
 		end if
 	end if
-	if object.state <= 11
+
+	if object.state <= DERMAIN_EXPLODING
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = object[currentPlayer].collisionRight
 			temp0 <<= 16
@@ -881,7 +1341,8 @@ event ObjectMain
 			end if
 		next
 	end if
-	if object.value8 == 1
+
+	if object.exploding == true
 		temp0 = oscillation
 		temp0 &= 7
 		if temp0 == 0
@@ -898,56 +1359,62 @@ event ObjectMain
 			PlaySfx(SfxName[Explosion], false)
 		end if
 	end if
-	if object.value14 > 0
-		object.value14--
-		temp0 = object.value14
+
+	if object.screenShake > 0
+		object.screenShake--
+		temp0 = object.screenShake
 		temp0 &= 7
 		if temp0 == 0
 			screen.shakeX = 1
 		end if
-		temp0 = object.value14
+		temp0 = object.screenShake
 		temp0 &= 3
 		if temp0 == 0
 			screen.shakeY = 2
 		end if
 	end if
-	switch object.value13
+
+	switch object.flameState
 	case 0
-		object.value10 -= 4
-		object.value10 ^= 1
-		object.value10 += 4
+		object.flameSprite -= 4
+		object.flameSprite ^= 1
+		object.flameSprite += 4
 		break
+
 	case 1
-		object.value11 += 2
-		if object.value11 >= object.value12
-			object.value11 = 0
-			object.value10 -= 5
-			object.value10 ^= 1
-			object.value10 += 5
-			if object.value12 > 4
-				object.value12--
+		object.flameTimer += 2
+		if object.flameTimer >= object.flameAnimSpeed
+			object.flameTimer = 0
+			object.flameSprite -= 5
+			object.flameSprite ^= 1
+			object.flameSprite += 5
+			if object.flameAnimSpeed > 4
+				object.flameAnimSpeed--
 			end if
 		end if
 		break
+
 	case 2
-		object.value11 += 2
-		if object.value11 >= object.value12
-			object.value11 = 0
-			object.value10 -= 5
-			object.value10 ^= 1
-			object.value10 += 5
-			if object.value12 < 16
-				object.value12++
-				if object.value12 == 16
-					object.value10 = 5
-					object.value13 = 0
+		object.flameTimer += 2
+		if object.flameTimer >= object.flameAnimSpeed
+			object.flameTimer = 0
+			object.flameSprite -= 5
+			object.flameSprite ^= 1
+			object.flameSprite += 5
+			if object.flameAnimSpeed < 16
+				object.flameAnimSpeed++
+				if object.flameAnimSpeed == 16
+					object.flameSprite = 5
+					object.flameState = 0
 				end if
 			end if
 		end if
 		break
+
 	case 3
-		object.value10 = 4
+		object.flameSprite = 4
 		break
+
 	end switch
 end event
 
@@ -955,27 +1422,29 @@ end event
 event ObjectDraw
 	temp0 = object.xpos
 	if object.direction == FLIP_NONE
-		temp0 += object.value1
+		temp0 += object.headOffset.x
 	else
-		temp0 -= object.value1
+		temp0 -= object.headOffset.x
 	end if
 	temp1 = object.ypos
-	temp1 += object.value2
+	temp1 += object.headOffset.y
 	DrawSpriteFX(2, FX_ROTATE, temp0, temp1)
 	DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
-	DrawSpriteFX(object.value10, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(object.flameSprite, FX_FLIP, object.xpos, object.ypos)
 end event
 
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone12")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("DEZ/Objects.gif")
 		SpriteFrame(12, -16, 23, 32, 487, 150)
 		SpriteFrame(-20, -13, 54, 29, 430, 125)
 		SpriteFrame(-32, -24, 71, 24, 414, 158)
 		SpriteFrame(-44, -36, 112, 72, 399, 183)
 		SpriteFrame(0, 0, 1, 1, 495, 106)
+
+		// FLame sprites
 		SpriteFrame(48, 12, 16, 16, 495, 108)
 		SpriteFrame(48, 12, 16, 24, 495, 83)
 	else
@@ -988,56 +1457,88 @@ event ObjectStartup
 		SpriteFrame(48, 12, 16, 16, 1007, 108)
 		SpriteFrame(48, 12, 16, 24, 1007, 83)
 	end if
+
 	foreach (TypeName[Death Egg Robot], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].rotation = 128
-		object[arrayPos0].value1 = 0xB0000
-		object[arrayPos0].value2 = -0x40000
+		object[arrayPos0].headOffset.x = 0xB0000
+		object[arrayPos0].headOffset.y = -0x40000
 	next
-	SetTableValue(DeathEggRobot_table52, 0, DeathEggRobot_table46)
+
+	SetTableValue(DeathEggRobot_anim_sub_bend, 0, DeathEggRobot_anim_bendDown)
 	
-	SetTableValue(DeathEggRobot_table52, 0, DeathEggRobot_table47)
+	SetTableValue(DeathEggRobot_anim_sub_bend, 0, DeathEggRobot_anim_getUp)
 	
-	SetTableValue(DeathEggRobot_table52, 0, DeathEggRobot_table48)
+	SetTableValue(DeathEggRobot_anim_sub_bend, 0, DeathEggRobot_anim_land)
 	
-	SetTableValue(DeathEggRobot_table53, 0, DeathEggRobot_table49)
+	SetTableValue(DeathEggRobot_anim_sub_jump, 0, DeathEggRobot_anim_jump)
 	
-	SetTableValue(DeathEggRobot_table54, 0, DeathEggRobot_table50)
+	SetTableValue(DeathEggRobot_anim_sub_walk, 0, DeathEggRobot_anim_stepAhead)
 	
-	SetTableValue(DeathEggRobot_table54, 0, DeathEggRobot_table51)
+	SetTableValue(DeathEggRobot_anim_sub_walk, 0, DeathEggRobot_anim_stepBack)
 	
-	SetTableValue(DeathEggRobot_table1, 0, DeathEggRobot_table52)
-	SetTableValue(DeathEggRobot_table2, 1, DeathEggRobot_table52)
-	SetTableValue(DeathEggRobot_table3, 2, DeathEggRobot_table52)
-	SetTableValue(DeathEggRobot_table4, 3, DeathEggRobot_table52)
-	SetTableValue(DeathEggRobot_table60, 4, DeathEggRobot_table52)
-	SetTableValue(DeathEggRobot_table5, 5, DeathEggRobot_table52)
-	SetTableValue(DeathEggRobot_table6, 6, DeathEggRobot_table52)
-	SetTableValue(DeathEggRobot_table7, 7, DeathEggRobot_table52)
-	SetTableValue(DeathEggRobot_table8, 8, DeathEggRobot_table52)
+	SetTableValue(DeathEggRobot_bend_frame_1, 0, DeathEggRobot_anim_sub_bend)
+	SetTableValue(DeathEggRobot_bend_frame_2, 1, DeathEggRobot_anim_sub_bend)
+	SetTableValue(DeathEggRobot_bend_frame_3, 2, DeathEggRobot_anim_sub_bend)
+	SetTableValue(DeathEggRobot_bend_frame_4, 3, DeathEggRobot_anim_sub_bend)
+	SetTableValue(DeathEggRobot_bend_frame_5, 4, DeathEggRobot_anim_sub_bend)
+	SetTableValue(DeathEggRobot_bend_frame_6, 5, DeathEggRobot_anim_sub_bend)
+	SetTableValue(DeathEggRobot_bend_frame_7, 6, DeathEggRobot_anim_sub_bend)
+	SetTableValue(DeathEggRobot_bend_frame_8, 7, DeathEggRobot_anim_sub_bend)
+	SetTableValue(DeathEggRobot_bend_frame_9, 8, DeathEggRobot_anim_sub_bend)
 	
-	SetTableValue(DeathEggRobot_table9, 0, DeathEggRobot_table53)
-	SetTableValue(DeathEggRobot_table56, 1, DeathEggRobot_table53)
-	SetTableValue(DeathEggRobot_table10, 2, DeathEggRobot_table53)
+	SetTableValue(DeathEggRobot_jump_frame_1, 0, DeathEggRobot_anim_sub_jump)
+	SetTableValue(DeathEggRobot_jump_frame_2, 1, DeathEggRobot_anim_sub_jump)
+	SetTableValue(DeathEggRobot_jump_frame_3, 2, DeathEggRobot_anim_sub_jump)
 	
-	SetTableValue(DeathEggRobot_table11, 0, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table12, 1, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table13, 2, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table14, 3, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table15, 4, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table16, 5, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table17, 6, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table18, 7, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table19, 8, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table20, 9, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table21, 10, DeathEggRobot_table54)
-	SetTableValue(DeathEggRobot_table22, 11, DeathEggRobot_table54)
+	SetTableValue(DeathEggRobot_walk_frame_1, 0,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_2, 1,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_3, 2,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_4, 3,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_5, 4,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_6, 5,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_7, 6,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_8, 7,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_9, 8,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_10, 9,  DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_11, 10, DeathEggRobot_anim_sub_walk)
+	SetTableValue(DeathEggRobot_walk_frame_12, 11, DeathEggRobot_anim_sub_walk)
 end event
+
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("DEZ/Objects.gif")
+	SpriteFrame(-44, -36, 112, 72, 399, 183)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Start Cutscene After Defeat", 0) // Used in DEZ
+	AddEnumVariable("No Cutscene",                 1) // Used in MBZ & Boss Rush
 end event

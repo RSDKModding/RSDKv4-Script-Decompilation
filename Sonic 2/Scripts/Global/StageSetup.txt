@@ -6,6 +6,7 @@
 // ----------------------------------
 
 // Aliases
+// Not all these aliases are actually used in this script necessarily, a good amount of them are just for general reference  as well
 
 // Game Modes
 private alias 0 : MODE_NOSAVE
@@ -22,10 +23,17 @@ private alias 5 : TRACK_GAMEOVER
 private alias 6 : TRACK_DROWNING
 private alias 7 : TRACK_SUPER
 
-// Music Events
+// Reserved object slots
+private alias 0  : SLOT_PLAYER1
+private alias 8  : SLOT_STAGESETUP
+private alias 9  : SLOT_HUD
+private alias 10 : SLOT_LEVELSETUP
+private alias 11 : SLOT_TITLECARD
 private alias 25 : SLOT_MUSICEVENT_CHANGE
 private alias 26 : SLOT_MUSICEVENT_BOSS
+private alias 30 : SLOT_ACTFINISH
 
+// Music Events
 private alias  0 : MUSICEVENT_FADETOBOSS
 private alias  1 : MUSICEVENT_FADETOSTAGE
 private alias  2 : MUSICEVENT_TRANSITION
@@ -110,7 +118,8 @@ event ObjectMain
 		break
 
 	default
-		// Handle Ring Frame
+		// Handle ring animation
+		// Not done in the ring object itself because all rings should share the same frame
 		ringTimer++
 		if ringTimer == 4
 			ringTimer = 0
@@ -141,7 +150,7 @@ event ObjectMain
 		oscillation &= 0x1FF
 		CallFunction(StageSetup_HandleOscillationTable)
 
-		// Handle Time overs
+		// Handle Time Overs
 		if stage.timeEnabled == true
 			if stage.minutes == 10
 				CheckEqual(stage.debugMode, true)
@@ -155,6 +164,7 @@ event ObjectMain
 					CallFunction(PlayerObject_Kill)
 				end if
 				
+				// Set the clock to 9:59:59 and disable timer progression so that it stays that way
 				stage.minutes 		= 9
 				stage.seconds 		= 59
 				stage.milliSeconds 	= 99
@@ -162,7 +172,7 @@ event ObjectMain
 			end if
 		end if
 
-		//Boundaries: Left & Bottom
+		// Boundaries: Left & Bottom
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = object[currentPlayer].collisionLeft
 			temp0 <<= 16
@@ -198,7 +208,7 @@ event ObjectMain
 		next
 	end switch
 
-	// Handle Touch Controls
+	// Show/hide touch controls based on whether the player's control is locked or not
 	if options.attractMode == false
 		if object[0].controlMode > -1
 			options.touchControls = true
@@ -254,7 +264,7 @@ event ObjectStartup
 		// There is code here on the official PC version...
 		// however! we don't have that!
 	else
-		//Set Object Range, changes internal bounds so attract mode always looks the same
+		// Set Object Range to a set value so that attract mode demos always looks the same
 		SetObjectRange(424)
 	end if
 
@@ -268,16 +278,16 @@ event ObjectStartup
 	foreach (TypeName[Stage Setup], arrayPos0, ALL_ENTITIES)
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
-	object[8].type = TypeName[Stage Setup]
-	object[8].priority = PRIORITY_ACTIVE_PAUSED
+	object[SLOT_STAGESETUP].type = TypeName[Stage Setup]
+	object[SLOT_STAGESETUP].priority = PRIORITY_ACTIVE_PAUSED
 
 	foreach (TypeName[HUD], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].type = TypeName[Blank Object]
 		if credits.screen == 0
-			object[9].type 			= TypeName[HUD]
-			object[9].priority 		= PRIORITY_ACTIVE
-			object[9].drawOrder 	= 6
-			object[9].propertyValue = object[arrayPos0].propertyValue
+			object[SLOT_HUD].type 			= TypeName[HUD]
+			object[SLOT_HUD].priority 		= PRIORITY_ACTIVE
+			object[SLOT_HUD].drawOrder 		= 6
+			object[SLOT_HUD].propertyValue = object[arrayPos0].propertyValue // Leftover from CD, doesn't actually do anything here
 		end if
 	next
 
@@ -285,6 +295,7 @@ event ObjectStartup
 	oscillation 						= 0
 	StageSetup_oscillateFlipFlags 		= 0b1011111000000000
 
+	// Reset the oscillation table
 	temp0 = 0
 	while temp0 < 32
 		GetTableValue(temp1, temp0, StageSetup_initOscillationTable)
@@ -293,10 +304,11 @@ event ObjectStartup
 	loop
 
 	if options.saveSlot > 0
+		// Extra shield options are for no save only
 		options.shieldType = 0
 	end if
 
-	blueShieldType 	  = TypeName[Blue Shield]
+	blueShieldType    = TypeName[Blue Shield]
 	invincibilityType = TypeName[Invincibility]
 end event
 

@@ -6,66 +6,124 @@
 // ----------------------------------
 
 // Aliases
-private alias 58 : TYPE_EARTHQUAKE
+private alias object.value0  : object.earthquakeType
+
+private alias object.value1  : object.maxPos
+private alias object.value2  : object.minPos
+
+// First set of sensor values for knowing whether to hold earthquake values or to reset
+private alias object.value3  : object.sensorHold.left
+private alias object.value4  : object.sensorHold.top
+private alias object.value5  : object.sensorHold.right
+private alias object.value6  : object.sensorHold.bottom
+
+// Main set of sensor values, used for sensing if the player's in the actual earthquake area
+private alias object.value7  : object.sensorMain.left
+private alias object.value8  : object.sensorMain.top
+private alias object.value9  : object.sensorMain.right
+private alias object.value10 : object.sensorMain.bottom
+
+// Acutal collision sizes for the object to use with player interaction during earthquake
+private alias object.value11 : object.colbox.left
+private alias object.value12 : object.colbox.top
+private alias object.value13 : object.colbox.right
+private alias object.value14 : object.colbox.bottom
+
+private alias object.value15 : object.prevPos
+private alias object.value16 : object.scrollStartPos
+
+// Reserved object slots
+private alias 0 : SLOT_PLAYER1
+
+private alias 0 : EARTHQUAKE_NONE
+private alias 1 : EARTHQUAKE_HOLD
+private alias 2 : EARTHQUAKE_ACTIVE
 
 
-// Static Values
+// Player aliases
+private alias object.value42 : player.prevGravity
+
+private alias HTZSetup_value33 : HTZSetup_earthquakeState
+private alias HTZSetup_value34 : HTZSetup_activeEarthquakeType
+private alias HTZSetup_value35 : HTZSetup_earthquakePosMin
+private alias HTZSetup_value36 : HTZSetup_earthquakePos    // Y Position, truncated down to only upper 16 bits
+private alias HTZSetup_value37 : HTZSetup_earthquakePosMax // Lowest point the earthquake should go
 
 // Tables
-public table Earthquake_table49
-	-192, -256, 192, 256, -192, -320, 192, 320, -192, -448, 192, 448, -384, -256, 384, 128
-	-448, -448, 448, 448, -448, -448, 448, 448
+public table Earthquake_collisionBoxSizes
+	-192, -256, 192, 256
+	-192, -320, 192, 320
+	-192, -448, 192, 448
+	-384, -256, 384, 128
+	-448, -448, 448, 448
+	-448, -448, 448, 448
 end table
 
-public table Earthquake_table51
-	-192, -640, 0x412, 256, 0, 0, 0, 0, 0, 0, 0, 0, -384, -896, 600, 128
-	-448, -0x540, 672, 448, -448, -0x460, 672, 448
+public table Earthquake_sensorsMain
+	-192,  -640, 1042, 256
+	   0,     0,    0,   0 // Two empty ones here because these are in a set of three earquake objects in the HTZ1 scene, so there's only really need to have one hitbox sensor
+	   0,     0,    0,   0
+	-384,  -896,  600, 128
+	-448, -1344,  672, 448
+	-448, -1120,  672, 448
 end table
 
-public table Earthquake_table50
-	-448, -640, 0x512, 256, 0, 0, 0, 0, 0, 0, 0, 0, -640, -896, 856, 128
-	-704, -0x540, 928, 448, -704, -0x460, 928, 448
+public table Earthquake_sensors2
+	-448,  -640, 1298, 256
+	   0,     0,    0,   0
+	   0,     0,    0,   0
+	-640,  -896,  856, 128
+	-704, -1344,  928, 448
+	-704, -1120,  928, 448
 end table
 
-public table Earthquake_table46
-	1, 1, 1, 2, 3, 4
+public table Earthquake_types
+	1, 1, 1 // These first three are all the same because they're used in the same earthquake event
+	2, 3, 4
 end table
 
-public table Earthquake_table48
-	-0xE00000, -0x1400000, 0, -0x2B40000, 0, -0x3000000, 0, -0x3500000
+public table Earthquake_maxMinPos
+	-0xE00000, -0x1400000
+	 0x000000, -0x2B40000
+	 0x000000, -0x3000000
+	 0x000000, -0x3500000
 end table
 
-public table Earthquake_table47
+public table Earthquake_scrollStartPos
 	0, 0, 0x6800000, 0x11800000
 end table
 
 
 event ObjectMain
-	BoxCollisionTest(C_TOUCH, object.entityPos, object.value7, object.value8, object.value9, object.value10, 0, 0, 0, 0, 0)
-	if checkResult == 1
-		if HTZSetup_value33 == 0
-			HTZSetup_value33 = 2
-			HTZSetup_value34 = object.value0
-			HTZSetup_value37 = object.value1
-			HTZSetup_value35 = object.value2
-			hParallax[20].scrollPos = object.value16
+	BoxCollisionTest(C_TOUCH, object.entityPos, object.sensorMain.left, object.sensorMain.top, object.sensorMain.right, object.sensorMain.bottom, SLOT_PLAYER1, 0, 0, 0, 0)
+	if checkResult == true
+		if HTZSetup_earthquakeState == EARTHQUAKE_NONE
+			HTZSetup_earthquakeState = EARTHQUAKE_ACTIVE
+			HTZSetup_activeEarthquakeType = object.earthquakeType
+			HTZSetup_earthquakePosMax = object.maxPos
+			HTZSetup_earthquakePosMin = object.minPos
+			hParallax[20].scrollPos = object.scrollStartPos
 		end if
 	end if
-	BoxCollisionTest(C_TOUCH, object.entityPos, object.value3, object.value4, object.value5, object.value6, 0, 0, 0, 0, 0)
-	if checkResult == 1
-		if HTZSetup_value33 == 0
-			HTZSetup_value33 = 1
-			HTZSetup_value34 = object.value0
-			HTZSetup_value37 = object.value1
-			HTZSetup_value35 = object.value2
-			hParallax[20].scrollPos = object.value16
+
+	BoxCollisionTest(C_TOUCH, object.entityPos, object.sensorHold.left, object.sensorHold.top, object.sensorHold.right, object.sensorHold.bottom, SLOT_PLAYER1, 0, 0, 0, 0)
+	if checkResult == true
+		if HTZSetup_earthquakeState == EARTHQUAKE_NONE
+			// Player isn't exactly in active earthquake area, but they're not fully out either,
+			// so make the earthquake holds its values in case it's still in view or the player decides to go back
+			HTZSetup_earthquakeState = EARTHQUAKE_HOLD
+			HTZSetup_activeEarthquakeType = object.earthquakeType
+			HTZSetup_earthquakePosMax = object.maxPos
+			HTZSetup_earthquakePosMin = object.minPos
+			hParallax[20].scrollPos = object.scrollStartPos
 		end if
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		temp0 = object.value12
-		temp0 -= object.value15
-		temp1 = object.value14
-		temp1 -= object.value15
+		temp0 = object.colbox.top
+		temp0 -= object.prevPos
+		temp1 = object.colbox.bottom
+		temp1 -= object.prevPos
 		if object.propertyValue == 3
 			temp2 = object[currentPlayer].xpos
 			temp2 -= object.xpos
@@ -75,7 +133,7 @@ event ObjectMain
 				temp0 += temp2
 			end if
 			temp0++
-			if object[currentPlayer].value42 == 0
+			if player[currentPlayer].prevGravity == GRAVITY_GROUND
 				if object[currentPlayer].gravity == GRAVITY_AIR
 					if object[currentPlayer].xvel > 0
 						temp2 = object[currentPlayer].xvel
@@ -86,15 +144,17 @@ event ObjectMain
 				end if
 			end if
 		end if
-		BoxCollisionTest(C_BOX, object.entityPos, object.value11, temp0, object.value13, temp1, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
+		BoxCollisionTest(C_BOX, object.entityPos, object.colbox.left, temp0, object.colbox.right, temp1, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		switch checkResult
-		case 1
-			temp0 = HTZSetup_value36
-			temp0 -= object.value15
+		case COL_TOP
+			temp0 = HTZSetup_earthquakePos
+			temp0 -= object.prevPos
 			temp0 <<= 16
 			object[currentPlayer].ypos -= temp0
-		case 2
-		case 3
+			// [Fallthrough]
+		case COL_LEFT
+		case COL_RIGHT
 			if object.propertyValue == 2
 				CallFunction(PlayerObject_FireHit)
 			end if
@@ -105,19 +165,22 @@ event ObjectMain
 				CallFunction(PlayerObject_FireHit)
 			end if
 			break
-		case 4
+
+		case COL_BOTTOM
 			if object[currentPlayer].gravity == GRAVITY_GROUND
 				CallFunction(PlayerObject_Kill)
 			end if
 			break
+
 		end switch
 	next
+
 	foreach (TypeName[Lose Ring], arrayPos0, ACTIVE_ENTITIES)
 		if object[arrayPos0].yvel >= 0
-			temp0 = object.value12
-			temp0 -= object.value15
-			temp1 = object.value14
-			temp1 -= object.value15
+			temp0 = object.colbox.top
+			temp0 -= object.prevPos
+			temp1 = object.colbox.bottom
+			temp1 -= object.prevPos
 			if object.propertyValue == 3
 				temp2 = object[arrayPos0].xpos
 				temp2 -= object.xpos
@@ -129,8 +192,9 @@ event ObjectMain
 				temp0++
 			end if
 			temp2 = object[arrayPos0].yvel
-			BoxCollisionTest(C_PLATFORM, object.entityPos, object.value11, temp0, object.value13, temp1, arrayPos0, -8, -8, 8, 8)
-			if checkResult == 1
+
+			BoxCollisionTest(C_PLATFORM, object.entityPos, object.colbox.left, temp0, object.colbox.right, temp1, arrayPos0, -8, -8, 8, 8)
+			if checkResult == true
 				object[arrayPos0].yvel = temp2
 				temp2 >>= 2
 				object[arrayPos0].yvel -= temp2
@@ -142,49 +206,100 @@ event ObjectMain
 			end if
 		end if
 	next
-	object.value15 = HTZSetup_value36
+
+	object.prevPos = HTZSetup_earthquakePos
 end event
 
 
 event ObjectStartup
 	foreach (TypeName[Earthquake], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
-		GetTableValue(object[arrayPos0].value0, object[arrayPos0].propertyValue, Earthquake_table46)
-		temp0 = object[arrayPos0].value0
+
+		// First get the object's target earthquake type based off its property value
+		GetTableValue(object[arrayPos0].earthquakeType, object[arrayPos0].propertyValue, Earthquake_types)
+
+		// Then use the earthquake's dedicated type for the next few value searches rather than simply its property value
+		temp0 = object[arrayPos0].earthquakeType
 		temp0--
-		GetTableValue(object[arrayPos0].value16, temp0, Earthquake_table47)
+
+		GetTableValue(object[arrayPos0].scrollStartPos, temp0, Earthquake_scrollStartPos)
+
 		temp0 <<= 1
-		GetTableValue(object[arrayPos0].value1, temp0, Earthquake_table48)
+		GetTableValue(object[arrayPos0].maxPos, temp0, Earthquake_maxMinPos)
+
 		temp0++
-		GetTableValue(object[arrayPos0].value2, temp0, Earthquake_table48)
+		GetTableValue(object[arrayPos0].minPos, temp0, Earthquake_maxMinPos)
+
+		// Get the sizes of the earthquake boxes
 		temp0 = object[arrayPos0].propertyValue
 		temp0 <<= 2
-		GetTableValue(object[arrayPos0].value11, temp0, Earthquake_table49)
-		GetTableValue(object[arrayPos0].value3, temp0, Earthquake_table50)
-		GetTableValue(object[arrayPos0].value7, temp0, Earthquake_table51)
+		GetTableValue(object[arrayPos0].colbox.left, temp0, Earthquake_collisionBoxSizes)
+		GetTableValue(object[arrayPos0].sensorHold.left, temp0, Earthquake_sensors2)
+		GetTableValue(object[arrayPos0].sensorMain.left, temp0, Earthquake_sensorsMain)
+
 		temp0++
-		GetTableValue(object[arrayPos0].value12, temp0, Earthquake_table49)
-		GetTableValue(object[arrayPos0].value4, temp0, Earthquake_table50)
-		GetTableValue(object[arrayPos0].value8, temp0, Earthquake_table51)
+		GetTableValue(object[arrayPos0].colbox.top, temp0, Earthquake_collisionBoxSizes)
+		GetTableValue(object[arrayPos0].sensorHold.top, temp0, Earthquake_sensors2)
+		GetTableValue(object[arrayPos0].sensorMain.top, temp0, Earthquake_sensorsMain)
+
 		temp0++
-		GetTableValue(object[arrayPos0].value13, temp0, Earthquake_table49)
-		GetTableValue(object[arrayPos0].value5, temp0, Earthquake_table50)
-		GetTableValue(object[arrayPos0].value9, temp0, Earthquake_table51)
+		GetTableValue(object[arrayPos0].colbox.right, temp0, Earthquake_collisionBoxSizes)
+		GetTableValue(object[arrayPos0].sensorHold.right, temp0, Earthquake_sensors2)
+		GetTableValue(object[arrayPos0].sensorMain.right, temp0, Earthquake_sensorsMain)
+
 		temp0++
-		GetTableValue(object[arrayPos0].value14, temp0, Earthquake_table49)
-		GetTableValue(object[arrayPos0].value6, temp0, Earthquake_table50)
-		GetTableValue(object[arrayPos0].value10, temp0, Earthquake_table51)
-		if options.vsMode == 1
+		GetTableValue(object[arrayPos0].colbox.bottom, temp0, Earthquake_collisionBoxSizes)
+		GetTableValue(object[arrayPos0].sensorHold.bottom, temp0, Earthquake_sensors2)
+		GetTableValue(object[arrayPos0].sensorMain.bottom, temp0, Earthquake_sensorsMain)
+
+		if options.vsMode == true
+			// No earthquakes in 2P
 			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 		end if
 	next
 end event
 
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	// Yeah these are pretty undescriptive names, but pretty much everything about the object is coded in here with tables
+	// so not much can be done from the editor alone
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Ground 1", 0)
+	AddEnumVariable("Ground 2", 1)
+	AddEnumVariable("Lava 1",   2)
+	AddEnumVariable("Ground 3", 3)
+	AddEnumVariable("Lava 1",   4)
+	AddEnumVariable("Lava 1",   5)
 end event
