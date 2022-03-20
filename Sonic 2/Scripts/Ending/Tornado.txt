@@ -9,61 +9,72 @@
 private alias object.frame : object.propellerFrame // States 0-2
 private alias object.frame : object.tornadoFrame // The rest of em
 
+private alias object.frame : object.propellerFrame // In states 0-2
+private alias object.frame : object.tornadoFrame   // For the rest of them
+
 private alias object.value0  : object.timer
-private alias object.value1  : object.pilotFrame
-private alias object.value2  : object.pilotFrameDelay
-private alias object.value3  : object.pilotAnimPos
-private alias object.value4  : object.bgAnimTablePos
-private alias object.value5  : object.logoShineTimer
-private alias object.value6  : object.logoSonicFrame
-private alias object.value7  : object.logo2Frame
-private alias object.value8  : object.logoShineTablePos
-private alias object.value9  : object.bgSuperSonicState
-private alias object.value10 : object.bgSuperSonicFrame
-private alias object.value11 : object.bgSSonicTablePos
-private alias object.value12 : object.bgSuperSonicTimer
-private alias object.value13 : object.bgSuperSonicPos.x
-private alias object.value14 : object.bgSuperSonicPos.y
-private alias object.value15 : object.tailsSuperBlendTimer
-private alias object.value16 : object.tailsSuperBlendClr
 
-// States
-private alias 0  : TORNADO_SETUP
-private alias 1  : TORNADO_PLAYERFALLING
+private alias object.value1  : object.pilot.frame
+private alias object.value2  : object.pilot.timer
+private alias object.value3  : object.pilot.index
+
+private alias object.value4  : object.zoomoutSprIndex
+
+private alias object.value5  : object.logo.timer
+private alias object.value6  : object.text.frame
+private alias object.value7  : object.number.frame
+private alias object.value8  : object.logo.frame
+
+private alias object.value9  : object.superSonic.state
+private alias object.value10 : object.superSonic.frame
+private alias object.value11 : object.superSonic.index
+private alias object.value12 : object.superSonic.timer
+private alias object.value13 : object.superSonic.x
+private alias object.value14 : object.superSonic.y
+
+private alias object.value15 : object.superBlendTimer
+private alias object.value16 : object.superBlendColour
+
+private alias 0  : TORNADO_CATCHPLAYER
+private alias 1  : TORNADO_STABALIZE
 private alias 2  : TORNADO_FLYING
-private alias 3  : TORNADO_INBG
-private alias 4  : TORNADO_SETUPENDPOSE
-private alias 5  : TORNADO_ENDPOSE_FRAME1
-private alias 6  : TORNADO_ENDPOSE_FRAME2
-private alias 7  : TORNADO_ENDPOSE_FRAME3
-private alias 8  : TORNADO_LOGOSONIC_SHINE
-private alias 9  : TORNADO_LOGO2_SHINE
-private alias 10 : TORNADO_ENDINGSCREEN
-private alias 11 : TORNADO_FADETOCREDITS
+private alias 3  : TORNADO_FLYINTOBG
+private alias 4  : TORNADO_OFFSCREEN
+private alias 5  : TORNADO_FLYINTOSCREEN
+private alias 6  : TORNADO_INITLOGO
+private alias 7  : TORNADO_FADEINLOGO
+private alias 8  : TORNADO_LOGOSHINE_TEXT
+private alias 9  : TORNADO_LOGOSHINE_NUMBER
+private alias 10 : TORNADO_DISPLAY
+private alias 11 : TORNADO_FADEOUT
 
-// BG Super Sonic States
-private alias 0 : TORNADO_BGSSONIC_INACTIVE
-private alias 1 : TORNADO_BGSSONIC_FLYING
-private alias 2 : TORNADO_BGSSONIC_WAITING
-private alias 3 : TORNADO_BGSSONIC_INBG
-private alias 4 : TORNADO_BGSSONIC_SETUPENDPOSE
-private alias 5 : TORNADO_BGSSONIC_PLAYENDPOSE
-private alias 6 : TORNADO_BGSSONIC_ENDPOSE
+private alias 0 : SUPERSONIC_DESCEND
+private alias 1 : SUPERSONIC_MEETTORNADO
+private alias 2 : SUPERSONIC_FLYALONGTORNADO
+private alias 3 : SUPERSONIC_FLYINTOBG
+private alias 4 : SUPERSONIC_OFFSCREEN
+private alias 5 : SUPERSONIC_FLYINTOSCREEN
+private alias 6 : SUPERSONIC_DISPAY
 
+// Super States
+private alias 0 : SUPERSTATE_NONE
 
-// Bird Aliases
+// Bird aliases
 private alias object.value0 : bird.timer
 
-// Ending Setup Values
 private alias EndingSetup_value33 : EndingSetup_scrollVelocity.x
 private alias EndingSetup_value34 : EndingSetup_scrollVelocity.y
 
+
 // Function declarations
-reserve function Tornado_ProcessTailsSuperPal
+reserve function Tornado_HandleSuperTailsPal
 reserve function Tornado_AnimatePilot
 
+
 // Tables
-private table Tornado_TailsPilotFrameTable
+
+// Format followed for below two tables - first number is frame ID, second number is frame duration
+private table Tornado_PilotAni_Tails
 	5, 32
 	6, 8
 	7, 8
@@ -74,7 +85,7 @@ private table Tornado_TailsPilotFrameTable
 	6, 16
 end table
 
-private table Tornado_SonicPilotFrameTable
+private table Tornado_PilotAni_Sonic
 	10, 9
 	11, 9
 	10, 9
@@ -85,83 +96,149 @@ private table Tornado_SonicPilotFrameTable
 	11, 9
 end table
 
-public table Tornado_bgAnimFrames_Sonic
-	19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 22, 22
-	22, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23
+private table Tornado_ZoomoutSprites_Sonic
+	19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 21, 21, 21, 22
+	22, 22, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23
 end table
 
-public table Tornado_bgAnimFrames_SS_Plane
-	12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 15, 15
-	15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16
+private table Tornado_ZoomoutSprites_SS // full name would be Tornado_ZoomoutSprites_SuperSonic but there's a 32 chars name length max lol
+	12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 13, 14, 14, 14, 15
+	15, 15, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16
 end table
 
-public table Tornado_bgAnimFrames_Tails
-	27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 29, 29, 29, 30, 30
-	30, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31
+private table Tornado_ZoomoutSprites_Tails
+	27, 27, 27, 27, 28, 28, 28, 28, 28, 28, 28, 29, 29, 29, 30
+	30, 30, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31
 end table
 
-public table Tornado_bgAnimFrames_Knux
-	35, 35, 35, 35, 36, 36, 36, 36, 36, 36, 36, 37, 37, 37, 38, 38
-	38, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39
+private table Tornado_ZoomoutSprites_Knuckles
+	35, 35, 35, 35, 36, 36, 36, 36, 36, 36, 36, 37, 37, 37, 38
+	38, 38, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39
 end table
 
-public table Tornado_bgAnimPosTable
-	0xA00000, 0x700000, 0xB00000, 0x700000, 0xB60000, 0x710000, 0xBC0000, 0x720000, 0xC40000, 0x740000, 0xC80000, 0x750000, 0xCA0000, 0x760000, 0xCC0000, 0x770000
-	0xCE0000, 0x780000, 0xD00000, 0x790000, 0xD20000, 0x7A0000, 0xD40000, 0x7B0000, 0xD60000, 0x7C0000, 0xD90000, 0x7E0000, 0xDC0000, 0x810000, 0xDE0000, 0x840000
-	0xE10000, 0x870000, 0xE40000, 0x8B0000, 0xE70000, 0x8F0000, 0xEC0000, 0x940000, 0xF00000, 0x990000, 0xF50000, 0x9D0000, 0xF90000, 0xA40000, 0x1000000, 0xAC0000
-	0x1080000, 0xB80000, 0x1120000, 0xC40000, 0x11F0000, 0xD30000, 0x12C0000, 0xFA0000
+private table Tornado_ZoomoutPositions
+	0xA00000,  0x700000
+	0xB00000,  0x700000
+	0xB60000,  0x710000
+	0xBC0000,  0x720000
+	0xC40000,  0x740000
+	0xC80000,  0x750000
+	0xCA0000,  0x760000
+	0xCC0000,  0x770000
+	0xCE0000,  0x780000
+	0xD00000,  0x790000
+	0xD20000,  0x7A0000
+	0xD40000,  0x7B0000
+	0xD60000,  0x7C0000
+	0xD90000,  0x7E0000
+	0xDC0000,  0x810000
+	0xDE0000,  0x840000
+	0xE10000,  0x870000
+	0xE40000,  0x8B0000
+	0xE70000,  0x8F0000
+	0xEC0000,  0x940000
+	0xF00000,  0x990000
+	0xF50000,  0x9D0000
+	0xF90000,  0xA40000
+	0x1000000, 0xAC0000
+	0x1080000, 0xB80000
+	0x1120000, 0xC40000
+	0x11F0000, 0xD30000
+	0x12C0000, 0xFA0000
 end table
 
-public table Tornado_bgAnimFrames_SS_Sonic
-	43, 43, 43, 43, 43, 43, 43, 44, 44, 44, 44, 44, 44, 45, 45, 45
-	45, 46, 46, 46, 47, 47, 47, 47, 47, 47, 47, 47, 47, 48, 48, 48
-	48, 48, 48, 48, 48, 48
+private table Tornado_SuperSonic_Sprites
+	43, 43, 43, 43, 43, 43, 43, 44, 44, 44, 44, 44, 44, 45, 45, 45, 45, 46, 46
+	46, 47, 47, 47, 47, 47, 47, 47, 47, 47, 48, 48, 48, 48, 48, 48, 48, 48, 48
 end table
 
-public table Tornado_bgSSonicPosTable
-	0xC00000, 0x900000, 0xB00000, 0x910000, 0xA80000, 0x920000, 0x9B0000, 0x960000, 0x990000, 0x980000, 0x980000, 0x990000, 0x990000, 0x9A0000, 0x9B0000, 0x9C0000
-	0x9F0000, 0x9E0000, 0xA40000, 0xA00000, 0xAC0000, 0xA20000, 0xB70000, 0xA50000, 0xC40000, 0xA80000, 0xD30000, 0xAB0000, 0xDE0000, 0xAE0000, 0xE80000, 0xB00000
-	0xEF0000, 0xB20000, 0xF40000, 0xB50000, 0xF90000, 0xB80000, 0xFC0000, 0xBB0000, 0xFE0000, 0xBE0000, 0xFF0000, 0xC00000, 0x1000000, 0xC20000, 0x1010000, 0xC50000
-	0x1020000, 0xC80000, 0x1020000, 0xCC0000, 0x1010000, 0xD10000, 0xFD0000, 0xD70000, 0xF90000, 0xDE0000, 0xF90000, 0x1180000, 0x600000, 0x880000, 0x500000, 0x680000
-	0x440000, 0x460000, 0x3C0000, 0x360000, 0x360000, 0x2A0000, 0x330000, 0x240000, 0x310000, 0x200000, 0x300000, 0x1E0000
+private table Tornado_SuperSonic_Positions
+	0xC00000,  0x900000
+	0xB00000,  0x910000
+	0xA80000,  0x920000
+	0x9B0000,  0x960000
+	0x990000,  0x980000
+	0x980000,  0x990000
+	0x990000,  0x9A0000
+	0x9B0000,  0x9C0000
+	0x9F0000,  0x9E0000
+	0xA40000,  0xA00000
+	0xAC0000,  0xA20000
+	0xB70000,  0xA50000
+	0xC40000,  0xA80000
+	0xD30000,  0xAB0000
+	0xDE0000,  0xAE0000
+	0xE80000,  0xB00000
+	0xEF0000,  0xB20000
+	0xF40000,  0xB50000
+	0xF90000,  0xB80000
+	0xFC0000,  0xBB0000
+	0xFE0000,  0xBE0000
+	0xFF0000,  0xC00000
+	0x1000000, 0xC20000
+	0x1010000, 0xC50000
+	0x1020000, 0xC80000
+	0x1020000, 0xCC0000
+	0x1010000, 0xD10000
+	0xFD0000,  0xD70000
+	0xF90000,  0xDE0000
+	0xF90000,  0x1180000
+	0x600000,  0x880000
+	0x500000,  0x680000
+	0x440000,  0x460000
+	0x3C0000,  0x360000
+	0x360000,  0x2A0000
+	0x330000,  0x240000
+	0x310000,  0x200000
+	0x300000,  0x1E0000
 end table
 
-public table Tornado_endPosePosTable
-	-0x3A0000, -0x880000, -0xC0000, -0x220000, -0x80000, -0x100000, -0x40000, -0x80000, -0x20000, -0x40000, -0x10000, -0x20000, -0x10000, -0x20000
+private table Tornado_EndPosePositions
+	-0x3A0000, -0x880000
+	-0x0C0000, -0x220000
+	-0x080000, -0x100000
+	-0x040000, -0x080000
+	-0x020000, -0x040000
+	-0x010000, -0x020000
+	-0x010000, -0x020000
 end table
 
-public table Tornado_logoSonicFrameTable
-	51, 53, 54, 55, 5453, 51
+private table Tornado_LogoTextFlash
+	51, 53, 54, 55, 0x154D, 51
 end table
 
-public table Tornado_logo2FrameTable
+private table Tornado_LogoNumberFlash
 	51, 56, 57, 58, 59, 58, 57, 56, 51
 end table
 
 
-function Tornado_ProcessTailsSuperPal
-	object.tailsSuperBlendTimer++
-	if object.tailsSuperBlendTimer >= 12
-		object.tailsSuperBlendTimer = 0
-		object.tailsSuperBlendClr += 4
-		if object.tailsSuperBlendClr >= 24
-			object.tailsSuperBlendClr = 0
+function Tornado_HandleSuperTailsPal
+	object.superBlendTimer++
+	if object.superBlendTimer >= 12
+		object.superBlendTimer = 0
+
+		object.superBlendColour += 4
+		if object.superBlendColour >= 24
+			object.superBlendColour = 0
 		end if
 	end if
 
-	temp1 = object.tailsSuperBlendClr
+	temp1 = object.superBlendColour
 	GetTableValue(temp0, temp1, PlayerObject_TailsSuperPal)
 	SetPaletteEntry(0, 202, temp0)
 
 	temp1++
+
 	GetTableValue(temp0, temp1, PlayerObject_TailsSuperPal)
 	SetPaletteEntry(0, 205, temp0)
 
 	temp1++
+
 	GetTableValue(temp0, temp1, PlayerObject_TailsSuperPal)
 	SetPaletteEntry(0, 206, temp0)
 
 	temp1++
+
 	GetTableValue(temp0, temp1, PlayerObject_TailsSuperPal)
 	SetPaletteEntry(0, 203, temp0)
 end function
@@ -171,38 +248,48 @@ function Tornado_AnimatePilot
 	object.propellerFrame++
 	object.propellerFrame &= 3
 
-	if object.pilotFrameDelay < 2
+	if object.pilot.timer < 2
 		if stage.playerListPos == PlayerName[TAILS]
-			GetTableValue(object.pilotFrame, object.pilotAnimPos, Tornado_SonicPilotFrameTable)
-			object.pilotAnimPos++
+			// Sonic pilots the Tornado when Tails is being saved
 
-			GetTableValue(object.pilotFrameDelay, object.pilotAnimPos, Tornado_SonicPilotFrameTable)
-			object.pilotAnimPos++
+			// Get the sprite
+			GetTableValue(object.pilot.frame, object.pilot.index, Tornado_PilotAni_Sonic)
+			object.pilot.index++
+
+			// Get its duration
+			GetTableValue(object.pilot.timer, object.pilot.index, Tornado_PilotAni_Sonic)
+			object.pilot.index++
 		else
-			GetTableValue(object.pilotFrame, object.pilotAnimPos, Tornado_TailsPilotFrameTable)
-			object.pilotAnimPos++
+			// Tails pilots the Tornado for everyone else
 
-			GetTableValue(object.pilotFrameDelay, object.pilotAnimPos, Tornado_TailsPilotFrameTable)
-			object.pilotAnimPos++
+			// Get the sprite
+			GetTableValue(object.pilot.frame, object.pilot.index, Tornado_PilotAni_Tails)
+			object.pilot.index++
+
+			// Get its duration
+			GetTableValue(object.pilot.timer, object.pilot.index, Tornado_PilotAni_Tails)
+			object.pilot.index++
 		end if
 
-		object.pilotAnimPos &= 15
+		// Loop after a cycle of 16
+		object.pilot.index &= 15
 	else
-		object.pilotFrameDelay--
+		object.pilot.timer--
 	end if
 end function
 
 
 event ObjectMain
 	object.drawOrder = 4
+
 	if stage.playerListPos == PlayerName[TAILS]
 		if PlayerObject_SuperState != SUPERSTATE_NONE
-			CallFunction(Tornado_ProcessTailsSuperPal)
+			CallFunction(Tornado_HandleSuperTailsPal)
 		end if
 	end if
 
 	switch object.state
-	case TORNADO_SETUP
+	case TORNADO_CATCHPLAYER
 		object.xpos += 0x10000
 		object.ypos -= 0x8000
 
@@ -228,6 +315,8 @@ event ObjectMain
 			end if
 
 			EndingSetup_scrollVelocity.x = -0x10000
+
+			// Create a flock of birds
 			arrayPos0 = object[34].entityPos
 			temp0 = 0
 			temp1 = 0
@@ -252,8 +341,8 @@ event ObjectMain
 			case PlayerName[SONIC]
 			case PlayerName[SONIC AND TAILS]
 				if specialStage.emeralds >= 0b01111111
-					object.bgSuperSonicTimer = 64
-					object.bgSuperSonicState = TORNADO_BGSSONIC_FLYING
+					object.superSonic.timer = 64
+					object.superSonic.state = SUPERSONIC_MEETTORNADO
 					stage.newXBoundary2 = screen.xsize
 					stage.newYBoundary2 = 376
 					stage.newYBoundary2 += screen.ysize
@@ -261,19 +350,20 @@ event ObjectMain
 					stage.deathBoundary <<= 16
 				end if
 				break
+
 			end switch
 
-			object.state = TORNADO_PLAYERFALLING
+			object.state = TORNADO_STABALIZE
 		end if
+
 		CallFunction(Tornado_AnimatePilot)
 		break
 
-	case TORNADO_PLAYERFALLING
+	case TORNADO_STABALIZE
 		EndingSetup_scrollVelocity.y += 0x400
 		if EndingSetup_scrollVelocity.y >= 0
 			object.state = TORNADO_FLYING
 		end if
-
 		CallFunction(Tornado_AnimatePilot)
 		break
 
@@ -288,32 +378,35 @@ event ObjectMain
 					object[0].visible = false
 				end if
 				break
+
 			case PlayerName[TAILS]
 			case PlayerName[KNUCKLES]
 				object[0].visible = false
 				break
-			end switch
-			object.state = TORNADO_INBG
-		end if
 
+			end switch
+
+			object.state = TORNADO_FLYINTOBG
+		end if
 		CallFunction(Tornado_AnimatePilot)
 		break
 
-	case TORNADO_INBG
+	case TORNADO_FLYINTOBG
 		switch stage.playerListPos
-			case PlayerName[SONIC]
-			case PlayerName[SONIC AND TAILS]
+		case PlayerName[SONIC]
+		case PlayerName[SONIC AND TAILS]
 			if PlayerObject_SuperState != SUPERSTATE_NONE
-				if object.bgSuperSonicState != TORNADO_BGSSONIC_INBG
-					object.bgSuperSonicTimer++
-					if object.bgSuperSonicTimer >= 90
-						object.bgSuperSonicTimer = 0
+				if object.superSonic.state != SUPERSONIC_FLYINTOBG
+					object.superSonic.timer++
+					if object.superSonic.timer >= 90
+						object.superSonic.timer = 0
 						object[0].visible = false
-						object.bgSuperSonicState = TORNADO_BGSSONIC_INBG
+						object.superSonic.state = SUPERSONIC_FLYINTOBG
 					end if
 				end if
 			end if
 			break
+
 		end switch
 
 		object.timer--
@@ -323,38 +416,40 @@ event ObjectMain
 			case PlayerName[SONIC]
 			case PlayerName[SONIC AND TAILS]
 				if specialStage.emeralds < 0b01111111
-					GetTableValue(object.tornadoFrame, object.bgAnimTablePos, Tornado_bgAnimFrames_Sonic)
+					GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_Sonic)
 				else
-					GetTableValue(object.tornadoFrame, object.bgAnimTablePos, Tornado_bgAnimFrames_SS_Plane)
+					GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_SS)
 				end if
 				break
 
 			case PlayerName[TAILS]
-				GetTableValue(object.tornadoFrame, object.bgAnimTablePos, Tornado_bgAnimFrames_Tails)
+				GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_Tails)
 				break
 
 			case PlayerName[KNUCKLES]
-				GetTableValue(object.tornadoFrame, object.bgAnimTablePos, Tornado_bgAnimFrames_Knux)
+				GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_Knuckles)
 				break
+
 			end switch
 
-			temp0 = object.bgAnimTablePos
+			temp0 = object.zoomoutSprIndex
 			temp0 <<= 1
-			GetTableValue(object.xpos, temp0, Tornado_bgAnimPosTable)
+			GetTableValue(object.xpos, temp0, Tornado_ZoomoutPositions)
 			object.xpos += 0x340000
 
 			temp0++
-			GetTableValue(object.ypos, temp0, Tornado_bgAnimPosTable)
+			GetTableValue(object.ypos, temp0, Tornado_ZoomoutPositions)
+
 			temp0 = screen.cameraY
 			temp0 -= screen.ycenter
 			temp0 += 32
 			temp0 <<= 16
 			object.ypos += temp0
 
-			object.bgAnimTablePos++
-			if object.bgAnimTablePos >= 28
+			object.zoomoutSprIndex++
+			if object.zoomoutSprIndex >= 28
 				object.timer = 0
-				object.bgAnimTablePos = 0
+				object.zoomoutSprIndex = 0
 				if stage.playerListPos == PlayerName[TAILS]
 					object.tornadoFrame = 49
 				else
@@ -362,121 +457,119 @@ event ObjectMain
 				end if
 				object.xpos -= 0x220000
 				object.ypos += 0x450000
-				object.state = TORNADO_SETUPENDPOSE
+				object.state = TORNADO_OFFSCREEN
 			end if
 		end if
 		break
 
-	case TORNADO_SETUPENDPOSE
+	case TORNADO_OFFSCREEN
 		switch stage.playerListPos
-			case PlayerName[SONIC]
-			case PlayerName[SONIC AND TAILS]
+		case PlayerName[SONIC]
+		case PlayerName[SONIC AND TAILS]
 			if PlayerObject_SuperState != SUPERSTATE_NONE
-				if object.bgSuperSonicState != TORNADO_BGSSONIC_INBG
-					object.bgSuperSonicTimer++
-					if object.bgSuperSonicTimer >= 90
-						object.bgSuperSonicTimer = 0
+				if object.superSonic.state != SUPERSONIC_FLYINTOBG
+					object.superSonic.timer++
+					if object.superSonic.timer >= 90
+						object.superSonic.timer = 0
 						object[0].visible = false
-						object.bgSuperSonicState = TORNADO_BGSSONIC_INBG
+						object.superSonic.state = SUPERSONIC_FLYINTOBG
 					end if
 				end if
 			end if
 			break
+
 		end switch
 
 		object.timer++
 		if object.timer >= 120
 			object.timer = 0
-			object.state = TORNADO_ENDPOSE_FRAME1
+			object.state = TORNADO_FLYINTOSCREEN
 		end if
 		break
 
-	case TORNADO_ENDPOSE_FRAME1
+	case TORNADO_FLYINTOSCREEN
 		object.timer--
 		if object.timer < 0
 			object.timer = 2
-			temp0 = object.bgAnimTablePos
+			temp0 = object.zoomoutSprIndex
 			temp0 <<= 1
-			GetTableValue(temp1, temp0, Tornado_endPosePosTable)
+			GetTableValue(temp1, temp0, Tornado_EndPosePositions)
 			object.xpos += temp1
 
 			temp0++
-			GetTableValue(temp1, temp0, Tornado_endPosePosTable)
+			GetTableValue(temp1, temp0, Tornado_EndPosePositions)
 			object.ypos += temp1
-
-			object.bgAnimTablePos++
-			if object.bgAnimTablePos >= 7
+			object.zoomoutSprIndex++
+			if object.zoomoutSprIndex >= 7
 				object.timer = 0
-				object.state = TORNADO_ENDPOSE_FRAME2
+				object.state = TORNADO_INITLOGO
 			end if
 		end if
 		break
 
-	case TORNADO_ENDPOSE_FRAME2
+	case TORNADO_INITLOGO
 		object.timer++
 		if object.timer == 4
 			object.timer = 0
-			GetTableValue(object.logoSonicFrame, 0, Tornado_logoSonicFrameTable)
-			GetTableValue(object.logo2Frame, 0, Tornado_logo2FrameTable)
-			object.state = TORNADO_ENDPOSE_FRAME3
+			GetTableValue(object.text.frame, 0, Tornado_LogoTextFlash)
+			GetTableValue(object.number.frame, 0, Tornado_LogoNumberFlash)
+			object.state = TORNADO_FADEINLOGO
 		end if
 		break
 
-	case TORNADO_ENDPOSE_FRAME3
-		if object.alpha < 0x100
+	case TORNADO_FADEINLOGO
+		if object.alpha < 256
 			object.alpha += 4
 		end if
 
 		object.timer++
 		if object.timer == 90
 			object.timer = 0
-			object.logoShineTablePos = 0
-			object.state = TORNADO_LOGOSONIC_SHINE
+			object.logo.frame = 0
+			object.state = TORNADO_LOGOSHINE_TEXT
 		end if
 		break
 
-	case TORNADO_LOGOSONIC_SHINE
-		object.logoShineTimer++
-		if object.logoShineTimer == 2
-			object.logoShineTimer = 0
-
-			object.logoShineTablePos++
-			GetTableValue(object.logoSonicFrame, object.logoShineTablePos, Tornado_logoSonicFrameTable)
-			if object.logoShineTablePos == 6
-				object.logoShineTablePos = 0
-				object.state = TORNADO_LOGO2_SHINE
+	case TORNADO_LOGOSHINE_TEXT
+		object.logo.timer++
+		if object.logo.timer == 2
+			object.logo.timer = 0
+			object.logo.frame++
+			GetTableValue(object.text.frame, object.logo.frame, Tornado_LogoTextFlash)
+			if object.logo.frame == 6
+				object.logo.frame = 0
+				object.state = TORNADO_LOGOSHINE_NUMBER
 			end if
 		end if
 		break
 
-	case TORNADO_LOGO2_SHINE
-		object.logoShineTimer++
-		if object.logoShineTimer == 2
-			object.logoShineTimer = 0
-
-			object.logoShineTablePos++
-			GetTableValue(object.logo2Frame, object.logoShineTablePos, Tornado_logo2FrameTable)
-			if object.logoShineTablePos == 9
-				object.logoShineTablePos = 0
-				object.state = TORNADO_ENDINGSCREEN
+	case TORNADO_LOGOSHINE_NUMBER
+		object.logo.timer++
+		if object.logo.timer == 2
+			object.logo.timer = 0
+			object.logo.frame++
+			GetTableValue(object.number.frame, object.logo.frame, Tornado_LogoNumberFlash)
+			if object.logo.frame == 9
+				object.logo.frame = 0
+				object.state = TORNADO_DISPLAY
 			end if
 		end if
 		break
 
-	case TORNADO_ENDINGSCREEN
+	case TORNADO_DISPLAY
 		object.timer++
 		if object.timer >= 240
 			object.timer = 0
-			object.state = TORNADO_FADETOCREDITS
+			object.state = TORNADO_FADEOUT
 		end if
 		break
 
-	case TORNADO_FADETOCREDITS
+	case TORNADO_FADEOUT
 		if object.timer < 320
 			object.timer += 12
 		else
 			stage.activeList = PRESENTATION_STAGE
-			stage.listPos = 2
+			stage.listPos = StageName[P - STAFF CREDITS]
 			LoadStage()
 		end if
 
@@ -487,118 +580,121 @@ event ObjectMain
 		end if
 		SetScreenFade(0x00, 0x00, 0x00, temp0)
 		break
+
 	end switch
 
-	switch object.bgSuperSonicState
-	case TORNADO_BGSSONIC_INACTIVE
+	switch object.superSonic.state
+	case SUPERSONIC_DESCEND
 		break
 
-	case TORNADO_BGSSONIC_FLYING
-		object[0].xpos += 0x8000
+	case SUPERSONIC_MEETTORNADO
+		object[0].xpos += 0x08000
 		object[0].ypos += 0x10000
-
-		object.bgSuperSonicTimer--
-		if object.bgSuperSonicTimer < 0
-			object.bgSuperSonicPos.x = object[0].xpos
-			object.bgSuperSonicPos.y = object[0].ypos
-			object.bgSuperSonicState = TORNADO_BGSSONIC_WAITING
+		object.superSonic.timer--
+		if object.superSonic.timer < 0
+			object.superSonic.x = object[0].xpos
+			object.superSonic.y = object[0].ypos
+			object.superSonic.state = SUPERSONIC_FLYALONGTORNADO
 		end if
 		break
 
-	case TORNADO_BGSSONIC_WAITING
+	case SUPERSONIC_FLYALONGTORNADO
 		break
 
-	case TORNADO_BGSSONIC_INBG
-		object.bgSuperSonicTimer--
-		if object.bgSuperSonicTimer < 0
-			object.bgSuperSonicTimer = 2
-			GetTableValue(object.bgSuperSonicFrame, object.bgSSonicTablePos, Tornado_bgAnimFrames_SS_Sonic)
-
-			temp0 = object.bgSSonicTablePos
+	case SUPERSONIC_FLYINTOBG
+		object.superSonic.timer--
+		if object.superSonic.timer < 0
+			object.superSonic.timer = 2
+			GetTableValue(object.superSonic.frame, object.superSonic.index, Tornado_SuperSonic_Sprites)
+			temp0 = object.superSonic.index
 			temp0 <<= 1
-			GetTableValue(object.bgSuperSonicPos.x, temp0, Tornado_bgSSonicPosTable)
-			object.bgSuperSonicPos.x += 0x340000
 
+			GetTableValue(object.superSonic.x, temp0, Tornado_SuperSonic_Positions)
+			object.superSonic.x += 0x340000
 			temp0++
-			GetTableValue(object.bgSuperSonicPos.y, temp0, Tornado_bgSSonicPosTable)
+
+			GetTableValue(object.superSonic.y, temp0, Tornado_SuperSonic_Positions)
 			temp0 = screen.cameraY
 			temp0 -= screen.ycenter
 			temp0 += 32
 			temp0 <<= 16
-			object.bgSuperSonicPos.y += temp0
+			object.superSonic.y += temp0
 
-			object.bgSSonicTablePos++
-			if object.bgSSonicTablePos >= 30
-				object.bgSuperSonicTimer = 0
-				object.bgSuperSonicState = TORNADO_BGSSONIC_SETUPENDPOSE
+			object.superSonic.index++
+			if object.superSonic.index >= 30
+				object.superSonic.timer = 0
+				object.superSonic.state = SUPERSONIC_OFFSCREEN
 			end if
 		end if
 		break
 
-	case TORNADO_BGSSONIC_SETUPENDPOSE
-		object.bgSuperSonicTimer++
-		if object.bgSuperSonicTimer >= 60
-			object.bgSuperSonicTimer = 0
-			object.bgSuperSonicState = TORNADO_BGSSONIC_PLAYENDPOSE
+	case SUPERSONIC_OFFSCREEN
+		object.superSonic.timer++
+		if object.superSonic.timer >= 60
+			object.superSonic.timer = 0
+			object.superSonic.state = SUPERSONIC_FLYINTOSCREEN
 		end if
 		break
 
-	case TORNADO_BGSSONIC_PLAYENDPOSE
-		object.bgSuperSonicTimer--
-		if object.bgSuperSonicTimer < 0
-			object.bgSuperSonicTimer = 2
-			GetTableValue(object.bgSuperSonicFrame, object.bgSSonicTablePos, Tornado_bgAnimFrames_SS_Sonic)
-
-			temp0 = object.bgSSonicTablePos
+	case SUPERSONIC_FLYINTOSCREEN
+		object.superSonic.timer--
+		if object.superSonic.timer < 0
+			object.superSonic.timer = 2
+			GetTableValue(object.superSonic.frame, object.superSonic.index, Tornado_SuperSonic_Sprites)
+			temp0 = object.superSonic.index
 			temp0 <<= 1
-			GetTableValue(object.bgSuperSonicPos.x, temp0, Tornado_bgSSonicPosTable)
-			object.bgSuperSonicPos.x += 0x340000
 
+			GetTableValue(object.superSonic.x, temp0, Tornado_SuperSonic_Positions)
+			object.superSonic.x += 0x340000
 			temp0++
-			GetTableValue(object.bgSuperSonicPos.y, temp0, Tornado_bgSSonicPosTable)
+
+			GetTableValue(object.superSonic.y, temp0, Tornado_SuperSonic_Positions)
 			temp0 = screen.cameraY
 			temp0 -= screen.ycenter
 			temp0 += 32
 			temp0 <<= 16
-			object.bgSuperSonicPos.y += temp0
-
-			object.bgSSonicTablePos++
-			if object.bgSSonicTablePos >= 38
-				object.bgSuperSonicState = TORNADO_BGSSONIC_ENDPOSE
+			object.superSonic.y += temp0
+			
+			object.superSonic.index++
+			if object.superSonic.index >= 38
+				object.superSonic.state = SUPERSONIC_DISPAY
 			end if
 		end if
 		break
 
-	case TORNADO_BGSSONIC_ENDPOSE
+	case SUPERSONIC_DISPAY
+		// Just hover in front of the screen, nothing to do here
 		break
+
 	end switch
 end event
 
 
 event ObjectDraw
 	switch object.state
-	case TORNADO_SETUP
-	case TORNADO_PLAYERFALLING
+	case TORNADO_CATCHPLAYER
+	case TORNADO_STABALIZE
 	case TORNADO_FLYING
-		// Draw Tornado
+		// The Tornado is in its normal 2D version right now, so just draw the propeller, the Tornado, and its pilot
 		DrawSprite(object.propellerFrame)
 		DrawSprite(4)
-		DrawSprite(object.pilotFrame)
+		DrawSprite(object.pilot.frame)
 		break
 
-	case TORNADO_INBG
+	case TORNADO_FLYINTOBG
 		DrawSprite(object.tornadoFrame)
 		break
 
-	case TORNADO_SETUPENDPOSE
+	case TORNADO_OFFSCREEN
 		break
 
-	case TORNADO_ENDPOSE_FRAME1
+	case TORNADO_FLYINTOSCREEN
 		DrawSprite(object.tornadoFrame)
-		
-		// Draw End Pose (Frame 1)
+
 		temp0 = object.xpos
 		temp1 = object.ypos
+
+		// Draw the first frame of the character posing for the screen
 		switch stage.playerListPos
 		case PlayerName[SONIC]
 		case PlayerName[SONIC AND TAILS]
@@ -620,15 +716,17 @@ event ObjectDraw
 			temp1 -= 0x2F0000
 			DrawSpriteXY(40, temp0, temp1)
 			break
+
 		end switch
 		break
 
-	case TORNADO_ENDPOSE_FRAME2
+	case TORNADO_INITLOGO
 		DrawSprite(object.tornadoFrame)
-		
-		// Draw End Pose (Frame 2)
+
 		temp0 = object.xpos
 		temp1 = object.ypos
+		
+		// Draw the second frame of the character posing for the screen
 		switch stage.playerListPos
 		case PlayerName[SONIC]
 		case PlayerName[SONIC AND TAILS]
@@ -650,32 +748,39 @@ event ObjectDraw
 			temp1 -= 0x270000
 			DrawSpriteXY(41, temp0, temp1)
 			break
+
 		end switch
 		break
 
-	case TORNADO_ENDPOSE_FRAME3
-	case TORNADO_LOGOSONIC_SHINE
-	case TORNADO_LOGO2_SHINE
-	case TORNADO_ENDINGSCREEN
-	case TORNADO_FADETOCREDITS
-		// Draw Sonic 2 Logo
+	case TORNADO_FADEINLOGO
+	case TORNADO_LOGOSHINE_TEXT
+	case TORNADO_LOGOSHINE_NUMBER
+	case TORNADO_DISPLAY
+	case TORNADO_FADEOUT
+		// First draw the base logo
 		temp0 = screen.xsize
 		temp0 -= 79
 		temp1 = screen.ysize
 		temp1 -= 38
 		DrawSpriteScreenFX(52, FX_INK, temp0, temp1)
-		DrawSpriteScreenFX(object.logoSonicFrame, FX_INK, temp0, temp1)
-		DrawSpriteScreenFX(object.logo2Frame, FX_INK, temp0, temp1)
 
+		// Then draw its shines on top of it
+		DrawSpriteScreenFX(object.text.frame, FX_INK, temp0, temp1)
+		DrawSpriteScreenFX(object.number.frame, FX_INK, temp0, temp1)
+
+		// And the actual Tornado sprite
 		DrawSprite(object.tornadoFrame)
 
-		// Draw End Pose (Frame 3)
 		temp0 = object.xpos
 		temp1 = object.ypos
+
+		// And then draw the character posing in front of it
 		switch stage.playerListPos
 		case PlayerName[SONIC]
 		case PlayerName[SONIC AND TAILS]
 			if specialStage.emeralds < 0b01111111
+				// Only normal Sonic is drawn here
+				// Super Sonic has his own entire process below
 				temp0 -= 0x6E0000
 				temp1 -= 0x670000
 				DrawSpriteXY(26, temp0, temp1)
@@ -693,21 +798,23 @@ event ObjectDraw
 			temp1 -= 0x670000
 			DrawSpriteXY(42, temp0, temp1)
 			break
+
 		end switch
 		break
+
 	end switch
 
-	switch object.bgSuperSonicState
-	case TORNADO_BGSSONIC_INBG
-	case TORNADO_BGSSONIC_SETUPENDPOSE
-	case TORNADO_BGSSONIC_PLAYENDPOSE
-	case TORNADO_BGSSONIC_ENDPOSE
-		DrawSpriteXY(object.bgSuperSonicFrame, object.bgSuperSonicPos.x, object.bgSuperSonicPos.y)
+	switch object.superSonic.state
+	case SUPERSONIC_FLYINTOBG
+	case SUPERSONIC_OFFSCREEN
+	case SUPERSONIC_FLYINTOSCREEN
+	case SUPERSONIC_DISPAY
+		DrawSpriteXY(object.superSonic.frame, object.superSonic.x, object.superSonic.y)
 		break
+
 	end switch
 
-	// Tornado End Pose Propeller
-	if object.state >= TORNADO_ENDPOSE_FRAME1
+	if object.state >= TORNADO_FLYINTOSCREEN
 		GetBit(temp0, oscillation, 1)
 		temp0 += 17
 		DrawSprite(temp0)
@@ -716,78 +823,120 @@ end event
 
 
 event ObjectStartup
+
 	LoadSpriteSheet("Ending/Objects.gif")
-	SpriteFrame(21, 8, 4, 24, 373, 191) 		// Propeller - Frame 1 						- #0
-	SpriteFrame(21, 11, 4, 18, 378, 194)		// Propeller - Frame 2 						- #1
-	SpriteFrame(21, 16, 4, 8, 383, 199) 		// Propeller - Frame 3 						- #2
-	SpriteFrame(21, 11, 4, 18, 388, 194)		// Propeller - Frame 4 						- #3
-	SpriteFrame(-95, -16, 116, 64, 256, 191)	// Tornado 									- #4
-	SpriteFrame(-45, -8, 21, 16, 256, 174)		// Tails Pilot - Frame 1 					- #5
-	SpriteFrame(-45, -8, 21, 16, 278, 174)		// Tails Pilot - Frame 2 					- #6
-	SpriteFrame(-45, -8, 21, 16, 300, 174)		// Tails Pilot - Frame 3 					- #7
-	SpriteFrame(-45, -8, 21, 16, 322, 174)		// Tails Pilot - Frame 4 					- #8
-	SpriteFrame(-47, -8, 23, 16, 344, 174)		// Tails Pilot - Frame 5 					- #9
-	SpriteFrame(-50, -8, 24, 16, 256, 157)		// Sonic Pilot - Frame 6 					- #10
-	SpriteFrame(-50, -8, 24, 16, 281, 157)		// Sonic Pilot - Frame 2 					- #11
-	SpriteFrame(-32, -16, 60, 32, 1, 1)			// BG Tornado (Super Sonic) - Frame 1 		- #12
-	SpriteFrame(-24, -12, 44, 24, 63, 1)		// BG Tornado (Super Sonic) - Frame 2 		- #13
-	SpriteFrame(-20, -12, 39, 24, 108, 1)		// BG Tornado (Super Sonic) - Frame 3 		- #14
-	SpriteFrame(-20, -12, 40, 24, 149, 1)		// BG Tornado (Super Sonic) - Frame 4 		- #15
-	SpriteFrame(-19, -12, 38, 24, 190, 1)		// BG Tornado (Super Sonic) - Frame 5 		- #16
-	SpriteFrame(-10, 7, 31, 31, 1, 34)			// Tornado End Pose (Propeller) - Frame 1 	- #17
-	SpriteFrame(-11, 6, 31, 31, 33, 34)			// Tornado End Pose (Propeller) - Frame 2 	- #18
-	SpriteFrame(-32, -28, 60, 44, 65, 26)		// BG Tornado (Sonic) 						- #19
-	SpriteFrame(-24, -24, 44, 36, 126, 26)		// BG Tornado (Sonic) 						- #20
-	SpriteFrame(-20, -19, 39, 31, 171, 26)		// BG Tornado (Sonic) 						- #21
-	SpriteFrame(-20, -19, 40, 31, 211, 26)		// BG Tornado (Sonic) 						- #22
-	SpriteFrame(-19, -15, 38, 27, 1, 146)		// BG Tornado (Sonic) 						- #23
-	SpriteFrame(0, 0, 31, 38, 4, 179)			// Sonic End Pose - Frame 1 				- #24
-	SpriteFrame(2, 5, 29, 42, 36, 175)			// Sonic End Pose - Frame 2 				- #25
-	SpriteFrame(3, 3, 77, 96, 178, 159)			// Sonic End Pose - Frame 3 				- #26
-	SpriteFrame(-32, -26, 60, 42, 1, 68)		// BG Tornado (Tails) 						- #27
-	SpriteFrame(-24, -23, 44, 34, 62, 75)		// BG Tornado (Tails) 						- #28
-	SpriteFrame(-20, -18, 39, 30, 1, 115)		// BG Tornado (Tails) 						- #29
-	SpriteFrame(-20, -19, 40, 31, 41, 115)		// BG Tornado (Tails) 						- #30
-	SpriteFrame(-19, -15, 38, 27, 82, 115)		// BG Tornado (Tails) 						- #31
-	SpriteFrame(0, 2, 31, 36, 1, 219)			// Tails End Pose - Frame 1 				- #32
-	SpriteFrame(0, 10, 32, 37, 33, 218)			// Tails End Pose - Frame 2 				- #33
-	SpriteFrame(1, 0, 111, 96, 66, 159)			// Tails End Pose - Frame 3 				- #34
-	SpriteFrame(-32, -32, 60, 48, 181, 256)		// BG Tornado (Knux) 						- #35
-	SpriteFrame(-24, -24, 44, 36, 181, 305)		// BG Tornado (Knux) 						- #36
-	SpriteFrame(-20, -19, 39, 31, 181, 342)		// BG Tornado (Knux) 						- #37
-	SpriteFrame(-20, -19, 40, 31, 181, 374)		// BG Tornado (Knux) 						- #38
-	SpriteFrame(-19, -15, 38, 27, 181, 406)		// BG Tornado (Knux) 						- #39
-	SpriteFrame(0, 0, 31, 38, 382, 217)			// Knux End Pose - Frame 1 					- #40
-	SpriteFrame(0, 0, 32, 39, 414, 216)			// Knux End Pose - Frame 2 					- #41
-	SpriteFrame(0, 0, 64, 104, 447, 151)		// Knux End Pose - Frame 3 					- #42
-	SpriteFrame(-11, -8, 19, 16, 124, 84)		// BG Super Sonic - Frame 1 				- #43
-	SpriteFrame(-8, -8, 15, 12, 128, 101)		// BG Super Sonic - Frame 2 				- #44
-	SpriteFrame(-7, -8, 11, 14, 132, 144)		// BG Super Sonic - Frame 3 				- #45
-	SpriteFrame(-7, -7, 13, 13, 130, 129)		// BG Super Sonic - Frame 4 				- #46
-	SpriteFrame(-6, -8, 13, 15, 130, 143)		// BG Super Sonic - Frame 5 				- #47
-	SpriteFrame(1, 4, 111, 92, 144, 66)			// Super Sonic End Pose 					- #48
-	SpriteFrame(-90, -53, 179, 105, 1, 256)		// Tornado End Pose (Sonic Pilot) 			- #49
-	SpriteFrame(-90, -53, 179, 105, 1, 362)		// Tornado End Pose (Tails Pilot) 			- #50
-	SpriteFrame(0, 0, 0, 0, 391, 256)			// Logo Blank								- #51
-	SpriteFrame(-60, -20, 120, 40, 391, 256)	// Sonic 2 Logo 							- #52
-	SpriteFrame(-63, -22, 81, 38, 397, 297)		// "Sonic" Flash - Frame 1 					- #53
-	SpriteFrame(-63, -22, 81, 38, 397, 336)		// "Sonic" Flash - Frame 2 					- #54
-	SpriteFrame(-63, -22, 81, 38, 397, 375)		// "Sonic" Flash - Frame 3 					- #55
-	SpriteFrame(28, -20, 32, 39, 479, 297)		// "2" Flash - Frame 1 						- #56
-	SpriteFrame(28, -20, 32, 39, 479, 337)		// "2" Flash - Frame 2 						- #57
-	SpriteFrame(28, -20, 32, 39, 479, 377)		// "2" Flash - Frame 3 						- #58
-	SpriteFrame(28, -20, 32, 39, 479, 417)		// "2" Flash - Frame 4 						- #59
+
+	// 0-3 - Front Propeller Frames
+	SpriteFrame(21, 8, 4, 24, 373, 191)
+	SpriteFrame(21, 11, 4, 18, 378, 194)
+	SpriteFrame(21, 16, 4, 8, 383, 199)
+	SpriteFrame(21, 11, 4, 18, 388, 194)
+
+	// 4 - Main Tornado Frame
+	SpriteFrame(-95, -16, 116, 64, 256, 191)
+	
+	// 5-9 - Tails Piloting the Tornado Frames
+	SpriteFrame(-45, -8, 21, 16, 256, 174) // 5  - Looking straight ahead
+	SpriteFrame(-45, -8, 21, 16, 278, 174) // 6  - Normal head sprite (~3/4 angle one cropped from normal standing sprite)
+	SpriteFrame(-45, -8, 21, 16, 300, 174) // 7  - Mid-blink frame
+	SpriteFrame(-45, -8, 21, 16, 322, 174) // 8  - Blink frame with fully closed eyes
+	SpriteFrame(-47, -8, 23, 16, 344, 174) // 9  - Looking up
+
+	// 10-11 - Sonic Piloting the Tornado Frames
+	SpriteFrame(-50, -8, 24, 16, 256, 157)
+	SpriteFrame(-50, -8, 24, 16, 281, 157)
+
+	//12-16 - Zoomout Tornado shots, Tails as pilot and no passenger
+	SpriteFrame(-32, -16, 60, 32, 1, 1)
+	SpriteFrame(-24, -12, 44, 24, 63, 1)
+	SpriteFrame(-20, -12, 39, 24, 108, 1)
+	SpriteFrame(-20, -12, 40, 24, 149, 1)
+	SpriteFrame(-19, -12, 38, 24, 190, 1)
+
+	// 17-18 - Zoomout Propeller Frames
+	SpriteFrame(-10, 7, 31, 31, 1, 34)
+	SpriteFrame(-11, 6, 31, 31, 33, 34)
+
+	// 19-23 - Zoomout Tornado Frames, Tails as pilot and Sonic as passenger
+	SpriteFrame(-32, -28, 60, 44, 65, 26)
+	SpriteFrame(-24, -24, 44, 36, 126, 26)
+	SpriteFrame(-20, -19, 39, 31, 171, 26)
+	SpriteFrame(-20, -19, 40, 31, 211, 26)
+	SpriteFrame(-19, -15, 38, 27, 1, 146)
+
+	// 24-26 - Normal Sonic Posing Frames
+	SpriteFrame(0, 0, 31, 38, 4, 179)
+	SpriteFrame(2, 5, 29, 42, 36, 175)
+	SpriteFrame(3, 3, 77, 96, 178, 159)
+
+	// 27-31 - Zoomout Tornado Frames, Sonic as pilot and Tails as passenger
+	SpriteFrame(-32, -26, 60, 42, 1, 68)
+	SpriteFrame(-24, -23, 44, 34, 62, 75)
+	SpriteFrame(-20, -18, 39, 30, 1, 115)
+	SpriteFrame(-20, -19, 40, 31, 41, 115)
+	SpriteFrame(-19, -15, 38, 27, 82, 115)
+
+	// 32-34 - Tails Posing Frame
+	SpriteFrame(0, 2, 31, 36, 1, 219)
+	SpriteFrame(0, 10, 32, 37, 33, 218)
+	SpriteFrame(1, 0, 111, 96, 66, 159)
+
+	// 35-39 - Zoomout Tornado Frames, Tails as pilot and Knuckles as passenger
+	SpriteFrame(-32, -32, 60, 48, 181, 256)
+	SpriteFrame(-24, -24, 44, 36, 181, 305)
+	SpriteFrame(-20, -19, 39, 31, 181, 342)
+	SpriteFrame(-20, -19, 40, 31, 181, 374)
+	SpriteFrame(-19, -15, 38, 27, 181, 406)
+
+	// 40-42 - Knuckles Posing Frames
+	SpriteFrame(0, 0, 31, 38, 382, 217)
+	SpriteFrame(0, 0, 32, 39, 414, 216)
+	SpriteFrame(0, 0, 64, 104, 447, 151)
+
+	// 43-48 - Super Sonic Zoomout Frames
+	SpriteFrame(-11, -8, 19, 16, 124, 84)
+	SpriteFrame(-8, -8, 15, 12, 128, 101)
+	SpriteFrame(-7, -8, 11, 14, 132, 144)
+	SpriteFrame(-7, -7, 13, 13, 130, 129)
+	SpriteFrame(-6, -8, 13, 15, 130, 143)
+	SpriteFrame(1, 4, 111, 92, 144, 66)
+
+	// 49 - Big Tornado Frame, Sonic as pilot
+	SpriteFrame(-90, -53, 179, 105, 1, 256)
+
+	// 50 - Big Tornado Frame, Tails as pilot
+	SpriteFrame(-90, -53, 179, 105, 1, 362)
+
+	// 51 - Blank Frame
+	SpriteFrame(0, 0, 0, 0, 391, 256)
+
+	// 52 - `Sonic the Hedgehog 2` Complete Text Frame
+	SpriteFrame(-60, -20, 120, 40, 391, 256)
+
+	// 53-55 - Flashing `Sonic` Text Frames
+	SpriteFrame(-63, -22, 81, 38, 397, 297)
+	SpriteFrame(-63, -22, 81, 38, 397, 336)
+	SpriteFrame(-63, -22, 81, 38, 397, 375)
+
+	// 56-59 - Flashing `2` Text Frames
+	SpriteFrame(28, -20, 32, 39, 479, 297)
+	SpriteFrame(28, -20, 32, 39, 479, 337)
+	SpriteFrame(28, -20, 32, 39, 479, 377)
+	SpriteFrame(28, -20, 32, 39, 479, 417)
+
 end event
 
 event RSDKDraw
-	DrawSprite(4)
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
 end event
 
 event RSDKLoad
 	LoadSpriteSheet("Ending/Objects.gif")
-	SpriteFrame(21, 8, 4, 24, 373, 191) 		// Propeller - Frame 1 						- #0
-	SpriteFrame(21, 11, 4, 18, 378, 194)		// Propeller - Frame 2 						- #1
-	SpriteFrame(21, 16, 4, 8, 383, 199) 		// Propeller - Frame 3 						- #2
-	SpriteFrame(21, 11, 4, 18, 388, 194)		// Propeller - Frame 4 						- #3
-	SpriteFrame(-95, -16, 116, 64, 256, 191)	// Tornado 									- #4
+	SpriteFrame(21, 8, 4, 24, 373, 191) // Propeller
+	SpriteFrame(-95, -16, 116, 64, 256, 191) // Tornado
+	SpriteFrame(-45, -8, 21, 16, 278, 174) // Tails
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
