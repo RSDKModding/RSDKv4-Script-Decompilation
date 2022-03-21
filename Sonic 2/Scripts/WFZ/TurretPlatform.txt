@@ -6,24 +6,26 @@
 // ----------------------------------
 
 // Aliases
-private alias 58 : TYPE_TURRETPLATFORM
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
-reserve function TurretPlatform_Function121
+reserve function TurretPlatform_SetupPlatform
 reserve function TurretPlatform_DebugDraw
 reserve function TurretPlatform_DebugSpawn
 
 // Static Values
-public value TurretPlatform_value47 = 0;
+private value TurretPlatform_value47 = 0
+private alias TurretPlatform_value47 : TurretPlatform_startDebugID
 
-// Tables
-
-function TurretPlatform_Function121
-	object[arrayPos0].value0 = 0
-	object[arrayPos0].animationTimer = 0
-	object[arrayPos0].frame = 0
-	object[arrayPos0].state = 0
-	object[arrayPos0].priority = PRIORITY_ACTIVE
+function TurretPlatform_SetupPlatform
+	object[arrayPos0].timer 			= 0
+	object[arrayPos0].animationTimer 	= 0
+	object[arrayPos0].frame 			= 0
+	object[arrayPos0].state 			= 0
+	object[arrayPos0].priority 			= PRIORITY_ACTIVE
 end function
 
 
@@ -33,13 +35,14 @@ end function
 
 
 function TurretPlatform_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= TurretPlatform_value47
-	temp0 *= 48
-	temp0 &= 240
+	temp0 = debugMode[0].currentSelection
+	temp0 -= TurretPlatform_startDebugID
+	temp0 *= 0x30
+	temp0 &= 0xF0
 	CreateTempObject(TypeName[Turret Platform], temp0, object.xpos, object.ypos)
+
 	arrayPos0 = object[tempObjectPos].entityPos
-	CallFunction(TurretPlatform_Function121)
+	CallFunction(TurretPlatform_SetupPlatform)
 end function
 
 
@@ -47,14 +50,15 @@ event ObjectMain
 	switch object.state
 	case 0
 		temp0 = oscillation
-		temp0 &= 240
+		temp0 &= 0xF0
 		if temp0 == object.propertyValue
-			object.priority = PRIORITY_ACTIVE
-			object.value0 = 160
-			object.animationTimer = 6
-			object.state = 1
+			object.priority 		= PRIORITY_ACTIVE
+			object.timer 			= 160
+			object.animationTimer 	= 6
+			object.state 			= 1
 		end if
 		break
+
 	case 1
 		object.animationTimer++
 		object.frame = object.animationTimer
@@ -63,12 +67,14 @@ event ObjectMain
 			object.state = 2
 		end if
 		break
+
 	case 2
-		object.value0--
-		if object.value0 == 0
+		object.timer--
+		if object.timer == 0
 			object.state = 3
 		end if
 		break
+
 	case 3
 		object.animationTimer--
 		object.frame = object.animationTimer
@@ -78,14 +84,16 @@ event ObjectMain
 		end if
 		break
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if object.frame >= 3
 			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -24, 32, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		end if
 	next
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		arrayPos0 = object.entityPos
-		CallFunction(TurretPlatform_Function121)
+		CallFunction(TurretPlatform_SetupPlatform)
 	end if
 end event
 
@@ -102,11 +110,13 @@ event ObjectStartup
 	SpriteFrame(-24, -24, 48, 16, 130, 126)
 	SpriteFrame(-28, -24, 56, 21, 130, 143)
 	SpriteFrame(-32, -24, 64, 24, 130, 165)
+
 	foreach (TypeName[Turret Platform], arrayPos0, ALL_ENTITIES)
-		CallFunction(TurretPlatform_Function121)
+		CallFunction(TurretPlatform_SetupPlatform)
 	next
+
 	temp0 = 0
-	TurretPlatform_value47 = DebugMode_ObjCount
+	TurretPlatform_startDebugID = DebugMode_ObjCount
 	while temp0 < 6
 		SetTableValue(TypeName[Turret Platform], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(TurretPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -121,6 +131,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-24, -24, 48, 16, 130, 92)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "intervalOffset")
 end event

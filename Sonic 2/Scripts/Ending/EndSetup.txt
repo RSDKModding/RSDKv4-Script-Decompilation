@@ -11,11 +11,11 @@ private alias object.value2  : object.blendAmount
 private alias object.value3  : object.tornadoTimer
 // values 4-13 are unused...
 private alias object.value14 : object.paletteTimer
-private alias object.value15 : object.palIndexA
-private alias object.value16 : object.palIndexB
-private alias object.value17 : object.palIndexC
-private alias object.value18 : object.palIndexD
-private alias object.value19 : object.palIndexE
+private alias object.value15 : object.bgTowerLightPalIndex
+private alias object.value16 : object.rainbowLightPalIndex
+private alias object.value17 : object.chemLiquidPalIndex1
+private alias object.value18 : object.chemLiquidPalIndex2
+private alias object.value19 : object.chemLiquidPalIndex3
 
 private alias object.value20 : object.srcBlendPal
 
@@ -48,7 +48,7 @@ private alias 0 : TRACK_STAGE
 
 // Reserved object slots
 private alias 0  : SLOT_PLAYER1
-private alias 10 : SLOT_LEVELSETUP
+private alias 10 : SLOT_ZONESETUP
 
 // Super States
 public alias 1 : SUPERSTATE_SUPER
@@ -63,18 +63,18 @@ private alias EndingSetup_value34 : EndingSetup_scrollVelocity.y
 // Tables
 
 // All these tables are copies of DEZ's tables
-private table EndingSetup_palTableA
+private table EndingSetup_bgTowerPalTable
 	0xE00000, 0xC00000, 0xA00000, 0x800000, 0x600000, 0x400000, 0x200000, 0x400000
 	0x600000, 0x800000, 0xA00000, 0xC00000, 0xE00000, 0xE02000, 0xE04000, 0xE02000
 end table
 
-private table EndingSetup_palTableB
+private table EndingSetup_blendLightPalTable
 	0x00E000, 0x20C000, 0x40A000, 0x608000, 0x806000, 0xA04000, 0xC02000
 	0xE00000, 0xC00020, 0xA00040, 0x800060, 0x600080, 0x4000A0, 0x2000C0
 	0x0000E0, 0x0020C0, 0x0040A0, 0x006080, 0x008060, 0x00A040, 0x00C020
 end table
 
-private table EndingSetup_palTableCDE
+private table EndingSetup_chemLiquidPalTable
 	0x0040E0, 0x0000C0, 0x0000C0
 	0x0060E0, 0x0020C0, 0x0000C0
 	0x0040E0, 0x0040E0, 0x0000C0
@@ -87,7 +87,7 @@ private table EndingSetup_palTableCDE
 end table
 
 // Unused table, also in CPZ and DEZ
-// See DEZSetup for full explanation
+// See CPZSetup/DEZSetup for full explanation
 private table EndingSetup_unusedPalette
 	0x00E000, 0x00A000, 0x006000, 0x002000, 0x000000, 0x000020, 0x000060, 0x0020A0
 	0x0060E0, 0x0020A0, 0x000060, 0x000020, 0x000000, 0x200000, 0x600000, 0xA00000
@@ -98,36 +98,35 @@ end table
 
 
 event ObjectMain
-
 	// Update palette cycling
 	// (This is just a duplicate of the DEZ palette cycle code, here so that DEZ will look normal for the short moment it appears)
 	object.paletteTimer++
 	if object.paletteTimer == 8
 		object.paletteTimer = 0
 
-		object.palIndexA++
-		object.palIndexA &= 15
-		GetTableValue(temp0, object.palIndexA, EndingSetup_palTableA)
+		object.bgTowerLightPalIndex++
+		object.bgTowerLightPalIndex &= 15
+		GetTableValue(temp0, object.bgTowerLightPalIndex, EndingSetup_bgTowerPalTable)
 		SetPaletteEntry(0, 175, temp0)
 
-		object.palIndexB++
-		object.palIndexB %= 21
-		GetTableValue(temp0, object.palIndexB, EndingSetup_palTableB)
+		object.rainbowLightPalIndex++
+		object.rainbowLightPalIndex %= 21
+		GetTableValue(temp0, object.rainbowLightPalIndex, EndingSetup_blendLightPalTable)
 		SetPaletteEntry(0, 191, temp0)
 
-		object.palIndexC += 3
-		object.palIndexC %= 27
-		GetTableValue(temp0, object.palIndexC, EndingSetup_palTableCDE)
+		object.chemLiquidPalIndex1 += 3
+		object.chemLiquidPalIndex1 %= 27
+		GetTableValue(temp0, object.chemLiquidPalIndex1, EndingSetup_chemLiquidPalTable)
 		SetPaletteEntry(0, 188, temp0)
 
-		object.palIndexD += 3
-		object.palIndexD %= 27
-		GetTableValue(temp0, object.palIndexD, EndingSetup_palTableCDE)
+		object.chemLiquidPalIndex2 += 3
+		object.chemLiquidPalIndex2 %= 27
+		GetTableValue(temp0, object.chemLiquidPalIndex2, EndingSetup_chemLiquidPalTable)
 		SetPaletteEntry(0, 189, temp0)
 
-		object.palIndexE += 3
-		object.palIndexE %= 27
-		GetTableValue(temp0, object.palIndexE, EndingSetup_palTableCDE)
+		object.chemLiquidPalIndex3 += 3
+		object.chemLiquidPalIndex3 %= 27
+		GetTableValue(temp0, object.chemLiquidPalIndex3, EndingSetup_chemLiquidPalTable)
 		SetPaletteEntry(0, 190, temp0)
 	end if
 
@@ -451,11 +450,11 @@ event ObjectStartup
 	playerCount = 1
 
 	// Place this object into the level and setup its values
-	object[SLOT_LEVELSETUP].type        = TypeName[Ending Setup]
-	object[SLOT_LEVELSETUP].priority    = PRIORITY_ACTIVE
-	object[SLOT_LEVELSETUP].palIndexD   = 1
-	object[SLOT_LEVELSETUP].palIndexE   = 2
-	object[SLOT_LEVELSETUP].blendAmount = 0x100
+	object[SLOT_ZONESETUP].type        			= TypeName[Ending Setup]
+	object[SLOT_ZONESETUP].priority    			= PRIORITY_ACTIVE
+	object[SLOT_ZONESETUP].chemLiquidPalIndex2	= 1
+	object[SLOT_ZONESETUP].chemLiquidPalIndex3	= 2
+	object[SLOT_ZONESETUP].blendAmount 			= 0x100
 
 	// P1 is controlled via other objects, so blank its state
 	player[SLOT_PLAYER1].state = PlayerObject_Blank

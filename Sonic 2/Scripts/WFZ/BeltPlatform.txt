@@ -6,72 +6,81 @@
 // ----------------------------------
 
 // Aliases
-private alias 60 : TYPE_BELTPLATFORM
+private alias object.value0 : object.timer
+private alias object.value1 : object.activePlayers
 
-
-// Static Values
-
-// Tables
+// States
+private alias 0 : BELTPLATFORM_INACTIVE
+private alias 1 : BELTPLATFORM_APPEARING
+private alias 2 : BELTPLATFORM_MOVING
+private alias 3 : BELTPLATFORM_DISAPPEARING
 
 event ObjectMain
 	switch object.state
-	case 0
+	case BELTPLATFORM_INACTIVE
 		break
-	case 1
+
+	case BELTPLATFORM_APPEARING
 		object.animationTimer++
 		if object.animationTimer == 4
 			object.animationTimer = 0
 			object.frame--
 			if object.frame == 0
-				object.state = 2
+				object.state = BELTPLATFORM_MOVING
 			end if
 		end if
 		break
-	case 2
+
+	case BELTPLATFORM_MOVING
 		object.ypos += object.yvel
-		object.value0--
-		if object.value0 == 0
-			object.state = 3
+		
+		object.timer--
+		if object.timer == 0
+			object.state = BELTPLATFORM_DISAPPEARING
 		end if
+
 		temp2 = 0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			GetBit(temp0, object.value1, temp2)
-			if temp0 == 1
+			GetBit(temp0, object.activePlayers, temp2)
+			if temp0 == true
 				object[currentPlayer].ypos += object.yvel
 			end if
-			SetBit(object.value1, temp2, 0)
+
+			SetBit(object.activePlayers, temp2, false)
 			BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -4, 24, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				SetBit(object.value1, temp2, 1)
+			if checkResult == true
+				SetBit(object.activePlayers, temp2, true)
 			end if
 			temp2++
 		next
 		break
-	case 3
+
+	case BELTPLATFORM_DISAPPEARING
 		object.animationTimer++
 		if object.animationTimer == 4
 			object.animationTimer = 0
 			object.frame++
 			if object.frame == 3
-				object.state = 0
+				object.state = BELTPLATFORM_INACTIVE
 			end if
 		end if
 		break
 	end switch
+
 	temp0 = object.xpos
 	temp0 >>= 16
 	temp0 -= screen.cameraX
 	Abs(temp0)
 	temp0 -= 128
 	if temp0 > screen.xcenter
-		object.state = 0
+		object.state 	= BELTPLATFORM_INACTIVE
 		object.priority = PRIORITY_ACTIVE_BOUNDS
 	end if
 end event
 
 
 event ObjectDraw
-	if object.state > 0
+	if object.state > BELTPLATFORM_INACTIVE
 		DrawSprite(object.frame)
 	end if
 end event
@@ -89,6 +98,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-24, -4, 48, 8, 80, 177)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

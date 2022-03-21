@@ -6,15 +6,12 @@
 // ----------------------------------
 
 // Aliases
-private alias 42 : TYPE_CLOUD
+
+private alias WFZSetup_value33 : WFZSetup_scrollVelocity.x
 
 // Function declarations
 reserve function Cloud_DebugDraw
 reserve function Cloud_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function Cloud_DebugDraw
 	DrawSprite(0)
@@ -30,7 +27,7 @@ end function
 
 event ObjectMain
 	object.xpos += object.xvel
-	object.xpos += WFZSetup_value33
+	object.xpos += WFZSetup_scrollVelocity.x
 end event
 
 
@@ -41,34 +38,76 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("SCZ/Objects.gif")
+
+	// Cloud frames
 	SpriteFrame(-40, -4, 79, 8, 72, 74)
 	SpriteFrame(-24, -4, 48, 8, 72, 83)
 	SpriteFrame(-8, -4, 16, 8, 121, 83)
+
 	foreach (TypeName[Cloud], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 2
 		switch object[arrayPos0].propertyValue
 		case 0
 			object[arrayPos0].xvel = -0xC000
 			break
+
 		case 1
 			object[arrayPos0].xvel = -0x8000
 			break
+
 		case 2
 			object[arrayPos0].xvel = -0x4000
 			break
 		end switch
 	next
+
 	SetTableValue(TypeName[Cloud], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Cloud_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Cloud_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult %= 3
+			break
+		case 0 // frameID
+			checkResult = object.propertyValue
+			checkResult %= 3
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue %= 3
+			break
+		case 0 // frameID
+			object.propertyValue = editor.variableValue
+			object.propertyValue %= 3
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	DrawSprite(object.propertyValue)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SCZ/Objects.gif")
+
+	// Cloud frames
+	SpriteFrame(-40, -4, 79, 8, 72, 74)
+	SpriteFrame(-24, -4, 48, 8, 72, 83)
+	SpriteFrame(-8, -4, 16, 8, 121, 83)
+
+	AddEditorVariable("frameID")
+	SetActiveVariable("frameID")
+	AddEnumVariable("Long Cloud", 0)
+	AddEnumVariable("Medium Cloud", 1)
+	AddEnumVariable("Small Cloud", 2)
 end event

@@ -49,21 +49,21 @@ event ObjectMain
 				object[currentPlayer].xvel = -0x80000
 			end if
 
-			player[currentPlayer].yvel = -0x80000
-			player[currentPlayer].yvel -= player[currentPlayer].gravityStrength
-			player[currentPlayer].direction = object.direction
-			player[currentPlayer].state = PlayerObject_HandleAir
-			player[currentPlayer].tileCollisions = true
-			player[currentPlayer].gravity = GRAVITY_AIR
-			player[currentPlayer].speed = object[currentPlayer].xvel
-			player[currentPlayer].timer = 1
-			player[currentPlayer].collisionMode = CMODE_FLOOR
-			player[currentPlayer].pushing = 0
-			player[currentPlayer].controlLock = 15
-			player[currentPlayer].animation = ANI_TWIRL
-			player[currentPlayer].prevAnimation = ANI_TWIRL
-			player[currentPlayer].frame = 0
-			player[currentPlayer].animationSpeed = 90
+			player[currentPlayer].yvel 				= -0x80000
+			player[currentPlayer].yvel 			   -= player[currentPlayer].gravityStrength
+			player[currentPlayer].direction 		= object.direction
+			player[currentPlayer].state 			= PlayerObject_HandleAir
+			player[currentPlayer].tileCollisions 	= true
+			player[currentPlayer].gravity 			= GRAVITY_AIR
+			player[currentPlayer].speed 			= object[currentPlayer].xvel
+			player[currentPlayer].timer 			= 1
+			player[currentPlayer].collisionMode 	= CMODE_FLOOR
+			player[currentPlayer].pushing 			= 0
+			player[currentPlayer].controlLock 		= 15
+			player[currentPlayer].animation 		= ANI_TWIRL
+			player[currentPlayer].prevAnimation 	= ANI_TWIRL
+			player[currentPlayer].frame 			= 0
+			player[currentPlayer].animationSpeed 	= 90
 
 			PlaySfx(SfxName[Spring], false)
 		end if
@@ -75,7 +75,7 @@ event ObjectDraw
 	// Only show if the player is in debug mode
 	if object[0].type == TypeName[Debug Mode]
 		temp1 = object.propertyValue
-		temp1 &= 112
+		temp1 &= 0x70
 		if temp1 == 0
 			temp0 = -0x400000
 			temp1 = 8
@@ -83,6 +83,7 @@ event ObjectDraw
 			temp0 = -0x800000
 			temp1 = 16
 		end if
+
 		temp0 += object.ypos
 		temp0 += 0x80000
 		temp4 = 0
@@ -97,7 +98,7 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-8, -8, 16, 16, 93, 113) // 0 - Blank control circle
+	SpriteFrame(-8, -8, 16, 16, 93, 113) // #0 - Blank control circle
 
 	foreach (TypeName[Wall Bumper], arrayPos0, ALL_ENTITIES)
 		temp0 = object[arrayPos0].propertyValue
@@ -111,6 +112,36 @@ event ObjectStartup
 		FlipSign(object[arrayPos0].hitboxT)
 		object[arrayPos0].drawOrder = 5
 	next
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 0x70
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			editor.variableValue &= 7
+			editor.variableValue <<= 4
+
+			temp0 = 0x70
+			Not(temp0)
+			object.propertyValue &= temp0
+
+			object.propertyValue |= editor.variableValue
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -136,7 +167,11 @@ end event
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-8, -8, 16, 16, 93, 113) // 0 - Blank control circle
+	SpriteFrame(-8, -8, 16, 16, 93, 113) // #0 - Blank control circle
 
-	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+	
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("4 Bumpers", 0)
+	AddEnumVariable("8 Bumpers", 1)
 end event

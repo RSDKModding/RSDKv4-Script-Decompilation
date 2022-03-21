@@ -10,28 +10,26 @@
 //value0 is unused
 private alias object.value1  : object.palRotateTimer
 //value2-4 are unused, too
-private alias object.value5  : object.aniTilesTimerA
-private alias object.value6  : object.aniTilesIndexA
 
-private alias object.value7  : object.aniTilesTimerB
-private alias object.value8  : object.aniTilesIndexB
+private alias object.value5  : object.bgLightDuration
+private alias object.value6  : object.bgLightFrame
 
-private alias object.value9  : object.aniTilesTimerC
-private alias object.value10 : object.aniTilesIndexC
+private alias object.value7  : object.pinkFlowerDuration
+private alias object.value8  : object.pinkFlowerFrame
 
-private alias object.value11 : object.aniTilesTimerD
-private alias object.value12 : object.aniTilesIndexD
+private alias object.value9  : object.redFlowerDuration
+private alias object.value10 : object.redFlowerFrame
 
-private alias object.value13 : object.aniTilesTimerE
-private alias object.value14 : object.aniTilesIndexE
+private alias object.value11 : object.rectFlowerDuration
+private alias object.value12 : object.rectFlowerFrame
 
-private alias object.value15 : object.palIndexA
-private alias object.value16 : object.palIndexB
-private alias object.value17 : object.palIndexC
-private alias object.value18 : object.palIndexD
+private alias object.value15 : object.lavaPalIndex1
+private alias object.value16 : object.lavaPalIndex2
+private alias object.value17 : object.lavaPalIndex3
+private alias object.value18 : object.lavaPalIndex4
 
 private alias object.value19 : object.shakeTimer
-// value20 is unused (besides being reset after earthquakes)
+private alias object.value20 : object.unused // unused (besides being reset after earthquakes)
 private alias object.value21 : object.earthquakeTimer
 private alias object.value22 : object.movementState
 private alias object.value23 : object.earthquakePos
@@ -39,18 +37,27 @@ private alias object.value23 : object.earthquakePos
 private alias object.value25 : object.prevEarthquakeActive
 private alias object.value26 : object.prevEarthquakeType
 
+// Earthquake states
 private alias 0 : EARTHQUAKE_NONE
 private alias 1 : EARTHQUAKE_HOLD
 private alias 2 : EARTHQUAKE_ACTIVE
 
+// Tile Flags
+private alias 1 : TILE_LAVA
 
 // Tracks
 private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
 private alias 2 : TRACK_INVINCIBLE
+private alias 3 : TRACK_CONTINUE
+private alias 4 : TRACK_BOSS
+private alias 5 : TRACK_GAMEOVER
+private alias 6 : TRACK_DROWNING
+private alias 7 : TRACK_SUPER
 
 // Reserved object slots
 private alias 0  : SLOT_PLAYER1
-private alias 10 : SLOT_LEVELSETUP
+private alias 10 : SLOT_ZONESETUP
 
 // Music Events
 private alias 25 : SLOT_MUSICEVENT_CHANGE
@@ -64,11 +71,11 @@ reserve function HTZSetup_SpeedUpMusic
 reserve function HTZSetup_SlowDownMusic
 
 // Static Values
-public value HTZSetup_value33 = 0;
-public value HTZSetup_value34 = 0;
-public value HTZSetup_value35 = 0;
-public value HTZSetup_value36 = 0;
-public value HTZSetup_value37 = 0;
+public value HTZSetup_value33 = 0
+public value HTZSetup_value34 = 0
+public value HTZSetup_value35 = 0
+public value HTZSetup_value36 = 0
+public value HTZSetup_value37 = 0
 
 private alias HTZSetup_value33 : HTZSetup_earthquakeState
 private alias HTZSetup_value34 : HTZSetup_activeEarthquakeType
@@ -77,23 +84,23 @@ private alias HTZSetup_value36 : HTZSetup_earthquakePos    // Y-wise, high part 
 private alias HTZSetup_value37 : HTZSetup_earthquakePosMax // Lowest point the earthquake should go
 
 // Tables
-public table HTZSetup_aniTilesTableA
+public table HTZSetup_bgLightFrameTable
 	508, 24, 509, 10, 510, 12, 511, 24, 510, 12, 509, 10
 end table
 
-public table HTZSetup_aniTilesTableB
+public table HTZSetup_pinkFlowerFrameTable
 	512, 128, 513, 20, 512, 8, 513, 8, 512, 8, 513, 8
 end table
 
-public table HTZSetup_aniTilesTableC
+public table HTZSetup_redFlowerFrameTable
 	514, 128, 515, 12, 514, 12, 515, 12, 514, 6, 515, 6, 514, 6, 515, 6
 end table
 
-public table HTZSetup_aniTilesTableD
+public table HTZSetup_rectFlowerFrameTable
 	516, 8, 517, 8
 end table
 
-public table HTZSetup_aniTilesTableE
+public table HTZSetup_pointyFlowerFrameTable
 	518, 128, 519, 8, 518, 8, 519, 8, 518, 8, 519, 12, 518, 12, 519, 12
 end table
 
@@ -113,18 +120,20 @@ function HTZSetup_SpeedUpMusic
 	temp0 &= checkResult
 	if temp0 == false
 		switch music.currentTrack
-		case 0
+		case TRACK_STAGE
 			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
-			SwapMusicTrack("HillTop_F.ogg", TRACK_STAGE, 1, 8000)
+			SwapMusicTrack("HillTop_F.ogg", TRACK_STAGE, true, 8000)
 			break
-		case 2
-			SetMusicTrack("HillTop_F.ogg", TRACK_STAGE, 1)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("HillTop_F.ogg", TRACK_STAGE, true)
 			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897, 8000)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("HillTop_F.ogg", TRACK_STAGE, 1)
+
+		case TRACK_BOSS
+		case TRACK_GAMEOVER
+		case TRACK_SUPER
+			SetMusicTrack("HillTop_F.ogg", TRACK_STAGE, true)
 			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
 			break
 		end switch
@@ -143,18 +152,20 @@ function HTZSetup_SlowDownMusic
 	temp0 &= checkResult
 	if temp0 == false
 		switch music.currentTrack
-		case 0
+		case TRACK_STAGE
 			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
-			SwapMusicTrack("HillTop.ogg", TRACK_STAGE, 1, 12500)
+			SwapMusicTrack("HillTop.ogg", TRACK_STAGE, true, 12500)
 			break
-		case 2
-			SetMusicTrack("HillTop.ogg", TRACK_STAGE, 1)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("HillTop.ogg", TRACK_STAGE, true)
 			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679, 12500)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("HillTop.ogg", TRACK_STAGE, 1)
+
+		case TRACK_BOSS
+		case TRACK_GAMEOVER
+		case TRACK_SUPER
+			SetMusicTrack("HillTop.ogg", TRACK_STAGE, true)
 			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
 			break
 		end switch
@@ -168,85 +179,106 @@ event ObjectMain
 	object.palRotateTimer++
 	if object.palRotateTimer == 12
 		object.palRotateTimer = 0
-		object.palIndexA += 4
-		object.palIndexA &= 63
-		GetTableValue(temp0, object.palIndexA, HTZSetup_palTable)
+
+		object.lavaPalIndex1 += 4
+		object.lavaPalIndex1 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex1, HTZSetup_palTable)
 		SetPaletteEntry(0, 147, temp0)
-		object.palIndexB += 4
-		object.palIndexB &= 63
-		GetTableValue(temp0, object.palIndexB, HTZSetup_palTable)
+
+		object.lavaPalIndex2 += 4
+		object.lavaPalIndex2 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex2, HTZSetup_palTable)
 		SetPaletteEntry(0, 148, temp0)
-		object.palIndexC += 4
-		object.palIndexC &= 63
-		GetTableValue(temp0, object.palIndexC, HTZSetup_palTable)
+
+		object.lavaPalIndex3 += 4
+		object.lavaPalIndex3 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex3, HTZSetup_palTable)
 		SetPaletteEntry(0, 158, temp0)
-		object.palIndexD += 4
-		object.palIndexD &= 63
-		GetTableValue(temp0, object.palIndexD, HTZSetup_palTable)
+
+		object.lavaPalIndex4 += 4
+		object.lavaPalIndex4 &= 0x3F
+		GetTableValue(temp0, object.lavaPalIndex4, HTZSetup_palTable)
 		SetPaletteEntry(0, 159, temp0)
 	end if
 
-	if object.aniTilesTimerA < 2
-		GetTableValue(temp0, object.aniTilesIndexA, HTZSetup_aniTilesTableA)
+	if object.bgLightDuration < 2
+		GetTableValue(temp0, object.bgLightFrame, HTZSetup_bgLightFrameTable)
+
 		Copy16x16Tile(761, temp0)
 		temp0 += 12
+
 		Copy16x16Tile(762, temp0)
 		temp0 += 4
+
 		Copy16x16Tile(763, temp0)
-		object.aniTilesIndexA++
-		GetTableValue(object.aniTilesTimerA, object.aniTilesIndexA, HTZSetup_aniTilesTableA)
-		object.aniTilesIndexA++
-		object.aniTilesIndexA %= 12
+		object.bgLightFrame++
+		
+		GetTableValue(object.bgLightDuration, object.bgLightFrame, HTZSetup_bgLightFrameTable)
+		object.bgLightFrame++
+
+		object.bgLightFrame %= 12
 	else
-		object.aniTilesTimerA--
+		object.bgLightDuration--
 	end if
 
-	if object.aniTilesTimerB < 2
-		GetTableValue(temp0, object.aniTilesIndexB, HTZSetup_aniTilesTableB)
+	if object.pinkFlowerDuration < 2
+		GetTableValue(temp0, object.pinkFlowerFrame, HTZSetup_pinkFlowerFrameTable)
+
 		Copy16x16Tile(764, temp0)
-		object.aniTilesIndexB++
-		GetTableValue(object.aniTilesTimerB, object.aniTilesIndexB, HTZSetup_aniTilesTableB)
-		object.aniTilesIndexB++
-		object.aniTilesIndexB %= 12
+		object.pinkFlowerFrame++
+
+		GetTableValue(object.pinkFlowerDuration, object.pinkFlowerFrame, HTZSetup_pinkFlowerFrameTable)
+		object.pinkFlowerFrame++
+
+		object.pinkFlowerFrame %= 12
 	else
-		object.aniTilesTimerB--
+		object.pinkFlowerDuration--
 	end if
 
-	if object.aniTilesTimerC < 2
-		GetTableValue(temp0, object.aniTilesIndexC, HTZSetup_aniTilesTableC)
+	if object.redFlowerDuration < 2
+		GetTableValue(temp0, object.redFlowerFrame, HTZSetup_redFlowerFrameTable)
+
 		Copy16x16Tile(765, temp0)
-		object.aniTilesIndexC++
-		GetTableValue(object.aniTilesTimerC, object.aniTilesIndexC, HTZSetup_aniTilesTableC)
-		object.aniTilesIndexC++
-		object.aniTilesIndexC &= 15
+		object.redFlowerFrame++
+
+		GetTableValue(object.redFlowerDuration, object.redFlowerFrame, HTZSetup_redFlowerFrameTable)
+		object.redFlowerFrame++
+
+		object.redFlowerFrame &= 15
 	else
-		object.aniTilesTimerC--
+		object.redFlowerDuration--
 	end if
 
-	if object.aniTilesTimerD < 2
-		GetTableValue(temp0, object.aniTilesIndexD, HTZSetup_aniTilesTableD)
+	if object.rectFlowerDuration < 2
+		GetTableValue(temp0, object.rectFlowerFrame, HTZSetup_rectFlowerFrameTable)
+
 		Copy16x16Tile(766, temp0)
-		object.aniTilesIndexD++
-		GetTableValue(object.aniTilesTimerD, object.aniTilesIndexD, HTZSetup_aniTilesTableD)
-		object.aniTilesIndexD++
-		object.aniTilesIndexD &= 3
+		object.rectFlowerFrame++
+
+		GetTableValue(object.rectFlowerDuration, object.rectFlowerFrame, HTZSetup_rectFlowerFrameTable)
+		object.rectFlowerFrame++
+
+		object.rectFlowerFrame &= 3
 	else
-		object.aniTilesTimerD--
+		object.rectFlowerDuration--
 	end if
 
-	if object.aniTilesTimerE < 2
-		GetTableValue(temp0, object.aniTilesIndexE, HTZSetup_aniTilesTableE)
+	if object.pointyFlowerDuration < 2
+		GetTableValue(temp0, object.pointyFlowerFrame, HTZSetup_pointyFlowerFrameTable)
+
 		Copy16x16Tile(767, temp0)
-		object.aniTilesIndexE++
-		GetTableValue(object.aniTilesTimerE, object.aniTilesIndexE, HTZSetup_aniTilesTableE)
-		object.aniTilesIndexE++
-		object.aniTilesIndexE &= 15
+		object.pointyFlowerFrame++
+
+		GetTableValue(object.pointyFlowerDuration, object.pointyFlowerFrame, HTZSetup_pointyFlowerFrameTable)
+		object.pointyFlowerFrame++
+
+		object.pointyFlowerFrame &= 15
 	else
-		object.aniTilesTimerE--
+		object.pointyFlowerDuration--
 	end if
 
+	// Check if any players are standing on lava tiles, and hurt them if so
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		// Check if any players are standing on lava tiles, and hurt them if so
 		temp1 = object[currentPlayer].xpos
 		temp1 >>= 16
 		temp2 = object[currentPlayer].ypos
@@ -254,7 +286,8 @@ event ObjectMain
 		temp2 += 4
 		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
 		temp0 &= 1
-		if temp0 == 1
+
+		if temp0 == TILE_LAVA
 			CallFunction(PlayerObject_FireHit)
 		end if
 	next
@@ -262,17 +295,17 @@ event ObjectMain
 	if HTZSetup_earthquakeState >= EARTHQUAKE_HOLD
 		if object.prevEarthquakeActive == false
 			if HTZSetup_activeEarthquakeType < 2
-				stage.midPoint = 2
-				stage.activeLayer[0] = 9
-				stage.activeLayer[1] = 0
-				stage.activeLayer[2] = 3
-				stage.activeLayer[3] = 0
+				stage.midPoint 		 = 2
+				stage.activeLayer[0] = 9 // None
+				stage.activeLayer[1] = 0 // FG   (Low)
+				stage.activeLayer[2] = 3 // BG 3 (High)
+				stage.activeLayer[3] = 0 // FG   (High)
 			else
-				stage.midPoint = 2
-				stage.activeLayer[0] = 9
-				stage.activeLayer[1] = 0
-				stage.activeLayer[2] = 4
-				stage.activeLayer[3] = 0
+				stage.midPoint 		 = 2
+				stage.activeLayer[0] = 9 // None
+				stage.activeLayer[1] = 0 // FG   (Low)
+				stage.activeLayer[2] = 4 // BG 4 (Low)
+				stage.activeLayer[3] = 0 // FG   (High)
 			end if
 
 			object.prevEarthquakeActive = true
@@ -350,16 +383,16 @@ event ObjectMain
 			tileLayer[3].scrollPos = object.earthquakePos
 			tileLayer[4].scrollPos = object.earthquakePos
 
-			stage.midPoint = 3
-			stage.activeLayer[0] = 1 // First BG layer  (far blue cliffs)
-			stage.activeLayer[1] = 2 // Second BG Layer (closer orange cliffs)
-			stage.activeLayer[2] = 0
-			stage.activeLayer[3] = 0
+			stage.midPoint 		 = 3
+			stage.activeLayer[0] = 1 // First BG layer  (far blue cliffs) (Low)
+			stage.activeLayer[1] = 2 // Second BG Layer (closer orange cliffs) (Low)
+			stage.activeLayer[2] = 0 // FG (Low)
+			stage.activeLayer[3] = 0 // FG (High)
 
-			object.shakeTimer = 0
-			object.value20 = 0
-			object.earthquakeTimer = 0
-			object.movementState = 0
+			object.shakeTimer 			= 0
+			object.unused 				= 0
+			object.earthquakeTimer 		= 0
+			object.movementState 		= 0
 			object.prevEarthquakeActive = false
 		end if
 	end if
@@ -367,7 +400,7 @@ end event
 
 
 event ObjectStartup
-	SetMusicTrack("HillTop.ogg", 0, true)
+	SetMusicTrack("HillTop.ogg", TRACK_STAGE, true)
 
 	// Set the music speed-changing functions
 	SpeedUpMusic = HTZSetup_SpeedUpMusic
@@ -383,13 +416,13 @@ event ObjectStartup
 	tileLayer[1].scrollPos = -0x40000
 	tileLayer[2].scrollPos = -0x40000
 
-	object[SLOT_LEVELSETUP].type = TypeName[HTZ Setup]
-	object[SLOT_LEVELSETUP].priority = PRIORITY_ACTIVE
+	object[SLOT_ZONESETUP].type = TypeName[HTZ Setup]
+	object[SLOT_ZONESETUP].priority = PRIORITY_ACTIVE
 
-	object[SLOT_LEVELSETUP].palIndexA = 0
-	object[SLOT_LEVELSETUP].palIndexB = 1
-	object[SLOT_LEVELSETUP].palIndexC = 2
-	object[SLOT_LEVELSETUP].palIndexD = 3
+	object[SLOT_ZONESETUP].lavaPalIndex1 = 0
+	object[SLOT_ZONESETUP].lavaPalIndex2 = 1
+	object[SLOT_ZONESETUP].lavaPalIndex3 = 2
+	object[SLOT_ZONESETUP].lavaPalIndex4 = 3
 end event
 
 event RSDKDraw

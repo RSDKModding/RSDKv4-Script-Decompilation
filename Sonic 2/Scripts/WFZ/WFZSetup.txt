@@ -6,7 +6,9 @@
 // ----------------------------------
 
 // Aliases
-private alias 40 : TYPE_WFZSETUP
+private alias object.value1 : object.palCycleTimer
+private alias object.value2 : object.palCycleTablePos
+private alias object.value3 : object.paletteTimer
 
 // Game Modes
 private alias 0 : MODE_NOSAVE
@@ -23,10 +25,12 @@ private alias 5 : TRACK_GAMEOVER
 private alias 6 : TRACK_DROWNING
 private alias 7 : TRACK_SUPER
 
-// Music Events
+// Reserved object slots
+private alias 10 : SLOT_ZONESETUP
 private alias 25 : SLOT_MUSICEVENT_CHANGE
 private alias 26 : SLOT_MUSICEVENT_BOSS
 
+// Music Events
 private alias  0 : MUSICEVENT_FADETOBOSS
 private alias  1 : MUSICEVENT_FADETOSTAGE
 private alias  2 : MUSICEVENT_TRANSITION
@@ -37,6 +41,7 @@ private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 
 // Function declarations
 reserve function WFZSetup_StateClinging
+
 reserve function WFZSetup_SpeedUpMusic
 reserve function WFZSetup_SlowDownMusic
 
@@ -48,8 +53,16 @@ public value WFZSetup_value36 = 0;
 public value WFZSetup_value37 = 0;
 public value WFZSetup_value38 = 0;
 
+private alias WFZSetup_value33 : WFZSetup_scrollVelocity.x
+private alias WFZSetup_value34 : WFZSetup_scrollVelocity.y
+
+private alias WFZSetup_value35 : WFZSetup_hPropellerFrame
+private alias WFZSetup_value36 : WFZSetup_hPropellerTimer
+private alias WFZSetup_value37 : WFZSetup_vPropellerFrame
+private alias WFZSetup_value38 : WFZSetup_vPropellerTimer
+
 // Tables
-public table WFZSetup_table38
+public table WFZSetup_palCycleTable
 	0xE0E040, 0xE0A020, 0xE06000, 0xC02000, 0xE0E0E0, 0xE0E040, 0xE0A020, 0xE06000, 0xE0E040, 0xE0A020, 0xE06000, 0xC02000, 0xE0A020, 0xE06000, 0xC02000, 0x802000
 end table
 
@@ -64,13 +77,15 @@ function WFZSetup_StateClinging
 		object.xvel = 0
 		object.speed = 0
 	end if
-	if object.up == 1
+
+	if object.up == true
 		object.ypos -= 0x10000
 	else
-		if object.down == 1
+		if object.down == true
 			object.ypos += 0x10000
 		end if
 	end if
+
 	object.yvel = 0
 end function
 
@@ -82,21 +97,23 @@ function WFZSetup_SpeedUpMusic
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 30897)
-			SwapMusicTrack("WingFortress_F.ogg", 0, 0x138CA, 8000)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
+			SwapMusicTrack("WingFortress_F.ogg", TRACK_STAGE, 80074, 8000)
 			break
-		case 2
-			SetMusicTrack("WingFortress_F.ogg", 0, 0x138CA)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 30897, 8000)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("WingFortress_F.ogg", TRACK_STAGE, 80074)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897, 8000)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("WingFortress_F.ogg", 0, 0x138CA)
-			SetMusicTrack("Invincibility_F.ogg", 2, 30897)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("WingFortress_F.ogg", TRACK_STAGE, 80074)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30897)
 			break
 		end switch
 	else
@@ -112,21 +129,23 @@ function WFZSetup_SlowDownMusic
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 38679)
-			SwapMusicTrack("WingFortress.ogg", 0, 0x18622, 12500)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
+			SwapMusicTrack("WingFortress.ogg", TRACK_STAGE, 99874, 12500)
 			break
-		case 2
-			SetMusicTrack("WingFortress.ogg", 0, 0x18622)
-			SwapMusicTrack("Invincibility.ogg", 2, 38679, 12500)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("WingFortress.ogg", TRACK_STAGE, 99874)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679, 12500)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("WingFortress.ogg", 0, 0x18622)
-			SetMusicTrack("Invincibility.ogg", 2, 38679)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("WingFortress.ogg", TRACK_STAGE, 99874)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 38679)
 			break
 		end switch
 	else
@@ -136,57 +155,71 @@ end function
 
 
 event ObjectMain
-	object.value1++
-	if object.value1 == 2
-		object.value1 = 0
-		GetTableValue(temp0, object.value2, WFZSetup_table38)
+	object.palCycleTimer++
+	if object.palCycleTimer == 2
+		object.palCycleTimer = 0
+
+		GetTableValue(temp0, object.palCycleTablePos, WFZSetup_palCycleTable)
 		SetPaletteEntry(0, 167, temp0)
-		object.value2++
-		object.value2 &= 15
-		GetTableValue(temp0, object.value2, WFZSetup_table38)
+		object.palCycleTablePos++
+		object.palCycleTablePos &= 15
+
+		GetTableValue(temp0, object.palCycleTablePos, WFZSetup_palCycleTable)
 		SetPaletteEntry(0, 168, temp0)
-		object.value2++
-		object.value2 &= 15
-		GetTableValue(temp0, object.value2, WFZSetup_table38)
+		object.palCycleTablePos++
+		object.palCycleTablePos &= 15
+
+		GetTableValue(temp0, object.palCycleTablePos, WFZSetup_palCycleTable)
 		SetPaletteEntry(0, 169, temp0)
-		object.value2++
-		object.value2 &= 15
-		GetTableValue(temp0, object.value2, WFZSetup_table38)
+		object.palCycleTablePos++
+		object.palCycleTablePos &= 15
+
+		GetTableValue(temp0, object.palCycleTablePos, WFZSetup_palCycleTable)
 		SetPaletteEntry(0, 170, temp0)
-		object.value2++
-		object.value2 &= 15
+		object.palCycleTablePos++
+		object.palCycleTablePos &= 15
 	end if
-	object.value3++
-	if object.value3 == 6
-		object.value3 = 0
-		RotatePalette(0, 192, 195, 1)
+
+	object.paletteTimer++
+	if object.paletteTimer == 6
+		object.paletteTimer = 0
+		RotatePalette(0, 192, 195, true)
 	end if
-	WFZSetup_value35 = WFZSetup_value36
-	WFZSetup_value35 >>= 1
-	WFZSetup_value36++
-	WFZSetup_value36 %= 12
-	WFZSetup_value37 = WFZSetup_value38
-	WFZSetup_value37 >>= 1
-	WFZSetup_value38++
-	WFZSetup_value38 %= 6
+
+	WFZSetup_hPropellerFrame = WFZSetup_hPropellerTimer
+	WFZSetup_hPropellerFrame >>= 1
+	WFZSetup_hPropellerTimer++
+	WFZSetup_hPropellerTimer %= 12
+
+	WFZSetup_vPropellerFrame = WFZSetup_vPropellerTimer
+	WFZSetup_vPropellerFrame >>= 1
+	WFZSetup_vPropellerTimer++
+	WFZSetup_vPropellerTimer %= 6
 end event
 
 
 event ObjectStartup
-	SetMusicTrack("WingFortress.ogg", 0, 0x18622)
+	SetMusicTrack("WingFortress.ogg", TRACK_STAGE, 99874)
+
 	SpeedUpMusic = WFZSetup_SpeedUpMusic
 	SlowDownMusic = WFZSetup_SlowDownMusic
+
 	animalType1 = TypeName[Locky]
 	animalType2 = TypeName[Wocky]
-	SetPaletteEntry(0, 196, 0)
-	object[10].type = TypeName[WFZ Setup]
-	object[10].priority = PRIORITY_ACTIVE
-	WFZSetup_value33 = 0
-	WFZSetup_value34 = 0
-	WFZSetup_value35 = 0
-	WFZSetup_value36 = 0
-	WFZSetup_value37 = 0
-	WFZSetup_value38 = 0
+
+	SetPaletteEntry(0, 196, 0x000000)
+
+	object[SLOT_ZONESETUP].type = TypeName[WFZ Setup]
+	object[SLOT_ZONESETUP].priority = PRIORITY_ACTIVE
+
+	WFZSetup_scrollVelocity.x = 0
+	WFZSetup_scrollVelocity.y = 0
+	
+	WFZSetup_hPropellerFrame = 0
+	WFZSetup_hPropellerTimer = 0
+	WFZSetup_vPropellerFrame = 0
+	WFZSetup_vPropellerTimer = 0
+
 	foreach (TypeName[Animal Prison], arrayPos0, ALL_ENTITIES)
 		if options.gameMode != MODE_TIMEATTACK
 			ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
@@ -201,4 +234,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

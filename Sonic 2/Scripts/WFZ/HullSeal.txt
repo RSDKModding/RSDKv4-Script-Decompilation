@@ -6,28 +6,30 @@
 // ----------------------------------
 
 // Aliases
-private alias 84 : TYPE_HULLSEAL
+private alias object.value0 : object.timer
 
-
-// Static Values
-
-// Tables
+// States
+private alias 0 : HULLSEAL_OPEN
+private alias 1 : HULLSEAL_CLOSING
+private alias 2 : HULLSEAL_CLOSED
 
 event ObjectMain
 	switch object.state
-	case 0
+	case HULLSEAL_OPEN
 		temp0 = object.ypos
 		temp0 += 0x180000
 		if object[0].ypos > temp0
-			object.value0 = 16
-			object.drawOrder = 4
-			object.state = 1
+			object.timer 		= 16
+			object.drawOrder 	= 4
+			object.state 		= HULLSEAL_CLOSING
 		end if
 		break
-	case 1
+
+	case HULLSEAL_CLOSING
 		object.xpos += 0x40000
-		object.value0--
-		if object.value0 == 0
+
+		object.timer--
+		if object.timer == 0
 			if object.propertyValue == 1
 				temp0 = object.xpos
 				temp0 >>= 23
@@ -36,12 +38,15 @@ event ObjectMain
 				SetTileLayerEntry(262, 0, temp0, temp1)
 				PlaySfx(SfxName[Hull Close], false)
 			end if
-			object.state = 2
+
+			object.state = HULLSEAL_CLOSED
 		end if
 		break
-	case 2
+
+	case HULLSEAL_CLOSED
 		break
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_BOX, object.entityPos, -32, -16, 32, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 	next
@@ -58,11 +63,38 @@ event ObjectStartup
 	SpriteFrame(-32, -16, 64, 32, 1, 193)
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SCZ/Objects2.gif")
+	SpriteFrame(-32, -16, 64, 32, 1, 193)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Doesn't Update TileLayer", 0)
+	AddEnumVariable("Updates TileLayer", 1)
 end event

@@ -6,10 +6,18 @@
 // ----------------------------------
 
 // Aliases
-private alias 53 : TYPE_CYLINDER
-
-
-// Static Values
+private alias object.value1  : object.activePlayers
+private alias object.value2  : object.player1.angle
+private alias object.value3  : object.player2.angle
+private alias object.value4  : object.player3.angle
+private alias object.value5  : object.player4.angle
+private alias object.value6  : object.player1.direction
+private alias object.value7  : object.player2.direction
+private alias object.value8  : object.player3.direction
+private alias object.value9  : object.player4.direction
+private alias object.value10 : object.hitbox.left
+private alias object.value11 : object.hitbox.right
+private alias object.value12 : object.size
 
 // Tables
 public table Cylinder_playerFrameTable
@@ -19,34 +27,38 @@ end table
 
 event ObjectMain
 	object.priority = PRIORITY_ACTIVE
+
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		GetBit(temp3, object.value1, temp2)
-		if temp3 == 0
-			BoxCollisionTest(C_TOUCH, object.entityPos, object.value10, 60, object.value11, 76, currentPlayer, HITBOX_AUTO, 1, HITBOX_AUTO, HITBOX_AUTO)
+		GetBit(temp3, object.activePlayers, temp2)
+		if temp3 == false
+			BoxCollisionTest(C_TOUCH, object.entityPos, object.hitbox.left, 60, object.hitbox.right, 76, currentPlayer, HITBOX_AUTO, 1, HITBOX_AUTO, HITBOX_AUTO)
 			if object[currentPlayer].yvel < 0
 				checkResult = false
 			end if
 
 			if checkResult == true
-				SetBit(object.value1, temp2, true)
+				SetBit(object.activePlayers, temp2, true)
 				object[currentPlayer].yvel = 0
+
+				// Very strange that it explicitly supports up to 4 players here, there's only 3 playable characters to begin with so not sure how that would've worked
+				// It should be noted that if 4 players were loaded at once, there'd be no object slot clashes (that would happen if 5 or more were loaded though)
 				switch temp2
 				case 0
-					object.value2 = 0
-					object.value6 = object[currentPlayer].direction
+					object.player1.angle = 0
+					object.player1.direction = object[currentPlayer].direction
 					break
 				case 1
-					object.value3 = 0
-					object.value7 = object[currentPlayer].direction
+					object.player2.angle = 0
+					object.player2.direction = object[currentPlayer].direction
 					break
 				case 2
-					object.value4 = 0
-					object.value8 = object[currentPlayer].direction
+					object.player3.angle = 0
+					object.player3.direction = object[currentPlayer].direction
 					break
 				case 3
-					object.value5 = 0
-					object.value9 = object[currentPlayer].direction
+					object.player4.angle = 0
+					object.player4.direction = object[currentPlayer].direction
 					break
 				end switch
 			else
@@ -55,14 +67,14 @@ event ObjectMain
 				temp0 += object[currentPlayer].ypos
 				temp0 -= object.ypos
 				if temp0 < -0x300000
-					BoxCollisionTest(C_BOX, object.entityPos, object.value10, -64, object.value11, -48, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					BoxCollisionTest(C_BOX, object.entityPos, object.hitbox.left, -64, object.hitbox.right, -48, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				else
 					temp0 = object[currentPlayer].collisionBottom
 					temp0 <<= 16
 					temp0 += object[currentPlayer].ypos
 					temp0 -= object.ypos
 					if temp0 > 0x400000
-						BoxCollisionTest(C_BOX, object.entityPos, object.value10, 48, object.value11, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+						BoxCollisionTest(C_BOX, object.entityPos, object.hitbox.left, 48, object.hitbox.right, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 					end if
 				end if
 			end if
@@ -71,12 +83,13 @@ event ObjectMain
 			temp0 = object[currentPlayer].xpos
 			temp0 -= object.xpos
 			Abs(temp0)
+
 			CheckLower(object[currentPlayer].yvel, -0x40000)
 			temp3 |= checkResult
-			CheckGreater(temp0, object.value12)
+			CheckGreater(temp0, object.size)
 			temp3 |= checkResult
 			if temp3 == true
-				SetBit(object.value1, temp2, 0)
+				SetBit(object.activePlayers, temp2, false)
 				if object[currentPlayer].gravity == GRAVITY_AIR
 					if object[currentPlayer].yvel >= 0
 						if object[currentPlayer].state != PlayerObject_HandleFlyCarry
@@ -84,6 +97,7 @@ event ObjectMain
 								if object[currentPlayer].xvel < 0
 									object[currentPlayer].direction = FLIP_X
 								end if
+
 								object[currentPlayer].animation = ANI_TWIRL
 								object[currentPlayer].angle = 0
 								object[currentPlayer].rotation = 0
@@ -94,21 +108,21 @@ event ObjectMain
 
 				switch temp2
 				case 0
-					temp6 = object.value2
+					temp6 = object.player1.angle
 					break
 				case 1
-					temp6 = object.value3
+					temp6 = object.player2.angle
 					break
 				case 2
-					temp6 = object.value4
+					temp6 = object.player3.angle
 					break
 				case 3
-					temp6 = object.value5
+					temp6 = object.player4.angle
 					break
 				end switch
 
-				temp6 += 32
-				temp6 &= 255
+				temp6 += 0x20
+				temp6 &= 0xFF
 				if temp6 >= 64
 					object[currentPlayer].yvel = 0
 				else
@@ -119,20 +133,20 @@ event ObjectMain
 				temp0 >>= 16
 				switch temp2
 				case 0
-					temp6 = object.value2
-					temp7 = object.value6
+					temp6 = object.player1.angle
+					temp7 = object.player1.direction
 					break
 				case 1
-					temp6 = object.value3
-					temp7 = object.value7
+					temp6 = object.player2.angle
+					temp7 = object.player2.direction
 					break
 				case 2
-					temp6 = object.value4
-					temp7 = object.value8
+					temp6 = object.player3.angle
+					temp7 = object.player3.direction
 					break
 				case 3
-					temp6 = object.value5
-					temp7 = object.value9
+					temp6 = object.player4.angle
+					temp7 = object.player4.direction
 					break
 				end switch
 
@@ -147,25 +161,27 @@ event ObjectMain
 				object[currentPlayer].ypos += object.ypos
 				if object[currentPlayer].state == PlayerObject_HandleGround
 					if object[currentPlayer].gravity == GRAVITY_AIR
-						object[currentPlayer].prevAnimation = ANI_TWIRL
-						object[currentPlayer].animation = ANI_TWIRL
-						object[currentPlayer].animationSpeed = 0
-						object[currentPlayer].direction = FLIP_NONE
+						object[currentPlayer].prevAnimation 	= ANI_TWIRL
+						object[currentPlayer].animation 		= ANI_TWIRL
+						object[currentPlayer].animationSpeed 	= 0
+						object[currentPlayer].direction 		= FLIP_NONE
+
 						temp0 = temp6
 						temp0 /= 21
 						if object[currentPlayer].xvel != 0
 							if object[currentPlayer].xvel > 0
-								temp7 = 0
+								temp7 = FLIP_NONE
 							else
-								temp7 = 1
+								temp7 = FLIP_X
 							end if
 						end if
-						if temp7 == 0
+
+						if temp7 == FLIP_NONE
 							object[currentPlayer].frame = temp0
-							object[currentPlayer].rotation = 0
+							object[currentPlayer].rotation = 0x000
 						else
 							GetTableValue(object[currentPlayer].frame, temp0, Cylinder_playerFrameTable)
-							object[currentPlayer].rotation = 256
+							object[currentPlayer].rotation = 0x100
 						end if
 					end if
 				end if
@@ -182,30 +198,31 @@ event ObjectMain
 
 				switch temp2
 				case 0
-					object.value2 = temp6
-					object.value6 = temp7
+					object.player1.angle 		= temp6
+					object.player1.direction 	= temp7
 					break
 				case 1
-					object.value3 = temp6
-					object.value7 = temp7
+					object.player2.angle 		= temp6
+					object.player2.direction 	= temp7
 					break
 				case 2
-					object.value4 = temp6
-					object.value8 = temp7
+					object.player3.angle 		= temp6
+					object.player3.direction 	= temp7
 					break
 				case 3
-					object.value5 = temp6
-					object.value9 = temp7
+					object.player4.angle 		= temp6
+					object.player4.direction 	= temp7
 					break
 				end switch
 
 				object[currentPlayer].gravity = GRAVITY_GROUND
 			end if
 		end if
+		
 		temp2++
 	next
 
-	if object.value1 != 0
+	if object.activePlayers != 0
 		if object.propertyValue == 0
 			if object.outOfBounds == true
 				object.priority = PRIORITY_ACTIVE_BOUNDS
@@ -214,12 +231,12 @@ event ObjectMain
 
 		temp0 = 0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			BoxCollisionTest(C_TOUCH, object.entityPos, object.value10, -64, object.value11, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			BoxCollisionTest(C_TOUCH, object.entityPos, object.hitbox.left, -64, object.hitbox.right, 64, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			temp0 |= checkResult
 		next
 
 		if temp0 == false
-			object.value1 = 0
+			object.activePlayers = 0
 		end if
 	end if
 end event
@@ -228,17 +245,40 @@ end event
 event ObjectStartup
 	foreach (TypeName[Cylinder], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue == 0
-			object[arrayPos0].value11 = 192
-			object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+			object[arrayPos0].hitbox.right 	= 192
+			object[arrayPos0].priority 		= PRIORITY_ACTIVE_BOUNDS
 		else
-			object[arrayPos0].value11 = 384
-			object[arrayPos0].priority = PRIORITY_ACTIVE
+			object[arrayPos0].hitbox.right 	= 384
+			object[arrayPos0].priority 		= PRIORITY_ACTIVE
 		end if
-		object[arrayPos0].value12 = object[arrayPos0].value11
-		object[arrayPos0].value12 <<= 16
-		object[arrayPos0].value10 = object[arrayPos0].value11
-		FlipSign(object[arrayPos0].value10)
+
+		object[arrayPos0].size 			  = object[arrayPos0].hitbox.right
+		object[arrayPos0].size 			<<= 16
+		object[arrayPos0].hitbox.left 	  = object[arrayPos0].hitbox.right
+		FlipSign(object[arrayPos0].hitbox.left)
 	next
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -248,4 +288,9 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	AddEditorVariable("size")
+	SetActiveVariable("size")
+	AddEnumVariable("Small", 0)
+	AddEnumVariable("Large", 1)
 end event

@@ -6,51 +6,56 @@
 // ----------------------------------
 
 // Aliases
-private alias 55 : TYPE_HATCH
 
+// HullSeal States
+private alias 1 : HULL_OPEN
 
-// Static Values
-
-// Tables
+// Player Aliases
+private alias object.value25 : player.gravityStrength 		// Also used in underwater checks, 0x1000 if underwater, otherwise 0x3800. Not to be confused with player.gravity
 
 event ObjectMain
-	temp1 = 0
+	temp1 = false
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		temp0 = object[currentPlayer].yvel
+		
 		BoxCollisionTest(C_BOX, object.entityPos, -16, -8, 16, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		switch checkResult
-		case 1
+		case COL_TOP
 			if object[currentPlayer].animation == ANI_JUMPING
 				object[currentPlayer].yvel = temp0
 				if object[currentPlayer].yvel > 0
-					object[currentPlayer].yvel += object[currentPlayer].value25
-					object[currentPlayer].yvel += object[currentPlayer].value25
+					object[currentPlayer].yvel += player[currentPlayer].gravityStrength
+					object[currentPlayer].yvel += player[currentPlayer].gravityStrength
 					FlipSign(object[currentPlayer].yvel)
 					object[currentPlayer].gravity = GRAVITY_AIR
 				end if
-				temp1 = 1
+				temp1 = true
 			end if
 			break
-		case 2
-		case 3
+
+		case COL_LEFT
+		case COL_RIGHT
 			if object[currentPlayer].gravity == GRAVITY_GROUND
 				if object[currentPlayer].animation == ANI_JUMPING
-					temp1 = 1
+					temp1 = true
 				end if
 			end if
 			break
 		end switch
 	next
-	if temp1 == 1
+
+	if temp1 == true
 		PlaySfx(SfxName[Destroy], false)
 		temp0 = object.xpos
 		temp0 >>= 16
 		temp0 -= 160
 		stage.newXBoundary1 = temp0
 		ResetObjectEntity(object.entityPos, TypeName[Smoke Puff], 0, object.xpos, object.ypos)
-		object[+1].state = 1
-		object[+1].inkEffect = INK_ALPHA
-		object[+1].alpha = 256
+
+		object[+1].state 		= HULL_OPEN
+		object[+1].inkEffect 	= INK_ALPHA
+		object[+1].alpha 		= 0x100
 	end if
 end event
 
@@ -70,6 +75,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 409, 1)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

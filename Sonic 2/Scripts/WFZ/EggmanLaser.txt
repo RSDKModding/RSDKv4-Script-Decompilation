@@ -6,45 +6,103 @@
 // ----------------------------------
 
 // Aliases
-private alias 83 : TYPE_EGGMANLASER
+private alias object.value0 : object.timer
+private alias object.value1 : object.boundsL
+private alias object.value2 : object.boundsR
+private alias object.value3 : object.coreOffset.y
+private alias object.value4 : object.laserFrame
+private alias object.value5 : object.laserHeight
+private alias object.value6 : object.health
+private alias object.value7 : object.invincibilityTimer
+private alias object.value8 : object.explodeState
+private alias object.value9 : object.flashPaletteIndex
 
+// States
+private alias 0  : WFZEGGMANLASER_SETUP
+private alias 1  : WFZEGGMANLASER_ENTERDELAY
+private alias 2  : WFZEGGMANLASER_ENTERBOSS
+private alias 3  : WFZEGGMANLASER_MOVING
+private alias 4  : WFZEGGMANLASER_OPENSHELL
+private alias 5  : WFZEGGMANLASER_CORESHOWDELAY
+private alias 6  : WFZEGGMANLASER_SHOWCORE
+private alias 7  : WFZEGGMANLASER_LASERDELAY
+private alias 8  : WFZEGGMANLASER_SETUPLASER
+private alias 9  : WFZEGGMANLASER_CHARGELASER
+private alias 10 : WFZEGGMANLASER_FIRINGLASER
+private alias 11 : WFZEGGMANLASER_LASERMOVE
+private alias 12 : WFZEGGMANLASER_HIDECORE
+private alias 13 : WFZEGGMANLASER_CLOSESHELL
+private alias 14 : WFZEGGMANLASER_DESTROYED
+private alias 15 : WFZEGGMANLASER_RESETBOUNDS
+
+// Explode States
+private alias 0 : WFZEGGMANLASER_BOSS_ACTIVE
+private alias 1 : WFZEGGMANLASER_BOSS_EXPLODE
+private alias 2 : WFZEGGMANLASER_BOSS_DESTROYED
+
+// WFZEggman States
+private alias 2 : WFZEGGMAN_ESCAPE
+
+// WFZEggmanDispenser Aliases
+private alias object.value0 : wfzEggmanDispenser.timer
+private alias object.value8 : wfzEggmanDispenser.exploding
+
+// WFZEggmanDispenser States
+private alias 14 : WFZEGGMANDISPENSER_DESTROYED
+
+// WFZEggmanPlatform States
+private alias 2 : WFZEGGMANPLATFORM_DESTROYED
+
+// WFZEggmanBarrier Aliases
+private alias object.value0 : wfzEggmanBarrier.timer
+
+
+// Player aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Static Values
-public value EggmanLaser_value52 = 0;
-
-// Tables
+public value EggmanLaser_value52 = 0
+private alias EggmanLaser_value52 : EggmanLaser_laserSheetX
 
 event ObjectMain
 	switch object.state
-	case 0
-		object.value1 = object.xpos
-		object.value1 -= 0x600000
-		object.value2 = object.xpos
-		object.value2 += 0x600000
-		object.value4 = 6
-		object.drawOrder = 4
-		object.inkEffect = INK_ADD
+	case WFZEGGMANLASER_SETUP
+		object.boundsL 		= object.xpos
+		object.boundsL 		-= 0x600000
+		object.boundsR 		= object.xpos
+		object.boundsR 		+= 0x600000
+		object.laserFrame	= 6
+		object.drawOrder 	= 4
+		object.inkEffect 	= INK_ADD
+
 		CheckCurrentStageFolder("Zone11")
-		if checkResult == 1
-			object.value9 = 196
+		if checkResult == true
+			object.flashPaletteIndex = 196
 		else
-			object.value9 = 192
+			object.flashPaletteIndex = 192
 		end if
-		object.value6 = 8
-	case 1
-		object.value0++
-		if object.value0 >= 90
-			object.value0 = 0
-			object.state = 2
+		object.health = 8
+		// [Fallthrough]
+	case WFZEGGMANLASER_ENTERDELAY
+		object.timer++
+		if object.timer >= 90
+			object.timer = 0
+			object.state = WFZEGGMANLASER_ENTERBOSS
 		end if
 		break
-	case 2
+
+	case WFZEGGMANLASER_ENTERBOSS
 		object.ypos += 0x4000
-		object.value0++
-		if object.value0 >= 96
-			object.value0 = 0
+
+		object.timer++
+		if object.timer >= 96
+			object.timer 	= 0
 			object[-1].type = TypeName[Eggman Dispenser]
-			object.state = 3
+			object.state 	= WFZEGGMANLASER_MOVING
+
 			if object[0].xpos < object.xpos
 				object.xvel = -0x10000
 			else
@@ -52,138 +110,158 @@ event ObjectMain
 			end if
 		end if
 		break
-	case 3
-		object.value0++
-		if object.value0 > 112
-			object.value0 = 0
-			object.state = 4
+
+	case WFZEGGMANLASER_MOVING
+		object.timer++
+		if object.timer > 112
+			object.timer = 0
+			object.state = WFZEGGMANLASER_OPENSHELL
 		else
 			object.xpos += object.xvel
 			if object.xvel > 0
-				if object.xpos >= object.value2
+				if object.xpos >= object.boundsR
 					FlipSign(object.xvel)
 				end if
 			else
-				if object.xpos <= object.value1
+				if object.xpos <= object.boundsL
 					FlipSign(object.xvel)
 				end if
 			end if
 		end if
 		break
-	case 4
+
+	case WFZEGGMANLASER_OPENSHELL
 		object.animationTimer++
 		if object.animationTimer == 6
 			object.animationTimer = 0
+
 			object.frame++
 			if object.frame == 3
-				object.state = 5
+				object.state = WFZEGGMANLASER_CORESHOWDELAY
 			end if
 		end if
 		break
-	case 5
-		object.value0++
-		if object.value0 > 26
-			object.value0 = 0
-			object.state = 6
+
+	case WFZEGGMANLASER_CORESHOWDELAY
+		object.timer++
+		if object.timer > 26
+			object.timer = 0
+			object.state = WFZEGGMANLASER_SHOWCORE
 		end if
 		break
-	case 6
-		object.value3 += 0x10000
-		object.value0++
-		if object.value0 > 12
-			object.value0 = 0
-			object.state = 7
+
+	case WFZEGGMANLASER_SHOWCORE
+		object.coreOffset.y += 0x10000
+
+		object.timer++
+		if object.timer > 12
+			object.timer = 0
+			object.state = WFZEGGMANLASER_LASERDELAY
 		end if
 		break
-	case 7
-		object.value0++
-		if object.value0 > 60
-			object.value0 = 15
-			object.animationTimer = 15
-			object.value5 = 8
-			object.alpha = 512
-			object.state = 8
+
+	case WFZEGGMANLASER_LASERDELAY
+		object.timer++
+		if object.timer > 60
+			object.timer 			= 15
+			object.animationTimer 	= 15
+			object.laserHeight 		= 8
+			object.alpha 			= 0x200
+			object.state 			= WFZEGGMANLASER_SETUPLASER
 		end if
 		break
-	case 8
+
+	case WFZEGGMANLASER_SETUPLASER
 		if object.animationTimer > 2
-			object.value4 = 6
+			object.laserFrame = 6
 		else
-			object.value4 = 5
+			object.laserFrame = 5
 		end if
+
 		object.animationTimer--
 		if object.animationTimer == 0
-			object.value0--
-			if object.value0 == 0
-				object.state = 9
+			object.timer--
+			if object.timer == 0
+				object.state = WFZEGGMANLASER_CHARGELASER
 			else
-				object.animationTimer = object.value0
-				if object.value0 == 13
+				object.animationTimer = object.timer
+				if object.timer == 13
 					PlaySfx(SfxName[Laser Charge], false)
 				end if
 			end if
 		end if
 		break
-	case 9
-		object.value4 -= 5
-		object.value4 ^= 1
-		object.value4 += 5
-		object.value0++
-		if object.value0 > 64
-			object.value0 = 0
-			object.alpha = 160
-			object.state = 10
-			object.value4 = 5
+
+	case WFZEGGMANLASER_CHARGELASER
+		object.laserFrame -= 5
+		object.laserFrame ^= 1
+		object.laserFrame += 5
+
+		object.timer++
+		if object.timer > 64
+			object.timer 		= 0
+			object.alpha 		= 0xA0
+			object.state 		= WFZEGGMANLASER_FIRINGLASER
+			object.laserFrame 	= 5
 			PlaySfx(SfxName[Large Laser], false)
 		end if
 		break
-	case 10
-		object.value5 += 32
-		if object.value5 >= 128
-			object.alpha += 32
-			object.value5 = 167
-			object.value0 = 0
+
+	case WFZEGGMANLASER_FIRINGLASER
+		object.laserHeight += 0x20
+		if object.laserHeight >= 0x80
+			object.alpha 		+= 0x20
+			object.laserHeight 	= 167
+			object.timer 		= 0
+
 			if object[0].xpos < object.xpos
 				object.xvel = -0x10000
 			else
 				object.xvel = 0x10000
 			end if
-			object.state = 11
+
+			object.state = WFZEGGMANLASER_LASERMOVE
 		end if
 		break
-	case 11
-		object.value0++
+
+	case WFZEGGMANLASER_LASERMOVE
+		object.timer++
 		object.alpha--
-		if object.value0 > 112
-			object.value0 = 0
-			object.state = 12
+
+		if object.timer > 112
+			object.timer = 0
+			object.state = WFZEGGMANLASER_HIDECORE
 		else
 			object.xpos += object.xvel
 			if object.xvel > 0
-				if object.xpos >= object.value2
+				if object.xpos >= object.boundsR
 					object.xvel = 0
 				end if
 			else
-				if object.xpos <= object.value1
+				if object.xpos <= object.boundsL
 					object.xvel = 0
 				end if
 			end if
 		end if
 		break
-	case 12
-		object.value3 -= 0x10000
-		object.alpha -= 24
-		object.value0++
-		if object.value0 > 12
-			object.value0 = 0
+
+	case WFZEGGMANLASER_HIDECORE
+		object.coreOffset.y	-= 0x10000
+		object.alpha 		-= 24
+
+		object.timer++
+		if object.timer > 12
+			object.timer = 0
 			object.animationTimer = 0
-			object.state = 13
+			object.state = WFZEGGMANLASER_CLOSESHELL
 		end if
 		break
-	case 13
+
+	case WFZEGGMANLASER_CLOSESHELL
 		object.animationTimer++
 		if object.animationTimer == 6
 			object.animationTimer = 0
+
 			object.frame--
 			if object.frame == 0
 				if object[0].xpos < object.xpos
@@ -191,76 +269,90 @@ event ObjectMain
 				else
 					object.xvel = 0x10000
 				end if
-				object.state = 3
+				
+				object.state = WFZEGGMANLASER_MOVING
 			end if
 		end if
 		break
-	case 14
+
+	case WFZEGGMANLASER_DESTROYED
 		if object.alpha > 0
 			object.alpha -= 24
 		end if
-		object.value0++
-		if object.value0 >= 180
-			object.value0 = 0
-			object.value8 = 2
-			object.state = 15
+
+		object.timer++
+		if object.timer >= 180
+			object.timer 		= 0
+			object.explodeState	= WFZEGGMANLASER_BOSS_DESTROYED
+			object.state 		= WFZEGGMANLASER_RESETBOUNDS
 		end if
 		break
-	case 15
+
+	case WFZEGGMANLASER_RESETBOUNDS
 		temp0 = tileLayer[0].ysize
 		temp0 <<= 7
 		stage.newYBoundary2 = temp0
+
 		temp0 <<= 16
 		stage.deathBoundary = temp0
 		break
 	end switch
-	if object.value6 != 0
-		if object.value7 > 0
-			object.value7--
-			GetBit(temp0, object.value7, 0)
-			if temp0 == 1
-				SetPaletteEntry(0, object.value9, 0xE0E0E0)
+
+	if object.health != 0
+		if object.invincibilityTimer > 0
+			object.invincibilityTimer--
+			GetBit(temp0, object.invincibilityTimer, 0)
+			if temp0 == true
+				SetPaletteEntry(0, object.flashPaletteIndex, 0xE0E0E0)
 			else
-				SetPaletteEntry(0, object.value9, 0)
+				SetPaletteEntry(0, object.flashPaletteIndex, 0x000000)
 			end if
 		end if
-		if object.value3 > 0
+
+		if object.coreOffset.y > 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-				BoxCollisionTest(C_TOUCH, object.entityPos, -16, 0, 16, 16, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-				if checkResult == 1
-					if object.value7 == 0
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, 0, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+				if checkResult == true
+					if object.invincibilityTimer == 0
 						CallFunction(PlayerObject_CheckHit)
-						if checkResult == 1
-							object.value6--
-							if object.value6 == 0
+						if checkResult == true
+							object.health--
+							if object.health == 0
 								player.score += 1000
-								object.value8 = 1
-								object.value0 = 0
-								object.state = 14
-								object[-4].state = 2
-								object[-3].value0 = 240
-								object[-2].value0 = 240
-								object[-1].value8 = 1
-								object[-1].value0 = 0
-								object[-1].state = 14
+								object.explodeState	= WFZEGGMANLASER_BOSS_EXPLODE
+								object.timer 		= 0
+								object.state 		= WFZEGGMANLASER_DESTROYED
+
+								object[-4].state 			= WFZEGGMAN_ESCAPE
+
+								wfzEggmanBarrier[-3].timer 	= 240
+								wfzEggmanBarrier[-2].timer 	= 240
+
+								wfzEggmanDispenser[-1].exploding	= true
+								wfzEggmanDispenser[-1].timer 		= 0
+								object[-1].state 					= WFZEGGMANDISPENSER_DESTROYED
+
 								CreateTempObject(TypeName[Explosion], 0, object[+1].xpos, object[+1].ypos)
-								object[+1].state = 2
+								object[+1].state = WFZEGGMANPLATFORM_DESTROYED
+
 								CreateTempObject(TypeName[Explosion], 0, object[+2].xpos, object[+2].ypos)
-								object[+2].state = 2
+								object[+2].state = WFZEGGMANPLATFORM_DESTROYED
+
 								CreateTempObject(TypeName[Explosion], 0, object[+3].xpos, object[+3].ypos)
-								object[+3].state = 2
+								object[+3].state = WFZEGGMANPLATFORM_DESTROYED
+
 								StopSfx(SfxName[Laser Charge])
 								StopSfx(SfxName[Large Laser])
 							else
-								object.value7 = 32
+								object.invincibilityTimer = 32
 								PlaySfx(SfxName[Boss Hit], false)
 							end if
 						end if
 					end if
 				else
-					if object.state == 11
+					if object.state == WFZEGGMANLASER_LASERMOVE
 						BoxCollisionTest(C_TOUCH, object.entityPos, -16, 0, 16, 168, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-						if checkResult == 1
+						if checkResult == true
 							CallFunction(PlayerObject_Hit)
 						end if
 					end if
@@ -268,7 +360,8 @@ event ObjectMain
 			next
 		end if
 	end if
-	if object.value8 == 1
+
+	if object.explodeState == WFZEGGMANLASER_BOSS_EXPLODE
 		temp0 = oscillation
 		temp0 &= 7
 		if temp0 == 0
@@ -289,22 +382,56 @@ end event
 
 
 event ObjectDraw
-	if object.value8 < 2
+	if object.explodeState < WFZEGGMANLASER_BOSS_DESTROYED
+		// Draw Core
 		temp1 = object.ypos
-		temp1 += object.value3
+		temp1 += object.coreOffset.y
 		DrawSpriteXY(4, object.xpos, temp1)
+
+		// Draw Shell
 		DrawSprite(object.frame)
+
+		// Draw Laser
 		temp0 = 168
-		temp0 -= object.value5
-		EditFrame(5, -16, 0, 32, object.value5, EggmanLaser_value52, temp0)
-		DrawSpriteFX(object.value4, FX_INK, object.xpos, temp1)
+		temp0 -= object.laserHeight
+		EditFrame(5, -16, 0, 32, object.laserHeight, EggmanLaser_laserSheetX, temp0)
+		DrawSpriteFX(object.laserFrame, FX_INK, object.xpos, temp1)
 	end if
 end event
 
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone11")
-	if checkResult == 1
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-32, -8, 64, 23, 311, 1)  	// Shell - Frame 1 	- #0
+		SpriteFrame(-32, -8, 64, 22, 311, 25)	// Shell - Frame 2 	- #1
+		SpriteFrame(-32, -8, 64, 19, 311, 48)	// Shell - Frame 3 	- #2
+		SpriteFrame(-32, -8, 64, 13, 311, 68)	// Shell - Frame 4 	- #3
+		SpriteFrame(-16, -8, 32, 16, 376, 1)	// Core 			- #4
+		SpriteFrame(-16, 0, 32, 168, 261, 1)	// Laser Beam 		- #5
+		SpriteFrame(0, 0, 1, 1, 261, 168)		// Laser Bottom 	- #6
+		EggmanLaser_laserSheetX = 261
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -8, 64, 23, 513, 139)	// Shell - Frame 1 	- #0
+		SpriteFrame(-32, -8, 64, 22, 578, 139)	// Shell - Frame 2 	- #1
+		SpriteFrame(-32, -8, 64, 19, 643, 139)	// Shell - Frame 3 	- #2
+		SpriteFrame(-32, -8, 64, 13, 578, 162)	// Shell - Frame 4 	- #3
+		SpriteFrame(-16, -8, 32, 16, 397, 1)	// Core 			- #4
+		SpriteFrame(-16, 0, 32, 168, 480, 1)	// Laser Beam 		- #5
+		SpriteFrame(0, 0, 1, 1, 480, 168)		// Laser Bottom 	- #6
+		EggmanLaser_laserSheetX = 480
+	end if
+end event
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
 		LoadSpriteSheet("SCZ/Objects.gif")
 		SpriteFrame(-32, -8, 64, 23, 311, 1)
 		SpriteFrame(-32, -8, 64, 22, 311, 25)
@@ -313,7 +440,7 @@ event ObjectStartup
 		SpriteFrame(-16, -8, 32, 16, 376, 1)
 		SpriteFrame(-16, 0, 32, 168, 261, 1)
 		SpriteFrame(0, 0, 1, 1, 261, 168)
-		EggmanLaser_value52 = 261
+		EggmanLaser_laserSheetX = 261
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-32, -8, 64, 23, 513, 139)
@@ -323,15 +450,8 @@ event ObjectStartup
 		SpriteFrame(-16, -8, 32, 16, 397, 1)
 		SpriteFrame(-16, 0, 32, 168, 480, 1)
 		SpriteFrame(0, 0, 1, 1, 480, 168)
-		EggmanLaser_value52 = 480
+		EggmanLaser_laserSheetX = 480
 	end if
-end event
-
-event RSDKDraw
-	DrawSprite(0)
-end event
-
-event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

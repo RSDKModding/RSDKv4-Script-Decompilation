@@ -8,12 +8,12 @@
 // Aliases
 private alias object.value0 : object.unused // Set to 0, but never used again...
 private alias object.value1 : object.activeFireballs // Bitfield, bits 1-4 are either true or false for the state of each of the Sol's 4 fireballs
-private alias object.value2 : object.originPos.x
-private alias object.value3 : object.fireBalls // true if the Sol should attack the player (always true)
+private alias object.value2 : object.startPos.x
+private alias object.value3 : object.fireOrbs // true if the Sol should attack the player (always true)
 private alias object.value4 : object.targetPlayer
 private alias object.value5 : object.backupTargetPlayer // if we cant target any players, target the last player detected (or P1 if none)
 private alias object.value6 : object.targetPlayerDistance
-private alias object.value7 : object.fireballSprite
+private alias object.value7 : object.fireballFrame
 private alias object.value8 : object.fireballFrame
 
 private alias 0 : SOL_AWAITPLAYER
@@ -30,9 +30,9 @@ private alias object.value39 : player.hitboxBottom
 // Function declarations
 reserve function Sol_DebugDraw
 reserve function Sol_DebugSpawn
-reserve function Sol_checkColFull
-reserve function Sol_checkColFireball
-reserve function Sol_checkOOB
+reserve function Sol_CheckColFull
+reserve function Sol_CheckColFireball
+reserve function Sol_CheckOffScreen
 
 
 function Sol_DebugDraw
@@ -42,9 +42,9 @@ end function
 
 function Sol_DebugSpawn
 	CreateTempObject(TypeName[Sol], 0, object.xpos, object.ypos)
-	object[tempObjectPos].originPos.x = object[tempObjectPos].xpos
+	object[tempObjectPos].startPos.x = object[tempObjectPos].xpos
 	object[tempObjectPos].activeFireballs = 0b1111
-	object[tempObjectPos].fireBalls = true
+	object[tempObjectPos].fireOrbs = true
 	if object[tempObjectPos].propertyValue == FLIP_NONE
 		object[tempObjectPos].direction = FLIP_NONE
 		object[tempObjectPos].xvel = -0x4000
@@ -55,7 +55,7 @@ function Sol_DebugSpawn
 end function
 
 
-function Sol_checkColFull
+function Sol_CheckColFull
 	// Called to check for collision of full entity (namely main Sol along with its fireballs)
 	
 	// First check collision with the fireballs
@@ -69,9 +69,11 @@ function Sol_checkColFull
 			Cos256(object.xpos, temp7)
 			object.xpos <<= 12
 			object.xpos += temp1
+
 			Sin256(object.ypos, temp7)
 			object.ypos <<= 12
 			object.ypos += temp2
+
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if checkResult == true
@@ -79,8 +81,8 @@ function Sol_checkColFull
 				end if
 			next
 		end if
-		temp7 += 64
-		temp7 &= 255
+		temp7 += 0x40
+		temp7 &= 0xFF
 		temp0++
 	loop
 
@@ -96,7 +98,7 @@ function Sol_checkColFull
 end function
 
 
-function Sol_checkColFireball
+function Sol_CheckColFireball
 	// Called to check collision ONLY with the fireball, this is called from the child fireball object, separate from the actual parent object Sol
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
@@ -107,26 +109,26 @@ function Sol_checkColFireball
 end function
 
 
-function Sol_checkOOB
+function Sol_CheckOffScreen
 	if object.outOfBounds == true
 		temp0 = object.xpos
-		object.xpos = object.originPos.x
+		object.xpos = object.startPos.x
 		if object.outOfBounds == true
 			// Reset the Sol
-			object.xpos = object.originPos.x
-			object.activeFireballs = 0b1111
+			object.xpos 			= object.startPos.x
+			object.activeFireballs 	= 0b1111
 			if object.propertyValue == FLIP_NONE
-				object.direction = FLIP_NONE
-				object.xvel = -0x4000
+				object.direction 	= FLIP_NONE
+				object.xvel 		= -0x4000
 			else
-				object.direction = FLIP_X
-				object.xvel = 0x4000
+				object.direction 	= FLIP_X
+				object.xvel 		= 0x4000
 			end if
-			object.unused = 0
-			object.animationTimer = 0
-			object.priority = PRIORITY_ACTIVE_BOUNDS
-			object.state = SOL_AWAITPLAYER
-			object.angle = 0
+			object.unused 			= 0
+			object.animationTimer 	= 0
+			object.priority 		= PRIORITY_ACTIVE_BOUNDS
+			object.state 			= SOL_AWAITPLAYER
+			object.angle 			= 0
 		else
 			object.xpos = temp0
 		end if
@@ -139,18 +141,20 @@ event ObjectMain
 	case SOL_AWAITPLAYER
 		object.priority = PRIORITY_ACTIVE
 		object.xpos += object.xvel
+
 		if object.direction == FLIP_NONE
 			object.angle++
 		else
 			object.angle--
 		end if
-		object.angle &= 255
-		CallFunction(Sol_checkColFull)
-		if object.fireBalls == true
+		object.angle &= 0xFF
+		CallFunction(Sol_CheckColFull)
+
+		if object.fireOrbs == true
 			// (Attempt to) find a target player in order to throw fireballs at them
 			object.targetPlayerDistance = 0x7FFFFFFF
-			object.targetPlayer = 0xFFFF
-			object.backupTargetPlayer = 0
+			object.targetPlayer 		= 0xFFFF
+			object.backupTargetPlayer 	= 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				temp0 = object[currentPlayer].ypos
 				temp0 -= object.ypos
@@ -199,7 +203,7 @@ event ObjectMain
 				object.xvel = 0x4000
 			end if
 		end if
-		CallFunction(Sol_checkOOB)
+		CallFunction(Sol_CheckOffScreen)
 		break
 
 	case SOL_FIREFIREBALLS
@@ -209,7 +213,7 @@ event ObjectMain
 		else
 			object.angle--
 		end if
-		object.angle &= 255
+		object.angle &= 0xFF
 
 		temp0 = 0
 		temp7 = object.angle
@@ -227,7 +231,7 @@ event ObjectMain
 					CreateTempObject(TypeName[Sol], 0, temp1, temp2)
 					object[tempObjectPos].state = SOL_FIREBALL
 					object[tempObjectPos].fireballFrame = object.fireballFrame
-					object[tempObjectPos].fireballSprite = object.fireballSprite
+					object[tempObjectPos].fireballFrame = object.fireballFrame
 					if object.direction == FLIP_NONE
 						object[tempObjectPos].xvel = -0x20000
 					else
@@ -239,7 +243,8 @@ event ObjectMain
 			temp7 &= 255
 			temp0++
 		loop
-		CallFunction(Sol_checkColFull)
+
+		CallFunction(Sol_CheckColFull)
 		if object.activeFireballs == 0b0000 // No active fire balls?
 			object.state = SOL_NOFIREBALLS
 			if object.direction == FLIP_NONE
@@ -248,28 +253,28 @@ event ObjectMain
 				object.xvel = 0x4000
 			end if
 		end if
+
 		if object.animationTimer < 16
 			object.animationTimer++
 		else
 			object.frame = 2
 		end if
-		CallFunction(Sol_checkOOB)
+		CallFunction(Sol_CheckOffScreen)
 		break
 
 	case SOL_NOFIREBALLS
 		object.xpos += object.xvel
-		CallFunction(Sol_checkColFull)
-		CallFunction(Sol_checkOOB)
+		CallFunction(Sol_CheckColFull)
+		CallFunction(Sol_CheckOffScreen)
 		break
 
 	case SOL_FIREBALL
 		object.xpos += object.xvel
-		CallFunction(Sol_checkColFireball)
+		CallFunction(Sol_CheckColFireball)
 		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
 		break
-
 	end switch
 
 	object.fireballFrame++
@@ -277,9 +282,9 @@ event ObjectMain
 		object.fireballFrame = 0
 	end if
 
-	object.fireballSprite = object.fireballFrame
-	object.fireballSprite /= 6
-	object.fireballSprite += 3
+	object.fireballFrame = object.fireballFrame
+	object.fireballFrame /= 6
+	object.fireballFrame += 3
 end event
 
 
@@ -298,12 +303,13 @@ event ObjectDraw
 				Sin256(temp2, temp7)
 				temp2 <<= 12
 				temp2 += object.ypos
-				DrawSpriteXY(object.fireballSprite, temp1, temp2)
+				DrawSpriteXY(object.fireballFrame, temp1, temp2)
 			end if
-			temp7 += 64
-			temp7 &= 255
+			temp7 += 0x40
+			temp7 &= 0xFF
 			temp0++
 		loop
+
 		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
 		break
 
@@ -312,9 +318,8 @@ event ObjectDraw
 		break
 
 	case SOL_FIREBALL
-		DrawSprite(object.fireballSprite)
+		DrawSprite(object.fireballFrame)
 		break
-
 	end switch
 end event
 
@@ -323,31 +328,31 @@ event ObjectStartup
 	CheckCurrentStageFolder("Zone05")
 	if checkResult == true
 		LoadSpriteSheet("HTZ/Objects.gif")
-		SpriteFrame(-8, -8, 16, 16, 91, 222) // 0 - 2 - Normal frame, duplicated a few times
+		SpriteFrame(-8, -8, 16, 16, 91, 222)	// #0 -> #2 - Normal frame, duplicated a few times
 		SpriteFrame(-8, -8, 16, 16, 91, 222)
 		SpriteFrame(-8, -8, 16, 16, 91, 222)
-		SpriteFrame(-8, -8, 16, 16, 1, 33)   // 3 - 4 - Fireball frames
+		SpriteFrame(-8, -8, 16, 16, 1, 33)  	// #3 -> #4 - Fireball frames
 		SpriteFrame(-8, -8, 16, 16, 18, 33)
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
 		// This SpriteFrame data is just duplicated from HTZ's sheet, so it appears broken 
+		SpriteFrame(-8, -8, 16, 16, 91, 222)	// #0 -> #2 - Normal frame, duplicated a few times
 		SpriteFrame(-8, -8, 16, 16, 91, 222)
 		SpriteFrame(-8, -8, 16, 16, 91, 222)
-		SpriteFrame(-8, -8, 16, 16, 91, 222)
-		SpriteFrame(-8, -8, 16, 16, 1, 33)
+		SpriteFrame(-8, -8, 16, 16, 1, 33)	 	// #3 -> #4 - Fireball frames
 		SpriteFrame(-8, -8, 16, 16, 18, 33)
 	end if
 
 	foreach (TypeName[Sol], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].originPos.x = object[arrayPos0].xpos
-		object[arrayPos0].activeFireballs = 0b1111
-		object[arrayPos0].fireBalls = true
+		object[arrayPos0].startPos.x 		= object[arrayPos0].xpos
+		object[arrayPos0].activeFireballs 	= 0b1111
+		object[arrayPos0].fireOrbs 			= true
 		if object[arrayPos0].propertyValue == FLIP_NONE
 			object[arrayPos0].direction = FLIP_NONE
-			object[arrayPos0].xvel = -0x4000
+			object[arrayPos0].xvel 		= -0x4000
 		else
 			object[arrayPos0].direction = FLIP_X
-			object[arrayPos0].xvel = 0x4000
+			object[arrayPos0].xvel 		= 0x4000
 		end if
 	next
 
@@ -394,14 +399,17 @@ event RSDKDraw
 		Cos256(temp1, temp3)
 		temp1 <<= 12
 		temp1 += object.xpos
+
 		Sin256(temp2, temp3)
 		temp2 <<= 12
 		temp2 += object.ypos
+
 		DrawSpriteXY(3, temp1, temp2)
-		temp3 += 64
-		temp3 &= 255
+		temp3 += 0x40
+		temp3 &= 0xFF
 		temp0++
 	loop
+	
 	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
 end event
 
@@ -410,18 +418,18 @@ event RSDKLoad
 	CheckCurrentStageFolder("Zone05")
 	if checkResult == true
 		LoadSpriteSheet("HTZ/Objects.gif")
-		SpriteFrame(-8, -8, 16, 16, 91, 222) // 0 - 2 - Normal frame, duplicated a few times
+		SpriteFrame(-8, -8, 16, 16, 91, 222)	// #0 -> #2 - Normal frame, duplicated a few times
 		SpriteFrame(-8, -8, 16, 16, 91, 222)
 		SpriteFrame(-8, -8, 16, 16, 91, 222)
-		SpriteFrame(-8, -8, 16, 16, 1, 33)   // 3 - Fireball frames
+		SpriteFrame(-8, -8, 16, 16, 1, 33)  	// #3 -> #4 - Fireball frames
 		SpriteFrame(-8, -8, 16, 16, 18, 33)
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
 		// This SpriteFrame data is just duplicated from HTZ's sheet, so it appears broken 
+		SpriteFrame(-8, -8, 16, 16, 91, 222)	// #0 -> #2 - Normal frame, duplicated a few times
 		SpriteFrame(-8, -8, 16, 16, 91, 222)
 		SpriteFrame(-8, -8, 16, 16, 91, 222)
-		SpriteFrame(-8, -8, 16, 16, 91, 222)
-		SpriteFrame(-8, -8, 16, 16, 1, 33)
+		SpriteFrame(-8, -8, 16, 16, 1, 33)	 	// #3 -> #4 - Fireball frames
 		SpriteFrame(-8, -8, 16, 16, 18, 33)
 	end if
 

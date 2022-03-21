@@ -6,29 +6,44 @@
 // ----------------------------------
 
 // Aliases
-private alias 67 : TYPE_CLUCKER
+private alias object.value0 : object.startPos.y
+private alias object.value1 : object.timer
+private alias object.value2 : object.cannonOffset.x
+
+// States
+private alias 0 : CLUCKER_HIDDEN
+private alias 1 : CLUCKER_APPEAR
+private alias 2 : CLUCKER_ADJUSTCANNON
+private alias 3 : CLUCKER_ATTACKING
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Function declarations
-reserve function Clucker_Function128
+reserve function Clucker_Setup
 reserve function Clucker_DebugDraw
 reserve function Clucker_DebugSpawn
 
 // Static Values
-private value Clucker_value49 = 0;
-private value Clucker_value50 = 0;
+private value Clucker_value49 = 0
+private value Clucker_value50 = 0
 
-// Tables
+private alias Clucker_value49 : Clucker_sheetX
+private alias Clucker_value50 : Clucker_sheetY
 
-function Clucker_Function128
-	object[arrayPos0].ypos = object[arrayPos0].value0
-	object[arrayPos0].value1 = 0
-	object[arrayPos0].state = 0
-	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+function Clucker_Setup
+	object[arrayPos0].ypos 		= object[arrayPos0].startPos.y
+	object[arrayPos0].timer 	= 0
+	object[arrayPos0].state 	= CLUCKER_HIDDEN
+	object[arrayPos0].priority 	= PRIORITY_ACTIVE_BOUNDS
 end function
 
 
 function Clucker_DebugDraw
-	EditFrame(0, -16, -16, 32, 32, Clucker_value49, Clucker_value50)
+	EditFrame(0, -16, -16, 32, 32, Clucker_sheetX, Clucker_sheetY)
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end function
 
@@ -36,102 +51,115 @@ end function
 function Clucker_DebugSpawn
 	CreateTempObject(TypeName[Clucker], 0, object.xpos, object.ypos)
 	object[tempObjectPos].ypos += 0x200000
-	object[tempObjectPos].value0 = object[tempObjectPos].ypos
-	object[tempObjectPos].direction = object.direction
+	object[tempObjectPos].startPos.y 	= object[tempObjectPos].ypos
+	object[tempObjectPos].direction 	= object.direction
+
 	arrayPos0 = object[tempObjectPos].entityPos
-	CallFunction(Clucker_Function128)
+	CallFunction(Clucker_Setup)
 end function
 
 
 event ObjectMain
 	switch object.state
-	case 0
+	case CLUCKER_HIDDEN
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -128, -256, 128, 32, currentPlayer, -1, -1, 1, 1)
-			if checkResult == 1
-				object.value1 = 16
+			if checkResult == true
+				object.timer = 16
 				if object[currentPlayer].xpos > object.xpos
-					object.direction = FLIP_X
-					object.value2 = -0x80000
+					object.direction 		= FLIP_X
+					object.cannonOffset.x	= -0x80000
 				else
-					object.direction = FLIP_NONE
-					object.value2 = 0x80000
+					object.direction 		= FLIP_NONE
+					object.cannonOffset.x	= 0x80000
 				end if
 				object.priority = PRIORITY_ACTIVE
-				object.state = 1
+				object.state 	= CLUCKER_APPEAR
 			end if
 		next
 		break
-	case 1
+
+	case CLUCKER_APPEAR
 		object.ypos -= 0x20000
-		object.value1--
-		if object.value1 == 0
-			object.value1 = 8
-			object.state = 2
+
+		object.timer--
+		if object.timer == 0
+			object.timer 	= 8
+			object.state 	= CLUCKER_ADJUSTCANNON
 		end if
 		break
-	case 2
+
+	case CLUCKER_ADJUSTCANNON
 		if object.direction == FLIP_NONE
-			object.value2 -= 0x10000
+			object.cannonOffset.x -= 0x10000
 		else
-			object.value2 += 0x10000
+			object.cannonOffset.x += 0x10000
 		end if
-		object.value1--
-		if object.value1 == 0
-			object.value1 = 14
-			object.state = 3
+
+		object.timer--
+		if object.timer == 0
+			object.timer 	= 14
+			object.state 	= CLUCKER_ATTACKING
 		end if
 		break
-	case 3
-		switch object.value1
+
+	case CLUCKER_ATTACKING
+		switch object.timer
 		case 4
 			if object.direction == FLIP_NONE
-				object.value2 += 0x20000
+				object.cannonOffset.x += 0x20000
 			else
-				object.value2 -= 0x20000
+				object.cannonOffset.x -= 0x20000
 			end if
 			break
+
 		case 0
 			PlaySfx(SfxName[Octus Shot], false)
 			temp0 = object.xpos
 			temp1 = object.ypos
 			temp1 += 0xB0000
+
 			if object.direction == FLIP_NONE
-				object.value2 -= 0x20000
+				object.cannonOffset.x -= 0x20000
 				temp0 -= 0x130000
 				CreateTempObject(TypeName[Clucker Shot], 0, temp0, temp1)
 				object[tempObjectPos].xvel = -0x20000
 			else
-				object.value2 += 0x20000
+				object.cannonOffset.x += 0x20000
 				temp0 += 0x130000
 				CreateTempObject(TypeName[Clucker Shot], 0, temp0, temp1)
 				object[tempObjectPos].xvel = 0x20000
 			end if
 			object[tempObjectPos].direction = object.direction
-			object.value1 = 68
+
+			object.timer = 68
 			break
 		end switch
-		object.value1--
+
+		object.timer--
 		break
 	end switch
 	temp0 = object.ypos
-	object.ypos = object.value0
+
+	object.ypos = object.startPos.y
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_BOX, object.entityPos, -16, -8, 16, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 	next
+
 	object.ypos = temp0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -16, 14, 16, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
+		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -16, 14, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
 			CallFunction(PlayerObject_BadnikBreak)
 		end if
 	next
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		temp1 = object.ypos
-		object.ypos = object.value0
-		if object.outOfBounds == 1
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
 			arrayPos0 = object.entityPos
-			CallFunction(Clucker_Function128)
+			CallFunction(Clucker_Setup)
 		else
 			object.ypos = temp1
 		end if
@@ -140,39 +168,42 @@ end event
 
 
 event ObjectDraw
-	if object.state >= 2
+	if object.state >= CLUCKER_ADJUSTCANNON
 		temp0 = object.xpos
-		temp0 += object.value2
+		temp0 += object.cannonOffset.x
 		DrawSpriteFX(1, FX_FLIP, temp0, object.ypos)
 	end if
-	temp0 = object.value0
+
+	temp0 = object.startPos.y
 	temp0 -= object.ypos
 	temp0 >>= 16
-	EditFrame(0, -16, -16, 32, temp0, Clucker_value49, Clucker_value50)
+	EditFrame(0, -16, -16, 32, temp0, Clucker_sheetX, Clucker_sheetY)
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone11")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("SCZ/Objects.gif")
-		SpriteFrame(-16, -16, 32, 32, 9, 223)
-		SpriteFrame(-24, 7, 8, 7, 1, 246)
-		Clucker_value49 = 9
-		Clucker_value50 = 223
+		SpriteFrame(-16, -16, 32, 32, 9, 223) 	// Clucker 	- #0
+		SpriteFrame(-24, 7, 8, 7, 1, 246)		// Cannon 	- #1
+		Clucker_sheetX = 9
+		Clucker_sheetY = 223
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
-		SpriteFrame(-16, -16, 32, 32, 845, 256)
-		SpriteFrame(-24, 7, 8, 7, 837, 279)
-		Clucker_value49 = 845
-		Clucker_value50 = 256
+		SpriteFrame(-16, -16, 32, 32, 845, 256) // Clucker - #0
+		SpriteFrame(-24, 7, 8, 7, 837, 279)		// Cannon 	- #1
+		Clucker_sheetX = 845
+		Clucker_sheetY = 256
 	end if
+
 	foreach (TypeName[Clucker], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].ypos += 0x200000
-		object[arrayPos0].value0 = object[arrayPos0].ypos
-		CallFunction(Clucker_Function128)
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		CallFunction(Clucker_Setup)
 	next
+
 	SetTableValue(TypeName[Clucker], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Clucker_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Clucker_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -180,10 +211,25 @@ event ObjectStartup
 end event
 
 event RSDKDraw
+	DrawSprite(1)
 	DrawSprite(0)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 9, 223) 	// Clucker 	- #0
+		SpriteFrame(-24, 7, 8, 7, 1, 246)		// Cannon 	- #1
+		Clucker_sheetX = 9
+		Clucker_sheetY = 223
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 845, 256) // Clucker - #0
+		SpriteFrame(-24, 7, 8, 7, 837, 279)		// Cannon 	- #1
+		Clucker_sheetX = 845
+		Clucker_sheetY = 256
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

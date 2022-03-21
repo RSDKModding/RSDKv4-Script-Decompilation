@@ -7,7 +7,7 @@
 
 // Aliases
 private alias object.value0 : object.paletteTimer
-private alias object.value1 : object.paletteID
+private alias object.value1 : object.paletteIndex
 private alias object.value2 : object.scrollPos
 
 // Function declarations
@@ -21,11 +21,15 @@ private alias SLZSetup_value29 : SLZSetup_rotateTimer
 // Tracks
 private alias 0 : TRACK_STAGE
 private alias 2 : TRACK_INVINCIBLE
+private alias 2 : TRACK_BOSS
 
-// Music Events
+// Reserved object slots
+private alias 10 : SLOT_ZONESETUP
 private alias 25 : SLOT_MUSICEVENT_CHANGE
 private alias 26 : SLOT_MUSICEVENT_BOSS
 
+
+// Music Events
 private alias 0 : MUSICEVENT_FADETOBOSS
 private alias 1 : MUSICEVENT_FADETOSTAGE
 private alias 2 : MUSICEVENT_TRANSITION
@@ -72,15 +76,17 @@ function SLZSetup_SpeedUpMusic
 	temp0 &= checkResult
 	if temp0 == 0
 		switch music.currentTrack
-		case 0
+		case TRACK_STAGE
 			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436)
 			SwapMusicTrack("Starlight_F.ogg", TRACK_STAGE, 67640, 8000)
 			break
-		case 2
+
+		case TRACK_INVINCIBLE
 			SetMusicTrack("Starlight_F.ogg", TRACK_STAGE, 67640)
 			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436, 8000)
 			break
-		case 4
+
+		case TRACK_BOSS
 			SetMusicTrack("Starlight_F.ogg", TRACK_STAGE, 67640)
 			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, 30436)
 			break
@@ -98,19 +104,20 @@ function SLZSetup_SlowDownMusic
 	temp0 &= checkResult
 	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+
+	if temp0 == false
 		switch music.currentTrack
-		case 0
+		case TRACK_STAGE
 			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
 			SwapMusicTrack("Starlight.ogg", TRACK_STAGE, 84364, 12500)
 			break
 
-		case 2
+		case TRACK_INVINCIBLE
 			SetMusicTrack("Starlight.ogg", TRACK_STAGE, 84364)
 			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528, 12500)
 			break
 
-		case 4
+		case TRACK_BOSS
 			SetMusicTrack("Starlight.ogg", TRACK_STAGE, 84364)
 			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
 			break
@@ -122,9 +129,7 @@ end function
 
 
 event ObjectMain
-
 	GetTableValue(temp0, 21, StageSetup_oscillationTable)
-
 	if temp0 == 0
 		SLZSetup_rotateTimer++
 		SLZSetup_rotateTimer &= 3
@@ -133,17 +138,16 @@ event ObjectMain
 	object.paletteTimer++
 	if object.paletteTimer == 8
 		object.paletteTimer = 0
-		object.paletteID++
-		object.paletteID %= 6
+		object.paletteIndex++
+		object.paletteIndex %= 6
 
-		GetTableValue(temp0, object.paletteID, SLZSetup_palTable1)
+		GetTableValue(temp0, object.paletteIndex, SLZSetup_palTable1)
 		SetPaletteEntry(0, 171, temp0)
-		GetTableValue(temp0, object.paletteID, SLZSetup_palTable2)
+		GetTableValue(temp0, object.paletteIndex, SLZSetup_palTable2)
 		SetPaletteEntry(0, 173, temp0)
-		GetTableValue(temp0, object.paletteID, SLZSetup_palTable3)
+		GetTableValue(temp0, object.paletteIndex, SLZSetup_palTable3)
 		SetPaletteEntry(0, 174, temp0)
 	end if
-
 end event
 
 
@@ -165,7 +169,6 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("SLZ/Objects.gif")
 	
 	SetMusicTrack("Starlight.ogg", TRACK_STAGE, 84364)
@@ -181,13 +184,13 @@ event ObjectStartup
 	animalType1 = TypeName[Flicky]
 	animalType2 = TypeName[Picky]
 
-	object[10].type = TypeName[SLZ Setup]
-	object[10].priority = PRIORITY_ACTIVE
-	object[10].drawOrder = 5
-	object[10].scrollPos = 496
+	object[SLOT_ZONESETUP].type = TypeName[SLZ Setup]
+	object[SLOT_ZONESETUP].priority = PRIORITY_ACTIVE
+	object[SLOT_ZONESETUP].drawOrder = 5
+	object[SLOT_ZONESETUP].scrollPos = 496
 	temp0 = screen.xcenter
 	temp0 >>= 2
-	object[10].scrollPos -= temp0
+	object[SLOT_ZONESETUP].scrollPos -= temp0
 	SLZSetup_rotateTimer = 0
 
 	if options.attractMode == true

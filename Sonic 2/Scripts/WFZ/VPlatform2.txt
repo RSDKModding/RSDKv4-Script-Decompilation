@@ -6,7 +6,13 @@
 // ----------------------------------
 
 // Aliases
-private alias 49 : TYPE_VPLATFORM2
+private alias object.value0 : object.centerPos.y
+private alias object.value1 : object.hitbox.left
+private alias object.value2 : object.hitbox.right
+private alias object.value3 : object.activePlayers
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
 reserve function VPlatform2_DebugDraw
@@ -14,28 +20,28 @@ reserve function VPlatform2_DebugSpawn
 
 // Static Values
 public value VPlatform2_value42 = 0;
-
-// Tables
+private alias VPlatform2_value42 : VPlatform2_startDebugID
 
 function VPlatform2_DebugDraw
-	temp0 = object[0].value17
-	temp0 -= VPlatform2_value42
+	temp0 = debugMode[0].currentSelection
+	temp0 -= VPlatform2_startDebugID
 	DrawSprite(temp0)
 end function
 
 
 function VPlatform2_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= VPlatform2_value42
+	temp0 = debugMode[0].currentSelection
+	temp0 -= VPlatform2_startDebugID
 	CreateTempObject(TypeName[V Platform 2], temp0, object.xpos, object.ypos)
-	object[tempObjectPos].value0 = object.ypos
+
+	object[tempObjectPos].centerPos.y = object.ypos
 	object[tempObjectPos].direction = object.direction
 	if object[tempObjectPos].propertyValue == 0
-		object[tempObjectPos].value1 = -32
-		object[tempObjectPos].value2 = 32
+		object[tempObjectPos].hitbox.left 	= -32
+		object[tempObjectPos].hitbox.right = 32
 	else
-		object[tempObjectPos].value1 = -24
-		object[tempObjectPos].value2 = 24
+		object[tempObjectPos].hitbox.left 	= -24
+		object[tempObjectPos].hitbox.right 	= 24
 	end if
 end function
 
@@ -43,7 +49,8 @@ end function
 event ObjectMain
 	temp6 = object.ypos
 	object.ypos += object.yvel
-	temp0 = object.value0
+
+	temp0 = object.centerPos.y
 	temp0 -= 0x600000
 	if object.ypos <= temp0
 		object.yvel += 0x800
@@ -54,16 +61,18 @@ event ObjectMain
 	temp7 = object.ypos
 	temp7 &= 0xFFFF0000
 	temp7 -= temp6
+
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		GetBit(temp0, object.value3, temp2)
-		if temp0 == 1
+		GetBit(temp0, object.activePlayers, temp2)
+		if temp0 == true
 			object[currentPlayer].ypos += temp7
 		end if
-		SetBit(object.value3, temp2, 0)
-		BoxCollisionTest(C_PLATFORM, object.entityPos, object.value1, -16, object.value2, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			SetBit(object.value3, temp2, 1)
+
+		SetBit(object.activePlayers, temp2, false)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitbox.left, -16, object.hitbox.right, 0, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		if checkResult == true
+			SetBit(object.activePlayers, temp2, true)
 		end if
 		temp2++
 	next
@@ -79,21 +88,24 @@ event ObjectStartup
 	LoadSpriteSheet("SCZ/Objects.gif")
 	SpriteFrame(-24, -16, 48, 24, 381, 178)
 	SpriteFrame(-32, -16, 64, 24, 1, 146)
+
 	foreach (TypeName[V Platform 2], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value0 = object[arrayPos0].ypos
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
 		if object[arrayPos0].direction == FLIP_Y
 			object[arrayPos0].direction -= 0xC00000
 		end if
+
 		if object[arrayPos0].propertyValue == 0
-			object[arrayPos0].value1 = -32
-			object[arrayPos0].value2 = 32
+			object[arrayPos0].hitbox.left 	= -32
+			object[arrayPos0].hitbox.right	= 32
 		else
-			object[arrayPos0].value1 = -24
-			object[arrayPos0].value2 = 24
+			object[arrayPos0].hitbox.left	= -24
+			object[arrayPos0].hitbox.right 	= 24
 		end if
 	next
+
 	temp0 = 0
-	VPlatform2_value42 = DebugMode_ObjCount
+	VPlatform2_startDebugID = DebugMode_ObjCount
 	while temp0 < 2
 		SetTableValue(TypeName[V Platform 2], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(VPlatform2_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -103,11 +115,39 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	DrawSprite(object.propertyValue)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SCZ/Objects.gif")
+	SpriteFrame(-24, -16, 48, 24, 381, 178)
+	SpriteFrame(-32, -16, 64, 24, 1, 146)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Small Platform", 0)
+	AddEnumVariable("Wide Platform", 1)
 end event

@@ -8,6 +8,9 @@
 // Aliases
 private alias 58 : TYPE_COGPLATFORM
 
+private alias MPZSetup_value34 : MPZSetup_cogFrame
+private alias MPZSetup_value35 : MPZSetup_cogTimer
+
 // Function declarations
 reserve function CogPlatform_DebugDraw
 reserve function CogPlatform_DebugSpawn
@@ -42,37 +45,38 @@ event ObjectMain
 	if checkResult == 1
 		if object.propertyValue == 0
 			object.xvel = 0
-			MPZSetup_value35 = 0
-			MPZSetup_value34 = 0
+			MPZSetup_cogTimer = 0
+			MPZSetup_cogFrame = 0
 		else
 			object.direction ^= FLIP_X
 			FlipSign(object.xvel)
-			FlipSign(MPZSetup_value35)
+			FlipSign(MPZSetup_cogFrame)
 		end if
 	end if
 	temp4 = object.xpos
 	temp2 = object.xpos
 	temp2 &= 0xFFFF0000
 	temp2 -= temp0
+
 	object.xpos = temp0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		switch checkResult
-		case 1
+		case COL_TOP
 			if object.xvel == 0
 				object.priority = PRIORITY_ACTIVE
 				if object.direction == FLIP_NONE
 					object.xvel = 0x20000
-					MPZSetup_value35 = -1
+					MPZSetup_cogTimer = -1
 				else
 					object.xvel = -0x20000
-					MPZSetup_value35 = 1
+					MPZSetup_cogTimer = 1
 				end if
 			end if
 			object[currentPlayer].xpos += temp2
 			break
-		case 2
-		case 3
+		case COL_LEFT
+		case COL_RIGHT
 			if object[currentPlayer].state == PlayerObject_KnuxWallClimb
 				object[currentPlayer].value1 = 0
 				object[currentPlayer].animation = ANI_GLIDING_DROP
@@ -82,18 +86,19 @@ event ObjectMain
 		end switch
 	next
 	object.xpos = temp4
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		if object.value0 == 0
 			object.type = TypeName[Blank Object]
 		else
 			object.xpos = object.value0
-			if object.outOfBounds == 0
+			if object.outOfBounds == false
 				object.xpos = temp4
 			else
 				object.priority = PRIORITY_ACTIVE_BOUNDS
 				object.xvel = 0
-				MPZSetup_value35 = 0
-				MPZSetup_value34 = 0
+				MPZSetup_cogTimer = 0
+				MPZSetup_cogFrame = 0
 			end if
 		end if
 	end if
@@ -108,6 +113,7 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("MPZ/Objects.gif")
 	SpriteFrame(-64, -12, 128, 24, 350, 182)
+
 	temp0 = 0
 	CogPlatform_value39 = DebugMode_ObjCount
 	while temp0 < 2
@@ -117,6 +123,7 @@ event ObjectStartup
 		DebugMode_ObjCount++
 		temp0++
 	loop
+
 	foreach (TypeName[Cog Platform], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].value0 = object[arrayPos0].xpos
 	next
@@ -127,6 +134,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-64, -12, 128, 24, 350, 182)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

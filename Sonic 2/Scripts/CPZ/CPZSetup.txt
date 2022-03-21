@@ -18,11 +18,11 @@ private alias object.value10 : object.scrollPos
 private alias object.value12 : object.drawingIndex
 private alias object.value13 : object.rippleTimer
 private alias object.value14 : object.paletteTimer
-private alias object.value15 : object.paletteIndex1
-private alias object.value16 : object.paletteIndex2
-private alias object.value17 : object.paletteIndex3
-private alias object.value18 : object.paletteIndex4
-private alias object.value19 : object.paletteIndex5
+private alias object.value15 : object.bgTowerLightPalIndex
+private alias object.value16 : object.rainbowLightPalIndex
+private alias object.value17 : object.chemLiquidPalIndex1
+private alias object.value18 : object.chemLiquidPalIndex2
+private alias object.value19 : object.chemLiquidPalIndex3
 
 // Tracks
 private alias 0 : TRACK_STAGE
@@ -34,10 +34,12 @@ private alias 5 : TRACK_GAMEOVER
 private alias 6 : TRACK_DROWNING
 private alias 7 : TRACK_SUPER
 
-// Music Events
+// Reserved object slots
+private alias 10 : SLOT_ZONESETUP
 private alias 25 : SLOT_MUSICEVENT_CHANGE
 private alias 26 : SLOT_MUSICEVENT_BOSS
 
+// Music Events
 private alias  0 : MUSICEVENT_FADETOBOSS
 private alias  1 : MUSICEVENT_FADETOSTAGE
 private alias  2 : MUSICEVENT_TRANSITION
@@ -55,10 +57,10 @@ reserve function CPZSetup_SpeedUpMusic
 reserve function CPZSetup_SlowDownMusic
 
 // Static Values
-public value ZoneSetup_value33 = 0;
-public value ZoneSetup_value34 = 0;
-private value ZoneSetup_value35 = 0;
-public value ZoneSetup_value36 = 0;
+public value ZoneSetup_value33  = 0
+public value ZoneSetup_value34  = 0
+private value ZoneSetup_value35 = 0
+public value ZoneSetup_value36  = 0
 
 private alias ZoneSetup_value33 : CPZSetup_rotatingStairTimer
 private alias ZoneSetup_value34 : Water_flashTimer
@@ -66,16 +68,16 @@ private alias ZoneSetup_value35 : CPZSetup_hasAchievement
 private alias ZoneSetup_value36 : CPZSetup_enteredWater
 
 // Tables
-private table CPZSetup_palTable1
+private table CPZSetup_bgTowerLightPalTable
 	0xE00000, 0xC00000, 0xA00000, 0x800000, 0x600000, 0x400000, 0x200000, 0x400000, 0x600000, 0x800000, 0xA00000, 0xC00000, 0xE00000, 0xE02000, 0xE04000, 0xE02000
 end table
 
-private table CPZSetup_palTable2
+private table CPZSetup_rainbowLightPalTable
 	0x00E000, 0x20C000, 0x40A000, 0x608000, 0x806000, 0xA04000, 0xC02000, 0xE00000, 0xC00020, 0xA00040, 0x800060, 0x600080, 0x4000A0, 0x2000C0, 0x0000E0, 0x0020C0
 	0x0040A0, 0x006080, 0x008060, 0x00A040, 0x00C020
 end table
 
-private table CPZSetup_palTable3
+private table CPZSetup_chemLiquidPalTable
 	0x0040E0, 0x0000C0, 0x0000C0, 0x0060E0, 0x0020C0, 0x0000C0, 0x0040E0, 0x0040E0, 0x0000C0, 0x0020C0, 0x0060E0, 0x0020C0, 0x0000C0, 0x0040E0, 0x0040C0, 0x0000C0
 	0x0020C0, 0x0040E0, 0x0000C0, 0x0000C0, 0x0060E0, 0x0020C0, 0x0000C0, 0x0040E0, 0x0020E0, 0x0000C0, 0x0020C0
 end table
@@ -87,10 +89,11 @@ private table CPZSetup_deformationTable
 	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
 end table
 
-
-// Unused..?
-// It's a long list of colors likely meant for a palette cycle but it doesn't match any other palette cycles
-// Strangely, this table can also be found in DEZSetup AND EndingSetup, also unused
+// Unused palette table, also found in DEZSetup and EndSetup
+// These are actually colours for one of WFZ's palette cycles
+// However, you won't find this in WFZSetup because in this 2013 remake, WFZ only uses 1 of the 3 palette cycles it had in the original game,
+// this one being among the 2 that were cut
+// Why they were cut, I have no idea, but at the very least, it's certainly a mystery how one of them ended up here of all places...
 private table CPZSetup_unusedPalette
 	0x00E000, 0x00A000, 0x006000, 0x002000, 0x000000, 0x000020, 0x000060, 0x0020A0, 0x0060E0, 0x0020A0, 0x000060, 0x000020, 0x000000, 0x200000, 0x600000, 0xA00000
 	0xE00000, 0xE04000, 0xE00000, 0xA00000, 0x600000, 0x200000, 0x000000, 0x202000, 0x606000, 0xA0A000, 0xE0E000, 0xA0A000, 0x606000, 0x202000, 0x000000, 0x002000
@@ -765,6 +768,7 @@ event ObjectMain
 		object.rippleTimer = 0
 	end if
 
+	// Animate the converyor belts in the background
 	object.aniTileTimer++
 	if object.aniTileTimer == 5
 		object.aniTileTimer = 0
@@ -780,33 +784,34 @@ event ObjectMain
 		Water_flashTimer--
 	end if
 
+	// Manage the various cycling palettes throughout the stage
 	object.paletteTimer++
 	if object.paletteTimer == 8
 		object.paletteTimer = 0
 
-		object.paletteIndex1++
-		object.paletteIndex1 &= 15
-		GetTableValue(temp0, object.paletteIndex1, CPZSetup_palTable1)
+		object.bgTowerLightPalIndex++
+		object.bgTowerLightPalIndex &= 15
+		GetTableValue(temp0, object.bgTowerLightPalIndex, CPZSetup_bgTowerLightPalTable)
 		SetPaletteEntry(0, 175, temp0)
 
-		object.paletteIndex2++
-		object.paletteIndex2 %= 21
-		GetTableValue(temp0, object.paletteIndex2, CPZSetup_palTable2)
+		object.rainbowLightPalIndex++
+		object.rainbowLightPalIndex %= 21
+		GetTableValue(temp0, object.rainbowLightPalIndex, CPZSetup_rainbowLightPalTable)
 		SetPaletteEntry(0, 191, temp0)
 
-		object.paletteIndex3 += 3
-		object.paletteIndex3 %= 27
-		GetTableValue(temp0, object.paletteIndex3, CPZSetup_palTable3)
+		object.chemLiquidPalIndex1 += 3
+		object.chemLiquidPalIndex1 %= 27
+		GetTableValue(temp0, object.chemLiquidPalIndex1, CPZSetup_chemLiquidPalTable)
 		SetPaletteEntry(0, 188, temp0)
 
-		object.paletteIndex4 += 3
-		object.paletteIndex4 %= 27
-		GetTableValue(temp0, object.paletteIndex4, CPZSetup_palTable3)
+		object.chemLiquidPalIndex2 += 3
+		object.chemLiquidPalIndex2 %= 27
+		GetTableValue(temp0, object.chemLiquidPalIndex2, CPZSetup_chemLiquidPalTable)
 		SetPaletteEntry(0, 189, temp0)
 
-		object.paletteIndex5 += 3
-		object.paletteIndex5 %= 27
-		GetTableValue(temp0, object.paletteIndex5, CPZSetup_palTable3)
+		object.chemLiquidPalIndex3 += 3
+		object.chemLiquidPalIndex3 %= 27
+		GetTableValue(temp0, object.chemLiquidPalIndex3, CPZSetup_chemLiquidPalTable)
 		SetPaletteEntry(0, 190, temp0)
 	end if
 
@@ -868,7 +873,7 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("CPZ/Objects.gif")
 
-	SetPaletteEntry(0, 192, 0x000000)
+	SetPaletteEntry(0, 192, 0x000000) // Set color index 192 to be black
 
 	// Set the Chemical Plant music, and set its speedup/slowndown functions too
 	SetMusicTrack("ChemicalPlant.ogg", TRACK_STAGE, 684580)
@@ -879,6 +884,7 @@ event ObjectStartup
 	SpriteFrame(-16, 0, 32, 256, 224, 0)
 	SpriteFrame(-16, 256, 32, 256, 224, 0)
 
+	// Conveyor Belt Tile - Frame 1
 	Copy16x16Tile(767, 768)
 
 	// Locky and Pocky are the ones swimming in these chemicals
@@ -886,16 +892,16 @@ event ObjectStartup
 	animalType2 = TypeName[Pocky]
 
 	// Set object 10 to be a CPZ Setup object
-	object[10].type = TypeName[CPZ Setup]
-	object[10].priority = PRIORITY_ACTIVE
-	object[10].drawOrder = 0
-	object[10].scrollPos = 496
-	object[10].paletteIndex4 = 1
-	object[10].paletteIndex5 = 2
+	object[SLOT_ZONESETUP].type 				= TypeName[CPZ Setup]
+	object[SLOT_ZONESETUP].priority 			= PRIORITY_ACTIVE
+	object[SLOT_ZONESETUP].drawOrder 			= 0
+	object[SLOT_ZONESETUP].scrollPos 			= 496
+	object[SLOT_ZONESETUP].chemLiquidPalIndex2 	= 1
+	object[SLOT_ZONESETUP].chemLiquidPalIndex3 	= 2
 
 	temp0 = screen.xcenter
 	temp0 >>= 2
-	object[10].scrollPos -= temp0
+	object[SLOT_ZONESETUP].scrollPos -= temp0
 
 	CPZSetup_rotatingStairTimer = 0
 
@@ -915,7 +921,7 @@ event ObjectStartup
 	arrayPos0 = 0
 	while arrayPos0 < 576
 		temp0 = arrayPos0
-		temp0 &= 63
+		temp0 &= 0x3F
 		GetTableValue(stage.deformationData2[arrayPos0], temp0, CPZSetup_deformationTable)
 		arrayPos0++
 	loop
@@ -923,21 +929,21 @@ event ObjectStartup
 	if options.attractMode == true
 		switch stage.playerListPos
 		case PlayerName[SONIC]
-			PlayerObject_ReplayTable = CPZSetup_replay_attract_S
-			PlayerObject_ReplaySize = 109
-			PlayerObject_ReplayLength = 0x708
+			PlayerObject_ReplayTable 	= CPZSetup_replay_attract_S
+			PlayerObject_ReplaySize 	= 109
+			PlayerObject_ReplayLength 	= 1800
 			break
 
 		case PlayerName[TAILS]
-			PlayerObject_ReplayTable = CPZSetup_replay_attract_T
-			PlayerObject_ReplaySize = 216
-			PlayerObject_ReplayLength = 0x618
+			PlayerObject_ReplayTable 	= CPZSetup_replay_attract_T
+			PlayerObject_ReplaySize 	= 216
+			PlayerObject_ReplayLength 	= 1560
 			break
 
 		case PlayerName[KNUCKLES]
-			PlayerObject_ReplayTable = CPZSetup_replay_attract_K
-			PlayerObject_ReplaySize = 126
-			PlayerObject_ReplayLength = 0x690
+			PlayerObject_ReplayTable 	= CPZSetup_replay_attract_K
+			PlayerObject_ReplaySize 	= 126
+			PlayerObject_ReplayLength 	= 1680
 			break
 		end switch
 

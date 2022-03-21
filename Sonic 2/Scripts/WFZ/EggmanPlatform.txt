@@ -6,80 +6,95 @@
 // ----------------------------------
 
 // Aliases
-private alias 82 : TYPE_EGGMANPLATFORM
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.y
+private alias object.value2 : object.activePlayers
+private alias object.value3 : object.debrisDistance.x
 
-
-// Static Values
-
-// Tables
+// States
+private alias 0 : WFZEGGMANPLATFORM_ENTER
+private alias 1 : WFZEGGMANPLATFORM_MOVE
+private alias 2 : WFZEGGMANPLATFORM_DESTROYED
 
 event ObjectMain
 	temp1 = object.ypos
 	temp1 &= 0xFFFF0000
+
 	switch object.state
-	case 0
+	case WFZEGGMANPLATFORM_ENTER
 		object.ypos += 0x10000
-		object.value0++
-		if object.value0 >= 119
-			object.value0 = 96
-			object.xvel = -0x10000
-			object.yvel = 0x10000
-			object.value1 = object.ypos
-			object.state = 1
+
+		object.timer++
+		if object.timer >= 119
+			object.timer 		= 96
+			object.xvel 		= -0x10000
+			object.yvel 		= 0x10000
+			object.startPos.y 	= object.ypos
+			object.state 		= WFZEGGMANPLATFORM_MOVE
 		end if
 		break
-	case 1
-		if object.value0 == 0
-			object.value0 = 192
+
+	case WFZEGGMANPLATFORM_MOVE
+		if object.timer == 0
+			object.timer = 192
 			FlipSign(object.xvel)
 		end if
-		if object.ypos >= object.value1
+
+		if object.ypos >= object.startPos.y
 			object.yvel -= 0x400
 		else
 			object.yvel += 0x400
 		end if
+
 		object.xpos += object.xvel
 		object.ypos += object.yvel
-		object.value0--
+		object.timer--
 		break
-	case 2
+
+	case WFZEGGMANPLATFORM_DESTROYED
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x3800
-		if object.outOfBounds == 1
+
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
-		object.value3++
+
+		object.debrisDistance.x++
 		break
 	end switch
+
 	FlipSign(temp1)
 	temp0 = object.ypos
 	temp0 &= 0xFFFF0000
 	temp1 += temp0
-	if object.state < 2
+	if object.state < WFZEGGMANPLATFORM_DESTROYED
 		object.frame = object.animationTimer
 		object.frame >>= 2
 		object.animationTimer++
 		if object.animationTimer >= 24
 			object.animationTimer = 0
 		end if
+
 		temp2 = 0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			GetBit(temp0, object.value2, temp2)
-			if temp0 == 1
+			GetBit(temp0, object.activePlayers, temp2)
+			if temp0 == true
 				object[currentPlayer].xpos += object.xvel
 				object[currentPlayer].ypos += temp1
 			end if
-			SetBit(object.value2, temp2, 0)
+			SetBit(object.activePlayers, temp2, false)
+
 			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -8, 16, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				SetBit(object.value2, temp2, 1)
+			if checkResult == true
+				SetBit(object.activePlayers, temp2, true)
 			else
 				BoxCollisionTest(C_TOUCH, object.entityPos, -4, 8, 4, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+				if checkResult == true
 					CallFunction(PlayerObject_Hit)
 				end if
 			end if
+
 			temp2++
 		next
 	end if
@@ -87,11 +102,12 @@ end event
 
 
 event ObjectDraw
-	if object.state == 2
+	if object.state == WFZEGGMANPLATFORM_DESTROYED
 		temp0 = -16
-		temp0 -= object.value3
+		temp0 -= object.debrisDistance.x
 		EditFrame(6, temp0, -8, 16, 22, 409, 18)
 		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+
 		object.direction ^= FLIP_X
 		DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
 	else
@@ -102,7 +118,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone11")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("SCZ/Objects.gif")
 		SpriteFrame(-16, -8, 32, 24, 376, 18)
 		SpriteFrame(-16, -8, 32, 23, 376, 43)
@@ -128,6 +144,26 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -8, 32, 24, 376, 18)
+		SpriteFrame(-16, -8, 32, 23, 376, 43)
+		SpriteFrame(-16, -8, 32, 22, 376, 67)
+		SpriteFrame(-16, -8, 32, 22, 409, 18)
+		SpriteFrame(-16, -8, 32, 22, 409, 41)
+		SpriteFrame(-16, -8, 32, 23, 409, 64)
+		SpriteFrame(-16, -8, 16, 22, 409, 18)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -8, 32, 24, 397, 18)
+		SpriteFrame(-16, -8, 32, 23, 397, 43)
+		SpriteFrame(-16, -8, 32, 22, 397, 67)
+		SpriteFrame(-16, -8, 32, 22, 430, 18)
+		SpriteFrame(-16, -8, 32, 22, 430, 41)
+		SpriteFrame(-16, -8, 32, 23, 430, 64)
+		SpriteFrame(-16, -8, 16, 22, 430, 18)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

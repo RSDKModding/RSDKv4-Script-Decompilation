@@ -6,15 +6,15 @@
 // ----------------------------------
 
 // Aliases
-private alias 70 : TYPE_TURRET
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : TURRET_SEARCHING
+private alias 1 : TURRET_ACTIVATED
 
 // Function declarations
 reserve function Turret_DebugDraw
 reserve function Turret_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function Turret_DebugDraw
 	DrawSprite(0)
@@ -27,7 +27,7 @@ end function
 
 
 event ObjectMain
-	if object.state == 0
+	if object.state == TURRET_SEARCHING
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if object[currentPlayer].ypos >= object.ypos
 				temp0 = object[currentPlayer].xpos
@@ -37,13 +37,14 @@ event ObjectMain
 					temp0 = object[currentPlayer].ypos
 					temp0 -= object.ypos
 					if temp0 < 0x900000
-						object.value0 = 2
+						object.timer = 2
 						object.state++
 					end if
 				end if
 			end if
 		next
 	else
+		// Pick a direction based on closest player
 		temp1 = 0x7FFFFFFF
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = object[currentPlayer].xpos
@@ -61,9 +62,10 @@ event ObjectMain
 				end if
 			end if
 		next
-		object.value0--
-		if object.value0 == 0
-			object.value0 = 96
+
+		object.timer--
+		if object.timer == 0
+			object.timer = 96
 			PlaySfx(SfxName[Octus Shot], false)
 			CreateTempObject(TypeName[Turret Bullet], 0, object.xpos, object.ypos)
 			switch object.frame
@@ -71,12 +73,14 @@ event ObjectMain
 				object[tempObjectPos].ypos += 0x180000
 				object[tempObjectPos].yvel = 0x10000
 				break
+
 			case 1
 				object[tempObjectPos].xpos -= 0x110000
 				object[tempObjectPos].ypos += 0x100000
 				object[tempObjectPos].xvel = -0x10000
 				object[tempObjectPos].yvel = 0x10000
 				break
+
 			case 2
 				object[tempObjectPos].xpos += 0x110000
 				object[tempObjectPos].ypos += 0x100000
@@ -96,7 +100,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone11")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("SCZ/Objects.gif")
 		SpriteFrame(-16, -16, 32, 38, 431, 88)
 		SpriteFrame(-17, -16, 33, 32, 430, 127)
@@ -107,6 +111,7 @@ event ObjectStartup
 		SpriteFrame(-17, -16, 33, 32, 933, 613)
 		SpriteFrame(-16, -16, 33, 32, 933, 646)
 	end if
+
 	SetTableValue(TypeName[Turret], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Turret_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Turret_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -118,6 +123,14 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 38, 431, 88)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -16, 32, 38, 934, 574)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "delay")
 end event

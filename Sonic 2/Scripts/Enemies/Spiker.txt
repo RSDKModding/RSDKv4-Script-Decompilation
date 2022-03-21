@@ -9,7 +9,7 @@
 private alias 51 : TYPE_SPIKER
 
 private alias object.value0 : object.timer
-private alias object.value1 : object.originPos.x
+private alias object.value1 : object.startPos.x
 private alias object.value2 : object.coneState
 private alias object.value3 : object.launchTimer // Separate from value0 since the two run alongside each other
 private alias object.value4 : object.backupState
@@ -31,12 +31,12 @@ private alias object.value39 : player.hitboxBottom
 
 
 // Function declarations
-reserve function Spiker_Reset
+reserve function Spiker_Setup
 reserve function Spiker_DebugDraw
 reserve function Spiker_DebugSpawn
 
 
-function Spiker_Reset
+function Spiker_Setup
 	object[arrayPos0].direction = object[arrayPos0].propertyValue
 	GetBit(temp0, object[arrayPos0].direction, 0)
 	if temp0 == FLIP_NONE
@@ -44,13 +44,13 @@ function Spiker_Reset
 	else
 		object[arrayPos0].xvel = 0x8000
 	end if
-	object[arrayPos0].yvel = 0
-	object[arrayPos0].timer = 64
-	object[arrayPos0].frame = 0
-	object[arrayPos0].animation = 0
-	object[arrayPos0].animationTimer = 0
-	object[arrayPos0].coneState = CONE_ATTACHED
-	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+	object[arrayPos0].yvel 				= 0
+	object[arrayPos0].timer 			= 64
+	object[arrayPos0].frame 			= 0
+	object[arrayPos0].animation 		= 0
+	object[arrayPos0].animationTimer 	= 0
+	object[arrayPos0].coneState 		= CONE_ATTACHED
+	object[arrayPos0].priority 			= PRIORITY_ACTIVE_BOUNDS
 end function
 
 
@@ -62,9 +62,9 @@ end function
 
 function Spiker_DebugSpawn
 	CreateTempObject(TypeName[Spiker], object.direction, object.xpos, object.ypos)
-	object[tempObjectPos].originPos.x = object.xpos
+	object[tempObjectPos].startPos.x = object.xpos
 	arrayPos0 = object[tempObjectPos].entityPos
-	CallFunction(Spiker_Reset)
+	CallFunction(Spiker_Setup)
 end function
 
 
@@ -123,11 +123,11 @@ event ObjectMain
 
 	if object.outOfBounds == true
 		temp0 = object.xpos
-		object.xpos = object.originPos.x
+		object.xpos = object.startPos.x
 
 		if object.outOfBounds == true
 			arrayPos0 = object.entityPos
-			CallFunction(Spiker_Reset)
+			CallFunction(Spiker_Setup)
 		else
 			object.xpos = temp0
 		end if
@@ -145,10 +145,10 @@ event ObjectMain
 				if object.coneState == CONE_ATTACHED
 					BoxCollisionTest(C_TOUCH, object.entityPos, -32, -128, 32, 128, currentPlayer, -1, -1, 1, 1)
 					if checkResult == true
-						object.coneState = CONE_LAUNCHING
-						object.launchTimer = 8
-						object.backupState = object.state
-						object.state = SPIKER_LAUNCHING
+						object.coneState 	= CONE_LAUNCHING
+						object.launchTimer 	= 8
+						object.backupState 	= object.state
+						object.state 		= SPIKER_LAUNCHING
 					end if
 				end if
 			end if
@@ -156,8 +156,7 @@ event ObjectMain
 
 		if object.coneState >= CONE_ATTACHED
 			GetBit(temp0, object.direction, 1)
-
-			if temp0 == FLIP_NONE
+			if temp0 == false
 				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -32, 8, 0, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
 			else
 				BoxCollisionTest(C_TOUCH, object.entityPos, -8, 0, 8, 32, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
@@ -188,25 +187,25 @@ event ObjectStartup
 	CheckCurrentStageFolder("Zone05")
 	if checkResult == true
 		LoadSpriteSheet("HTZ/Objects.gif")
-		SpriteFrame(-12, -8, 23, 24, 66, 206)  // 0 - 1 - Walking Frames
-		SpriteFrame(-12, -8, 24, 24, 66, 231)
-		SpriteFrame(-12, -32, 24, 32, 66, 173) // 2 - Cone Frame
+		SpriteFrame(-12, -8, 23, 24, 66, 206)  	// #0 - Walking - Frame 1
+		SpriteFrame(-12, -8, 24, 24, 66, 231)	// #1 - Walking - Frame 2
+		SpriteFrame(-12, -32, 24, 32, 66, 173) 	// #2 - Cone
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
-		SpriteFrame(-12, -8, 23, 24, 67, 781)  // 0 - 1 - Walking Frames
-		SpriteFrame(-12, -8, 24, 24, 67, 806)
-		SpriteFrame(-12, -32, 24, 32, 67, 748) // 2 - Cone Frame
+		SpriteFrame(-12, -8, 23, 24, 67, 781)  	// #0 - Walking - Frame 1
+		SpriteFrame(-12, -8, 24, 24, 67, 806)	// #1 - Walking - Frame 2
+		SpriteFrame(-12, -32, 24, 32, 67, 748) 	// #2 - Cone
 	end if
 
 	foreach (TypeName[Spiker], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].originPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
 		GetBit(temp0, object[arrayPos0].propertyValue, 1)
 		if temp0 == FLIP_NONE
 			object[arrayPos0].ypos += 0x80000
 		else
 			object[arrayPos0].ypos -= 0x80000
 		end if
-		CallFunction(Spiker_Reset)
+		CallFunction(Spiker_Setup)
 	next
 
 	SetTableValue(TypeName[Spiker], DebugMode_ObjCount, DebugMode_TypesTable)
@@ -240,11 +239,7 @@ end event
 
 
 event RSDKDraw
-	if object.propertyValue == 0
-		object.direction = FLIP_NONE
-	else
-		object.direction = FLIP_X
-	end if
+	object.direction = object.propertyValue
 
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 	DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
@@ -255,17 +250,19 @@ event RSDKLoad
 	CheckCurrentStageFolder("Zone05")
 	if checkResult == true
 		LoadSpriteSheet("HTZ/Objects.gif")
-		SpriteFrame(-12, -8, 23, 24, 66, 206)  // Walking Frame
-		SpriteFrame(-12, -32, 24, 32, 66, 173) // Cone Frame
+		SpriteFrame(-12, -8, 23, 24, 66, 206)  	// #0 - Walking - Frame 1
+		SpriteFrame(-12, -32, 24, 32, 66, 173) 	// #1 - Cone
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
-		SpriteFrame(-12, -8, 23, 24, 67, 781)  // Walking Frame
-		SpriteFrame(-12, -32, 24, 32, 67, 748) // Cone Frame
+		SpriteFrame(-12, -8, 23, 24, 67, 781)  	// #0 - Walking - Frame 1
+		SpriteFrame(-12, -32, 24, 32, 67, 748) 	// #1 - Cone
 	end if
 
 	AddEditorVariable("direction")
 	SetActiveVariable("direction")
-	AddEnumVariable("Left",  0)
-	AddEnumVariable("Right", 1)
+	AddEnumVariable("Left",  FLIP_NONE)
+	AddEnumVariable("Right", FLIP_X)
+	AddEnumVariable("Left (Upside Down)",  FLIP_Y)
+	AddEnumVariable("Right (Upside Down)", FLIP_XY)
 end event
 
