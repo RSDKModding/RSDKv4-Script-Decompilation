@@ -6,23 +6,35 @@
 // ----------------------------------
 
 // Aliases
-private alias 62 : TYPE_SPEARBLOCK
+private alias object.value0 : object.timer
+private alias object.value1 : object.spearPos.x
+private alias object.value2 : object.spearPos.y
+
+// States
+private alias 0 : SPEARBLOCK_SPEARSRETRACTED
+private alias 1 : SPEARBLOCK_EXTENDSPEARS
+private alias 2 : SPEARBLOCK_SPEARSEXTENDED
+private alias 3 : SPEARBLOCK_RETRACTSPEARS
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
-reserve function SpearBlock_Reset
+reserve function SpearBlock_Setup
 reserve function SpearBlock_DebugDraw
 reserve function SpearBlock_DebugSpawn
 
 // Static Values
-public value SpearBlock_value41 = 0;
+private value SpearBlock_value41 = 0
+private alias SpearBlock_value41 : SpearBlock_startDebugID
 
 
-function SpearBlock_Reset
-	object[arrayPos0].value1 = 0
-	object[arrayPos0].value2 = 0
-	object[arrayPos0].value0 = 0
-	object[arrayPos0].state = 0
-	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+function SpearBlock_Setup
+	object[arrayPos0].spearPos.x	= 0
+	object[arrayPos0].spearPos.y	= 0
+	object[arrayPos0].timer 		= 0
+	object[arrayPos0].state 		= 0
+	object[arrayPos0].priority 		= PRIORITY_ACTIVE_BOUNDS
 end function
 
 
@@ -32,129 +44,138 @@ end function
 
 
 function SpearBlock_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= SpearBlock_value41
+	temp0 = debugMode[0].currentSelection
+	temp0 -= SpearBlock_startDebugID
 	CreateTempObject(TypeName[Spear Block], temp0, object.xpos, object.ypos)
+
 	arrayPos0 = object[tempObjectPos].entityPos
-	CallFunction(SpearBlock_Reset)
+	CallFunction(SpearBlock_Setup)
 end function
 
 
 event ObjectMain
 	switch object.state
-	case 0
+	case SPEARBLOCK_SPEARSRETRACTED
 		temp0 = oscillation
-		temp0 &= 127
+		temp0 &= 0x7F
 		if temp0 == 0
 			temp0 = oscillation
 			temp0 >>= 7
 			temp0 += object.propertyValue
 			temp0 &= 3
 			object.frame = temp0
+
 			PlaySfx(SfxName[Spear], false) // Note - `Spear` SFX doesn't exist in MBZ, so this'll play the Jump sound there
 			object.priority = PRIORITY_ACTIVE
-			object.value0 = 4
-			object.state = 1
+			object.timer 	= 4
+			object.state  	= SPEARBLOCK_EXTENDSPEARS
 		end if
 		break
 
-	case 1
+	case SPEARBLOCK_EXTENDSPEARS
 		switch object.frame
 		case 0
-			object.value2 -= 0x80000
+			object.spearPos.y -= 0x80000
 			break
 		case 1
-			object.value1 += 0x80000
+			object.spearPos.x += 0x80000
 			break
 		case 2
-			object.value2 += 0x80000
+			object.spearPos.y += 0x80000
 			break
 		case 3
-			object.value1 -= 0x80000
+			object.spearPos.x -= 0x80000
 			break
 		end switch
-		object.value0--
-		if object.value0 == 0
+
+		object.timer--
+		if object.timer == 0
 			object.state = 2
 		end if
 		break
 
-	case 2
+	case SPEARBLOCK_SPEARSEXTENDED
 		temp0 = oscillation
-		temp0 &= 63
+		temp0 &= 0x3F
 		if temp0 == 0
 			PlaySfx(SfxName[Spear], false) // Note - `Spear` SFX doesn't exist in MBZ, so this'll play the Jump sound there
 			object.priority = PRIORITY_ACTIVE
-			object.value0 = 4
-			object.state = 3
+			object.timer 	= 4
+			object.state  	= SPEARBLOCK_RETRACTSPEARS
 		end if
 		break
 
-	case 3
+	case SPEARBLOCK_RETRACTSPEARS
 		switch object.frame
 		case 0
-			object.value2 += 0x80000
+			object.spearPos.y += 0x80000
 			break
 		case 1
-			object.value1 -= 0x80000
+			object.spearPos.x -= 0x80000
 			break
 		case 2
-			object.value2 -= 0x80000
+			object.spearPos.y -= 0x80000
 			break
 		case 3
-			object.value1 += 0x80000
+			object.spearPos.x += 0x80000
 			break
 		end switch
-		object.value0--
-		if object.value0 == 0
-			object.state = 0
+
+		object.timer--
+		if object.timer == 0
+			object.state = SPEARBLOCK_SPEARSRETRACTED
 		end if
 		break
-
 	end switch
 
 	temp0 = object.xpos
 	temp1 = object.ypos
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		object.xpos += object.value1
-		object.ypos += object.value2
+
+		object.xpos += object.spearPos.x
+		object.ypos += object.spearPos.y
 		switch object.frame
 		case 0
 		case 2
 			BoxCollisionTest(C_TOUCH, object.entityPos, -4, -16, 4, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			break
+
 		case 1
 		case 3
 			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -4, 16, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			break
 		end switch
+
 		if checkResult == true
 			CallFunction(PlayerObject_Hit)
 		end if
+
 		object.xpos = temp0
 		object.ypos = temp1
 	next
+
 	if object.outOfBounds == true
 		arrayPos0 = object.entityPos
-		CallFunction(SpearBlock_Reset)
+		CallFunction(SpearBlock_Setup)
 	end if
 end event
 
 
 event ObjectDraw
 	temp0 = object.xpos
-	temp0 += object.value1
+	temp0 += object.spearPos.x
 	temp1 = object.ypos
-	temp1 += object.value2
+	temp1 += object.spearPos.y
 	DrawSpriteXY(object.frame, temp0, temp1)
+
 	DrawSprite(4)
 end event
 
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone09")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("MPZ/Objects.gif")
 		SpriteFrame(-4, -16, 8, 32, 34, 102)
 		SpriteFrame(-16, -4, 32, 8, 34, 84)
@@ -171,11 +192,11 @@ event ObjectStartup
 	end if
 
 	foreach (TypeName[Spear Block], arrayPos0, ALL_ENTITIES)
-		CallFunction(SpearBlock_Reset)
+		CallFunction(SpearBlock_Setup)
 	next
 
 	temp0 = 0
-	SpearBlock_value41 = DebugMode_ObjCount
+	SpearBlock_startDebugID = DebugMode_ObjCount
 	while temp0 < 4
 		SetTableValue(TypeName[Spear Block], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(SpearBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -185,11 +206,80 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // spearDir
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // spearDir
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	arrayPos0 = object.entityPos
+	CallFunction(SpearBlock_Setup)
+
+	object.frame = object.propertyValue
+	object.frame &= 3
+	switch object.frame
+	case 0
+		object.spearPos.y -= 0x200000
+		break
+	case 1
+		object.spearPos.x += 0x200000
+		break
+	case 2
+		object.spearPos.y += 0x200000
+		break
+	case 3
+		object.spearPos.x -= 0x200000
+		break
+	end switch
+
+	temp0 = object.xpos
+	temp0 += object.spearPos.x
+	temp1 = object.ypos
+	temp1 += object.spearPos.y
+	DrawSpriteXY(object.frame, temp0, temp1)
+
+	DrawSprite(4)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-4, -16, 8, 32, 34, 102)
+		SpriteFrame(-16, -4, 32, 8, 34, 84)
+		SpriteFrame(-4, -16, 8, 32, 43, 102)
+		SpriteFrame(-16, -4, 32, 8, 34, 93)
+		SpriteFrame(-16, -16, 32, 32, 52, 102)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-4, -16, 8, 32, 859, 615)
+		SpriteFrame(-16, -4, 32, 8, 893, 648)
+		SpriteFrame(-4, -16, 8, 32, 868, 615)
+		SpriteFrame(-16, -4, 32, 8, 893, 657)
+		SpriteFrame(-16, -16, 32, 32, 926, 541)
+	end if
+
+	AddEditorVariable("spearDir")
+	SetActiveVariable("spearDir")
+	AddEnumVariable("Up", FLIP_NONE)
+	AddEnumVariable("Left", FLIP_X)
+	AddEnumVariable("Down", FLIP_Y)
+	AddEnumVariable("Right", FLIP_XY)
 end event

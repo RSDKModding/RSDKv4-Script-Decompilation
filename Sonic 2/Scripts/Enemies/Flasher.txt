@@ -6,25 +6,23 @@
 // ----------------------------------
 
 // Aliases
-private alias 57 : TYPE_FLASHER
+private alias object.value0 : object.timer
+private alias object.value1 : object.holdTimer
+private alias object.value2 : object.moveIndex
+private alias object.value3 : object.flip
+private alias object.value4 : object.turnIndex
+private alias object.value5 : object.startPos.x
+private alias object.value6 : object.startPos.y
 
+// States
 private alias 0 : FLASHER_PAUSED
 private alias 1 : FLASHER_MOVING
 private alias 2 : FLASHER_CHARGING
 private alias 3 : FLASHER_FLASHING
 private alias 4 : FLASHER_DIMMING
 
-private alias object.value0 : object.timer
-private alias object.value1 : object.holdTimer
-private alias object.value2 : object.moveIndex
-private alias object.value3 : object.flip
-private alias object.value4 : object.turnIndex
-private alias object.value5 : object.originPos.x
-private alias object.value6 : object.originPos.y
-
 // Player Aliases
 private alias object.value37 : player.shield
-
 private alias object.value40 : player.hitboxLeft
 private alias object.value38 : player.hitboxTop
 private alias object.value41 : player.hitboxRight
@@ -46,14 +44,14 @@ end table
 // Which way the flasher should turn after each cycle
 // First value in an entry is if it should turn around X-wise, second is for Y
 private table Flasher_directionTable
-	true,  true
-	false, true
-	true,  true
-	false, true
-	false, true
-	true,  false
-	false, true
-	false, true
+	FLIP_X,  	FLIP_X
+	FLIP_NONE, 	FLIP_X
+	FLIP_X,  	FLIP_X
+	FLIP_NONE, 	FLIP_X
+	FLIP_NONE, 	FLIP_X
+	FLIP_X,  	FLIP_NONE
+	FLIP_NONE, 	FLIP_X
+	FLIP_NONE, 	FLIP_X
 end table
 
 
@@ -254,11 +252,11 @@ event ObjectMain
 	end switch
 
 	if object.outOfBounds == true
-		// Even if out of bounds, only despawn the Flasher if its origin pos is OOB too
+		// Even if out of bounds, only despawn the Flasher if its startPos is OOB too
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.originPos.x
-		object.ypos = object.originPos.y
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
 		if object.outOfBounds == true
 			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.timer = 0
@@ -267,7 +265,7 @@ event ObjectMain
 				object.priority = PRIORITY_ACTIVE_BOUNDS
 			end if
 		else
-			// Object origin is within bounds, move the Flasher back and continue as normal
+			// Object startPos is within bounds, move the Flasher back and continue as normal
 			object.xpos = temp0
 			object.ypos = temp1
 		end if
@@ -299,7 +297,10 @@ event ObjectStartup
 		// Using these sheet positions results in some of Eggman's head frames
 		LoadSpriteSheet("MBZ/Objects.gif")
 
+		// Normal frame
 		SpriteFrame(-16, -8, 23, 15, 1, 1)
+
+		// Lighting Frames
 		SpriteFrame(-16, -8, 23, 15, 25, 1)
 		SpriteFrame(-16, -8, 24, 16, 1, 17)
 		SpriteFrame(-16, -12, 28, 24, 1, 34)
@@ -307,8 +308,8 @@ event ObjectStartup
 	end if
 	
 	foreach (TypeName[Flasher], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].originPos.x = object[arrayPos0].xpos
-		object[arrayPos0].originPos.y = object[arrayPos0].ypos
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
 	next
 	
 	SetTableValue(TypeName[Flasher], DebugMode_ObjCount, DebugMode_TypesTable)
@@ -331,4 +332,6 @@ event RSDKLoad
 		// Decomp note - using "fixed" SpriteFrame here for editor purposes
 		SpriteFrame(-16, -8, 23, 15, 125, 501)
 	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

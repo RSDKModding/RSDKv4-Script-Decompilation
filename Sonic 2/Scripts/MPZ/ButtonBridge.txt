@@ -6,27 +6,41 @@
 // ----------------------------------
 
 // Aliases
-private alias 57 : TYPE_BUTTONBRIDGE
+private alias object.value0 : object.timer
+private alias object.value1 : object.drawPos.x
+
+// States
+private alias 0 : BUTTONBRIDGE_HIDDEN
+private alias 1 : BUTTONBRIDGE_SHOWING
+private alias 2 : BUTTONBRIDGE_SHOWN
+private alias 3 : BUTTONBRIDGE_HIDING
+
+// Player Aliases
+private alias object.value1  : player.timer
+private alias object.value17 : debugMode.currentSelection
+
+// PushButton Aliases
+private alias object.value0 : pushButton.pressed
 
 // Function declarations
-reserve function ButtonBridge_Function127
+reserve function ButtonBridge_Setup
 reserve function ButtonBridge_DebugDraw
 reserve function ButtonBridge_DebugSpawn
 
 // Static Values
-public value ButtonBridge_value38 = 0;
+private value ButtonBridge_value38 = 0
+private alias ButtonBridge_value38 : ButtonBridge_startDebugID
 
-// Tables
-
-function ButtonBridge_Function127
-	object[arrayPos0].priority = PRIORITY_ACTIVE
-	object[arrayPos0].value0 = 64
-	object[arrayPos0].value1 = object[arrayPos0].xpos
+function ButtonBridge_Setup
+	object[arrayPos0].priority 	= PRIORITY_ACTIVE
+	object[arrayPos0].timer 	= 64
+	object[arrayPos0].drawPos.x	= object[arrayPos0].xpos
 	if object[arrayPos0].direction == FLIP_NONE
-		object[arrayPos0].value1 -= 0x4C0000
+		object[arrayPos0].drawPos.x -= 0x4C0000
 	else
-		object[arrayPos0].value1 += 0x4C0000
+		object[arrayPos0].drawPos.x += 0x4C0000
 	end if
+
 	if object[arrayPos0].propertyValue == 1
 		if object[arrayPos0].direction == FLIP_NONE
 			object[arrayPos0].xpos -= 0x800000
@@ -38,8 +52,9 @@ end function
 
 
 function ButtonBridge_DebugDraw
-	temp0 = object[0].value17
-	temp0 -= ButtonBridge_value38
+	temp0 = debugMode[0].currentSelection
+	temp0 -= ButtonBridge_startDebugID
+
 	temp1 = object.xpos
 	if object.direction == FLIP_NONE
 		temp1 -= 0x4C0000
@@ -47,6 +62,7 @@ function ButtonBridge_DebugDraw
 		temp1 += 0x4C0000
 	end if
 	DrawSpriteXY(0, temp1, object.ypos)
+
 	temp1 = object.xpos
 	if temp0 == 1
 		if object.direction == FLIP_NONE
@@ -60,30 +76,32 @@ end function
 
 
 function ButtonBridge_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= ButtonBridge_value38
+	temp0 = debugMode[0].currentSelection
+	temp0 -= ButtonBridge_startDebugID
 	CreateTempObject(TypeName[Button Bridge], temp0, object.xpos, object.ypos)
 	object[tempObjectPos].direction = object.direction
 	arrayPos0 = object[tempObjectPos].entityPos
-	CallFunction(ButtonBridge_Function127)
+	CallFunction(ButtonBridge_Setup)
 end function
 
 
 event ObjectMain
 	switch object.state
-	case 0
-		if object[+1].value0 == 1
+	case BUTTONBRIDGE_HIDDEN
+		if pushButton[+1].pressed == true
 			if object.propertyValue == 0
-				object.state = 1
+				object.state = BUTTONBRIDGE_SHOWING
 			else
-				object.state = 3
+				object.state = BUTTONBRIDGE_HIDING
 			end if
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
 		break
-	case 1
+
+	case BUTTONBRIDGE_SHOWING
 		temp0 = object.xpos
 		temp0 &= 0xFFFF0000
 		if object.direction == FLIP_NONE
@@ -93,55 +111,63 @@ event ObjectMain
 			object.xpos += 0x20000
 			object.frame--
 		end if
+
 		object.frame &= 3
-		object.value0--
-		if object.value0 <= 0
+
+		object.timer--
+		if object.timer <= 0
 			if object.propertyValue == 0
-				object.state = 2
+				object.state = BUTTONBRIDGE_SHOWN
 			else
-				object.state = 0
-				object.value0 = 64
+				object.state = BUTTONBRIDGE_HIDDEN
+				object.timer = 64
 			end if
 		end if
+
 		temp1 = object.xpos
 		temp1 &= 0xFFFF0000
 		temp1 -= temp0
 		temp2 = object.xpos
+
 		object.xpos = temp0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			switch checkResult
-			case 1
+			case COL_TOP
 				object[currentPlayer].xpos += temp1
 				break
-			case 2
-			case 3
+
+			case COL_LEFT
+			case COL_RIGHT
 				if object[currentPlayer].state == PlayerObject_KnuxWallClimb
-					object[currentPlayer].value1 = 0
+					player[currentPlayer].timer 	= 0
 					object[currentPlayer].animation = ANI_GLIDING_DROP
-					object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+					object[currentPlayer].state 	= PlayerObject_KnuxGlideDrop
 				end if
 				break
 			end switch
 		next
 		object.xpos = temp2
 		break
-	case 2
-		object.value0++
-		if object.value0 == 180
-			object.value0 = 0
+
+	case BUTTONBRIDGE_SHOWN
+		object.timer++
+		if object.timer == 180
+			object.timer = 0
 			if object.propertyValue == 0
-				object.state = 3
+				object.state = BUTTONBRIDGE_HIDING
 			else
-				object.state = 1
+				object.state = BUTTONBRIDGE_SHOWING
 			end if
-			object.value0 = 64
+			object.timer = 64
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		next
 		break
-	case 3
+
+	case BUTTONBRIDGE_HIDING
 		temp0 = object.xpos
 		temp0 &= 0xFFFF0000
 		if object.direction == FLIP_NONE
@@ -152,36 +178,41 @@ event ObjectMain
 			object.frame++
 		end if
 		object.frame &= 3
-		object.value0--
-		if object.value0 <= 0
+
+		object.timer--
+		if object.timer <= 0
 			if object.propertyValue == 0
-				object.state = 0
-				object.value0 = 64
+				object.state = BUTTONBRIDGE_HIDDEN
+				object.timer = 64
 			else
-				object.state = 2
+				object.state = BUTTONBRIDGE_SHOWN
 			end if
 		end if
+
 		temp1 = object.xpos
 		temp1 &= 0xFFFF0000
 		temp1 -= temp0
 		temp2 = object.xpos
+
 		object.xpos = temp0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			switch checkResult
-			case 1
+			case COL_TOP
 				object[currentPlayer].xpos += temp1
 				break
-			case 2
-			case 3
+
+			case COL_LEFT
+			case COL_RIGHT
 				if object[currentPlayer].state == PlayerObject_KnuxWallClimb
-					object[currentPlayer].value1 = 0
+					player[currentPlayer].timer 	= 0
 					object[currentPlayer].animation = ANI_GLIDING_DROP
-					object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+					object[currentPlayer].state 	= PlayerObject_KnuxGlideDrop
 				end if
 				break
 			end switch
 		next
+		
 		object.xpos = temp2
 		break
 	end switch
@@ -189,7 +220,7 @@ end event
 
 
 event ObjectDraw
-	DrawSpriteXY(object.frame, object.value1, object.ypos)
+	DrawSpriteXY(object.frame, object.drawPos.x, object.ypos)
 	DrawSprite(4)
 end event
 
@@ -201,11 +232,13 @@ event ObjectStartup
 	SpriteFrame(-12, 8, 24, 24, 158, 126)
 	SpriteFrame(-12, 8, 24, 24, 183, 126)
 	SpriteFrame(-64, -12, 128, 24, 350, 182)
+
 	foreach (TypeName[Button Bridge], arrayPos0, ALL_ENTITIES)
-		CallFunction(ButtonBridge_Function127)
+		CallFunction(ButtonBridge_Setup)
 	next
+
 	temp0 = 0
-	ButtonBridge_value38 = DebugMode_ObjCount
+	ButtonBridge_startDebugID = DebugMode_ObjCount
 	while temp0 < 2
 		SetTableValue(TypeName[Button Bridge], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(ButtonBridge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -215,11 +248,58 @@ event ObjectStartup
 	loop
 end event
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
 event RSDKDraw
-	DrawSprite(0)
+	temp1 = object.xpos
+	if object.direction == FLIP_NONE
+		temp1 -= 0x4C0000
+	else
+		temp1 += 0x4C0000
+	end if
+	DrawSpriteXY(0, temp1, object.ypos)
+
+	temp1 = object.xpos
+	if object.propertyValue == 1
+		if object.direction == FLIP_NONE
+			temp1 -= 0x800000
+		else
+			temp1 += 0x800000
+		end if
+	end if
+	DrawSpriteXY(4, temp1, object.ypos)
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-12, 8, 24, 24, 133, 126)
+	SpriteFrame(-12, 8, 24, 24, 158, 126)
+	SpriteFrame(-12, 8, 24, 24, 158, 126)
+	SpriteFrame(-12, 8, 24, 24, 183, 126)
+	SpriteFrame(-64, -12, 128, 24, 350, 182)
+	
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Show On Activate", 0)
+	AddEnumVariable("Hide On Activate", 1)
 end event

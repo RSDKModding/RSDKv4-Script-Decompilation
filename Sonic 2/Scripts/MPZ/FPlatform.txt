@@ -6,15 +6,24 @@
 // ----------------------------------
 
 // Aliases
-private alias 69 : TYPE_FALLPLATFORM
+private alias object.value0  : object.timer
+private alias object.value1  : object.centerPos.y
+private alias object.value2  : object.stoodPlayers
+private alias object.value31 : object.wrapOffset.y
+
+// Types
+private alias 0 : FPLATFORM_FALL
+private alias 1 : FPLATFORM_STATIC
+
+// States
+private alias 0 : FPLATFORM_IDLE
+private alias 1 : FPLATFORM_FALLING_SOLID
+private alias 2 : FPLATFORM_FALLING
+private alias 3 : FPLATFORM_OFFSCREEN
 
 // Function declarations
 reserve function FallPlatform_DebugDraw
 reserve function FallPlatform_DebugSpawn
-
-// Static Values
-
-// Tables
 
 function FallPlatform_DebugDraw
 	DrawSprite(0)
@@ -23,85 +32,95 @@ end function
 
 function FallPlatform_DebugSpawn
 	CreateTempObject(TypeName[Fall Platform], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value1 = object[tempObjectPos].ypos
+	object[tempObjectPos].centerPos.y = object[tempObjectPos].ypos
 end function
 
 
 event ObjectMain
 	temp0 = object.ypos
 	temp0 &= 0xFFFF0000
+
 	switch object.state
-	case 0
+	case FPLATFORM_IDLE
 		if object.propertyValue == 0
-			if object.value0 != 0
-				object.value0--
-				if object.value0 == 0
+			if object.timer != 0
+				object.timer--
+				if object.timer == 0
 					object.state++
-					object.value0 = 32
+					object.timer = 32
 				end if
 			end if
 		end if
 		break
-	case 1
-		object.value0--
-		if object.value0 == 0
+
+	case FPLATFORM_FALLING_SOLID
+		object.timer--
+		if object.timer == 0
 			object.state++
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				BoxCollisionTest(C_BOX, object.entityPos, -32, -12, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					object[currentPlayer].ypos += object.yvel
-					object[currentPlayer].yvel = object.yvel
-					object[currentPlayer].yvel -= 0x3800
-					object[currentPlayer].gravity = GRAVITY_AIR
+				if checkResult == true
+					object[currentPlayer].ypos 		+= object.yvel
+					object[currentPlayer].yvel 		 = object.yvel
+					object[currentPlayer].yvel 		-= 0x3800
+					object[currentPlayer].gravity	 = GRAVITY_AIR
 				end if
 			next
 		end if
-	case 2
+		// [Fallthrough]
+	case FPLATFORM_FALLING
 		object.ypos += object.yvel
 		object.yvel += 0x3800
-		if object.outOfBounds == 1
-			object.ypos = object.value1
-			object.ypos += object.value31
+
+		if object.outOfBounds == true
+			object.ypos = object.centerPos.y
+			object.ypos += object.wrapOffset.y
 			object.yvel = 0
-			object.value0 = 0
+			object.timer = 0
 			object.state++
 		end if
 		break
-	case 3
-		if object.outOfBounds == 1
-			object.state = 0
+		
+	case FPLATFORM_OFFSCREEN
+		if object.outOfBounds == true
+			object.state = FPLATFORM_IDLE
 			object.priority = PRIORITY_ACTIVE_BOUNDS
 		end if
 		break
 	end switch
+
 	temp7 = object.ypos
 	temp7 &= 0xFFFF0000
 	temp7 -= temp0
-	if object.state < 2
+	if object.state < FPLATFORM_FALLING
 		temp2 = 0
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			GetBit(temp0, object.value2, temp2)
-			if temp0 == 1
+			GetBit(temp0, object.stoodPlayers, temp2)
+			if temp0 == true
 				object[currentPlayer].ypos += temp7
 			end if
-			SetBit(object.value2, temp2, 0)
+
+			SetBit(object.stoodPlayers, temp2, false)
 			BoxCollisionTest(C_BOX, object.entityPos, -32, -12, 32, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			switch checkResult
-			case 1
-				SetBit(object.value2, temp2, 1)
-				if object.value0 == 0
-					if object.state == 0
+			case COL_TOP
+				SetBit(object.stoodPlayers, temp2, true)
+				if object.timer == 0
+					if object.state == FPLATFORM_IDLE
 						object.priority = PRIORITY_ACTIVE
-						object.value0 = 30
+						object.timer 	= 30
 					end if
 				end if
 				break
-			case 4
+
+			case COL_BOTTOM
 				if object[currentPlayer].gravity == GRAVITY_GROUND
 					CallFunction(PlayerObject_Kill)
 				end if
 				break
 			end switch
+			
 			temp2++
 		next
 	end if
@@ -109,7 +128,7 @@ end event
 
 
 event ObjectDraw
-	if object.state < 3
+	if object.state < FPLATFORM_OFFSCREEN
 		DrawSprite(0)
 	end if
 end event
@@ -118,13 +137,37 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("MPZ/Objects.gif")
 	SpriteFrame(-32, -12, 64, 24, 383, 207)
+
 	foreach (TypeName[Fall Platform], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].ypos
+		object[arrayPos0].centerPos.y = object[arrayPos0].ypos
 	next
+
 	SetTableValue(TypeName[Fall Platform], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(FallPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(FallPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -132,6 +175,11 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 383, 207)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Falling Platform", FPLATFORM_FALL)
+	AddEnumVariable("Static Platform", FPLATFORM_STATIC)
 end event

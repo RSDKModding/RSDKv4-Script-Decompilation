@@ -6,19 +6,22 @@
 // ----------------------------------
 
 // Aliases
-private alias 58 : TYPE_COGPLATFORM
+private alias object.value0 : object.startPos.x
 
 private alias MPZSetup_value34 : MPZSetup_cogFrame
 private alias MPZSetup_value35 : MPZSetup_cogTimer
+
+// Player Aliases
+private alias object.value1  : player.timer
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
 reserve function CogPlatform_DebugDraw
 reserve function CogPlatform_DebugSpawn
 
 // Static Values
-public value CogPlatform_value39 = 0;
-
-// Tables
+private value CogPlatform_value39 = 0;
+private alias CogPlatform_value39 : CogPlatform_startDebugID
 
 function CogPlatform_DebugDraw
 	DrawSprite(0)
@@ -26,8 +29,8 @@ end function
 
 
 function CogPlatform_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= CogPlatform_value39
+	temp0 = debugMode[0].currentSelection
+	temp0 -= CogPlatform_startDebugID
 	CreateTempObject(TypeName[Cog Platform], temp0, object.xpos, object.ypos)
 	object[tempObjectPos].direction = object.direction
 end function
@@ -36,15 +39,17 @@ end function
 event ObjectMain
 	temp0 = object.xpos
 	temp0 &= 0xFFFF0000
+
 	object.xpos += object.xvel
 	if object.direction == FLIP_NONE
-		ObjectTileCollision(CSIDE_LWALL, 64, 0, 0)
+		ObjectTileCollision(CSIDE_LWALL, 64, 0, PATH_A)
 	else
-		ObjectTileCollision(CSIDE_RWALL, -64, 0, 0)
+		ObjectTileCollision(CSIDE_RWALL, -64, 0, PATH_A)
 	end if
-	if checkResult == 1
+
+	if checkResult == true
 		if object.propertyValue == 0
-			object.xvel = 0
+			object.xvel 	  = 0
 			MPZSetup_cogTimer = 0
 			MPZSetup_cogFrame = 0
 		else
@@ -53,6 +58,7 @@ event ObjectMain
 			FlipSign(MPZSetup_cogFrame)
 		end if
 	end if
+
 	temp4 = object.xpos
 	temp2 = object.xpos
 	temp2 &= 0xFFFF0000
@@ -75,12 +81,13 @@ event ObjectMain
 			end if
 			object[currentPlayer].xpos += temp2
 			break
+
 		case COL_LEFT
 		case COL_RIGHT
 			if object[currentPlayer].state == PlayerObject_KnuxWallClimb
-				object[currentPlayer].value1 = 0
+				player[currentPlayer].timer 	= 0
 				object[currentPlayer].animation = ANI_GLIDING_DROP
-				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+				object[currentPlayer].state 	= PlayerObject_KnuxGlideDrop
 			end if
 			break
 		end switch
@@ -88,17 +95,17 @@ event ObjectMain
 	object.xpos = temp4
 
 	if object.outOfBounds == true
-		if object.value0 == 0
+		if object.startPos.x == 0
 			object.type = TypeName[Blank Object]
 		else
-			object.xpos = object.value0
+			object.xpos = object.startPos.x
 			if object.outOfBounds == false
 				object.xpos = temp4
 			else
-				object.priority = PRIORITY_ACTIVE_BOUNDS
-				object.xvel = 0
-				MPZSetup_cogTimer = 0
-				MPZSetup_cogFrame = 0
+				object.priority 	= PRIORITY_ACTIVE_BOUNDS
+				object.xvel 		= 0
+				MPZSetup_cogTimer 	= 0
+				MPZSetup_cogFrame 	= 0
 			end if
 		end if
 	end if
@@ -115,7 +122,7 @@ event ObjectStartup
 	SpriteFrame(-64, -12, 128, 24, 350, 182)
 
 	temp0 = 0
-	CogPlatform_value39 = DebugMode_ObjCount
+	CogPlatform_startDebugID = DebugMode_ObjCount
 	while temp0 < 2
 		SetTableValue(TypeName[Cog Platform], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(CogPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -125,8 +132,30 @@ event ObjectStartup
 	loop
 
 	foreach (TypeName[Cog Platform], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value0 = object[arrayPos0].xpos
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
 	next
+end event
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
 end event
 
 event RSDKDraw
@@ -137,5 +166,9 @@ event RSDKLoad
 	LoadSpriteSheet("MPZ/Objects.gif")
 	SpriteFrame(-64, -12, 128, 24, 350, 182)
 	
-	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Stop On Contact", 0)
+	AddEnumVariable("Swap Direction On Contact", 1)
 end event

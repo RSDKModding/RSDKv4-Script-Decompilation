@@ -6,26 +6,36 @@
 // ----------------------------------
 
 // Aliases
-private alias 61 : TYPE_SPEAR
+private alias object.value0  : object.timer
+private alias object.value1  : object.startPos.y
+private alias object.value31 : object.wrapOffset.y
+
+// States
+private alias 0 : SPEAR_DOWN_IDLE
+private alias 1 : SPEAR_MOVEUP
+private alias 2 : SPEAR_UP_IDLE
+private alias 3 : SPEAR_MOVEDOWN
+
+// Player Aliases
+private alias object.value17 : debugMode.currentSelection
 
 // Function declarations
-reserve function Spear_Function134
+reserve function Spear_Setup
 reserve function Spear_DebugDraw
 reserve function Spear_DebugSpawn
 
 // Static Values
-public value Spear_value40 = 0;
+private value Spear_value40 = 0
+private alias Spear_value40 : Spear_startDebugID
 
-function Spear_Function134
-
-	object[arrayPos0].ypos = object[arrayPos0].value1
-	object[arrayPos0].ypos += object[arrayPos0].value31
+function Spear_Setup
+	object[arrayPos0].ypos = object[arrayPos0].startPos.y
+	object[arrayPos0].ypos += object[arrayPos0].wrapOffset.y
 
 	object[arrayPos0].drawOrder = 2
-	object[arrayPos0].value0 = 0
-	object[arrayPos0].state = 0
-	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
-
+	object[arrayPos0].timer 	= 0
+	object[arrayPos0].state 	= 0
+	object[arrayPos0].priority 	= PRIORITY_ACTIVE_BOUNDS
 end function
 
 
@@ -35,66 +45,69 @@ end function
 
 
 function Spear_DebugSpawn
-
-	temp0 = object[0].value17
-	temp0 -= Spear_value40
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Spear_startDebugID
 	temp0 <<= 2
 
 	CreateTempObject(TypeName[Spear], temp0, object.xpos, object.ypos)
 
 	arrayPos0 = object[tempObjectPos].entityPos
-	object[arrayPos0].value1 = object.ypos
-	CallFunction(Spear_Function134)
-
+	object[arrayPos0].startPos.y = object.ypos
+	CallFunction(Spear_Setup)
 end function
 
 
 event ObjectMain
-
 	switch object.state
-	case 0
+	case SPEAR_DOWN_IDLE
 		temp0 = oscillation
 		temp0 -= object.propertyValue
-		temp0 &= 127
+		temp0 &= 0x7F
 		if temp0 == 0
 			object.priority = PRIORITY_ACTIVE
-			object.value0 = 8
-			object.state = 1
+			object.timer 	= 8
+			object.state 	= SPEAR_MOVEUP
 		end if
 		break
 
-	case 1
+	case SPEAR_MOVEUP
 		object.ypos -= 0x40000
-		object.value0--
-		if object.value0 == 0
-			object.value0 = 3
-			object.state = 2
+
+		object.timer--
+		if object.timer == 0
+			object.timer 	= 3
+			object.state 	= SPEAR_UP_IDLE
 		end if
 		break
-	case 2
-		object.value0--
-		if object.value0 == 0
-			object.value0 = 8
-			object.state = 3
+
+	case SPEAR_UP_IDLE
+		object.timer--
+		if object.timer == 0
+			object.timer 	= 8
+			object.state 	= SPEAR_MOVEDOWN
 		end if
 		break
-	case 3
+
+	case SPEAR_MOVEDOWN
 		object.ypos += 0x40000
-		object.value0--
-		if object.value0 == 0
-			object.state = 0
+
+		object.timer--
+		if object.timer == 0
+			object.state = SPEAR_DOWN_IDLE
 		end if
 		break
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -4, -16, 4, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
+		if checkResult == true
 			CallFunction(PlayerObject_Hit)
 		end if
 	next
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		arrayPos0 = object.entityPos
-		CallFunction(Spear_Function134)
+		CallFunction(Spear_Setup)
 	end if
 end event
 
@@ -107,12 +120,14 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("MPZ/Objects.gif")
 	SpriteFrame(-4, -16, 8, 32, 34, 102)
+
 	foreach (TypeName[Spear], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].ypos
-		CallFunction(Spear_Function134)
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		CallFunction(Spear_Setup)
 	next
+
 	temp0 = 0
-	Spear_value40 = DebugMode_ObjCount
+	Spear_startDebugID = DebugMode_ObjCount
 	while temp0 < 16
 		SetTableValue(TypeName[Spear], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(Spear_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -127,6 +142,8 @@ event RSDKDraw
 end event
 
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-4, -16, 8, 32, 34, 102)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "intervalOffset")
 end event
