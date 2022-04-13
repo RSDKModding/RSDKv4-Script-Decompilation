@@ -43,8 +43,17 @@ private alias 2 : FIRESHIELD_DASH_SETUP
 // Super States
 private alias 0 : SUPERSTATE_NONE
 private alias 1 : SUPERSTATE_SUPER
-private alias 2 : SUPERSTATE_FADEOUT
+private alias 2 : SUPERSTATE_UNTRANSFORM
 private alias 3 : SUPERSTATE_END
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
+private alias 2 : TRACK_INVINCIBLE
+private alias 3 : TRACK_CONTINUE
+private alias 4 : TRACK_BOSS
+private alias 5 : TRACK_GAMEOVER
+private alias 6 : TRACK_DROWNING
 
 // this isn't a global variable, so it's set here
 private alias 34 : ANI_CORKSCREW_V
@@ -622,7 +631,7 @@ end function
 function PlayerObject_UpdatePhysicsState
 
 	switch stage.playerListPos
-	case PlayerName[SONIC AND TAILS] // S&T falls through to Sonic alone
+	case PlayerName[SONIC AND TAILS] // This case check should never pass since playing as S&T will set your character to Sonic alone
 	case PlayerName[SONIC]
 		temp0 = PlayerObject_SonicPhysicsTable
 		break
@@ -693,11 +702,11 @@ end function
 
 function PlayerObject_ProcessSuperForms
 
-	// Do the fancy palette stuff if Super
+	// Do the fancy palette stuff if Super or while untransforming back to normal
 	if PlayerObject_SuperState != SUPERSTATE_NONE
 		switch stage.playerListPos
-		case PlayerName[SONIC] // Sonic alone falls through to S&T
-		case PlayerName[SONIC AND TAILS]
+		case PlayerName[SONIC]
+		case PlayerName[SONIC AND TAILS] // This case check should never pass since playing as S&T will set your character to Sonic alone
 			CallFunction(PlayerObject_HandleSuperPalSonic)
 			break
 
@@ -711,7 +720,6 @@ function PlayerObject_ProcessSuperForms
 		end switch
 	end if
 
-	// Main Super state
 	if PlayerObject_SuperState == SUPERSTATE_SUPER
 		player.invincibleTimer = 60
 
@@ -725,27 +733,23 @@ function PlayerObject_ProcessSuperForms
 
 			// If the player has no more rings, make them untransform
 			if player.rings == 0
-				PlayerObject_SuperState = SUPERSTATE_FADEOUT
+				PlayerObject_SuperState = SUPERSTATE_UNTRANSFORM
 			end if
 		end if
 	end if
 
-	// Untransformation state
-	if PlayerObject_SuperState == SUPERSTATE_FADEOUT
-		// If Sonic, go back to normal Sonic sprites
+	if PlayerObject_SuperState == SUPERSTATE_UNTRANSFORM
 		if stage.playerListPos == PlayerName[SONIC]
 			LoadAnimation("Sonic.ani")
 		end if
 
-		// Is the invincibility music playing?
-		if music.currentTrack == 2
+		if music.currentTrack == TRACK_INVINCIBLE
 			PlayMusic(0)
 		end if
 
-		// Reset the player's invincibility
 		player.invincibleTimer = 0
 
-		// If the player isn't already dead then give them back their shield
+		// If the player isn't already dead, give them back their shield
 		if player.state != PlayerObject_Death
 			if player.state != PlayerObject_Drown
 
@@ -906,7 +910,7 @@ function PlayerObject_BadnikBreak
 			player.score += 500
 			break
 
-		case 3 // Fall through
+		case 3
 		case 4
 		case 5
 		case 6
@@ -1127,8 +1131,6 @@ function PlayerObject_Kill
 	// Is this the main character?
 	if currentPlayer == 0
 		player[currentPlayer].priority = PRIORITY_ACTIVE_PAUSED
-
-		// Disable P2 (if it exists)
 		if player[1].type == TypeName[Player 2 Object]
 			player[1].priority = PRIORITY_ACTIVE_PAUSED
 		end if
@@ -1339,11 +1341,9 @@ function PlayerObject_ProcessPlayer
 	if player.invincibleTimer > 0
 		player.invincibleTimer--
 
-		// Out of invincibility?
 		if player.invincibleTimer == 0
-			// If currently playing invincibility music, go back to normal stage music
-			if music.currentTrack == 2
-				PlayMusic(0)
+			if music.currentTrack == TRACK_INVINCIBLE
+				PlayMusic(TRACK_STAGE)
 			end if
 
 			// If the next object in an invincibility effect object, remove it and restore the shield the player had, if any
@@ -1887,7 +1887,7 @@ function PlayerObject_ResetOnFloor
 end function
 
 
-// Sometimes also set as the player's spindash function based on their settings
+// This is also set as the player's spindash function if the move is disabled
 function PlayerObject_StartJump
 	temp1 = false
 
@@ -2140,7 +2140,7 @@ function PlayerObject_JumpAbility_Sonic
 		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
 
-		// And don't let the player transform if the level is over, either
+		// Don't let the player transform if the level is over, either
 		CheckNotEqual(object[30].type, TypeName[Act Finish])
 		temp0 &= checkResult
 
@@ -2297,7 +2297,7 @@ function PlayerObject_JumpAbility_Tails
 		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
 
-		// And don't let Tails transform if the level is over, either
+		// Don't let the player transform if the level is over, either
 		CheckNotEqual(object[30].type, TypeName[Act Finish])
 		temp0 &= checkResult
 
@@ -2328,7 +2328,7 @@ function PlayerObject_JumpAbility_Knux
 	// Only act if the jump button is pressed
 	if player.jumpPress == true
 
-		// Following checks are to see if Sonic transform instead of doing arial abilities
+		// Following checks are to see if Knuckles should transform instead of doing arial abilities
 
 		// Note that this isn't 127 emeralds, but rather 01111111 in binary
 		CheckEqual(specialStage.emeralds, 0b01111111)
@@ -2346,8 +2346,7 @@ function PlayerObject_JumpAbility_Knux
 		CheckNotEqual(object[30].type, TypeName[Act Finish])
 		temp0 &= checkResult
 
-		if temp0 == true
-			// All checks passed, go Super!
+		if temp0 == true // All checks passed?
 			currentPlayer = player.entityPos
 			CallFunction(PlayerObject_SuperTransform)
 		else
@@ -2635,14 +2634,10 @@ function PlayerObject_HandleAir
 			end if
 		end if
 
-		// Allow the player to use their jump ability if the conditions are met
-		// (In order...)
-		// - Must be rolling
-		// - Must have the jump ability flag set
-		// - Must be after a jump
+		// Allow the player to use their jump ability if these conditions are met
 		if player.animation == ANI_JUMPING
 			if player.jumpAbilityState == 1
-				if player.yvel >= player.jumpCap
+				if player.yvel >= player.jumpCap // Did the player actually jump? Rolling off of a ledge shouldn't count!
 					CallFunction(player.jumpAbility)
 				end if
 			end if
@@ -2716,13 +2711,10 @@ function PlayerObject_RollingJump
 
 	if player.gravity == GRAVITY_AIR
 
-		// Allow the player to use their jump ability, given the conditions are met
-		// - Must be rolling
-		// - Must have the jump ability flag set
-		// - Must be after a jump
+		// Allow the player to use their jump ability if these conditions are met
 		if player.animation == ANI_JUMPING
 			if player.jumpAbilityState == 1
-				if player.yvel >= player.jumpCap
+				if player.yvel >= player.jumpCap // Did the player actually jump? Rolling off of a ledge shouldn't count!
 					CallFunction(player.jumpAbility)
 				end if
 			end if
@@ -3847,7 +3839,7 @@ function PlayerObject_Death
 
 	if player.entityPos == 0 // Player 1?
 		if PlayerObject_SuperState == SUPERSTATE_SUPER
-			PlayerObject_SuperState = SUPERSTATE_FADEOUT
+			PlayerObject_SuperState = SUPERSTATE_UNTRANSFORM
 		end if
 	end if
 
@@ -3886,17 +3878,19 @@ function PlayerObject_Death
 				if player.lives == 0
 					deathEvent.timer = -2880
 					deathEvent.state = 0
-					PlayMusic(5)
+					PlayMusic(TRACK_GAMEOVER)
 					stage.pauseEnabled = false
 				else
 					deathEvent.timer = 0
 					deathEvent.state = 2
+					
+					// Check for Time Over
 					if stage.minutes == 9
 						if stage.seconds == 59
 							if stage.milliSeconds == 99
 								deathEvent.timer = -2880
 								deathEvent.state = 1
-								PlayMusic(5)
+								PlayMusic(TRACK_GAMEOVER)
 								stage.pauseEnabled = false
 							end if
 						end if
@@ -3912,7 +3906,7 @@ end function
 function PlayerObject_Drown
 	if player.entityPos == 0 // Player 1?
 		if PlayerObject_SuperState == SUPERSTATE_SUPER
-			PlayerObject_SuperState = SUPERSTATE_FADEOUT
+			PlayerObject_SuperState = SUPERSTATE_UNTRANSFORM
 		end if
 	end if
 
@@ -3940,11 +3934,13 @@ function PlayerObject_Drown
 				if player.lives == 0
 					deathEvent.timer = -0xB40
 					deathEvent.state = 0
-					PlayMusic(5)
+					PlayMusic(TRACK_GAMEOVER)
 					stage.pauseEnabled = false
 				else
 					deathEvent.timer = 0
 					deathEvent.state = 2
+					
+					// We don't need the Time Over check here because the player cannot drown while already dead
 				end if
 			end if
 		end if
@@ -4055,6 +4051,7 @@ function PlayerObject_CorkscrewRoll
 		CallFunction(PlayerObject_ResetOnFloor)
 	end if
 end function
+
 
 function PlayerObject_TubeSwitch
 	if player.gravity == GRAVITY_AIR
@@ -4201,6 +4198,7 @@ end function
 // ========================
 
 event ObjectMain
+
 	if stage.debugMode == true
 		CallFunction(PlayerObject_ProcessPlayer)
 		CheckEqual(options.attractMode, false)
@@ -4430,7 +4428,7 @@ event ObjectStartup
 		player[0].hitboxTop 	= HITBOX_AUTO
 		player[0].hitboxBottom 	= HITBOX_AUTO
 
-		// Reset things for Super Sonic
+		// Reset things for Super states
 		PlayerObject_SuperState = SUPERSTATE_NONE
 		PlayerObject_SuperRingLossTimer = 0
 		PlayerObject_SuperBlendClr = 0
@@ -4439,84 +4437,58 @@ event ObjectStartup
 		// Player specific stuff
 		switch stage.playerListPos
 		case PlayerName[SONIC]
-			// Load animations
+			// Even though you never start an act as Super Sonic, loading the animation file on startup will prevent having to load it in the middle of gameplay
 			LoadAnimation("SuperSonic.ani")
 			LoadAnimation("Sonic.ani")
-
-			// Initialize fur colors
-			CallFunction(PlayerObject_HandleSuperPalSonic)
-
-			// Set character values
+			CallFunction(PlayerObject_HandleSuperPalSonic) // Initialize fur colors
 			player[0].character = PLAYER_SONIC_ALONE
-			
-			// Offset by 5 pixels when rolling
-			player[0].jumpOffset = -5 
-			
-			// Sonic's ability is the shield moves and Insta-shield
+			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
 			player[0].jumpAbility = PlayerObject_JumpAbility_Sonic
-			
-			// Disable the Peelout animation from showing up
-			ANI_PEELOUT = ANI_RUNNING 
+			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
 			break
 
 		case PlayerName[TAILS]
 			// Instead of object 0 being a player object, make it the Tails object
 			player[0].type = TypeName[Tails Object]
 			player[0].character = PLAYER_TAILS_ALONE
-
-			// Initialize fur colors
-			CallFunction(PlayerObject_HandleSuperPalTails)
-
-			// Load animations
+			CallFunction(PlayerObject_HandleSuperPalTails) // Initialize fur colors
 			LoadAnimation("Tails.ani")
-
-			// Set character-specific values
-			player[0].jumpOffset = -1 // Tails is shorter, so change this to account for that
-			player[0].jumpAbility = PlayerObject_JumpAbility_Tails // Tails's ability is flight
+			player[0].jumpOffset = -1 // Offset by 1 pixel when rolling (Tails has a different offset from Sonic & Knux since he's shorter)
+			player[0].jumpAbility = PlayerObject_JumpAbility_Tails
 			stage.player2Enabled = false // Tails can't have Miles following him
+			// Tails doesn't disable the peelout animation, you can probably guess why
 			break
 
 		case PlayerName[KNUCKLES]
-			// Load animations
 			LoadAnimation("Knuckles.ani")
-
-			// Initialize fur colors
-			CallFunction(PlayerObject_HandleSuperPalKnux)
-
+			CallFunction(PlayerObject_HandleSuperPalKnux) // Initialize fur colors
 			player[0].character = PLAYER_KNUX_ALONE
-
-			// Set Knuckles-specific stuff
 			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
-			player[0].jumpAbility = PlayerObject_JumpAbility_Knux // Knuckles's ability is gliding
-
-			// Disable Knuckles's "Peelout" animation from showing up
-			ANI_PEELOUT = ANI_RUNNING
+			player[0].jumpAbility = PlayerObject_JumpAbility_Knux
+			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
 
 			// Force 2P Tails to be off if not on no-save
+			// Note this is actually bugged, this only checks for the last three save slots, ignoring the first one
 			if options.saveSlot > 0
 				stage.player2Enabled = false
 			end if
 			break
 		end switch
 
-		// Set player count
 		if stage.player2Enabled == true
 			playerCount = 2
 		else
 			playerCount = 1
 		end if
 
-		// Reset currentPlayer
 		currentPlayer = 0
 
-		// Init physics
+		// Initialize physics
 		CallFunction(PlayerObject_UpdatePhysicsState)
 
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
 
-	// Reset goggleType
-	// -> Gets set by the goggles themselves when in LZ
 	goggleType = TypeName[Blank Object]
 end event
 
