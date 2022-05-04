@@ -13,6 +13,10 @@ public alias 0x10000 	: HITBOX_AUTO
 public alias arrayPos6 	: currentPlayer
 public alias arrayPos7 	: playerCount
 
+// Reserved Object Slot Aliases
+private alias 0 : SLOT_PLAYER1
+
+// Made Aliases
 private alias 2 : MODE_TIMEATTACK
 
 // Draw Order
@@ -29,7 +33,7 @@ private alias 0 : SHIELD_NONE
 private alias 1 : SHIELD_NORMAL
 private alias 2 : SHIELD_BUBBLE
 private alias 3 : SHIELD_FIRE
-private alias 4 : SHIELD_LIGHTNING 	
+private alias 4 : SHIELD_LIGHTNING
 // LZ goggles, debug mode only
 private alias 5 : SHIELD_GOGGLES
 
@@ -55,7 +59,8 @@ private alias 4 : TRACK_BOSS
 private alias 5 : TRACK_GAMEOVER
 private alias 6 : TRACK_DROWNING
 
-// this isn't a global variable, so it's set here
+// This isn't a global variable, so set it here
+// It's an unused (broken) animation 
 private alias 34 : ANI_CORKSCREW_V
 
 // Variables
@@ -112,7 +117,7 @@ private alias object.right	 	: player.right
 // Object values
 private alias object.value0  : player.rings
 private alias object.value1  : player.timer
-private alias object.value2  : player.abilityTimer			// Note: Also used by death/drowning state
+private alias object.value2  : player.abilityTimer			// Note: Also used by death/drowning state, not just character abilities
 private alias object.value3  : player.drownTimer			// Countdown before player moves to next drown "level"
 private alias object.value4  : player.drownLevel
 private alias object.value5  : player.customRollAnimSpeed
@@ -122,16 +127,15 @@ private alias object.value8  : player.blinkTimer
 private alias object.value9  : player.skidSpeed
 private alias object.value10 : player.animationReserve		// Used by springs to store what animation will play after the bounce animation
 private alias object.value11 : player.scrollDelay			// A timer of how long the camera will stay locked for
-// Tails' tail values
-private alias object.value12 : player.tailFrame
-private alias object.value13 : player.tailAnim
+private alias object.value12 : player.tailFrame				// One of Tails' tail values
+private alias object.value13 : player.tailAnim				// Also one of Tails' tail values
 private alias object.value14 : player.skidding
-// value15 isn't used
+// value15 is unused
 private alias object.value16 : player.isSidekick			// 0/false is player 1, 1/true if player 2
 private alias object.value17 : debugMode.currentSelection
 private alias object.value18 : player.sortedDrawOrder
 private alias object.value19 : player.scoreBonus	// How many enemies the player has bounced on in a row
-private alias object.value20 : player.topSpeed 			
+private alias object.value20 : player.topSpeed
 private alias object.value21 : player.acceleration
 private alias object.value22 : player.deceleration
 private alias object.value23 : player.airAcceleration
@@ -154,6 +158,7 @@ private alias object.value38 : player.hitboxTop
 private alias object.value41 : player.hitboxRight
 private alias object.value39 : player.hitboxBottom
 private alias object.value42 : player.prevGravity
+
 // P2 values
 private alias object.value43 : player.jumpInTimer
 private alias object.value44 : player.p2InputFunction
@@ -204,8 +209,8 @@ reserve function PlayerObject_Knockback
 reserve function PlayerObject_Death
 reserve function PlayerObject_Drown
 reserve function PlayerObject_HangingBar // Unused - Leftover from CD
-reserve function PlayerObject_CorkscrewRun // Unused - Leftover from nexus
-reserve function PlayerObject_CorkscrewRoll // Unused - Leftover from nexus
+reserve function PlayerObject_CorkscrewRun // Unused - Leftover from Sonic Nexus
+reserve function PlayerObject_CorkscrewRoll // Unused - Leftover from Sonic Nexus
 reserve function PlayerObject_TubeSwitch
 reserve function PlayerObject_Clinging
 reserve function PlayerObject_WaterSlide
@@ -355,7 +360,7 @@ end table
 
 private table PlayerObject_SonicPhysicsTable
 	0x60000, 0x0C00, 0x1800, 0x0600, 0x008000, 0x0600, 0x68000, -0x40000
-	0x30000, 0x0600, 0xC00,  0x0300, 0x004000, 0x0300, 0x38000, -0x20000
+	0x30000, 0x0600, 0x0C00, 0x0300, 0x004000, 0x0300, 0x38000, -0x20000
 	0xA0000, 0x3000, 0x6000, 0x1800, 0x010000, 0x0600, 0x80000, -0x40000
 	0x50000, 0x1800, 0x3000, 0x0C00, 0x008000, 0x0300, 0x38000, -0x20000
 	0xC0000, 0x1800, 0x3000, 0x0C00, 0x008000, 0x0600, 0x68000, -0x40000
@@ -403,7 +408,7 @@ function PlayerObject_InitReplay
 	while currentPlayer < playerCount
 		GetTableValue(player[currentPlayer].xpos, 0, PlayerObject_ReplayTable)
 		GetTableValue(player[currentPlayer].ypos, 1, PlayerObject_ReplayTable)
-		player[currentPlayer].controlMode = -1
+		player[currentPlayer].controlMode = CONTROLMODE_NONE
 		player[currentPlayer].up = false
 		player[currentPlayer].down = false
 		player[currentPlayer].left = false
@@ -650,13 +655,13 @@ function PlayerObject_UpdatePhysicsState
 
 	if stage.state != STAGE_FROZEN
 		// Is the player underwater?
-		temp3 = object[currentPlayer].ypos
+		temp3 = player[currentPlayer].ypos
 		temp3 >>= 16
 		CheckGreater(temp3, stage.waterLevel)
 
 		// Make sure the player isn't in debug mode
 		temp4 = checkResult
-		CheckNotEqual(object[currentPlayer].type, TypeName[Debug Mode])
+		CheckNotEqual(player[currentPlayer].type, TypeName[Debug Mode])
 		temp4 &= checkResult
 
 		if temp4 == true
@@ -681,20 +686,28 @@ function PlayerObject_UpdatePhysicsState
 
 	// Set the physics values
 	GetTableValue(player[currentPlayer].topSpeed, temp1, temp0)
+	
 	temp1++
 	GetTableValue(player[currentPlayer].acceleration, temp1, temp0)
+
 	player[currentPlayer].deceleration = player[currentPlayer].acceleration
 	player[currentPlayer].deceleration >>= temp2
+	
 	temp1++
 	GetTableValue(player[currentPlayer].airAcceleration, temp1, temp0)
+	
 	temp1++
 	GetTableValue(player[currentPlayer].airDeceleration, temp1, temp0)
+	
 	temp1++
 	GetTableValue(player[currentPlayer].skidSpeed, temp1, temp0)
+	
 	temp1++
 	GetTableValue(player[currentPlayer].rollingFriction, temp1, temp0)
+	
 	temp1++
 	GetTableValue(player[currentPlayer].jumpStrength, temp1, temp0)
+	
 	temp1++
 	GetTableValue(player[currentPlayer].jumpCap, temp1, temp0)
 end function
@@ -963,7 +976,7 @@ end function
 function PlayerObject_Hit
 
 	if player[currentPlayer].state != PlayerObject_Death
-		arrayPos0 = object[currentPlayer].entityPos
+		arrayPos0 = player[currentPlayer].entityPos
 		arrayPos0 += playerCount
 
 		if player[currentPlayer].invincibleTimer == 0
@@ -1077,7 +1090,7 @@ end function
 // Used by spikes upon player collision
 function PlayerObject_SpikeHit
 
-	if object[currentPlayer].state != PlayerObject_Death
+	if player[currentPlayer].state != PlayerObject_Death
 		arrayPos0 = player[currentPlayer].entityPos
 		arrayPos0 += playerCount
 
@@ -1221,9 +1234,8 @@ function PlayerObject_ProcessPlayer
 			end if
 
 			CheckTouchRect(240, 0, screen.xsize, 40)
-
 			if checkResult > -1
-				// Pause the game
+				// Pause the game if the pause icon was tapped
 				PlaySfx(SfxName[Menu Back], false)
 				StopSfx(SfxName[Flying])
 				StopSfx(SfxName[Jump])
@@ -1231,12 +1243,21 @@ function PlayerObject_ProcessPlayer
 			end if
 
 			if inputPress.start == true
-				// Pause the game
+				// Pause the game if the start button was pressed as well
 				PlaySfx(SfxName[Menu Back], false)
 				StopSfx(SfxName[Flying])
 				StopSfx(SfxName[Jump])
 				engine.state = ENGINE_INITPAUSE
 			end if
+			
+//			if inputPress.buttonB == true
+//				// If the B button was pressed, pause the game..?
+//				// Don't know why you'd want this, though SEGA apparently does since this is in the latest versions of the game
+//				PlaySfx(SfxName[Menu Back], false)
+//				StopSfx(SfxName[Flying])
+//				StopSfx(SfxName[Jump])
+//				engine.state = ENGINE_INITPAUSE
+//			end if
 		end if
 
 		ProcessObjectControl()
@@ -1291,12 +1312,13 @@ function PlayerObject_ProcessPlayer
 				PlayerObject_ReplayLength--
 
 				if PlayerObject_ReplayLength < 1 // Replay over?
-
 					// Start fading out
+					
 					ResetObjectEntity(11, TypeName[Title Card], 0, 0, 0)
 					object[11].state = 8
 					object[11].priority = PRIORITY_ACTIVE
 					object[11].drawOrder = 6
+					
 					player.invincibleTimer = 80
 					screen.cameraEnabled = false
 				end if
@@ -1306,7 +1328,7 @@ function PlayerObject_ProcessPlayer
 
 	// Update speed shoes
 	if player.speedShoesTimer > 0
-		player.speedShoesTimer-- // Decrease the timer
+		player.speedShoesTimer--
 
 		// Ran out of speed shoes?
 		if player.speedShoesTimer < 1
@@ -1314,7 +1336,8 @@ function PlayerObject_ProcessPlayer
 			currentPlayer = player.entityPos
 			CallFunction(PlayerObject_UpdatePhysicsState)
 
-			// SlowDownMusic is normally set by the stage's setup script, but if it's not set then don't call it
+			// SlowDownMusic is normally a function ID set by the stage's setup script, but if it's not set then don't call it
+			// (Function 0 is just PlayerObject_Blank so 
 			if SlowDownMusic != 0
 				CallFunction(SlowDownMusic)
 			end if
@@ -1346,7 +1369,7 @@ function PlayerObject_ProcessPlayer
 				PlayMusic(TRACK_STAGE)
 			end if
 
-			// If the next object in an invincibility effect object, remove it and restore the shield the player had, if any
+			// If the next object in an invincibility effect object, remove it and restore the shield the player had
 			if object[+playerCount].type == invincibilityType
 				currentPlayer = player.entityPos
 				arrayPos0 = currentPlayer
@@ -1356,7 +1379,7 @@ function PlayerObject_ProcessPlayer
 		end if
 	end if
 
-	// If not looking up or down, move the camera back to normal
+	// If not looking up or down, restore the camera back to normal
 	if player.state != PlayerObject_LookingUp
 		if player.state != PlayerObject_Crouching
 			if player.lookPosY > 0
@@ -1369,7 +1392,7 @@ function PlayerObject_ProcessPlayer
 		end if
 	end if
 
-	// Update camera lock
+	// Update camera lock (from Spindash or similar)
 	if player.scrollDelay > 0
 		player.scrollDelay--
 
@@ -2179,7 +2202,7 @@ function PlayerObject_JumpAbility_Sonic
 
 						player.jumpAbilityState = 2
 
-						// Set insta shield state to active
+						// Set insta shield state to active?
 						// Side note: this isn't ever used LOL
 						object[+playerCount].state = 1
 						
@@ -2330,7 +2353,7 @@ function PlayerObject_JumpAbility_Knux
 
 		// Following checks are to see if Knuckles should transform instead of doing arial abilities
 
-		// Note that this isn't 127 emeralds, but rather 01111111 in binary
+		// Each bit represents an emerald, so seven bits are seven emeralds
 		CheckEqual(specialStage.emeralds, 0b01111111)
 		temp0 = checkResult
 
@@ -2436,8 +2459,10 @@ function PlayerObject_HandleGround
 								player.animationTimer = 0
 								player.animationSpeed = 0
 							end if
+
 							player.direction = FACING_RIGHT
 						end if
+
 						if player.floorSensorL == false
 							player.timer = 0
 							player.animation = ANI_FLAILING1
@@ -2447,6 +2472,7 @@ function PlayerObject_HandleGround
 								player.animationTimer = 0
 								player.animationSpeed = 0
 							end if
+
 							player.direction = FACING_LEFT
 						end if
 					end if
@@ -3846,7 +3872,7 @@ function PlayerObject_Death
 	// Lock player control
 	if player.controlMode != -1
 		player.yvel = -0x70000
-		player.controlMode = -1
+		player.controlMode = CONTROLMODE_NONE
 	end if
 
 	// Remove player invulnerability and make the player visible
@@ -3910,7 +3936,7 @@ function PlayerObject_Drown
 		end if
 	end if
 
-	player.controlMode = -1
+	player.controlMode = CONTROLMODE_NONE
 	player.yvel += player.gravityStrength
 	player.animation = ANI_DROWNING
 	if player.yvel > 0x80000
@@ -4393,7 +4419,7 @@ event ObjectStartup
 		screen.cameraEnabled = true
 		screen.cameraStyle = 0
 		screen.cameraTarget = 0
-		currentPlayer = 0
+		currentPlayer = SLOT_PLAYER1
 
 		// Handle S&T
 		if stage.playerListPos > PlayerName[KNUCKLES]		// Only true with S&T
@@ -4401,32 +4427,33 @@ event ObjectStartup
 			stage.player2Enabled = true						// Set P2 to true, will always be Tails
 		end if
 
-		// Set object slot 0 to the player object
-		ResetObjectEntity(0, TypeName[Player Object], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
+		// Set object slot SLOT_PLAYER1 to the player object
+		ResetObjectEntity(SLOT_PLAYER1, TypeName[Player Object], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
 
-		screen.cameraX = player[0].ixpos
-		screen.cameraY = player[0].iypos
+		screen.cameraX = player[SLOT_PLAYER1].ixpos
+		screen.cameraY = player[SLOT_PLAYER1].iypos
 
-		player[0].groupID = GROUP_PLAYERS
-		player[0].state = PlayerObject_HandleAir
-		player[0].priority = PRIORITY_ACTIVE
-		player[0].drawOrder = DRAWORDER_PLAYER
-		player[0].sortedDrawOrder = 4
+		player[SLOT_PLAYER1].groupID = GROUP_PLAYERS
+		player[SLOT_PLAYER1].state = PlayerObject_HandleAir
+		player[SLOT_PLAYER1].priority = PRIORITY_ACTIVE
+		player[SLOT_PLAYER1].drawOrder = DRAWORDER_PLAYER
+		player[SLOT_PLAYER1].sortedDrawOrder = 4
 
 		player[0].rollingDeceleration = 0x2000
 
 		// If the spindash is enabled, allow the player to spindash
 		if options.spindash == true
-			player[0].spindashFunction = PlayerObject_StartSpindash
+			player[SLOT_PLAYER1].spindashFunction = PlayerObject_StartSpindash
 		else
-			player[0].spindashFunction = PlayerObject_StartJump
+			player[SLOT_PLAYER1].spindashFunction = PlayerObject_StartJump
 		end if
 		
 		// Set player hitboxes
-		player[0].hitboxLeft 	= HITBOX_AUTO
-		player[0].hitboxRight 	= HITBOX_AUTO
-		player[0].hitboxTop 	= HITBOX_AUTO
-		player[0].hitboxBottom 	= HITBOX_AUTO
+		// By setting them to HITBOX_AUTO, we leave them to use numbers from the animation file instead
+		player[SLOT_PLAYER1].hitboxLeft 	= HITBOX_AUTO
+		player[SLOT_PLAYER1].hitboxRight 	= HITBOX_AUTO
+		player[SLOT_PLAYER1].hitboxTop 		= HITBOX_AUTO
+		player[SLOT_PLAYER1].hitboxBottom 	= HITBOX_AUTO
 
 		// Reset things for Super states
 		PlayerObject_SuperState = SUPERSTATE_NONE
@@ -4437,38 +4464,53 @@ event ObjectStartup
 		// Player specific stuff
 		switch stage.playerListPos
 		case PlayerName[SONIC]
-			// Even though you never start an act as Super Sonic, loading the animation file on startup will prevent having to load it in the middle of gameplay
+			// Even though you never start an act as Super Sonic, loading the animation file on startup will load all the sprites upon startup
+			// so that they won't have to load during gameplay instead and cause a notable pause
 			LoadAnimation("SuperSonic.ani")
 			LoadAnimation("Sonic.ani")
-			CallFunction(PlayerObject_HandleSuperPalSonic) // Initialize fur colors
-			player[0].character = PLAYER_SONIC_ALONE
-			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
-			player[0].jumpAbility = PlayerObject_JumpAbility_Sonic
+			
+			// Similarly, Sonic's not actually going Super here, this is just to initialise his fur colours
+			CallFunction(PlayerObject_HandleSuperPalSonic)
+			
+			player[SLOT_PLAYER1].character = PLAYER_SONIC_ALONE
+			player[SLOT_PLAYER1].jumpOffset = -5 // Offset of 5 pixels when rolling
+			player[SLOT_PLAYER1].jumpAbility = PlayerObject_JumpAbility_Sonic
 			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
 			break
 
 		case PlayerName[TAILS]
-			// Instead of object 0 being a player object, make it the Tails object
-			player[0].type = TypeName[Tails Object]
-			player[0].character = PLAYER_TAILS_ALONE
-			CallFunction(PlayerObject_HandleSuperPalTails) // Initialize fur colors
+			// Instead of being a player object, the player is playing as a Tails object instead
+			player[SLOT_PLAYER1].type = TypeName[Tails Object]
+			player[SLOT_PLAYER1].character = PLAYER_TAILS_ALONE
+			
+			// Initialize fur colors
+			CallFunction(PlayerObject_HandleSuperPalTails)
+			
 			LoadAnimation("Tails.ani")
-			player[0].jumpOffset = -1 // Offset by 1 pixel when rolling (Tails has a different offset from Sonic & Knux since he's shorter)
-			player[0].jumpAbility = PlayerObject_JumpAbility_Tails
-			stage.player2Enabled = false // Tails can't have Miles following him
-			// Tails doesn't disable the peelout animation, you can probably guess why
+			
+			// As opposed to Sonic & Knuckles' 5 pixel offset, 
+			// Tails get offset by 1 pixel when rolling since he's shorter
+			player[SLOT_PLAYER1].jumpOffset = -1
+			
+			player[SLOT_PLAYER1].jumpAbility = PlayerObject_JumpAbility_Tails
+			stage.player2Enabled = false // Tails can't have Miles following him, unfortunately
+			
+			// Tails doesn't disable the "peelout" animation and since it's actually his fastest run animation
 			break
 
 		case PlayerName[KNUCKLES]
 			LoadAnimation("Knuckles.ani")
-			CallFunction(PlayerObject_HandleSuperPalKnux) // Initialize fur colors
+			
+			// Initialize fur colors
+			CallFunction(PlayerObject_HandleSuperPalKnux)
+			
 			player[0].character = PLAYER_KNUX_ALONE
 			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
 			player[0].jumpAbility = PlayerObject_JumpAbility_Knux
 			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
 
 			// Force 2P Tails to be off if not on no-save
-			// Note this is actually bugged, this only checks for the last three save slots, ignoring the first one
+			// Note this is actually bugged as this only checks for the last three save slots, ignoring the first one
 			if options.saveSlot > 0
 				stage.player2Enabled = false
 			end if
@@ -4481,7 +4523,7 @@ event ObjectStartup
 			playerCount = 1
 		end if
 
-		currentPlayer = 0
+		currentPlayer = SLOT_PLAYER1
 
 		// Initialize physics
 		CallFunction(PlayerObject_UpdatePhysicsState)
@@ -4492,6 +4534,7 @@ event ObjectStartup
 	goggleType = TypeName[Blank Object]
 end event
 
+
 // ========================
 // Editor Events
 // ========================
@@ -4499,6 +4542,7 @@ end event
 event RSDKDraw
 	DrawSprite(0)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Players/Sonic1.gif")

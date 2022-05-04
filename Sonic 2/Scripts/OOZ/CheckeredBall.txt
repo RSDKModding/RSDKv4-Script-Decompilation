@@ -145,6 +145,7 @@ private alias 7 : OOZEGGMAN_EXPLODE
 private alias 3 : OOZEGGANI_HIT
 private alias 4 : OOZEGGANI_DEFEATED
 
+
 // ========================
 // Function Declarations
 // ========================
@@ -158,14 +159,17 @@ reserve function CheckeredBall_SpringBounce
 reserve function CheckeredBall_CLedgeCollapse
 reserve function CheckeredBall_HandlePhysics
 
+
 // ========================
 // Tables
 // ========================
+
 private table CheckeredBall_heightArray
 	0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20
 end table
 
 // Seems to be unused, and as such, its purpose is unknown...
+// This same table exists in S1's and Mania's unused CheckeredBall objects as well, for whatever reason
 private table CheckeredBall_unusedTable
 	253, 251, 248, 245, 243, 240, 237, 235, 232, 229, 226, 224, 221, 219, 216, 213, 210, 208, 205, 203, 200, 197, 195, 192
 end table
@@ -179,7 +183,7 @@ function CheckeredBall_DebugSpawn
 	CreateTempObject(TypeName[Checkered Ball], 0, object.xpos, object.ypos)
 	object[tempObjectPos].gravity = GRAVITY_AIR
 	object[tempObjectPos].startPos.x = object.xpos
-	object[tempObjectPos].startPos.x = object.ypos
+	object[tempObjectPos].startPos.y = object.ypos
 	object[tempObjectPos].roundedPos.x = object.xpos
 	object[tempObjectPos].roundedPos.y = object.ypos
 end function
@@ -533,7 +537,11 @@ end function
 
 function CheckeredBall_CLedgeCollapse
 	if object[arrayPos0].state < CFLOOR_NONE
+	
+		// what? why is this here??
+		// If I had to guess, I'd say it's just a debugging leftover or something, but it's certainly very strange
 		player.score++
+
 		if object[arrayPos0].propertyValue < 2
 			if object.yvel >= 0
 				BoxCollisionTest(C_PLATFORM, arrayPos0, -64, -24, 64, 0, object.entityPos, -10, -14, 10, 14)
@@ -590,9 +598,14 @@ function CheckeredBall_HandlePhysics
 		temp0 >>= 8
 		object.yvel = temp0
 	end if
+
 	object.playerControlled = false
 end function
 
+
+// ========================
+// Events
+// ========================
 
 event ObjectMain
 	if object.state == CHECKEREDBALL_NORMAL
@@ -874,6 +887,8 @@ event ObjectMain
 			break
 
 		case TypeName[Plane Sw V]
+			// Why is this here, plane switches don't even exist in OOZ...
+			// (Likely just leftover from copying S1's CheckeredBall object, since there *are* path swappers in GHZ)
 			CheckEqual(planeSwV[arrayPos0].onGround, false)
 			temp0 = checkResult
 			CheckEqual(object.gravity, GRAVITY_GROUND)
@@ -893,6 +908,7 @@ event ObjectMain
 			break
 
 		case TypeName[Plane Sw H]
+			// See above note, likely the same story here
 			CheckEqual(planeSwH[arrayPos0].onGround, false)
 			temp0 = checkResult
 			CheckEqual(object.gravity, GRAVITY_GROUND)
@@ -1221,7 +1237,7 @@ event ObjectMain
 		temp0 = object.xpos
 		temp1 = object.ypos
 		object.xpos = object.startPos.x
-		object.ypos = object.startPos.x
+		object.ypos = object.startPos.y
 		if object.outOfBounds == true
 			object.roundedPos.x = object.xpos
 			object.roundedPos.y = object.ypos
@@ -1250,6 +1266,7 @@ end event
 
 
 event ObjectDraw
+	// Draw the ball frame
 	object.rotation = object.ballAngle
 	object.rotation >>= 14
 	temp0 = object.rotation
@@ -1259,6 +1276,7 @@ event ObjectDraw
 	temp0++
 	DrawSprite(temp0)
 
+	// And draw the shine ontop of it too
 	object.inkEffect 	= INK_ADD
 	object.alpha 		= 0xA0
 	DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
@@ -1267,6 +1285,8 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("OOZ/Objects.gif")
+	
+	// Checkered Ball Frames
 	SpriteFrame(-16, -16, 32, 32, 396, 190)
 	SpriteFrame(-16, -16, 32, 32, 429, 190)
 	SpriteFrame(-16, -16, 32, 32, 273, 133)
@@ -1277,23 +1297,34 @@ event ObjectStartup
 	SpriteFrame(-16, -16, 32, 32, 256, 34)
 	SpriteFrame(-16, -16, 32, 32, 256, 1)
 
+	// Load the animation file... but why?
+	// Nothing's ever really done with it
 	LoadAnimation("WreckingBallJr.ani")
 
+	// Setup all Checkered Ball objects in the level
+	// Do note though that, at least in the normal game, this never really does anything since there aren't any Checkered Ball objects placed in the level
 	foreach (TypeName[Checkered Ball], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].gravity = GRAVITY_AIR
 		object[arrayPos0].startPos.x = object.xpos
-		object[arrayPos0].startPos.x = object.ypos
+		object[arrayPos0].startPos.y = object.ypos
 	next
 
+	// Add this object to the debug object list
 	SetTableValue(TypeName[Checkered Ball], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(CheckeredBall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(CheckeredBall_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("OOZ/Objects.gif")

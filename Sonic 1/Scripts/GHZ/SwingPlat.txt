@@ -19,6 +19,10 @@ private alias object.value4 : object.collisionOffset.y
 // Player Aliases
 private alias object.value17 : debugMode.currentSelection
 
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
 // ========================
 // Function Declarations
 // ========================
@@ -73,14 +77,21 @@ end function
 function SwingPlatform_DebugSpawn
 	temp0 = debugMode[0].currentSelection
 	temp0 -= SwingPlatform_startDebugID
+
 	CreateTempObject(TypeName[Swing Platform], temp0, object.xpos, object.ypos)
 	object[tempObjectPos].direction = object.direction
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectMain
+	// Backup the object's position, as it'll need to be moved for collision checks
 	temp2 = object.xpos
 	temp3 = object.ypos
+
 	GetTableValue(object.swingAngle, 12, StageSetup_oscillationTable)
 	object.swingAngle >>= 8
 	if object.direction == FLIP_X
@@ -115,10 +126,12 @@ event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 		if checkResult == true
-			object[currentPlayer].xpos += object.collisionOffset.x
-			object[currentPlayer].ypos += object.collisionOffset.y
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
 		end if
 	next
+	
+	// Move the object back to its actual position
 	object.xpos = temp2
 	object.ypos = temp3
 end event
@@ -145,8 +158,9 @@ event ObjectDraw
 		temp1 += 16
 	loop
 	
-	// Draw the platform itself
 	temp1 -= 8
+	
+	// Draw the platform itself
 	Cos(object.drawPos.x, object.swingAngle)
 	object.drawPos.x *= temp1
 	object.drawPos.x <<= 7
@@ -185,6 +199,7 @@ event ObjectStartup
 	loop
 end event
 
+
 event RSDKDraw
 	// Draw the post
 	DrawSprite(0)
@@ -217,13 +232,100 @@ event RSDKDraw
 	temp3 <<= 7
 	temp3 += object.ypos
 	DrawSpriteXY(2, temp2, temp3)
+	
+	if editor.showGizmos == true
+	
+#platform: DUMMY
+		// Draw the platform's arc of movement rather than its end points
+		// TODO: Is this too much? It doesn't even work right...
+
+		temp1 += 8
+		temp0 = 1
+		while temp0 < 255
+			Cos(object.drawPos.x, temp0)
+			object.drawPos.x *= temp1
+			object.drawPos.x <<= 7
+			object.drawPos.x += object.xpos
+			object.drawPos.x &= 0xFFFF0000
+			
+			Sin(object.drawPos.y, temp0)
+			object.drawPos.y *= temp1
+			object.drawPos.y <<= 7
+			object.drawPos.y += object.ypos
+			object.drawPos.y &= 0xFFFF0000
+
+			DrawRectWorld(object.drawPos.x, object.drawPos.y, 1, 1, 255, 255, 255, 255)
+
+			temp0++
+		loop
+#endplatform
+
+		// Draw the platform's path to the right and left too to show where and how far it'll go
+		object.inkEffect = INK_ALPHA
+		
+		// Left chains
+		temp0 = 0
+		temp1 = 16
+		while temp0 < object.length
+			Cos(temp2, 0)
+			temp2 *= temp1
+			temp2 <<= 7
+			temp2 += object.xpos
+			Sin(temp3, 0)
+			temp3 *= temp1
+			temp3 <<= 7
+			temp3 += object.ypos
+			DrawSpriteFX(1, FX_INK, temp2, temp3)
+			temp0++
+			temp1 += 16
+		loop
+
+		// Left platform
+		temp1 -= 8
+		Cos(temp2, 0)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, 0)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteFX(2, FX_INK, temp2, temp3)
+		
+		// Right chains
+		temp0 = 0
+		temp1 = 16
+		while temp0 < object.length
+			Cos(temp2, 256)
+			temp2 *= temp1
+			temp2 <<= 7
+			temp2 += object.xpos
+			Sin(temp3, 256)
+			temp3 *= temp1
+			temp3 <<= 7
+			temp3 += object.ypos
+			DrawSpriteFX(1, FX_INK, temp2, temp3)
+			temp0++
+			temp1 += 16
+		loop
+
+		// Right platform
+		temp1 -= 8
+		Cos(temp2, 256)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		Sin(temp3, 256)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteFX(2, FX_INK, temp2, temp3)
+	end if
 end event
 
+
 event RSDKLoad
-
 	LoadSpriteSheet("GHZ/Objects.gif")
-
-	// Swinging Platform frames
 	SpriteFrame(-8, -8, 16, 16, 84, 1) 		// connection joint - #0
 	SpriteFrame(-8, -8, 16, 16, 101, 1) 	// chain link 		- #1
 	SpriteFrame(-24, -8, 48, 16, 118, 1) 	// platform 		- #2

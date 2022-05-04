@@ -78,7 +78,7 @@ function SeeSaw_SetupHitbox
 		temp1 = -6
 		temp2 = 48
 	else
-		temp1 = object[currentPlayer].xpos
+		temp1 = player[currentPlayer].xpos
 		temp1 -= object.xpos
 		temp1 >>= 16
 		temp1 += 48
@@ -100,6 +100,10 @@ function SeeSaw_SetupHitbox
 	end if
 end function
 
+
+// ========================
+// Events
+// ========================
 
 event ObjectMain
 	temp0 = object.tiltTimerL
@@ -254,14 +258,14 @@ event ObjectMain
 		if temp2 != 0
 			temp3 = temp2
 			FlipSign(temp3)
-			if object[currentPlayer].yvel > object.launchVelocity
-				temp4 = object[currentPlayer].yvel
+			if player[currentPlayer].yvel > object.launchVelocity
+				temp4 = player[currentPlayer].yvel
 				temp4 += 0x7000
 			else
 				temp4 = object.launchVelocity
 			end if
 
-			if object[currentPlayer].gravity == GRAVITY_AIR
+			if player[currentPlayer].gravity == GRAVITY_AIR
 				BoxCollisionTest(C_PLATFORM, object.entityPos, temp3, temp0, temp2, temp1, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			else
 				checkResult = false
@@ -275,10 +279,10 @@ event ObjectMain
 					CallFunction(SeeSaw_SetupHitbox)
 					temp0 -= temp6
 					temp0 <<= 16
-					object[currentPlayer].ypos += temp0
+					player[currentPlayer].ypos += temp0
 				end if
 
-				object[currentPlayer].ypos += 0x20000
+				player[currentPlayer].ypos += 0x20000
 				if object.orbSide == 0
 					if object.state == SEESAW_ORB_IDLE
 						object.state = SEESAW_NONE
@@ -288,13 +292,13 @@ event ObjectMain
 						end if
 					end if
 
-					temp0 = object[currentPlayer].xpos
+					temp0 = player[currentPlayer].xpos
 					temp0 -= object.xpos
 					Abs(temp0)
 					if temp0 < 0x80000
 						object.tiltTimerM++
 					else
-						if object[currentPlayer].xpos < object.xpos
+						if player[currentPlayer].xpos < object.xpos
 							object.tiltTimerL++
 							if object.targetTilt != SEESAW_TILT_L
 								object.launchVelocity = temp4
@@ -307,12 +311,12 @@ event ObjectMain
 						end if
 					end if
 				else
-					temp0 = object[currentPlayer].xpos
+					temp0 = player[currentPlayer].xpos
 					temp0 -= object.xpos
 					Abs(temp0)
 					temp4 = object.yvel
 					if temp0 >= 0x80000
-						if object[currentPlayer].xpos < object.xpos
+						if player[currentPlayer].xpos < object.xpos
 							if object.orbSide == 1
 								temp4 = 0
 							end if
@@ -324,23 +328,23 @@ event ObjectMain
 					end if
 
 					if temp4 != 0
-						object[currentPlayer].state = PlayerObject_HandleAir
-						object[currentPlayer].gravity = GRAVITY_AIR
-						object[currentPlayer].speed = object[currentPlayer].xvel
+						player[currentPlayer].state = PlayerObject_HandleAir
+						player[currentPlayer].gravity = GRAVITY_AIR
+						player[currentPlayer].speed = player[currentPlayer].xvel
 						if object.state == SEESAW_NO_ORB
-							object[currentPlayer].animation = ANI_JUMPING
+							player[currentPlayer].animation = ANI_JUMPING
 						else
 							if object.orbTimer != 0
-								object[currentPlayer].animation = ANI_JUMPING
+								player[currentPlayer].animation = ANI_JUMPING
 							else
-								object[currentPlayer].animation = ANI_BOUNCING
+								player[currentPlayer].animation = ANI_BOUNCING
 							end if
 						end if
 
 						player[currentPlayer].timer = 0
 						PlaySfx(SfxName[Spring], false)
-						object[currentPlayer].yvel = temp4
-						FlipSign(object[currentPlayer].yvel)
+						player[currentPlayer].yvel = temp4
+						FlipSign(player[currentPlayer].yvel)
 					end if
 				end if
 			end if
@@ -448,6 +452,11 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
@@ -470,18 +479,19 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	if object.propertyValue == 0
 		object.orbTargetPos.x = object.xpos
 		object.orbTargetPos.x += 0x280000
 		object.orbTargetPos.y = object.ypos
 		object.orbTargetPos.y -= 0x80000
-		object.orbFrame = 2
-		DrawSpriteXY(object.orbFrame, object.orbTargetPos.x, object.orbTargetPos.y)
+		DrawSpriteXY(2, object.orbTargetPos.x, object.orbTargetPos.y)
 	end if
 
 	DrawSprite(0)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("SLZ/Objects.gif")
