@@ -13,10 +13,14 @@ private alias object.value1  : object.timer
 private alias object.value3  : object.rewardPlayer
 private alias object.value31 : object.altContents
 
-// player aliases
+// Player Aliases
+private alias object.propertyValue : player.character
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
 private alias object.value16 : player.isSidekick
 private alias object.value17 : debugMode.currentSelection
-private alias object.value25 : player.gravityStrength 		// Also used in underwater checks, 0x1000 if underwater, otherwise 0x3800. Not to be confused with player.gravity
+private alias object.value25 : player.gravityStrength
 private alias object.value40 : player.hitboxLeft
 private alias object.value38 : player.hitboxTop
 private alias object.value41 : player.hitboxRight
@@ -51,29 +55,32 @@ private alias 0 : MONITOR_STATE_RISE
 // Game Modes
 private alias 2 : MODE_TIMEATTACK
 
+
 // ========================
 // Function Declarations
 // ========================
 reserve function Monitor_DebugDraw
 reserve function Monitor_DebugSpawn
 
+
 // ========================
 // Static Values
 // ========================
 private value Monitor_startDebugID = 0
 
+
 // ========================
 // Tables
 // ========================
 
-// Use S2 shields only
+// This variant uses S2 shields only
 private table Monitor_randTypesTable_S2
 	MONITOR_RINGS, MONITOR_SHIELD_BLUE, MONITOR_INVINCIBILITY, MONITOR_SPEEDSHOES, MONITOR_1UP_SONIC
 	MONITOR_EGGMAN, MONITOR_TELEPORT
 	MONITOR_RINGS, MONITOR_SHIELD_BLUE, MONITOR_RINGS
 end table
 
-// Use S3 shields as well!
+// This table uses S3 shields as well!
 private table Monitor_randTypesTable_S3
 	MONITOR_RINGS, MONITOR_SHIELD_BLUE, MONITOR_INVINCIBILITY, MONITOR_SPEEDSHOES, MONITOR_1UP_SONIC
 	MONITOR_SHIELD_BUBBLE, MONITOR_SHIELD_FIRE, MONITOR_SHIELD_LIGHTNING
@@ -116,6 +123,10 @@ function Monitor_DebugSpawn
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectMain
 	if object.state == MONITOR_STATE_FALL
 		object.yvel += 0x3800
@@ -130,16 +141,16 @@ event ObjectMain
 	end if
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		CheckGreater(object[currentPlayer].yvel, -1)
+		CheckGreater(player[currentPlayer].yvel, -1)
 		temp0 = checkResult
-		CheckEqual(object[currentPlayer].gravity, GRAVITY_GROUND)
+		CheckEqual(player[currentPlayer].gravity, GRAVITY_GROUND)
 		temp0 |= checkResult
 		if temp0 == true
-			CheckEqual(object[currentPlayer].animation, ANI_JUMPING)
+			CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
 			temp0 = checkResult
-			CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
+			CheckEqual(player[currentPlayer].animation, ANI_GLIDING)
 			temp0 |= checkResult
-			CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
+			CheckEqual(player[currentPlayer].animation, ANI_GLIDING_STOP)
 			temp0 |= checkResult
 			if temp0 == true
 				if player[currentPlayer].isSidekick == false
@@ -148,9 +159,9 @@ event ObjectMain
 						object.state = MONITOR_STATE_RISE
 						CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
 						object[tempObjectPos].drawOrder = 4
-						object[currentPlayer].yvel += player[currentPlayer].gravityStrength
-						object[currentPlayer].yvel += player[currentPlayer].gravityStrength
-						FlipSign(object[currentPlayer].yvel)
+						player[currentPlayer].yvel += player[currentPlayer].gravityStrength
+						player[currentPlayer].yvel += player[currentPlayer].gravityStrength
+						FlipSign(player[currentPlayer].yvel)
 
 						object.type = TypeName[Broken Monitor]
 						object.rewardPlayer = currentPlayer
@@ -170,7 +181,7 @@ event ObjectMain
 							temp0 %= 10
 
 							if options.vsMode == true
-								if object[currentPlayer].propertyValue == 0
+								if player[currentPlayer].character == 0
 									GetTableValue(object.propertyValue, temp0, Monitor_randTypesTable_S3)
 								else
 									GetTableValue(object.propertyValue, temp0, Monitor_randTypesTable_S2)
@@ -235,7 +246,7 @@ event ObjectMain
 			if checkResult == COL_BOTTOM
 				object.state = MONITOR_STATE_FALL
 				object.yvel = -0x20000
-				object[currentPlayer].yvel = 0x20000
+				player[currentPlayer].yvel = 0x20000
 			end if
 		end if
 	next
@@ -336,7 +347,7 @@ event ObjectStartup
 		next
 	end if
 	
-	// Erase all Sonic 1UP monitors in 2P
+	// Only 1 life in Time Attack, remove all 1UP monitors
 	if options.gameMode == MODE_TIMEATTACK
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
 			if object[arrayPos0].propertyValue == MONITOR_1UP_SONIC
@@ -391,6 +402,7 @@ event ObjectStartup
 	next
 end event
 
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
@@ -429,6 +441,7 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	object.frame = object.propertyValue
 	object.frame &= 0xF
@@ -436,6 +449,7 @@ event RSDKDraw
 	DrawSprite(0)
 	DrawSprite(object.frame)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Items.gif")

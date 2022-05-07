@@ -36,6 +36,18 @@ private alias 1 : GRABBER_ANI_OPENCLAMP
 private alias 2 : GRABBER_ANI_GRABBED
 
 // Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.value 1 : player.timer
 private alias object.value40 : player.hitboxLeft
 private alias object.value38 : player.hitboxTop
 private alias object.value41 : player.hitboxRight
@@ -89,6 +101,10 @@ function Grabber_DebugSpawn
 	CallFunction(Grabber_Setup)
 end function
 
+
+// ========================
+// Events
+// ========================
 
 event ObjectMain
 	object.priority = PRIORITY_ACTIVE
@@ -152,9 +168,9 @@ event ObjectMain
 
 		object.ypos -= 0x20000
 		currentPlayer = object.targetPlayer
-		object[currentPlayer].xpos = object.xpos
-		object[currentPlayer].ypos = object.ypos
-		object[currentPlayer].ypos += 0x100000
+		player[currentPlayer].xpos = object.xpos
+		player[currentPlayer].ypos = object.ypos
+		player[currentPlayer].ypos += 0x100000
 		break
 
 	case GRABBER_STRUGGLE
@@ -168,11 +184,11 @@ event ObjectMain
 				end if
 
 				temp0 = 0
-				if object[currentPlayer].left != false
+				if player[currentPlayer].left != false
 					temp0 |= 1
 				end if
 
-				if object[currentPlayer].right != false
+				if player[currentPlayer].right != false
 					temp0 |= 2
 				end if
 
@@ -182,7 +198,7 @@ event ObjectMain
 							object.struggleFlags = temp0
 							object.struggleTimer++
 							if object.struggleTimer >= 4
-								object[currentPlayer].state = PlayerObject_HandleAir
+								player[currentPlayer].state = PlayerObject_HandleAir
 								object.targetPlayer = -1
 								object.explodeTimer = 16
 								object.state = GRABBER_ESCAPED
@@ -193,19 +209,19 @@ event ObjectMain
 					end if
 				end if
 			else
-				if object[currentPlayer].left != false
+				if player[currentPlayer].left != false
 					object.struggleFlags |= 1
 					object.struggleDelay = 32
 				end if
-				if object[currentPlayer].right != false
+				if player[currentPlayer].right != false
 					object.struggleFlags |= 2
 					object.struggleDelay = 32
 				end if
 			end if
 
-			object[currentPlayer].xpos = object.xpos
-			object[currentPlayer].ypos = object.ypos
-			object[currentPlayer].ypos += 0x100000
+			player[currentPlayer].xpos = object.xpos
+			player[currentPlayer].ypos = object.ypos
+			player[currentPlayer].ypos += 0x100000
 		end if
 		break
 
@@ -236,22 +252,22 @@ event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if currentPlayer != temp7
 			if object.targetPlayer == -1
-				if object[currentPlayer].state != PlayerObject_Blank
+				if player[currentPlayer].state != PlayerObject_Blank
 					if object.animation == GRABBER_ANI_OPENCLAMP
 						BoxCollisionTest(C_TOUCH, object.entityPos, -8, 0, 8, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 						if checkResult == true
 							object.state = GRABBER_GRABBED
 							object.animation = GRABBER_ANI_IDLE
 							object.targetPlayer = currentPlayer
-							object[currentPlayer].xvel = 0
-							object[currentPlayer].yvel = 0
-							object[currentPlayer].speed = 0
-							object[currentPlayer].startPos.y = 0
-							object[currentPlayer].state = PlayerObject_Blank
-							object[currentPlayer].gravity = GRAVITY_AIR
-							object[currentPlayer].animation = ANI_GRABBED
-							object[currentPlayer].direction = object.direction
-							object[currentPlayer].direction ^= FLIP_X
+							player[currentPlayer].xvel = 0
+							player[currentPlayer].yvel = 0
+							player[currentPlayer].speed = 0
+							player[currentPlayer].timer = 0
+							player[currentPlayer].state = PlayerObject_Blank
+							player[currentPlayer].gravity = GRAVITY_AIR
+							player[currentPlayer].animation = ANI_GRABBED
+							player[currentPlayer].direction = object.direction
+							player[currentPlayer].direction ^= FLIP_X
 							checkResult = true
 						end if
 					else
@@ -260,7 +276,7 @@ event ObjectMain
 				end if
 			end if
 
-			if object[currentPlayer].state != PlayerObject_Blank
+			if player[currentPlayer].state != PlayerObject_Blank
 				if object.explodeTimer == 0
 					if checkResult == false
 						BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
@@ -304,10 +320,10 @@ event ObjectMain
 			if object.timer == 0
 				if object.targetPlayer != -1
 					currentPlayer = object.targetPlayer
-					if object[currentPlayer].state == PlayerObject_Blank
+					if player[currentPlayer].state == PlayerObject_Blank
 						CallFunction(PlayerObject_Hit)
-						if object[currentPlayer].state != PlayerObject_Hurt
-							object[currentPlayer].state = PlayerObject_HandleAir
+						if player[currentPlayer].state != PlayerObject_Hurt
+							player[currentPlayer].state = PlayerObject_HandleAir
 						end if
 
 						object.targetPlayer = -1
@@ -326,7 +342,7 @@ event ObjectMain
 	if object.type != TypeName[Grabber]
 		if temp7 != -1
 			currentPlayer = temp7
-			object[currentPlayer].state = PlayerObject_HandleAir
+			player[currentPlayer].state = PlayerObject_HandleAir
 		end if
 	end if
 end event
@@ -409,6 +425,11 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
@@ -434,6 +455,7 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	if object.propertyValue == 0
 		object.direction = FLIP_NONE
@@ -447,6 +469,7 @@ event RSDKDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 	DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
 end event
+
 
 event RSDKLoad
 	CheckCurrentStageFolder("Zone02")

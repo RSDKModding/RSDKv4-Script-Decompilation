@@ -10,6 +10,7 @@
 // ========================
 
 // Variables
+//value0 is unused...
 private alias object.value1 : object.spinCount
 private alias object.value2 : object.spinTimer
 private alias object.value3 : object.activePlayers
@@ -26,6 +27,27 @@ private alias 5 : SIGNPOST_UNUSED
 private alias 6 : SIGNPOST_FINISHED
 
 // Player Aliases
+private alias object.type : player.type
+private alias object.propertyValue : player.character
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.speed : player.speed
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.controlMode : player.controlMode
+private alias object.interaction : player.interaction
+private alias object.jumpPress : player.jumpPress
+private alias object.jumpHold : player.jumpHold
+private alias object.up : player.up
+private alias object.down : player.down
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.value21 : player.acceleration
+
+private alias 0 : CHARACTER_SONIC
+private alias 1 : CHARACTER_TAILS
+private alias 2 : CHARACTER_KNUCKLES
+
 private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_FADEOUT
 
@@ -66,12 +88,16 @@ function SignPost_DebugSpawn
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectMain
 	switch object.state
 	case SIGNPOST_IDLE
 		temp0 = object.ypos
 		temp0 += 0x400000
-		if object[0].ypos < temp0
+		if player[0].ypos < temp0
 			stage.newXBoundary1 = object.xpos
 			stage.newXBoundary1 >>= 16
 			stage.newXBoundary1 -= screen.xcenter
@@ -81,21 +107,21 @@ event ObjectMain
 			stage.newXBoundary2 >>= 16
 			stage.newXBoundary2 += screen.xcenter
 
-			if object[0].xpos > object.xpos
+			if player[0].xpos > object.xpos
 				stage.newXBoundary1 = object.xpos
 				stage.newXBoundary1 >>= 16
 				stage.newXBoundary1 -= screen.xcenter
 				
-				switch object[0].propertyValue
-				case 0
+				switch player[0].character
+				case CHARACTER_SONIC
 					EditFrame(5, -24, -16, 48, 32, 34, 1)
 					break
 
-				case 1
+				case CHARACTER_TAILS
 					EditFrame(5, -24, -16, 48, 32, 34, 34)
 					break
 
-				case 2
+				case CHARACTER_KNUCKLES
 					EditFrame(5, -24, -16, 48, 32, 34, 67)
 					break
 				end switch
@@ -163,13 +189,45 @@ event ObjectMain
 		temp0 = screen.xcenter
 		temp0 <<= 16
 		temp0 += object.xpos
-		if object[0].xpos > temp0
+		if player[0].xpos > temp0
 			PlayMusic(TRACK_ACTFINISH)
 			object.state = SIGNPOST_FINISHED
 			object[30].type = TypeName[Act Finish]
 			object[30].drawOrder = 6
 			object[30].priority = PRIORITY_ACTIVE
 		end if
+
+#platform: USE_DECOMP
+		// Another finish condition, new to the decomp
+		//  -> On wide displays, sometimes Sonic is unable to go offscreen
+		//     This means that, after he passes the signpost, the Act Results will never spawn and he'll be softlocked forever
+		//     With the decomp, let's go ahead and implement a fallback so that this doesn't happen
+
+		// Find player's truncated XPos and add 23 (the collision offset size) to it
+		temp0 = player[0].xpos
+		temp0 >>= 16
+		temp0 += 23
+		
+		// First check if the player's touching the right bounds
+		CheckEqual(temp0, stage.curXBoundary2)
+		temp3 = checkResult
+		
+		// Then check that the player has their base speed (as it gets reset upon hitting the right barrier)
+		CheckEqual(player[0].speed, player[0].acceleration)
+		temp3 &= checkResult
+		
+		// And finally, a small check to make sure the results haven't already been spawned earlier this frame
+		CheckNotEqual(object.state, SIGNPOST_FINISHED)
+		temp3 &= checkResult
+
+		if temp3 == true
+			PlayMusic(TRACK_ACTFINISH)
+			object.state = SIGNPOST_FINISHED
+			object[30].type = TypeName[Act Finish]
+			object[30].drawOrder = 6
+			object[30].priority = PRIORITY_ACTIVE
+		end if
+#endplatform
 		break
 
 	case SIGNPOST_IDLE_VS
@@ -179,7 +237,7 @@ event ObjectMain
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			GetBit(temp1, object.activePlayers, currentPlayer)
 			if temp1 == false
-				if object[currentPlayer].xpos > object.xpos
+				if player[currentPlayer].xpos > object.xpos
 					object.priority = PRIORITY_ACTIVE
 					
 					SetBit(object.activePlayers, currentPlayer, true)
@@ -229,7 +287,7 @@ event ObjectMain
 						object[30].state = VSGAME_FINISH_COUNTDOWN
 						vsGame[30].countdownPlayer = currentPlayer
 						vsGame[30].countdownPlayer ^= 1
-						switch object[currentPlayer].propertyValue
+						switch player[currentPlayer].character
 						case 0
 							EditFrame(5, -24, -16, 48, 32, 34, 1)
 							break
@@ -260,7 +318,7 @@ event ObjectMain
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				GetBit(temp1, object.activePlayers, currentPlayer)
 				if temp1 == false
-					if object[currentPlayer].xpos > object.xpos
+					if player[currentPlayer].xpos > object.xpos
 						object.spinTimer	= 1
 						object.frame 	 	= 4
 						object.spinCount 	= 1
@@ -328,23 +386,23 @@ event ObjectMain
 	while currentPlayer < playerCount
 		GetBit(temp1, object.activePlayers, currentPlayer)
 		if temp1 == true
-			object[currentPlayer].interaction 	= false
-			object[currentPlayer].controlMode 	= -1
-			object[currentPlayer].up 			= false
-			object[currentPlayer].down 			= false
-			object[currentPlayer].left 			= false
-			object[currentPlayer].right 		= true
-			object[currentPlayer].jumpPress 	= false
-			object[currentPlayer].jumpHold 		= false
+			player[currentPlayer].interaction 	= false
+			player[currentPlayer].controlMode 	= -1
+			player[currentPlayer].up 			= false
+			player[currentPlayer].down 			= false
+			player[currentPlayer].left 			= false
+			player[currentPlayer].right 		= true
+			player[currentPlayer].jumpPress 	= false
+			player[currentPlayer].jumpHold 		= false
 		end if
 
-		if object[currentPlayer].xpos > temp0
-			object[currentPlayer].xpos 	= temp0
-			object[currentPlayer].speed = 0
-			object[currentPlayer].xvel 	= 0
+		if player[currentPlayer].xpos > temp0
+			player[currentPlayer].xpos 	= temp0
+			player[currentPlayer].speed = 0
+			player[currentPlayer].xvel 	= 0
 		end if
 
-		if object[currentPlayer].type == TypeName[Debug Mode]
+		if player[currentPlayer].type == TypeName[Debug Mode]
 			SetBit(object.activePlayers, currentPlayer, false)
 		end if
 		currentPlayer++
@@ -402,6 +460,11 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
@@ -424,10 +487,12 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	DrawSprite(0)
 	DrawSprite(1)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Items2.gif")

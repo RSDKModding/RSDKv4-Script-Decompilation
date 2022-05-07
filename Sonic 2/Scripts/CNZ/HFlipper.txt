@@ -25,8 +25,26 @@ private alias 0 : HFLIPPER_IDLE
 private alias 1 : HFLIPPER_ACTIVATED
 
 // Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.ixpos : player.ixpos
+private alias object.iypos : player.iypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.prevAnimation : player.prevAnimation
+private alias object.animation : player.animation
+private alias object.controlLock : player.controlLock
+private alias object.scrollTracking : player.scrollTracking
+private alias object.collisionLeft : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+private alias object.collisionBottom : player.collisionBottom
+private alias object.jumpPress : player.jumpPress
+
 private alias object.value1  : player.timer
-private alias object.value30 : player.jumpOffset			// Added to the player's position when jumping/rolling. Normally -5 for S&K, and -1 for Tails
+private alias object.value30 : player.jumpOffset
 
 // ========================
 // Function Declarations
@@ -73,7 +91,7 @@ end function
 
 
 function HFlipper_LaunchPlayer
-	temp0 = object[currentPlayer].ixpos
+	temp0 = player[currentPlayer].ixpos
 	temp0 -= object.ixpos
 	if object.direction == FLIP_X
 		FlipSign(temp0)
@@ -97,14 +115,18 @@ function HFlipper_LaunchPlayer
 	temp0 *= temp2
 	temp1 *= temp2
 
-	object[currentPlayer].yvel = temp0
+	player[currentPlayer].yvel = temp0
 	if object.direction == FLIP_X
 		FlipSign(temp1)
 	end if
-	object[currentPlayer].speed = temp1
-	object[currentPlayer].xvel = temp1
+	player[currentPlayer].speed = temp1
+	player[currentPlayer].xvel = temp1
 end function
 
+
+// ========================
+// Events
+// ========================
 
 event ObjectMain
 	switch object.state
@@ -127,20 +149,20 @@ event ObjectMain
 	end switch
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		CheckEqual(object[currentPlayer].state, PlayerObject_Death)
+		CheckEqual(player[currentPlayer].state, PlayerObject_Death)
 		temp0 = checkResult
-		CheckEqual(object[currentPlayer].state, PlayerObject_Hurt)
+		CheckEqual(player[currentPlayer].state, PlayerObject_Hurt)
 		temp0 |= checkResult
 		if temp0 == false
-			object.sensorPosL = object[currentPlayer].xpos
+			object.sensorPosL = player[currentPlayer].xpos
 			object.sensorPosL -= object.xpos
 			object.sensorPosL >>= 16
 
 			object.sensorPosM = object.sensorPosL
-			object.sensorPosM += object[currentPlayer].collisionLeft
+			object.sensorPosM += player[currentPlayer].collisionLeft
 
 			object.sensorPosR = object.sensorPosL
-			object.sensorPosR += object[currentPlayer].collisionRight
+			object.sensorPosR += player[currentPlayer].collisionRight
 
 			object.sensorPosM += 24
 
@@ -196,24 +218,24 @@ event ObjectMain
 				object.hitboxB = object.sensorHeightR
 			end if
 
-			if object[currentPlayer].state != PlayerObject_Blank
+			if player[currentPlayer].state != PlayerObject_Blank
 				BoxCollisionTest(C_BOX, object.entityPos, -24, object.hitboxT, 24, object.hitboxB, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if checkResult == COL_BOTTOM
-					CheckEqual(object[currentPlayer].state, PlayerObject_KnuxWallClimb)
+					CheckEqual(player[currentPlayer].state, PlayerObject_KnuxWallClimb)
 					temp0 = checkResult
-					CheckEqual(object[currentPlayer].state, PlayerObject_KnuxGlideLeft)
+					CheckEqual(player[currentPlayer].state, PlayerObject_KnuxGlideLeft)
 					temp0 |= checkResult
-					CheckEqual(object[currentPlayer].state, PlayerObject_KnuxGlideRight)
+					CheckEqual(player[currentPlayer].state, PlayerObject_KnuxGlideRight)
 					temp0 |= checkResult
-					CheckEqual(object[currentPlayer].state, PlayerObject_HandleTailsFlight)
+					CheckEqual(player[currentPlayer].state, PlayerObject_HandleTailsFlight)
 					temp0 |= checkResult
-					CheckEqual(object[currentPlayer].state, PlayerObject_TubeSwitch)
+					CheckEqual(player[currentPlayer].state, PlayerObject_TubeSwitch)
 					temp0 |= checkResult
-					CheckEqual(object[currentPlayer].state, PlayerObject_AirCtrlLock)
+					CheckEqual(player[currentPlayer].state, PlayerObject_AirCtrlLock)
 					temp0 |= checkResult
 					if temp0 == false
-						object[currentPlayer].state = PlayerObject_HandleAir
-						object[currentPlayer].gravity = GRAVITY_AIR
+						player[currentPlayer].state = PlayerObject_HandleAir
+						player[currentPlayer].gravity = GRAVITY_AIR
 					end if
 				end if
 
@@ -227,11 +249,11 @@ event ObjectMain
 			object.hitboxB += 8
 			BoxCollisionTest(C_TOUCH, object.entityPos, -24, object.hitboxT, 24, object.hitboxB, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			if checkResult == true
-				object[currentPlayer].ypos = object.hitboxT
-				object[currentPlayer].ypos += temp0
-				object[currentPlayer].ypos -= object[currentPlayer].collisionBottom
-				object[currentPlayer].ypos <<= 16
-				object[currentPlayer].ypos += object.ypos
+				player[currentPlayer].ypos = object.hitboxT
+				player[currentPlayer].ypos += temp0
+				player[currentPlayer].ypos -= player[currentPlayer].collisionBottom
+				player[currentPlayer].ypos <<= 16
+				player[currentPlayer].ypos += object.ypos
 				if object.state == HFLIPPER_IDLE
 					if object.direction == FLIP_NONE
 						BoxCollisionTest(C_TOUCH, object.entityPos, -26, -12, 20, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
@@ -240,67 +262,67 @@ event ObjectMain
 					end if
 
 					if checkResult == true
-						CheckEqual(object[currentPlayer].state, PlayerObject_TubeSwitch)
+						CheckEqual(player[currentPlayer].state, PlayerObject_TubeSwitch)
 						temp0 = checkResult
-						CheckEqual(object[currentPlayer].state, PlayerObject_AirCtrlLock)
+						CheckEqual(player[currentPlayer].state, PlayerObject_AirCtrlLock)
 						temp0 |= checkResult
 						if temp0 == false
-							object[currentPlayer].state 	= PlayerObject_HandleRolling
-							object[currentPlayer].animation = ANI_JUMPING
+							player[currentPlayer].state 	= PlayerObject_HandleRolling
+							player[currentPlayer].animation = ANI_JUMPING
 						end if
 
-						object[currentPlayer].scrollTracking = false
-						object[currentPlayer].gravity = GRAVITY_GROUND
-						object[currentPlayer].controlLock = 8
-						if object[currentPlayer].jumpPress == true
-							CheckEqual(object[currentPlayer].state, PlayerObject_TubeSwitch)
+						player[currentPlayer].scrollTracking = false
+						player[currentPlayer].gravity = GRAVITY_GROUND
+						player[currentPlayer].controlLock = 8
+						if player[currentPlayer].jumpPress == true
+							CheckEqual(player[currentPlayer].state, PlayerObject_TubeSwitch)
 							temp0 = checkResult
-							CheckEqual(object[currentPlayer].state, PlayerObject_AirCtrlLock)
+							CheckEqual(player[currentPlayer].state, PlayerObject_AirCtrlLock)
 							temp0 |= checkResult
 							if temp0 == false
-								object[currentPlayer].state = PlayerObject_HandleAir
+								player[currentPlayer].state = PlayerObject_HandleAir
 							end if
 
-							object[currentPlayer].gravity 		= GRAVITY_AIR
+							player[currentPlayer].gravity 		= GRAVITY_AIR
 							player[currentPlayer].timer 		= 0
-							object[currentPlayer].controlLock 	= 0
+							player[currentPlayer].controlLock 	= 0
 							CallFunction(HFlipper_LaunchPlayer)
 							object.state = HFLIPPER_ACTIVATED
 							StopSfx(SfxName[Jump])
 							PlaySfx(SfxName[Flipper], false)
 						else
-							object[currentPlayer].speed = object.xvel
-							object[currentPlayer].xvel = object.xvel
-							object[currentPlayer].yvel = 0
+							player[currentPlayer].speed = object.xvel
+							player[currentPlayer].xvel = object.xvel
+							player[currentPlayer].yvel = 0
 						end if
 					else
-						CheckEqual(object[currentPlayer].state, PlayerObject_TubeSwitch)
+						CheckEqual(player[currentPlayer].state, PlayerObject_TubeSwitch)
 						temp0 = checkResult
-						CheckEqual(object[currentPlayer].state, PlayerObject_AirCtrlLock)
+						CheckEqual(player[currentPlayer].state, PlayerObject_AirCtrlLock)
 						temp0 |= checkResult
 						if temp0 == false
-							object[currentPlayer].state = PlayerObject_HandleAir
+							player[currentPlayer].state = PlayerObject_HandleAir
 						end if
 
-						object[currentPlayer].gravity 	= GRAVITY_AIR
+						player[currentPlayer].gravity 	= GRAVITY_AIR
 						player[currentPlayer].timer 	= 0
 					end if
 
-					object[currentPlayer].animation = ANI_JUMPING
-					if object[currentPlayer].prevAnimation != ANI_JUMPING
-						object[currentPlayer].iypos -= player[currentPlayer].jumpOffset
+					player[currentPlayer].animation = ANI_JUMPING
+					if player[currentPlayer].prevAnimation != ANI_JUMPING
+						player[currentPlayer].iypos -= player[currentPlayer].jumpOffset
 					end if
 				else
-					CheckEqual(object[currentPlayer].state, PlayerObject_TubeSwitch)
+					CheckEqual(player[currentPlayer].state, PlayerObject_TubeSwitch)
 					temp0 = checkResult
-					CheckEqual(object[currentPlayer].state, PlayerObject_AirCtrlLock)
+					CheckEqual(player[currentPlayer].state, PlayerObject_AirCtrlLock)
 					temp0 |= checkResult
 					if temp0 == false
-						object[currentPlayer].state = PlayerObject_HandleAir
+						player[currentPlayer].state = PlayerObject_HandleAir
 					end if
 
 					CallFunction(HFlipper_LaunchPlayer)
-					object[currentPlayer].gravity 	= GRAVITY_AIR
+					player[currentPlayer].gravity 	= GRAVITY_AIR
 					player[currentPlayer].timer 	= 0
 				end if
 			end if
@@ -349,6 +371,11 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
@@ -371,11 +398,13 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	object.direction = object.propertyValue
 	object.direction &= 1
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
+
 
 event RSDKLoad
 	CheckCurrentStageFolder("Zone04")

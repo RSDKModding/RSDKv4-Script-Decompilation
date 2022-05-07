@@ -25,9 +25,25 @@ private alias 0 : MODE_NOSAVE
 private alias 1 : MODE_NORMAL
 private alias 2 : MODE_TIMEATTACK
 
-// Super States
+// Player Aliases
 private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_UNTRANSFORM
+
+private alias object.type : player.type
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.up : player.up
+private alias object.down : player.down
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.jumpPress : player.jumpPress
+private alias object.jumpHold : player.jumpHold
+private alias object.interaction : player.interaction
+private alias object.controlMode : player.controlMode
 
 // ========================
 // Function Declarations
@@ -48,12 +64,16 @@ function SignPost_DebugSpawn
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectMain
 	switch object.state
 	case SIGNPOST_AWAITPLAYER
 		temp0 = object.ypos
 		temp0 += 0x400000
-		if object[0].ypos < temp0
+		if player[0].ypos < temp0
 			stage.newXBoundary1 = object.xpos
 			stage.newXBoundary1 >>= 16
 			stage.newXBoundary1 -= screen.xcenter
@@ -61,7 +81,7 @@ event ObjectMain
 			stage.newXBoundary2 = object.xpos
 			stage.newXBoundary2 >>= 16
 			stage.newXBoundary2 += screen.xcenter
-			if object[0].xpos > object.xpos
+			if player[0].xpos > object.xpos
 				stage.newXBoundary1 = object.xpos
 				stage.newXBoundary1 >>= 16
 				stage.newXBoundary1 -= screen.xcenter
@@ -106,7 +126,7 @@ event ObjectMain
 
 				object.spinCount--
 				if object.spinCount == 0
-					if object[0].type == TypeName[Blank Object]
+					if player[0].type == TypeName[Blank Object]
 						object.state = SIGNPOST_TOSPECIALSTAGE
 
 						if object.propertyValue < 3
@@ -120,33 +140,33 @@ event ObjectMain
 						object[30].type = TypeName[Act Finish]
 						object[30].drawOrder = 6
 						object[30].priority = PRIORITY_ACTIVE
-						object[0].controlMode = -1
-						object[0].interaction = false
+						player[0].controlMode = CONTROLMODE_NONE
+						player[0].interaction = false
 						if stage.player2Enabled == true
-							object[1].interaction 	= false
-							object[1].controlMode 	= -1
-							object[1].up 			= false
-							object[1].down 			= false
-							object[1].left 			= false
-							object[1].jumpPress 	= false
-							object[1].jumpHold 		= false
+							player[1].interaction 	= false
+							player[1].controlMode 	= -1
+							player[1].up 			= false
+							player[1].down 			= false
+							player[1].left 			= false
+							player[1].jumpPress 	= false
+							player[1].jumpHold 		= false
 						end if
 					else
-						object[0].controlMode 	= -1
-						object[0].interaction 	= false
-						object[0].up 			= false
-						object[0].down 			= false
-						object[0].left 			= false
-						object[0].jumpPress 	= false
-						object[0].jumpHold 		= false
+						player[0].controlMode 	= -1
+						player[0].interaction 	= false
+						player[0].up 			= false
+						player[0].down 			= false
+						player[0].left 			= false
+						player[0].jumpPress 	= false
+						player[0].jumpHold 		= false
 						if stage.player2Enabled == true
-							object[1].controlMode 	= -1
-							object[1].interaction 	= false
-							object[1].up 			= false
-							object[1].down 			= false
-							object[1].left 			= false
-							object[1].jumpPress 	= false
-							object[1].jumpHold 		= false
+							player[1].controlMode 	= -1
+							player[1].interaction 	= false
+							player[1].up 			= false
+							player[1].down 			= false
+							player[1].left 			= false
+							player[1].jumpPress 	= false
+							player[1].jumpHold 		= false
 						end if
 
 						object.state = SIGNPOST_HANDLEACTFINISH
@@ -159,23 +179,23 @@ event ObjectMain
 		temp0 += screen.xcenter
 		temp0 <<= 16
 		temp0 += object.xpos
-		if object[0].xpos > temp0
-			object[0].xpos = temp0
-			object[0].speed = 0
-			object[0].xvel = 0
+		if player[0].xpos > temp0
+			player[0].xpos = temp0
+			player[0].speed = 0
+			player[0].xvel = 0
 		end if
 
 		if stage.player2Enabled == true
-			if object[1].xpos > temp0
-				object[1].xpos = temp0
-				object[1].speed = 0
-				object[1].xvel = 0
+			if player[1].xpos > temp0
+				player[1].xpos = temp0
+				player[1].speed = 0
+				player[1].xvel = 0
 			end if
 		end if
 		break
 
 	case SIGNPOST_HANDLEACTFINISH
-		if object[0].type == TypeName[Blank Object]
+		if player[0].type == TypeName[Blank Object]
 			object.state = SIGNPOST_TOSPECIALSTAGE
 			if object.propertyValue < 3
 				PlayMusic(TRACK_ACTFINISH)
@@ -189,15 +209,15 @@ event ObjectMain
 			object[30].priority = PRIORITY_ACTIVE
 		end if
 
-		if object[0].controlMode == -1
-			object[0].right = true
+		if player[0].controlMode == -1
+			player[0].right = true
 		end if
 
 		if stage.player2Enabled == true
-			object[1].controlMode = object[0].controlMode
-			if object[1].controlMode == -1
-				if object[1].left == false
-					object[1].right = true
+			player[1].controlMode = player[0].controlMode
+			if player[1].controlMode == -1
+				if player[1].left == false
+					player[1].right = true
 				end if
 			end if
 		end if
@@ -205,7 +225,7 @@ event ObjectMain
 		temp0 = screen.xcenter
 		temp0 <<= 16
 		temp0 += object.xpos
-		if object[0].xpos > temp0
+		if player[0].xpos > temp0
 			if object.propertyValue < 3
 				PlayMusic(TRACK_ACTFINISH)
 			else
@@ -222,29 +242,29 @@ event ObjectMain
 		break
 
 	case SIGNPOST_EXITSTAGERIGHT
-		if object[0].controlMode == -1
-			object[0].right = true
+		if player[0].controlMode == -1
+			player[0].right = true
 		end if
 
 		temp0 = 40
 		temp0 += screen.xcenter
 		temp0 <<= 16
 		temp0 += object.xpos
-		if object[0].xpos > temp0
-			object[0].xpos = temp0
-			object[0].speed = 0
-			object[0].xvel = 0
+		if player[0].xpos > temp0
+			player[0].xpos = temp0
+			player[0].speed = 0
+			player[0].xvel = 0
 		end if
 
 		if stage.player2Enabled == true
-			if object[1].controlMode == -1
-				object[1].right = true
+			if player[1].controlMode == -1
+				player[1].right = true
 			end if
 
-			if object[1].xpos > temp0
-				object[1].xpos = temp0
-				object[1].speed = 0
-				object[1].xvel = 0
+			if player[1].xpos > temp0
+				player[1].xpos = temp0
+				player[1].speed = 0
+				player[1].xvel = 0
 			end if
 		end if
 		break
@@ -255,12 +275,12 @@ event ObjectMain
 			temp0 += screen.xcenter
 			temp0 <<= 16
 			temp0 += object.xpos
-			object[1].right = true
-			object[1].controlMode = -1
-			if object[1].xpos > temp0
-				object[1].xpos = temp0
-				object[1].speed = 0
-				object[1].xvel = 0
+			player[1].right = true
+			player[1].controlMode = CONTROLMODE_NONE
+			if player[1].xpos > temp0
+				player[1].xpos = temp0
+				player[1].speed = 0
+				player[1].xvel = 0
 			end if
 		end if
 		break
@@ -332,6 +352,11 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
@@ -354,10 +379,12 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	DrawSprite(0)
 	DrawSprite(1)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Items2.gif")

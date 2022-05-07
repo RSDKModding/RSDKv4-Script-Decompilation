@@ -12,6 +12,13 @@ private alias object.value0 : object.boostSpeed
 private alias object.value1 : object.timer
 
 // Player Aliases
+private alias object.state : player.state
+private alias object.speed : player.speed
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.controlLock : player.controlLock
+
 private alias object.value1  : player.timer
 private alias object.value14 : player.skidding
 private alias object.value17 : debugMode.currentSelection
@@ -47,12 +54,16 @@ function SpeedBooster_DebugSpawn
 	if temp0 == 0
 		object[tempObjectPos].boostSpeed = 0x100000
 	else
-		object[tempObjectPos].boostSpeed = 0xA0000
+		object[tempObjectPos].boostSpeed = 0x0A0000
 	end if
 
 	object[tempObjectPos].drawOrder = 5
 end function
 
+
+// ========================
+// Events
+// ========================
 
 event ObjectMain
 	if object.timer != 0
@@ -62,7 +73,7 @@ event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, 0, 0, 0, 0)
 		if checkResult == true
-			if object[currentPlayer].gravity == GRAVITY_GROUND
+			if player[currentPlayer].gravity == GRAVITY_GROUND
 				if object.timer == 0
 					object.timer = 2
 					PlaySfx(SfxName[Spring], false)
@@ -72,31 +83,31 @@ event ObjectMain
 				temp0 = object.boostSpeed
 				if object.direction == FLIP_X
 					FlipSign(object.boostSpeed)
-					if object[currentPlayer].speed > temp0
+					if player[currentPlayer].speed > temp0
 						temp1 = true
 					end if
 				else
-					if object[currentPlayer].speed < temp0
+					if player[currentPlayer].speed < temp0
 						temp1 = true
 					end if
 				end if
 
 				if temp1 == true
-					object[currentPlayer].state = PlayerObject_HandleGround
-					if object[currentPlayer].animation != ANI_JUMPING
-						if object[currentPlayer].animation != ANI_RUNNING
-							object[currentPlayer].animation = ANI_WALKING
+					player[currentPlayer].state = PlayerObject_HandleGround
+					if player[currentPlayer].animation != ANI_JUMPING
+						if player[currentPlayer].animation != ANI_RUNNING
+							player[currentPlayer].animation = ANI_WALKING
 						end if
 					end if
 
 					player[currentPlayer].timer 		= 0
-					object[currentPlayer].controlLock 	= 0
+					player[currentPlayer].controlLock 	= 0
 					player[currentPlayer].skidding		= 0
-					object[currentPlayer].controlLock 	= 15
-					object[currentPlayer].speed 		= object.boostSpeed
-					object[currentPlayer].direction 	= object.direction
+					player[currentPlayer].controlLock 	= 15
+					player[currentPlayer].speed 		= object.boostSpeed
+					player[currentPlayer].direction 	= object.direction
 					if object.direction == FLIP_X
-						FlipSign(object[currentPlayer].speed)
+						FlipSign(player[currentPlayer].speed)
 					end if
 				end if
 			end if
@@ -114,6 +125,9 @@ end event
 
 
 event ObjectStartup
+	// Note - the majority of the speed booster sprite is built into the level tiles itself
+	// All that's drawn here is the overlay spinning frame, and even then, it's only drawn sometimes
+
 	CheckCurrentStageFolder("Zone02")
 	if checkResult == true
 		LoadSpriteSheet("CPZ/Objects.gif")
@@ -127,7 +141,7 @@ event ObjectStartup
 		if object[arrayPos0].propertyValue == 0
 			object[arrayPos0].boostSpeed = 0x100000
 		else
-			object[arrayPos0].boostSpeed = 0xA0000
+			object[arrayPos0].boostSpeed = 0x0A0000
 		end if
 		object[arrayPos0].drawOrder = 5
 	next
@@ -142,6 +156,7 @@ event ObjectStartup
 		temp0++
 	loop
 end event
+
 
 event RSDKEdit
 	if editor.returnVariable == true
@@ -166,9 +181,11 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	DrawSprite(0)
 end event
+
 
 event RSDKLoad
 	CheckCurrentStageFolder("Zone02")

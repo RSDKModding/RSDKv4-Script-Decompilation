@@ -15,6 +15,18 @@ private alias 0 : INVISIBLEBLOCK_SOLID		// regular invis block
 private alias 1 : INVISIBLEBLOCK_EJECT_L	// ejects the player out (to the left)
 private alias 2 : INVISIBLEBLOCK_EJECT_R	// ejects the player out (to the right)
 
+// Player Aliases
+private alias 0 : SLOT_PLAYER1
+
+private alias object.type : player.type
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.collisionLeft : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+
+
 // ========================
 // Function Declarations
 // ========================
@@ -48,6 +60,10 @@ function InvisibleBlock_DebugSpawn
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectMain
 	temp0 = object.width
 	FlipSign(temp0)
@@ -59,7 +75,7 @@ event ObjectMain
 	switch object.state
 	case INVISIBLEBLOCK_SOLID
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
+			if player[currentPlayer].state != PlayerObject_KnuxLedgePullUp
 				BoxCollisionTest(C_BOX, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				switch checkResult
 				case COL_NONE
@@ -71,12 +87,12 @@ event ObjectMain
 					temp3 -= 2
 					BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, temp2, temp3, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 					if checkResult == true
-						object[currentPlayer].gravity = GRAVITY_GROUND
+						player[currentPlayer].gravity = GRAVITY_GROUND
 					end if
 					break
 
 				case COL_BOTTOM
-					if object[currentPlayer].gravity == GRAVITY_GROUND
+					if player[currentPlayer].gravity == GRAVITY_GROUND
 						CallFunction(PlayerObject_Kill)
 					end if
 					break
@@ -87,17 +103,17 @@ event ObjectMain
 
 	case INVISIBLEBLOCK_EJECT_L
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
+			if player[currentPlayer].state != PlayerObject_KnuxLedgePullUp
 				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if checkResult == true
-					if object[currentPlayer].gravity == GRAVITY_GROUND
-						object[currentPlayer].xpos = object[currentPlayer].collisionRight
-						FlipSign(object[currentPlayer].xpos)
-						object[currentPlayer].xpos -= object.width
-						object[currentPlayer].xpos <<= 16
-						object[currentPlayer].xpos += object.xpos
-						if object[currentPlayer].speed > 0
-							object[currentPlayer].speed = 0
+					if player[currentPlayer].gravity == GRAVITY_GROUND
+						player[currentPlayer].xpos = player[currentPlayer].collisionRight
+						FlipSign(player[currentPlayer].xpos)
+						player[currentPlayer].xpos -= object.width
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.xpos
+						if player[currentPlayer].speed > 0
+							player[currentPlayer].speed = 0
 						end if
 					end if
 				end if
@@ -107,17 +123,17 @@ event ObjectMain
 
 	case INVISIBLEBLOCK_EJECT_R
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].state != PlayerObject_KnuxLedgePullUp
+			if player[currentPlayer].state != PlayerObject_KnuxLedgePullUp
 				BoxCollisionTest(C_TOUCH, object.entityPos, temp0, temp1, object.width, object.height, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if checkResult == true
-					if object[currentPlayer].gravity == GRAVITY_GROUND
-						object[currentPlayer].xpos = object[currentPlayer].collisionLeft
-						FlipSign(object[currentPlayer].xpos)
-						object[currentPlayer].xpos += object.width
-						object[currentPlayer].xpos <<= 16
-						object[currentPlayer].xpos += object.xpos
-						if object[currentPlayer].speed < 0
-							object[currentPlayer].speed = 0
+					if player[currentPlayer].gravity == GRAVITY_GROUND
+						player[currentPlayer].xpos = player[currentPlayer].collisionLeft
+						FlipSign(player[currentPlayer].xpos)
+						player[currentPlayer].xpos += object.width
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.xpos
+						if player[currentPlayer].speed < 0
+							player[currentPlayer].speed = 0
 						end if
 					end if
 				end if
@@ -129,18 +145,18 @@ end event
 
 
 event ObjectDraw
-	if object[0].type == TypeName[Debug Mode]
+	if player[SLOT_PLAYER1].type == TypeName[Debug Mode]
 		temp0 = object.xpos
 		temp1 = object.ypos
 		temp2 = object.propertyValue
 		temp4 = temp2
-		temp4 &= 240
+		temp4 &= 0xF0
 		temp4 <<= 15
 		temp2 >>= 4
 		temp2++
 		temp6 = temp2
 		temp3 = object.propertyValue
-		temp3 &= 15
+		temp3 &= 0x0F
 		temp5 = temp3
 		temp5 <<= 19
 		temp3++
@@ -196,51 +212,51 @@ event ObjectStartup
 
 end event
 
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
 		case EDIT_VAR_PROPVAL // property value
 			checkResult = object.propertyValue
 			break
-
 		case 0 // width
 			checkResult = object.propertyValue
 			checkResult >>= 4
 			checkResult &= 0xF
 			break
-
 		case 1 // height
 			checkResult = object.propertyValue
 			checkResult &= 0xF
 			break
-
+		case 2 // type
+			checkResult = object.state
+			break
 		end switch
 	else
 		switch editor.variableID
 		case EDIT_VAR_PROPVAL // property value
 			object.propertyValue = editor.variableValue
 			break
-			
 		case 0 // width
 			temp0 = editor.variableValue
 			temp0 &= 0xF
 			temp0 <<= 4
-			
 			object.propertyValue &= 0x0F
 			object.propertyValue |= temp0
 			break
-
 		case 1 // height
 			temp0 = editor.variableValue
 			temp0 &= 0xF
-
 			object.propertyValue &= 0xF0
 			object.propertyValue |= temp0
 			break
-
+		case 2 // type
+			object.state = editor.variableValue
+			break
 		end switch
 	end if
 end event
+
 
 event RSDKDraw
 	temp0 = object.xpos
@@ -274,7 +290,10 @@ event RSDKDraw
 		temp1 += 0x100000
 		temp3--
 	loop
+
+	// TODO: I had an idea to add a box around the object but... would that really serve to do much?
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
@@ -285,4 +304,10 @@ event RSDKLoad
 
 	AddEditorVariable("width")
 	AddEditorVariable("height")
+
+	AddEditorVariable("type")
+	SetEditorVariable("type")
+	AddEnumVariable("solid",       INVISIBLEBLOCK_SOLID)
+	AddEnumVariable("eject left",  INVISIBLEBLOCK_EJECT_L)
+	AddEnumVariable("eject right", INVISIBLEBLOCK_EJECT_R)
 end event

@@ -37,6 +37,10 @@ function VDropBridge_DebugSpawn
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectMain
 	switch object.state
 	case VDROPBRIDGE_CLOSED
@@ -147,6 +151,11 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
@@ -155,6 +164,7 @@ event RSDKEdit
 			break
 		case 0 // openDir
 			checkResult = object.propertyValue
+			checkResult &= FLIP_X
 			break
 		end switch
 	else
@@ -169,6 +179,7 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	temp0 = 0
 	temp1 = 0x800
@@ -176,24 +187,26 @@ event RSDKDraw
 		Sin(temp2, 256)
 		temp2 *= temp1
 		temp2 += object.xpos
-
 		Cos(temp3, 256)
 		temp3 *= temp1
 		temp3 += object.ypos
-
 		DrawSpriteXY(0, temp2, temp3)
-
 		temp0++
 		temp1 += 0x800
 	loop
 
 	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
 		// Draw semi-transparent version of how the bridge will be when lowered
-		if object.direction == FLIP_NONE
+
+		if object.propertyValue == 0
 			temp4 = 128
 		else
 			temp4 = 384
 		end if
+
+		object.inkEffect = INK_BLEND
 		
 		temp0 = 0
 		temp1 = 0x800
@@ -201,19 +214,18 @@ event RSDKDraw
 			Sin(temp2, temp4)
 			temp2 *= temp1
 			temp2 += object.xpos
-
 			Cos(temp3, temp4)
 			temp3 *= temp1
 			temp3 += object.ypos
-
-			object.inkEffect = INK_BLEND
 			DrawSpriteFX(0, FX_INK, temp2, temp3)
-
 			temp0++
 			temp1 += 0x800
 		loop
+
+		editor.drawingOverlay = false
 	end if
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
@@ -222,5 +234,5 @@ event RSDKLoad
 	AddEditorVariable("openDir")
 	SetActiveVariable("openDir")
 	AddEnumVariable("Right", 0)
-	AddEnumVariable("Left" , 1)
+	AddEnumVariable("Left",  1)
 end event

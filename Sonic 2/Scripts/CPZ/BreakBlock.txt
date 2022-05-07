@@ -14,8 +14,12 @@ private alias 2 : BREAKBLOCK_DEBRIS2
 private alias 3 : BREAKBLOCK_DEBRIS3
 private alias 4 : BREAKBLOCK_DEBRIS4
 
+
 // Player Aliases
-private alias object.value16 : player.isSidekick // false if player 1, true if player 2
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.value16 : player.isSidekick
 private alias object.value19 : player.scoreBonus
 
 
@@ -24,6 +28,7 @@ private alias object.value19 : player.scoreBonus
 // ========================
 reserve function BreakBlock_DebugDraw
 reserve function BreakBlock_DebugSpawn
+
 
 function BreakBlock_DebugDraw
 	DrawSprite(0)
@@ -35,15 +40,19 @@ function BreakBlock_DebugSpawn
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectMain
 	switch object.state
 	case BREAKBLOCK_SOLID
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].animation == ANI_JUMPING
+			if player[currentPlayer].animation == ANI_JUMPING
 				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if checkResult == COL_TOP
-					object[currentPlayer].yvel = -0x30000
-					object[currentPlayer].gravity = GRAVITY_AIR
+					player[currentPlayer].yvel = -0x30000
+					player[currentPlayer].gravity = GRAVITY_AIR
 
 					CreateTempObject(TypeName[Object Score], player[currentPlayer].scoreBonus, object.xpos, object.ypos)
 					object[tempObjectPos].drawOrder = 4
@@ -84,7 +93,7 @@ event ObjectMain
 
 					object.type = TypeName[Blank Object]
 					
-					// global variable "array" (yes, this is actually how its done)
+					// Award some score to the player, uses the global variable "array" (yes, this is actually how its done)
 					arrayPos0 = VarName[player.score]
 					if player[currentPlayer].isSidekick == false
 						arrayPos0 += currentPlayer
@@ -123,7 +132,7 @@ event ObjectMain
 						break
 					end switch
 
-					if object[currentPlayer].gravity == GRAVITY_AIR
+					if player[currentPlayer].gravity == GRAVITY_AIR
 						if player[currentPlayer].scoreBonus < 15
 							player[currentPlayer].scoreBonus++
 						end if
@@ -141,7 +150,7 @@ event ObjectMain
 	case BREAKBLOCK_DEBRIS2
 	case BREAKBLOCK_DEBRIS3
 	case BREAKBLOCK_DEBRIS4
-		// Block fragment - just update movement and unload when needed
+		// Block fragment - just update movement and unload when no longer needed
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x3800
@@ -173,9 +182,15 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("CPZ/Objects.gif")

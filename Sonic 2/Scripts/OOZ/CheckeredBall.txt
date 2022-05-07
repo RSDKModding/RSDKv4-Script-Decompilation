@@ -29,7 +29,19 @@ private alias object.value15 : object.parent // Should be a ballcannon entity
 private alias 0 : CHECKEREDBALL_NORMAL
 private alias 1 : CHECKEREDBALL_LAUNCHED
 
-// Player Alises
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.pushing : player.pushing
+private alias object.controlLock : player.controlLock
+private alias object.collisionLeft : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+private alias object.left : player.left
+private alias object.right : player.right
+
 private alias object.value20 : player.topSpeed 			
 private alias object.value21 : player.acceleration
 
@@ -145,6 +157,7 @@ private alias 7 : OOZEGGMAN_EXPLODE
 private alias 3 : OOZEGGANI_HIT
 private alias 4 : OOZEGGANI_DEFEATED
 
+
 // ========================
 // Function Declarations
 // ========================
@@ -158,14 +171,17 @@ reserve function CheckeredBall_SpringBounce
 reserve function CheckeredBall_CLedgeCollapse
 reserve function CheckeredBall_HandlePhysics
 
+
 // ========================
 // Tables
 // ========================
+
 private table CheckeredBall_heightArray
 	0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 20
 end table
 
 // Seems to be unused, and as such, its purpose is unknown...
+// This same table exists in S1's and Mania's unused CheckeredBall objects as well, for whatever reason
 private table CheckeredBall_unusedTable
 	253, 251, 248, 245, 243, 240, 237, 235, 232, 229, 226, 224, 221, 219, 216, 213, 210, 208, 205, 203, 200, 197, 195, 192
 end table
@@ -179,7 +195,7 @@ function CheckeredBall_DebugSpawn
 	CreateTempObject(TypeName[Checkered Ball], 0, object.xpos, object.ypos)
 	object[tempObjectPos].gravity = GRAVITY_AIR
 	object[tempObjectPos].startPos.x = object.xpos
-	object[tempObjectPos].startPos.x = object.ypos
+	object[tempObjectPos].startPos.y = object.ypos
 	object[tempObjectPos].roundedPos.x = object.xpos
 	object[tempObjectPos].roundedPos.y = object.ypos
 end function
@@ -197,11 +213,11 @@ function CheckeredBall_HandlePlayerMove
 		temp0 = player[currentPlayer].acceleration
 		temp0 >>= 1
 
-		if object[currentPlayer].gravity == GRAVITY_GROUND
-			if object[currentPlayer].xvel < 0
+		if player[currentPlayer].gravity == GRAVITY_GROUND
+			if player[currentPlayer].xvel < 0
 				BoxCollisionTest(C_TOUCH, object.entityPos, 0, -14, 15, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if checkResult == true
-					if object[currentPlayer].left == true
+					if player[currentPlayer].left == true
 						if temp1 == false
 							SetBit(object.activePlayers, temp2, true)
 							temp1 = player[currentPlayer].topSpeed
@@ -212,26 +228,26 @@ function CheckeredBall_HandlePlayerMove
 							object.playerControlled = true
 						end if
 
-						object[currentPlayer].xpos = object[currentPlayer].collisionRight
-						object[currentPlayer].xpos += 14
-						object[currentPlayer].xpos <<= 16
-						object[currentPlayer].xpos += object.roundedPos.x
+						player[currentPlayer].xpos = player[currentPlayer].collisionRight
+						player[currentPlayer].xpos += 14
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.roundedPos.x
 
 						if object.xvel < 0
-							if object[currentPlayer].speed < object.speed
-								object[currentPlayer].xvel = object.xvel
-								object[currentPlayer].speed = object.speed
+							if player[currentPlayer].speed < object.speed
+								player[currentPlayer].xvel = object.xvel
+								player[currentPlayer].speed = object.speed
 							end if
 						end if
 
-						object[currentPlayer].pushing = 2
+						player[currentPlayer].pushing = 2
 					end if
 				end if
 			else
-				if object[currentPlayer].xvel > 0
+				if player[currentPlayer].xvel > 0
 					BoxCollisionTest(C_TOUCH, object.entityPos, -15, -14, 0, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 					if checkResult == true
-						if object[currentPlayer].right == true
+						if player[currentPlayer].right == true
 							if temp1 == false
 								SetBit(object.activePlayers, temp2, true)
 								if object.speed < player[currentPlayer].topSpeed
@@ -240,19 +256,19 @@ function CheckeredBall_HandlePlayerMove
 								object.playerControlled = true
 							end if
 
-							object[currentPlayer].xpos = object[currentPlayer].collisionLeft
-							object[currentPlayer].xpos += -14
-							object[currentPlayer].xpos <<= 16
-							object[currentPlayer].xpos += object.roundedPos.x
+							player[currentPlayer].xpos = player[currentPlayer].collisionLeft
+							player[currentPlayer].xpos += -14
+							player[currentPlayer].xpos <<= 16
+							player[currentPlayer].xpos += object.roundedPos.x
 
 							if object.xvel > 0
-								if object[currentPlayer].speed > object.speed
-									object[currentPlayer].xvel = object.xvel
-									object[currentPlayer].speed = object.speed
+								if player[currentPlayer].speed > object.speed
+									player[currentPlayer].xvel = object.xvel
+									player[currentPlayer].speed = object.speed
 								end if
 							end if
 
-							object[currentPlayer].pushing = 2
+							player[currentPlayer].pushing = 2
 						end if
 					end if
 				end if
@@ -283,32 +299,32 @@ function CheckeredBall_PlayerInteraction
 		if checkResult == false
 			GetBit(temp0, object.activePlayers, temp2)
 			if temp0 == true
-				if object[currentPlayer].xpos < object.xpos
-					temp1 = object[currentPlayer].collisionRight
+				if player[currentPlayer].xpos < object.xpos
+					temp1 = player[currentPlayer].collisionRight
 					FlipSign(temp1)
 					temp1 -= 14
 				else
-					temp1 = object[currentPlayer].collisionLeft
+					temp1 = player[currentPlayer].collisionLeft
 					FlipSign(temp1)
 					temp1 += 14
 				end if
 				
 				temp1 <<= 16
-				object[currentPlayer].xpos = temp1
-				object[currentPlayer].xpos += temp4
+				player[currentPlayer].xpos = temp1
+				player[currentPlayer].xpos += temp4
 			else
 				BoxCollisionTest(C_BOX, object.entityPos, -14, -14, 14, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 				if checkResult == COL_TOP
-					object[currentPlayer].xpos += temp6
+					player[currentPlayer].xpos += temp6
 					temp0 = temp6
 					temp0 >>= 1
-					object[currentPlayer].xpos += temp0
-					object[currentPlayer].ypos += temp7
+					player[currentPlayer].xpos += temp0
+					player[currentPlayer].ypos += temp7
 
-					if object[currentPlayer].xvel != 0
+					if player[currentPlayer].xvel != 0
 						temp0 = player[currentPlayer].acceleration
 						temp0 >>= 2
-						if object[currentPlayer].xvel > 0
+						if player[currentPlayer].xvel > 0
 							FlipSign(temp0)
 						end if
 					else
@@ -330,16 +346,16 @@ function CheckeredBall_PlayerInteraction
 						temp1 = temp6
 						temp0 >>= 1
 						temp1 += temp0
-						object[currentPlayer].speed += temp0
-						object[currentPlayer].xvel = object[currentPlayer].speed
-						object[currentPlayer].gravity = GRAVITY_AIR
-						object[currentPlayer].controlLock = 15
+						player[currentPlayer].speed += temp0
+						player[currentPlayer].xvel = player[currentPlayer].speed
+						player[currentPlayer].gravity = GRAVITY_AIR
+						player[currentPlayer].controlLock = 15
 					end if
 				end if
 
 				if checkResult == COL_BOTTOM
 					if object.yvel >= 0
-						if object[currentPlayer].gravity == GRAVITY_GROUND
+						if player[currentPlayer].gravity == GRAVITY_GROUND
 							CallFunction(PlayerObject_Kill)
 						end if
 					end if
@@ -533,7 +549,11 @@ end function
 
 function CheckeredBall_CLedgeCollapse
 	if object[arrayPos0].state < CFLOOR_NONE
+	
+		// what? why is this here??
+		// If I had to guess, I'd say it's just a debugging leftover or something, but it's certainly very strange
 		player.score++
+
 		if object[arrayPos0].propertyValue < 2
 			if object.yvel >= 0
 				BoxCollisionTest(C_PLATFORM, arrayPos0, -64, -24, 64, 0, object.entityPos, -10, -14, 10, 14)
@@ -590,9 +610,14 @@ function CheckeredBall_HandlePhysics
 		temp0 >>= 8
 		object.yvel = temp0
 	end if
+
 	object.playerControlled = false
 end function
 
+
+// ========================
+// Events
+// ========================
 
 event ObjectMain
 	if object.state == CHECKEREDBALL_NORMAL
@@ -874,6 +899,8 @@ event ObjectMain
 			break
 
 		case TypeName[Plane Sw V]
+			// Why is this here, plane switches don't even exist in OOZ...
+			// (Likely just leftover from copying S1's CheckeredBall object, since there *are* path swappers in GHZ)
 			CheckEqual(planeSwV[arrayPos0].onGround, false)
 			temp0 = checkResult
 			CheckEqual(object.gravity, GRAVITY_GROUND)
@@ -893,6 +920,7 @@ event ObjectMain
 			break
 
 		case TypeName[Plane Sw H]
+			// See above note, likely the same story here
 			CheckEqual(planeSwH[arrayPos0].onGround, false)
 			temp0 = checkResult
 			CheckEqual(object.gravity, GRAVITY_GROUND)
@@ -1205,8 +1233,8 @@ event ObjectMain
 				if checkResult == false
 					BoxCollisionTest(C_BOX, object.entityPos, -14, -14, 14, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 					if checkResult == COL_TOP
-						object[currentPlayer].xpos += object.collisionOffset.x
-						object[currentPlayer].ypos += object.collisionOffset.y
+						player[currentPlayer].xpos += object.collisionOffset.x
+						player[currentPlayer].ypos += object.collisionOffset.y
 					end if
 				end if
 			next
@@ -1221,7 +1249,7 @@ event ObjectMain
 		temp0 = object.xpos
 		temp1 = object.ypos
 		object.xpos = object.startPos.x
-		object.ypos = object.startPos.x
+		object.ypos = object.startPos.y
 		if object.outOfBounds == true
 			object.roundedPos.x = object.xpos
 			object.roundedPos.y = object.ypos
@@ -1250,6 +1278,7 @@ end event
 
 
 event ObjectDraw
+	// Draw the ball frame
 	object.rotation = object.ballAngle
 	object.rotation >>= 14
 	temp0 = object.rotation
@@ -1259,6 +1288,7 @@ event ObjectDraw
 	temp0++
 	DrawSprite(temp0)
 
+	// And draw the shine ontop of it too
 	object.inkEffect 	= INK_ADD
 	object.alpha 		= 0xA0
 	DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
@@ -1267,6 +1297,8 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("OOZ/Objects.gif")
+	
+	// Checkered Ball Frames
 	SpriteFrame(-16, -16, 32, 32, 396, 190)
 	SpriteFrame(-16, -16, 32, 32, 429, 190)
 	SpriteFrame(-16, -16, 32, 32, 273, 133)
@@ -1277,23 +1309,34 @@ event ObjectStartup
 	SpriteFrame(-16, -16, 32, 32, 256, 34)
 	SpriteFrame(-16, -16, 32, 32, 256, 1)
 
+	// Load the animation file... but why?
+	// Nothing's ever really done with it
 	LoadAnimation("WreckingBallJr.ani")
 
+	// Setup all Checkered Ball objects in the level
+	// Do note though that, at least in the normal game, this never really does anything since there aren't any Checkered Ball objects placed in the level
 	foreach (TypeName[Checkered Ball], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].gravity = GRAVITY_AIR
 		object[arrayPos0].startPos.x = object.xpos
-		object[arrayPos0].startPos.x = object.ypos
+		object[arrayPos0].startPos.y = object.ypos
 	next
 
+	// Add this object to the debug object list
 	SetTableValue(TypeName[Checkered Ball], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(CheckeredBall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(CheckeredBall_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("OOZ/Objects.gif")

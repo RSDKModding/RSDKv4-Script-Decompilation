@@ -16,33 +16,35 @@ private alias object.value4 : object.drawOrderR // bottom (rising up), named the
 private alias object.value5 : object.drawOrderL // top (falling down), named the same as PSwitch_V for consistency
 private alias object.value6 : object.onGround
 
+// Player Aliases
+private alias object.state : player.state
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.collisionPlane : player.collisionPlane
 private alias object.value18 :	player.sortedDrawOrder
 
-private alias 0 : VAR_ID_SIZE
-private alias 1 : VAR_ID_PLANEL
-private alias 2 : VAR_ID_PLANER
-private alias 3 : VAR_ID_DRAWL
-private alias 4 : VAR_ID_DRAWR
-private alias 5 : VAR_ID_ONGROUND
 
+// ========================
+// Events
+// ========================
 
 event ObjectMain
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		CheckEqual(object.onGround, false)
 		temp0 = checkResult
-		CheckEqual(object[currentPlayer].gravity, GRAVITY_GROUND)
+		CheckEqual(player[currentPlayer].gravity, GRAVITY_GROUND)
 		temp0 |= checkResult
-		CheckEqual(object[currentPlayer].state, PlayerObject_KnuxWallClimb)
+		CheckEqual(player[currentPlayer].state, PlayerObject_KnuxWallClimb)
 		temp0 |= checkResult
 
 		if temp0 == true
 			BoxCollisionTest(C_TOUCH, object.entityPos, object.extendLeft, -12, object.extendRight, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
 			if checkResult == true
-				if object[currentPlayer].yvel > 0
-					object[currentPlayer].collisionPlane 	= object.planeL
+				if player[currentPlayer].yvel > 0
+					player[currentPlayer].collisionPlane 	= object.planeL
 					player[currentPlayer].sortedDrawOrder 	= object.drawOrderL
 				else
-					object[currentPlayer].collisionPlane 	= object.planeR
+					player[currentPlayer].collisionPlane 	= object.planeR
 					player[currentPlayer].sortedDrawOrder 	= object.drawOrderR
 				end if
 			end if
@@ -76,6 +78,22 @@ event ObjectStartup
 		GetBit(object[arrayPos0].onGround, object[arrayPos0].propertyValue, 7)
 	next
 end event
+
+
+// ========================
+// Editor Events & Aliases
+// ========================
+
+#platform: USE_EDITOR
+	// Putting these here inside a platform flag so that these don't implede onto the normal game Aliases
+	private alias 0 : VAR_ID_SIZE
+	private alias 1 : VAR_ID_PLANEL
+	private alias 2 : VAR_ID_PLANER
+	private alias 3 : VAR_ID_DRAWL
+	private alias 4 : VAR_ID_DRAWR
+	private alias 5 : VAR_ID_ONGROUND
+#endplatform
+
 
 event RSDKEdit
 	if editor.returnVariable == true
@@ -141,8 +159,10 @@ event RSDKEdit
 	end if
 end event
 
+
 event RSDKDraw
 	// Grabbed this from S2's debug view, since S1 doesn't have one, works the same though
+	
 	temp1 = object.propertyValue
 	temp1 &= 3
 	temp1 += 2
@@ -153,6 +173,14 @@ event RSDKDraw
 	FlipSign(temp0)
 	temp0 += object.xpos
 	temp0 += 0x80000
+	
+//	if editor.showGizmos == true
+//		// TODO: likely broken, i have no way to test this
+//		temp4 = 0x100000
+//		temp4 *= temp1
+//		DrawRectOutline(temp0, object.ypos, temp4, 0x100000, 255, 255, 255, 255)
+//	end if
+
 	GetBit(temp2, object.propertyValue, 7)
 	temp3 = object.propertyValue
 	temp3 >>= 2
@@ -172,6 +200,7 @@ event RSDKDraw
 		DrawSprite(temp3)
 	end if
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")

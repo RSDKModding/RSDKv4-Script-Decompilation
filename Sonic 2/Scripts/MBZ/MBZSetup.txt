@@ -22,6 +22,14 @@ private alias object.value10 : object.isDimming
 private alias 3 : SHIELD_FIRE
 
 // Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.frame : player.frame
+private alias object.animation : player.animation
+
 private alias object.value1  : player.timer
 private alias object.value14 : player.skidding
 private alias object.value18 : player.sortedDrawOrder
@@ -70,10 +78,10 @@ reserve function MBZSetup_SlowDownMusic
 // Static Values
 // ========================
 // Values here are named this way because the idea is to "mimic" CPZSetup for the CPZ objs in the stage
-public value CPZSetup_rotatingStairTimer 	= 0
-public value Water_flashTimer 			 	= 0 // Uses "Water_" since all water objects use it from the setup so its easier to make new objs this way
-public value CPZSetup_hasAchievement 	 	= false
-public value CPZSetup_enteredWater 		 	= false
+public value ZoneSetup_value33 = 0
+public value ZoneSetup_value34 = 0 // Uses "Water_" since all water objects use it from the setup so its easier to make new objs this way
+public value ZoneSetup_value35 = false
+public value ZoneSetup_value36 = false
 
 private value MBZSetup_unused1 				= 0	// As the name suggests, this is not used
 private value MBZSetup_unused2 				= 0	// As the name suggests, this is not used
@@ -81,10 +89,10 @@ private value MBZSetup_unused3 				= 0	// As the name suggests, this is not used
 private value MBZSetup_unused4 				= 0	// As the name suggests, this is not used
 private value MBZSetup_unknownTimer 		= 0 // This is used to count, but not actually used in any meaningful way
 
-private alias CPZSetup_rotatingStairTimer : ZoneSetup_value33
-private alias Water_flashTimer 			  : ZoneSetup_value34
-private alias CPZSetup_hasAchievement 	  : ZoneSetup_value35
-private alias CPZSetup_enteredWater 	  : ZoneSetup_value36
+private alias ZoneSetup_value33 : CPZSetup_rotatingStairTimer
+private alias ZoneSetup_value34 : Water_flashTimer
+private alias ZoneSetup_value35 : CPZSetup_hasAchievement
+private alias ZoneSetup_value36 : CPZSetup_enteredWater
 
 // ========================
 // Tables
@@ -98,7 +106,7 @@ private table MBZSetup_lavaPalCycle
 	0xA00000, 0xE02000, 0xE06000, 0xC0A000, 0xE0C000, 0xC00000, 0xE04000, 0xE08000, 0xE0A000, 0xE0E000, 0xE00000, 0xE06000, 0xE06000, 0xE0A000, 0xE0E000, 0xE00000
 end table
 
-// Stage deformation data
+// Stage deformation data, used for animating the water
 private table MBZSetup_deformationTable
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
 	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
@@ -268,6 +276,10 @@ function MBZSetup_SlowDownMusic
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectMain
 	// Pulsing palette
 	object.lavaPalTimer++
@@ -336,7 +348,7 @@ event ObjectMain
 		object.oilAniTileDelay--
 	end if
 
-	// Clouds scrolling
+	// Water shining
 	object.deformTimer++
 	if object.deformTimer > 7
 		tileLayer[1].deformationOffset++
@@ -361,14 +373,14 @@ event ObjectMain
 
 	// Check interaction with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		if object[currentPlayer].animation == ANI_TWIRL
-			object[currentPlayer].frame %= 24
+		if player[currentPlayer].animation == ANI_TWIRL
+			player[currentPlayer].frame %= 24
 		end if
 
-		temp1 = object[currentPlayer].xpos
+		temp1 = player[currentPlayer].xpos
 		temp1 >>= 16
 
-		temp2 = object[currentPlayer].ypos
+		temp2 = player[currentPlayer].ypos
 		temp2 >>= 16
 		temp2 += 6
 
@@ -381,14 +393,14 @@ event ObjectMain
 			break
 
 		case TILE_OILPOOL
-			if object[currentPlayer].yvel > -1
-				object[currentPlayer].state = MBZSetup_HandlePlayerOilPool
-				if object[currentPlayer].animation == ANI_JUMPING
-					object[currentPlayer].animation = ANI_WALKING
+			if player[currentPlayer].yvel > -1
+				player[currentPlayer].state = MBZSetup_HandlePlayerOilPool
+				if player[currentPlayer].animation == ANI_JUMPING
+					player[currentPlayer].animation = ANI_WALKING
 				end if
-				object[currentPlayer].gravity = GRAVITY_GROUND
-				object[currentPlayer].yvel = 0
-				object[currentPlayer].ypos += 0x10000
+				player[currentPlayer].gravity = GRAVITY_GROUND
+				player[currentPlayer].yvel = 0
+				player[currentPlayer].ypos += 0x10000
 			end if
 			break
 
@@ -433,6 +445,10 @@ event ObjectStartup
 	object[SLOT_ZONESETUP].lavaPalIndex4 = 3
 	object[SLOT_ZONESETUP].drawOrder 	 = 1
 
+	// Interesting note - most of this does nothing!
+	// The normal BG used only has deformation enabled for a very small height - 13 pixels to be exact!
+	// However, the unused third background layer has deformation enabled for its entirety, so perhaps this was meant for that..?
+	// Certainly very strange...
 	arrayPos0 = 0
 	while arrayPos0 < 576
 		temp0 = arrayPos0
@@ -441,9 +457,6 @@ event ObjectStartup
 		arrayPos0++
 	loop
 
-	// ========================
-// Static Values
-// ========================
 	CPZSetup_rotatingStairTimer = 0
 	Water_flashTimer 			= 0
 	CPZSetup_hasAchievement 	= false
@@ -454,9 +467,11 @@ event ObjectStartup
 	MBZSetup_unused4 			= 0
 end event
 
+
 event RSDKDraw
 	DrawSprite(0)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
