@@ -44,6 +44,11 @@ private alias object.left : player.left
 private alias object.right : player.right
 private alias object.value21 : player.acceleration
 
+#platform: USE_DECOMP
+	// Alias only used in decomp-exlclusive code
+	private alias object.xpos : player.xpos
+#endplatform
+
 private alias 0 : CHARACTER_SONIC
 private alias 1 : CHARACTER_TAILS
 private alias 2 : CHARACTER_KNUCKLES
@@ -126,13 +131,15 @@ event ObjectMain
 					break
 				end switch
 
+				// No achievements in debug mode!
 				if stage.debugMode == false
 					if stage.activeList == BONUS_STAGE
+						// Boss Attack is on the Bonus Stage list, check for the Boss Attack achievement
 						if stage.minutes < 7
 							CallNativeFunction2(SetAchievement, AchievementName[Scrambled Egg], 100)
 						end if
 					else
-						if stage.listPos == 0
+						if stage.listPos == StageName[R - EMERALD HILL ZONE 1]
 							if stage.minutes == 0
 								if stage.seconds < 35
 									CallNativeFunction2(SetAchievement, AchievementName[Quick Run], 100)
@@ -210,17 +217,25 @@ event ObjectMain
 		
 		// First check if the player's touching the right bounds
 		CheckEqual(temp0, stage.curXBoundary2)
-		temp3 = checkResult
+		temp2 = checkResult
 		
 		// Then check that the player has their base speed (as it gets reset upon hitting the right barrier)
 		CheckEqual(player[0].speed, player[0].acceleration)
-		temp3 &= checkResult
+		temp2 &= checkResult
 		
-		// And finally, a small check to make sure the results haven't already been spawned earlier this frame
+		// And finally, a small check to make sure the results haven't already been spawned earlier this frame from the normal code above
 		CheckNotEqual(object.state, SIGNPOST_FINISHED)
-		temp3 &= checkResult
+		temp2 &= checkResult
 
-		if temp3 == true
+		// Another alt condition, for screens > 520
+		//  -> There's another invisible barrier 252 pixels away from the signpost, check to see if the player's against that
+		temp0 = object.xpos
+		temp0 >>= 16
+		temp0 += 252
+		CheckEqual(temp0, player[0].ixpos)
+		temp2 |= checkResult
+
+		if temp2 == true
 			PlayMusic(TRACK_ACTFINISH)
 			object.state = SIGNPOST_FINISHED
 			object[30].type = TypeName[Act Finish]
@@ -241,6 +256,7 @@ event ObjectMain
 					object.priority = PRIORITY_ACTIVE
 					
 					SetBit(object.activePlayers, currentPlayer, true)
+					
 					if currentPlayer == 0
 						if PlayerObject_SuperState == SUPERSTATE_SUPER
 							PlayerObject_SuperState = SUPERSTATE_FADEOUT
