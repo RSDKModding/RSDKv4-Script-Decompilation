@@ -37,7 +37,7 @@ private alias object.controlMode	 : player.controlMode		// Normally 0 to allow f
 private alias object.interaction	 : player.interaction		// Will the object interact with objects?
 private alias object.tileCollisions	 : player.tileCollisions
 
-// *Object-wise* input, not to be confused with inputPress.X and inputDown.X
+// *Object-wise* input, not to be confused with inputPress[0].X and inputDown[0].X
 private alias object.jumpPress 	: player.jumpPress
 private alias object.jumpHold 	: player.jumpHold
 private alias object.up		 	: player.up
@@ -120,8 +120,9 @@ public function PlayerObject_InitReplay
 		currentPlayer++
 	loop
 	
-	screen.cameraX = player[SLOT_PLAYER1].ixpos
-	screen.cameraY = player[SLOT_PLAYER1].iypos
+	// 0 = SLOT_PLAYER1
+	screen.cameraX = player[0].ixpos
+	screen.cameraY = player[0].iypos
 end function
 
 
@@ -149,19 +150,19 @@ public function PlayerObject_ProcessPlayer
 					
 					switch temp2
 					case 0
-						inputDown.right = true
+						inputDown[0].right = true
 						break
 
 					case 1
-						inputDown.down = true
+						inputDown[0].down = true
 						break
 
 					case 2
-						inputDown.left = true
+						inputDown[0].left = true
 						break
 
 					case 3
-						inputDown.up = true
+						inputDown[0].up = true
 						break
 					end switch
 				end if
@@ -169,29 +170,29 @@ public function PlayerObject_ProcessPlayer
 				// Check if the jump button is touched
 				CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
 				if checkResult > -1
-					inputDown.buttonA = true
+					inputDown[0].buttonA = true
 				end if
 
 				if touchJump == false
 					// If the jump button only started being touched this frame, then update the press variable accordingly
-					inputPress.buttonA |= inputDown.buttonA
+					inputPress[0].buttonA |= inputDown[0].buttonA
 				end if
 				
 				// And now store the current held state for next frame
-				touchJump = inputDown.buttonA
+				touchJump = inputDown[0].buttonA
 
 				if stage.debugMode == true
 					// And now to the same process for the B button (debug mode buttom)
 					CheckTouchRect(0, 0, 112, 56)
 					if checkResult > -1
-						inputDown.buttonB = true
+						inputDown[0].buttonB = true
 					end if
 
 					if touchDebug == false
-						inputPress.buttonB |= inputDown.buttonB
+						inputPress[0].buttonB |= inputDown[0].buttonB
 					end if
 					
-					touchDebug = inputDown.buttonB
+					touchDebug = inputDown[0].buttonB
 				end if
 
 				CheckTouchRect(240, 0, screen.xsize, 40)
@@ -200,7 +201,7 @@ public function PlayerObject_ProcessPlayer
 					engine.state = ENGINE_INITPAUSE
 				end if
 
-				if inputPress.start == true
+				if inputPress[0].start == true
 					PlaySfx(SfxName[Menu Back], false)
 					engine.state = ENGINE_INITPAUSE
 				end if
@@ -210,7 +211,7 @@ public function PlayerObject_ProcessPlayer
 		ProcessObjectControl()
 	else
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
-		if inputPress.start == true
+		if inputPress[0].start == true
 			checkResult = false
 		end if
 
@@ -220,7 +221,7 @@ public function PlayerObject_ProcessPlayer
 			end if
 		end if
 
-		if inputPress.start == true
+		if inputPress[0].start == true
 			PlayerObject_replayLength = 1
 		end if
 
@@ -469,7 +470,7 @@ end function
 event ObjectUpdate
 	if stage.debugMode == true
 		CallFunction(PlayerObject_ProcessPlayer)
-		if inputPress.buttonB == true
+		if inputPress[0].buttonB == true
 			player.type = TypeName[Debug Mode]
 			
 			if stage.playerListPos == PlayerName[TAILS]
@@ -521,43 +522,44 @@ event ObjectStartup
 			stage.player2Enabled = true
 		end if
 
-		ResetObjectEntity(0, TypeName[Player Object], 0, player[arrayPos0].xpos, player[arrayPos0].ypos)
-		screen.cameraX = player[SLOT_PLAYER1].ixpos
-		screen.cameraY = player[SLOT_PLAYER1].iypos
-		player[SLOT_PLAYER1].groupID = GROUP_PLAYERS
-		player[SLOT_PLAYER1].xvel = 0
-		player[SLOT_PLAYER1].yvel = 0
-		player[SLOT_PLAYER1].speed = 0
+		// 0 = SLOT_PLAYER1
+		ResetObjectEntity(SLOT_PLAYER1, TypeName[Player Object], 0, player[arrayPos0].xpos, player[arrayPos0].ypos)
+		screen.cameraX = player[0].ixpos
+		screen.cameraY = player[0].iypos
+		player[9].groupID = GROUP_PLAYERS
+		player[9].xvel = 0
+		player[9].yvel = 0
+		player[9].speed = 0
 		PlayerObject_playerSlot = player.entityPos
 
 		switch stage.playerListPos
 		case 0
 			LoadAnimation("SonicSS.ani")
-			player[SLOT_PLAYER1].animationSpeed = 48
+			player[9].animationSpeed = 48
 			break
 
 		case 1
 			LoadAnimation("TailsSS.ani")
-			player[SLOT_PLAYER1].animationSpeed = 120
+			player[9].animationSpeed = 120
 			break
 
 		case 2
 			LoadAnimation("KnucklesSS.ani")
-			player[SLOT_PLAYER1].animationSpeed = 48
+			player[9].animationSpeed = 48
 			break
 		end switch
 		
 		// Note - player.animation never needs to be set since the desired animation is animation ID 0 in the file
 
-		player[SLOT_PLAYER1].state = PlayerObject_HandleMovement
-		player[SLOT_PLAYER1].priority = PRIORITY_ACTIVE
-		player[SLOT_PLAYER1].drawOrder = 4
-		player[SLOT_PLAYER1].acceleration = 0xC00
-		player[SLOT_PLAYER1].jumpStrength = 0x68000
-		player[SLOT_PLAYER1].rollSpeed = 0x2A00
+		player[0].state = PlayerObject_HandleMovement
+		player[0].priority = PRIORITY_ACTIVE
+		player[0].drawOrder = 4
+		player[0].acceleration = 0xC00
+		player[0].jumpStrength = 0x68000
+		player[0].rollSpeed = 0x2A00
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
-		player[SLOT_PLAYER1].tileCollisions = false
-		player[SLOT_PLAYER1].gravity = GRAVITY_AIR
+		player[0].tileCollisions = false
+		player[0].gravity = GRAVITY_AIR
 		PlayerObject_stageRotation = 0
 		PlayerObject_rotateSpeed = 0
 		PlayerObject_rotateDir = 0
