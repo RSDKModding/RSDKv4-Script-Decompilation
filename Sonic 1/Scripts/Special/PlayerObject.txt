@@ -28,7 +28,7 @@ private alias object.yvel			 : player.yvel
 private alias object.speed			 : player.speed			// Also based on world-space
 private alias object.rotation		 : player.rotation
 private alias object.direction		 : player.direction
-private alias object.gravity		 : player.gravity			// GRAVITY_GROUND or GRAVITY_AIR. Not to be confused with player.gravityStrength, see there for more info
+private alias object.gravity		 : player.gravity			// 0 or 1. Not to be confused with player.gravityStrength, see there for more info
 private alias object.frame			 : player.frame
 private alias object.animation		 : player.animation
 private alias object.animationSpeed	 : player.animationSpeed
@@ -37,7 +37,7 @@ private alias object.controlMode	 : player.controlMode		// Normally 0 to allow f
 private alias object.interaction	 : player.interaction		// Will the object interact with objects?
 private alias object.tileCollisions	 : player.tileCollisions
 
-// *Object-wise* input, not to be confused with inputPress[0].X and inputDown[0].X
+// *Object-wise* input, not to be confused with keyPress[0].X and keyDown[0].X
 private alias object.jumpPress 	: player.jumpPress
 private alias object.jumpHold 	: player.jumpHold
 private alias object.up		 	: player.up
@@ -72,11 +72,11 @@ private alias 8 : TITLECARD_FADETOTITLE
 // ========================
 reserve function PlayerObject_ProcessPlayer
 reserve function PlayerObject_Blank
-reserve function PlayerObject_HandleAniSpeed
-reserve function PlayerObject_HandleMovement
+reserve function PlayerObject_AniSpeed
+reserve function PlayerObject_Movement
 reserve function PlayerObject_InitReplay
-reserve function PlayerObject_HandleGroundCol
-reserve function PlayerObject_HandleAirCol
+reserve function PlayerObject_GroundCol
+reserve function PlayerObject_AirCol
 
 // ========================
 // Static Values
@@ -150,19 +150,19 @@ public function PlayerObject_ProcessPlayer
 					
 					switch temp2
 					case 0
-						inputDown[0].right = true
+						keyDown[0].right = true
 						break
 
 					case 1
-						inputDown[0].down = true
+						keyDown[0].down = true
 						break
 
 					case 2
-						inputDown[0].left = true
+						keyDown[0].left = true
 						break
 
 					case 3
-						inputDown[0].up = true
+						keyDown[0].up = true
 						break
 					end switch
 				end if
@@ -170,40 +170,40 @@ public function PlayerObject_ProcessPlayer
 				// Check if the jump button is touched
 				CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
 				if checkResult > -1
-					inputDown[0].buttonA = true
+					keyDown[0].buttonA = true
 				end if
 
 				if touchJump == false
 					// If the jump button only started being touched this frame, then update the press variable accordingly
-					inputPress[0].buttonA |= inputDown[0].buttonA
+					keyPress[0].buttonA |= keyDown[0].buttonA
 				end if
 				
 				// And now store the current held state for next frame
-				touchJump = inputDown[0].buttonA
+				touchJump = keyDown[0].buttonA
 
 				if stage.debugMode == true
 					// And now to the same process for the B button (debug mode buttom)
 					CheckTouchRect(0, 0, 112, 56)
 					if checkResult > -1
-						inputDown[0].buttonB = true
+						keyDown[0].buttonB = true
 					end if
 
 					if touchDebug == false
-						inputPress[0].buttonB |= inputDown[0].buttonB
+						keyPress[0].buttonB |= keyDown[0].buttonB
 					end if
 					
-					touchDebug = inputDown[0].buttonB
+					touchDebug = keyDown[0].buttonB
 				end if
 
 				CheckTouchRect(240, 0, screen.xsize, 40)
 				if checkResult > -1
 					PlaySfx(SfxName[Menu Back], false)
-					engine.state = ENGINE_INITPAUSE
+					engine.state = 5
 				end if
 
-				if inputPress[0].start == true
+				if keyPress[0].start == true
 					PlaySfx(SfxName[Menu Back], false)
-					engine.state = ENGINE_INITPAUSE
+					engine.state = 5
 				end if
 			end if
 		end if
@@ -211,7 +211,7 @@ public function PlayerObject_ProcessPlayer
 		ProcessObjectControl()
 	else
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
-		if inputPress[0].start == true
+		if keyPress[0].start == true
 			checkResult = false
 		end if
 
@@ -221,7 +221,7 @@ public function PlayerObject_ProcessPlayer
 			end if
 		end if
 
-		if inputPress[0].start == true
+		if keyPress[0].start == true
 			PlayerObject_replayLength = 1
 		end if
 
@@ -252,7 +252,7 @@ public function PlayerObject_ProcessPlayer
 				arrayPos0 = PlayerObject_playerSlot
 				player[arrayPos0].type = TypeName[Title Card]
 				player[arrayPos0].state = TITLECARD_FADETOTITLE
-				player[arrayPos0].priority = PRIORITY_ACTIVE
+				player[arrayPos0].priority = 1
 				player[arrayPos0].drawOrder = 6
 			end if
 		end if
@@ -267,8 +267,8 @@ public function PlayerObject_Blank
 end function
 
 
-public function PlayerObject_HandleAniSpeed
-	if stage.playerListPos == PlayerName[TAILS]
+public function PlayerObject_AniSpeed
+	if stage.playerListPos == 1
 		player.animationSpeed = 120
 	else
 		player.animationSpeed = player.moveSpeed
@@ -280,32 +280,32 @@ public function PlayerObject_HandleAniSpeed
 end function
 
 
-public function PlayerObject_HandleGroundCol
+public function PlayerObject_GroundCol
 	if player.worldVelocity.x > 0
-		GetBit(temp0, player.collisionFlags, COL_LEFT)
+		GetBit(temp0, player.collisionFlags, 2)
 	else
-		GetBit(temp0, player.collisionFlags, COL_RIGHT)
+		GetBit(temp0, player.collisionFlags, 3)
 	end if
 
 	if temp0 != 0
 		player.worldVelocity.x = 0
-		player.gravity = GRAVITY_GROUND
+		player.gravity = 0
 	end if
 
 	if player.worldVelocity.y > 0
-		GetBit(temp0, player.collisionFlags, COL_TOP)
+		GetBit(temp0, player.collisionFlags, 1)
 	else
-		GetBit(temp0, player.collisionFlags, COL_BOTTOM)
+		GetBit(temp0, player.collisionFlags, 4)
 	end if
 
 	if temp0 != 0
 		player.worldVelocity.y = 0
-		player.gravity = GRAVITY_GROUND
+		player.gravity = 0
 	end if
 end function
 
 
-public function PlayerObject_HandleAirCol
+public function PlayerObject_AirCol
 	// Get the nearest rotation quarter
 	temp0 = PlayerObject_stageRotation
 	temp0 >>= 1
@@ -314,33 +314,33 @@ public function PlayerObject_HandleAirCol
 	switch temp0
 	case 0x00
 		if player.moveSpeed > 0
-			GetBit(temp0, player.collisionFlags, COL_LEFT)
+			GetBit(temp0, player.collisionFlags, 2)
 		else
-			GetBit(temp0, player.collisionFlags, COL_RIGHT)
+			GetBit(temp0, player.collisionFlags, 3)
 		end if
 		break
 
 	case 0x40
 		if player.moveSpeed > 0
-			GetBit(temp0, player.collisionFlags, COL_TOP)
+			GetBit(temp0, player.collisionFlags, 1)
 		else
-			GetBit(temp0, player.collisionFlags, COL_BOTTOM)
+			GetBit(temp0, player.collisionFlags, 4)
 		end if
 		break
 
 	case 0x80
 		if player.moveSpeed > 0
-			GetBit(temp0, player.collisionFlags, COL_RIGHT)
+			GetBit(temp0, player.collisionFlags, 3)
 		else
-			GetBit(temp0, player.collisionFlags, COL_LEFT)
+			GetBit(temp0, player.collisionFlags, 2)
 		end if
 		break
 
 	case 0xC0
 		if player.moveSpeed > 0
-			GetBit(temp0, player.collisionFlags, COL_BOTTOM)
+			GetBit(temp0, player.collisionFlags, 4)
 		else
-			GetBit(temp0, player.collisionFlags, COL_TOP)
+			GetBit(temp0, player.collisionFlags, 1)
 		end if
 		break
 	end switch
@@ -353,9 +353,9 @@ public function PlayerObject_HandleAirCol
 end function
 
 
-public function PlayerObject_HandleMovement
-	CallFunction(PlayerObject_HandleGroundCol)
-	if player.gravity == GRAVITY_AIR
+public function PlayerObject_Movement
+	CallFunction(PlayerObject_GroundCol)
+	if player.gravity == 1
 		if player.rotateBlockTimer != 0
 			player.rotateBlockTimer--
 		end if
@@ -367,7 +367,7 @@ public function PlayerObject_HandleMovement
 
 	temp2 = PlayerObject_stageRotation
 	temp2 &= 504
-	if player.gravity == GRAVITY_GROUND
+	if player.gravity == 0
 		if player.jumpPress == true
 			checkResult = true
 		else
@@ -404,7 +404,7 @@ public function PlayerObject_HandleMovement
 		player.worldVelocity.y += temp1
 	end if
 
-	CallFunction(PlayerObject_HandleAirCol)
+	CallFunction(PlayerObject_AirCol)
 
 	temp0 = 0
 	if player.left == true
@@ -413,7 +413,7 @@ public function PlayerObject_HandleMovement
 			player.moveSpeed = -0x80000
 		end if
 
-		player.direction = FLIP_X
+		player.direction = 1
 		temp0 = true
 	end if
 
@@ -423,7 +423,7 @@ public function PlayerObject_HandleMovement
 			player.moveSpeed = 0x80000
 		end if
 
-		player.direction = FLIP_NONE
+		player.direction = 0
 		temp0 = true
 	end if
 
@@ -459,7 +459,7 @@ public function PlayerObject_HandleMovement
 	player.xvel += player.moveVelocity.x
 	player.yvel = player.worldVelocity.y
 	player.yvel += player.moveVelocity.y
-	CallFunction(PlayerObject_HandleAniSpeed)
+	CallFunction(PlayerObject_AniSpeed)
 end function
 
 
@@ -470,10 +470,10 @@ end function
 event ObjectUpdate
 	if stage.debugMode == true
 		CallFunction(PlayerObject_ProcessPlayer)
-		if inputPress[0].buttonB == true
+		if keyPress[0].buttonB == true
 			player.type = TypeName[Debug Mode]
 			
-			if stage.playerListPos == PlayerName[TAILS]
+			if stage.playerListPos == 1
 				// Clear the following Tails Object if needed too
 				object[+1].type = TypeName[Blank Object]
 			end if
@@ -493,7 +493,7 @@ event ObjectUpdate
 				ProcessObjectMovement()
 			end if
 
-			player.gravity = GRAVITY_AIR
+			player.gravity = 1
 		end if
 	else
 		CallFunction(PlayerObject_ProcessPlayer)
@@ -504,7 +504,7 @@ event ObjectUpdate
 			ProcessObjectMovement()
 		end if
 
-		player.gravity = GRAVITY_AIR
+		player.gravity = 1
 	end if
 end event
 
@@ -517,8 +517,8 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("Global/Display.gif")
 	foreach (TypeName[Player Object], arrayPos0, ALL_ENTITIES)
-		if stage.playerListPos >= PlayerName[SONIC AND TAILS]
-			stage.playerListPos = PlayerName[SONIC]
+		if stage.playerListPos >= 3
+			stage.playerListPos = 0
 			stage.player2Enabled = true
 		end if
 
@@ -551,15 +551,15 @@ event ObjectStartup
 		
 		// Note - player.animation never needs to be set since the desired animation is animation ID 0 in the file
 
-		player[0].state = PlayerObject_HandleMovement
-		player[0].priority = PRIORITY_ACTIVE
+		player[0].state = PlayerObject_Movement
+		player[0].priority = 1
 		player[0].drawOrder = 4
 		player[0].acceleration = 0xC00
 		player[0].jumpStrength = 0x68000
 		player[0].rollSpeed = 0x2A00
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 		player[0].tileCollisions = false
-		player[0].gravity = GRAVITY_AIR
+		player[0].gravity = 1
 		PlayerObject_stageRotation = 0
 		PlayerObject_rotateSpeed = 0
 		PlayerObject_rotateDir = 0

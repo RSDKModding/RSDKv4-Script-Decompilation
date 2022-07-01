@@ -130,20 +130,20 @@ public function OOZSetup_HandlePlayerOilPool
 		temp7 = false
 	end if
 
-	CallFunction(PlayerObject_HandleMovement)
-	if object.gravity == GRAVITY_AIR
-		object.state = PlayerObject_HandleAir
-		CallFunction(PlayerObject_HandleAirMovement)
+	CallFunction(PlayerObject_Movement)
+	if object.gravity == 1
+		object.state = PlayerObject_Air
+		CallFunction(PlayerObject_AirMovement)
 	else
 		CallFunction(PlayerObject_ResetOnFloor)
 		if object.speed == 0
-			if object.collisionMode == CMODE_FLOOR
+			if object.collisionMode == 0
 				if player.timer < 240
 					object.animation = ANI_STOPPED
 					player.timer++
 				else
 					object.animation = ANI_WAITING
-					if stage.playerListPos == PlayerName[KNUCKLES]
+					if stage.playerListPos == 2
 						player.timer++
 						if player.timer == 834
 							player.timer = 0
@@ -196,13 +196,13 @@ public function OOZSetup_HandlePlayerOilPool
 			end if
 
 			if object.speed > 0
-				object.direction = FLIP_NONE
+				object.direction = 0
 			else
-				object.direction = FLIP_X
+				object.direction = 1
 			end if
 		end if
 
-		if object.collisionMode == CMODE_FLOOR
+		if object.collisionMode == 0
 			if object.pushing == 2
 				object.animation = ANI_PUSHING
 				object.animationSpeed = 0
@@ -232,7 +232,7 @@ public function OOZSetup_HandleOilMovement
 			end if
 
 			if object.speed <= 0
-				object.direction = FLIP_X
+				object.direction = 1
 			end if
 		end if
 
@@ -242,7 +242,7 @@ public function OOZSetup_HandleOilMovement
 			end if
 
 			if object.speed >= 0
-				object.direction = FLIP_NONE
+				object.direction = 0
 			end if
 		end if
 
@@ -332,19 +332,19 @@ end function
 public function OOZSetup_HandlePlayerOilSlide
 	CallFunction(OOZSetup_HandleOilMovement)
 
-	if object.gravity == GRAVITY_AIR
-		object.state = PlayerObject_HandleAir
-		CallFunction(PlayerObject_HandleAirMovement)
+	if object.gravity == 1
+		object.state = PlayerObject_Air
+		CallFunction(PlayerObject_AirMovement)
 	else
 		CallFunction(PlayerObject_ResetOnFloor)
 		if object.speed == 0
-			if object.collisionMode == CMODE_FLOOR
+			if object.collisionMode == 0
 				if player.timer < 240
 					object.animation = ANI_STOPPED
 					player.timer++
 				else
 					object.animation = ANI_WAITING
-					if stage.playerListPos == PlayerName[KNUCKLES]
+					if stage.playerListPos == 2
 						player.timer++
 						if player.timer == 834
 							player.timer = 0
@@ -377,7 +377,7 @@ public function OOZSetup_HandlePlayerOilSlide
 		end if
 
 		player.skidding = 0
-		if object.collisionMode == CMODE_FLOOR
+		if object.collisionMode == 0
 			if object.pushing == 2
 				object.animation = ANI_PUSHING
 				object.animationSpeed = 0
@@ -560,8 +560,8 @@ event ObjectUpdate
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if player[currentPlayer].state == PlayerObject_Blank
 			if player[currentPlayer].ypos < -0x800000
-				player[currentPlayer].state = PlayerObject_HandleAir
-				player[currentPlayer].gravity = GRAVITY_AIR
+				player[currentPlayer].state = PlayerObject_Air
+				player[currentPlayer].gravity = 1
 				player[currentPlayer].jumpAbilityState = 0
 				player[currentPlayer].tileCollisions = true
 			end if
@@ -576,7 +576,7 @@ event ObjectUpdate
 		temp2 >>= 16
 		temp2 += 6
 
-		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
+		Get16x16TileInfo(temp0, temp1, temp2, 8)
 		switch temp0
 		default
 		case TILE_NORMAL
@@ -588,33 +588,33 @@ event ObjectUpdate
 				if player[currentPlayer].animation == ANI_JUMPING
 					player[currentPlayer].animation = ANI_WALKING
 				end if
-				player[currentPlayer].gravity = GRAVITY_GROUND
+				player[currentPlayer].gravity = 0
 				player[currentPlayer].yvel = 0
 				player[currentPlayer].ypos += 0x10000
 			end if
 			break
 
 		case TILE_OILSTRIP
-			if player[currentPlayer].gravity == GRAVITY_GROUND
+			if player[currentPlayer].gravity == 0
 				player[currentPlayer].state = OOZSetup_HandlePlayerOilSlide
 			end if
 			break
 
 		case TILE_OILSLIDE
-			if player[currentPlayer].gravity == GRAVITY_GROUND
+			if player[currentPlayer].gravity == 0
 				player[currentPlayer].state = OOZSetup_HandlePlayerOilSlide
 				player[currentPlayer].animation = ANI_WATERSLIDE
-				Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_DIRECTION)
+				Get16x16TileInfo(temp0, temp1, temp2, 1)
 				switch temp0
-				case FLIP_NONE
-				case FLIP_Y
+				case 0
+				case 2
 					if player[currentPlayer].speed > -0x80000
 						player[currentPlayer].speed -= 0x4000
 					end if
 					break
 
-				case FLIP_X
-				case FLIP_XY
+				case 1
+				case 3
 					if player[currentPlayer].speed < 0x80000
 						player[currentPlayer].speed += 0x4000
 					end if
@@ -622,9 +622,9 @@ event ObjectUpdate
 				end switch
 
 				if player[currentPlayer].speed < 0
-					player[currentPlayer].direction = FLIP_X
+					player[currentPlayer].direction = 1
 				else
-					player[currentPlayer].direction = FLIP_NONE
+					player[currentPlayer].direction = 0
 				end if
 
 				if currentPlayer == 0
@@ -653,7 +653,7 @@ event ObjectStartup
 	SetPaletteEntry(0, 192, 0x000000)
 
 	object[SLOT_ZONESETUP].type = TypeName[OOZ Setup]
-	object[SLOT_ZONESETUP].priority = PRIORITY_ACTIVE
+	object[SLOT_ZONESETUP].priority = 1
 
 	stage.newYBoundary2 = 1896
 	stage.deathBoundary = stage.newYBoundary2

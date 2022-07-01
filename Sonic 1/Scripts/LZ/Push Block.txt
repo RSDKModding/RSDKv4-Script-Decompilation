@@ -111,7 +111,7 @@ public function PushBlock_HandleObjectCollisions
 		CheckEqual(currentPlayer, 1)
 		temp1 &= checkResult
 
-		if player[currentPlayer].gravity == GRAVITY_GROUND
+		if player[currentPlayer].gravity == 0
 			if player[currentPlayer].xvel < 0
 				BoxCollisionTest(C_TOUCH, object.entityPos, 0, -12, object.pushBoxR, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 				if checkResult == true
@@ -164,9 +164,9 @@ public function PushBlock_HandleObjectCollisions
 	if object.xvel != 0
 		object.xpos += object.xvel
 		if object.xvel < 0
-			ObjectTileCollision(CSIDE_RWALL, object.solidBoxL, 0, 0)
+			ObjectTileCollision(2, object.solidBoxL, 0, 0)
 		else
-			ObjectTileCollision(CSIDE_LWALL, object.solidBoxR, 0, 0)
+			ObjectTileCollision(1, object.solidBoxR, 0, 0)
 		end if
 
 		CallFunction(PushBlock_HandlePushBounds)
@@ -210,44 +210,44 @@ end function
 
 public function PushBlock_HandleTileCollisions
 	if object.beingPushed == true
-		if object.gravity == GRAVITY_AIR
+		if object.gravity == 1
 			object.yvel += 0x1800
 			object.ypos += object.yvel
 			temp0 = object.solidBoxL
 			temp0 += 2
-			ObjectTileCollision(CSIDE_FLOOR, temp0, 16, 0)
+			ObjectTileCollision(0, temp0, 16, 0)
 			object.floorSensorL = checkResult
 			object.gravity = checkResult
 
-			ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
+			ObjectTileCollision(0, 0, 16, 0)
 			object.floorSensorC = checkResult
 			object.gravity |= checkResult
 
 			temp0 = object.solidBoxR
 			temp0 -= 2
-			ObjectTileCollision(CSIDE_FLOOR, temp0, 16, 0)
+			ObjectTileCollision(0, temp0, 16, 0)
 			object.floorSensorR = checkResult
 			object.gravity |= checkResult
 		else
 			object.yvel = 0
 			temp0 = object.solidBoxL
 			temp0 += 2
-			ObjectTileGrip(CSIDE_FLOOR, temp0, 16, 0)
+			ObjectTileGrip(0, temp0, 16, 0)
 
 			object.floorSensorL = checkResult
 			object.gravity = checkResult
-			ObjectTileGrip(CSIDE_FLOOR, 0, 16, 0)
+			ObjectTileGrip(0, 0, 16, 0)
 
 			object.floorSensorC = checkResult
 			object.gravity |= checkResult
 
 			temp0 = object.solidBoxR
 			temp0 -= 2
-			ObjectTileGrip(CSIDE_FLOOR, temp0, 16, 0)
+			ObjectTileGrip(0, temp0, 16, 0)
 			object.floorSensorR = checkResult
 			object.gravity |= checkResult
 		end if
-		object.gravity ^= GRAVITY_AIR
+		object.gravity ^= 1
 	else
 		object.floorSensorL = true
 		object.floorSensorC = true
@@ -266,7 +266,7 @@ event ObjectUpdate
 
 	switch object.state
 	case PUSHBLOCK_PUSHABLE
-		object.priority = PRIORITY_ACTIVE
+		object.priority = 1
 		CallFunction(PushBlock_HandleObjectCollisions)
 		CallFunction(PushBlock_HandleTileCollisions)
 		break
@@ -277,14 +277,14 @@ event ObjectUpdate
 			if object.xpos >= object.pushBoundary
 				object.xpos = object.pushBoundary
 				object.xvel = 0
-				object.gravity = GRAVITY_AIR
+				object.gravity = 1
 				object.state = PUSHBLOCK_FALLING
 			end if
 		else
 			if object.xpos <= object.pushBoundary
 				object.xpos = object.pushBoundary
 				object.xvel = 0
-				object.gravity = GRAVITY_AIR
+				object.gravity = 1
 				object.state = PUSHBLOCK_FALLING
 			end if
 		end if
@@ -292,7 +292,7 @@ event ObjectUpdate
 
 	case PUSHBLOCK_FALLING
 		CallFunction(PushBlock_HandleTileCollisions)
-		if object.gravity == GRAVITY_GROUND
+		if object.gravity == 0
 			object.state = PUSHBLOCK_PUSHABLE
 		end if
 		break
@@ -317,7 +317,7 @@ event ObjectUpdate
 		temp2 &= checkResult
 		if temp2 == 0
 			BoxCollisionTest(C_SOLID, object.entityPos, object.solidBoxL, -16, object.solidBoxR, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
-			if checkResult == COL_TOP
+			if checkResult == 1
 				player[currentPlayer].xpos += temp4
 				player[currentPlayer].ypos += temp5
 			end if
@@ -336,7 +336,7 @@ event ObjectUpdate
 		if object.outOfBounds == true
 			object.yvel = 0
 			object.beingPushed = false
-			object.priority = PRIORITY_ACTIVE_BOUNDS
+			object.priority = 0
 			object.state = 0
 		else
 			object.xpos = temp0
