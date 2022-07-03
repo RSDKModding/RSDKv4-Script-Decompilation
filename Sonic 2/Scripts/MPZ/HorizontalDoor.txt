@@ -1,5 +1,5 @@
 // ----------------------------------
-// RSDK Project: Sonic 2
+// RSDK Project: Sonic 1/Sonic 2
 // Script Description: Horizontal Door Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
@@ -22,10 +22,15 @@ reserve function HorizontalDoor_Setup
 reserve function HorizontalDoor_DebugDraw
 reserve function HorizontalDoor_DebugSpawn
 
+
+// ========================
+// Events
+// ========================
+
 public function HorizontalDoor_Setup
 	object[arrayPos0].priority 	= 1
 	object[arrayPos0].timer 	= 0
-	object[arrayPos0].xpos 		= object[arrayPos0].startPos.x
+	object[arrayPos0].xpos 	= object[arrayPos0].startPos.x
 
 	if object[arrayPos0].direction == 1
 		object[arrayPos0].xpos -= 0x400000
@@ -44,10 +49,12 @@ end function
 
 private function HorizontalDoor_DebugSpawn
 	CreateTempObject(TypeName[Horizontal Door], 0, object.xpos, object.ypos)
+
+	// Door direction is based on the direction of the player when entering Debug Mode
 	object[tempObjectPos].direction = object.direction
-	
-	arrayPos0 						= object[tempObjectPos].entityPos
-	object[arrayPos0].startPos.x 	= object.xpos
+
+	arrayPos0 = object[tempObjectPos].entityPos
+	object[arrayPos0].startPos.x = object.xpos
 	CallFunction(HorizontalDoor_Setup)
 end function
 
@@ -57,9 +64,11 @@ end function
 // ========================
 
 event ObjectUpdate
-	temp0 = true
+	temp0 = false
 
 	temp1 = object.xpos
+
+	// Check to see if any players have stepped within range for the door activation
 	object.xpos = object.startPos.x
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if object.direction == 0
@@ -74,8 +83,10 @@ event ObjectUpdate
 			end if
 		end if
 	next
+
 	object.xpos = temp1
 
+	// A player has stepped within range, move the door
 	if temp0 == true
 		if object.timer < 4
 			object.timer++
@@ -111,6 +122,8 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("MPZ/Objects.gif")
+
+	// Horizontal Door Frame
 	SpriteFrame(-32, -12, 64, 24, 383, 207)
 
 	foreach (TypeName[Horizontal Door], arrayPos0, ALL_ENTITIES)
@@ -137,6 +150,7 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("MPZ/Objects.gif")
 	SpriteFrame(-32, -12, 64, 24, 383, 207)
-	
+
+	// Note that this object actually uses the `direction` variable for its direction, rather than property value
 	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

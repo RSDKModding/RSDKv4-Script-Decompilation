@@ -171,9 +171,7 @@ end table
 
 // This is the anim sub-table used for the above proper anim tables
 // (confusing system, I know)
-private table DeathEggRobot_anim_sub_bend
-	0, 0, 0, 0, 0, 0, 0, 0, 0
-end table
+private table DeathEggRobot_anim_sub_bend[9]
 
 
 private table DeathEggRobot_anim_jump
@@ -182,9 +180,7 @@ private table DeathEggRobot_anim_jump
 end table
 
 // Also an anim sub-table
-private table DeathEggRobot_anim_sub_jump
-	0, 0, 0
-end table
+private table DeathEggRobot_anim_sub_jump[3]
 
 private table DeathEggRobot_anim_stepAhead
 	0 // DeathEggRobot_anim_sub_walk gets placed here
@@ -198,9 +194,7 @@ end table
 
 
 // The last anim sub-table, also placed in a weird spot
-private table DeathEggRobot_anim_sub_walk
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-end table
+private table DeathEggRobot_anim_sub_walk[12]
 
 
 // All the way over here for some reason, this frame was likely added after the entire object had already been completed
@@ -505,31 +499,45 @@ private table DeathEggRobot_walk_frame_12
 	 1, 0x0000,  0x0800
 end table
 
+
+// And now, the actual code starts!
+
 public function DeathEggRobot_restoreBodyParts
 	// Restores all the body parts back to their normal positions, used for cleanup quite often
-
+	
+	// Preconditions:
+	// - temp0 is set to the table ID of a DER animation table (always DeathEggRobot_bodyPartsOrigin)
+	
 	temp7 = 0
-	GetTableValue(temp6, temp7, temp0) // Get tntry count
+	
+	// First, get entry count
+	GetTableValue(temp6, temp7, temp0)
 	temp7++
 	while temp6 >= 0
-		GetTableValue(temp1, temp7, temp0) // Object entity pos offset
+		
+		// Get the object's entity pos offset
+		GetTableValue(temp1, temp7, temp0)
 		temp7++
 		arrayPos0 = object.entityPos
 		arrayPos0 += temp1
-
-		GetTableValue(temp1, temp7, temp0) // Object xpos offset
+		
+		// Object xpos offset
+		GetTableValue(temp1, temp7, temp0)
 		temp7++
-
-		GetTableValue(temp2, temp7, temp0) // Object ypos offset
+		
+		// Object ypos offset
+		GetTableValue(temp2, temp7, temp0)
 		temp7++
-
+		
+		// Update xpos
 		object[arrayPos0].xpos = object.xpos
 		if object.direction == 0
 			object[arrayPos0].xpos += temp1
 		else
 			object[arrayPos0].xpos -= temp1
 		end if
-
+		
+		// Update ypos
 		object[arrayPos0].ypos = object.ypos
 		object[arrayPos0].ypos += temp2
 
@@ -576,24 +584,25 @@ end function
 
 
 public function DeathEggRobot_animateBody
-	// Precondition - when this function is called, temp6 is holding an animation table
-	// This table is, itself, holding another table, where that table being held also contains a long string of tables
-	// Far too many tables to wrap your head around, to say the least
-
+	// Preconditions:
+	// - When this function is called, temp6 is holding an animation table
+	//   This table is, itself, holding another table, where that table being held also contains a long string of tables
+	//   Far too many tables to wrap your head around, to say the least...
+	
 	// Essentially, what this function itself does is move and animate the body
-
+	
 	GetTableValue(temp5, 0, temp6)
-
+	
 	GetTableValue(temp0, object.frame, temp6)
 	temp1 = temp0
 	temp4 = false
 	temp1 &= 192
-
+	
 	checkResult = false
 	if temp0 != 0
 		CallFunction(DeathEggRobot_checkAnimEX)
 	end if
-
+	
 	if checkResult == false
 		GetTableValue(temp2, temp0, temp5)
 		temp7 = 0
@@ -606,7 +615,7 @@ public function DeathEggRobot_animateBody
 			object.animationTimer = 0
 			object.frame++
 		end if
-
+		
 		while temp0 >= 0
 			GetTableValue(temp5, temp7, temp2)
 			temp7++
@@ -644,14 +653,14 @@ end function
 
 public function DeathEggRobot_CreateBombs
 	arrayPos0 = object[-7].entityPos
-
+	
 	// Offset the entity pos based on the last bombs used, in case there's more than one pair active
 	arrayPos0 += object.bombs
-
-	// Cpdate the value with a cap of 3, there should only ever be 4 bombs max active at one point 
+	
+	// Update the value with a cap of 3, there should only ever be 4 bombs (2 pairs) max active at one point 
 	object.bombs += 2
 	object.bombs &= 3
-
+	
 	// Create bomb 1
 	object[arrayPos0].type = TypeName[DER Bomb]
 	object[arrayPos0].xpos = object.xpos
@@ -1439,6 +1448,7 @@ event ObjectDraw
 	temp1 = object.ypos
 	temp1 += object.headOffset.y
 	DrawSpriteFX(2, FX_ROTATE, temp0, temp1)
+	
 	DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
 	DrawSpriteFX(object.flameSprite, FX_FLIP, object.xpos, object.ypos)
 end event
@@ -1448,21 +1458,31 @@ event ObjectStartup
 	CheckCurrentStageFolder("Zone12")
 	if checkResult == true
 		LoadSpriteSheet("DEZ/Objects.gif")
+		
+		// These first two are unused pre-rotated Head sprites
 		SpriteFrame(12, -16, 23, 32, 487, 150)
 		SpriteFrame(-20, -13, 54, 29, 430, 125)
+		
+		// In their place, a engine-rotated single Head sprite is used instead
 		SpriteFrame(-32, -24, 71, 24, 414, 158)
+		
+		// Main Body
 		SpriteFrame(-44, -36, 112, 72, 399, 183)
+		
+		// Flame Animation Sprites
 		SpriteFrame(0, 0, 1, 1, 495, 106)
-
-		// FLame sprites
 		SpriteFrame(48, 12, 16, 16, 495, 108)
 		SpriteFrame(48, 12, 16, 24, 495, 83)
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
+		
 		SpriteFrame(12, -16, 23, 32, 999, 150)
 		SpriteFrame(-20, -13, 54, 29, 942, 125)
+		
 		SpriteFrame(-32, -24, 71, 24, 926, 158)
+		
 		SpriteFrame(-44, -36, 112, 72, 911, 183)
+		
 		SpriteFrame(0, 0, 1, 1, 1007, 106)
 		SpriteFrame(48, 12, 16, 16, 1007, 108)
 		SpriteFrame(48, 12, 16, 24, 1007, 83)
@@ -1514,6 +1534,10 @@ event ObjectStartup
 	SetTableValue(DeathEggRobot_walk_frame_12, 11, DeathEggRobot_anim_sub_walk)
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKEdit
 	if editor.returnVariable == true

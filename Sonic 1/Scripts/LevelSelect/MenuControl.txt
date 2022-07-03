@@ -21,6 +21,17 @@ private alias object.value1 : hexNo.highlighted
 // The maximum number of selections available
 private alias 27 : MAX_SELECTION_COUNT
 
+// Aliases for some of the special options
+private alias 64 : SETTING_PLAYER
+private alias 65 : SETTING_SPINDASH
+private alias 66 : SETTING_GNDSPDCAP
+private alias 67 : SETTING_AIRSPDCAP
+private alias 68 : SETTING_S1SPIKES
+private alias 69 : SETTING_ITEMS
+private alias 70 : SETTING_EMERALDS
+
+private alias 71 : ENTRY_SOUNDTEST
+
 // States
 private alias 0 : MENUCONTROL_INIT
 private alias 1 : MENUCONTROL_FADEIN
@@ -69,13 +80,17 @@ private table MenuControl_EmeraldsCheatCode
 	4, 1, 2, 6
 end table
 
+// TODO: The Origins-ification uglied the below table quite a bit... 
+// pretty it up later - lave
+
 // This table holds data for every stage with six values for every stage,
 // -> First entry is menu table the stage option is on
 // -> Second is what number this one is on the list, from top to bottom
 // -> Third is the active stage list the stage is on
 // -> Fourth is the stage's position in the stage list
 // -> Fifth is the menu entry of what is on the opposite side of this selection, like how SBZ is to the right of GHZ and vice versa
-// -> Sixth is the icon the entry uses
+//      -> For "special" selections (like settings) this value is instead used to hold a special ID
+// -> Sixth is the icon the entry uses (based on Sprite Frames in the BG Animation object)
 private table MenuControl_EntryTable
 	0,  0, 1, 0,  15, 1 	// 0  - GHZ 1
 	0,  1, 1, 1,  16, 1 	// 1  - GHZ 2
@@ -131,11 +146,14 @@ public function MenuControl_HandleSecrets
 		if MenuControl_EmeraldCheatCodePos == 4
 			MenuControl_EmeraldCheatCodePos = 0
 			if options.superStates == true
-				specialStage.emeralds = 0x7F // Note that this isn't 127 emeralds, just seven 1's in binary
+				// Give the player all seven emeralds
+				specialStage.emeralds = 0b01111111
 			else
-				specialStage.emeralds = 0x3F // This isn't 63 emeralds, either. Just 6 1's in binary
+				// Only give the player 6 emeralds, as the seventh one shouldn't really exist
+				specialStage.emeralds = 0b00111111
 				specialStage.listPos = 6
 			end if
+
 			PlaySfx(SfxName[Emerald], false)
 			StopMusic()
 		end if
@@ -352,10 +370,10 @@ event ObjectUpdate
 		GetTableValue(temp2, temp0, MenuControl_EntryTable)
 		temp0 += 3
 
-		// Get what "scene" the selection should load
+		// Get the selection's special ID (will return a normal value if it's a normal selection)
 		GetTableValue(temp1, temp0, MenuControl_EntryTable)
 
-		// Switch statement based on the scene
+		// Switch statement based on the entry's special ID
 		switch temp1
 		default
 			// Default - anything that isn't an option or sound test will end up here
@@ -374,7 +392,7 @@ event ObjectUpdate
 			end if
 			break
 
-		case 64
+		case SETTING_PLAYER
 			// Player option
 			hexNo[+1].highlighted = 16
 			hexNo[+2].highlighted = 0
@@ -408,8 +426,8 @@ event ObjectUpdate
 			end switch
 			break
 
-		case 65
-			// Spindash option
+		case SETTING_SPINDASH
+			// Spindash setting
 			hexNo[+1].highlighted = 0
 			hexNo[+2].highlighted = 0
 
@@ -418,7 +436,7 @@ event ObjectUpdate
 
 			if checkResult == true
 				// Toggle it
-				options.spindash ^= 1
+				options.spindash ^= true
 
 				// Update the menu to match
 				if options.spindash == true
@@ -429,16 +447,16 @@ event ObjectUpdate
 			end if
 			break
 
-		case 66
+		case SETTING_GNDSPDCAP
 			// Ground speed cap option
 			checkResult = keyPress[0].left
 			checkResult |= keyPress[0].right
 
 			if checkResult == true
 				// Toggle it
-				options.speedCap ^= 1
+				options.speedCap ^= true
 
-				// Update the menu to match the new setting
+				// Update the menu text to match the new setting
 				if options.speedCap == true
 					EditMenuEntry(MENU_2, "GND SPD CAP@@*ON*", temp2, true)
 				else
@@ -447,7 +465,7 @@ event ObjectUpdate
 			end if
 			break
 
-		case 67
+		case SETTING_AIRSPDCAP
 			// Air speed cap option
 			checkResult = keyPress[0].left
 			checkResult |= keyPress[0].right
@@ -455,9 +473,9 @@ event ObjectUpdate
 			if checkResult == true
 
 				// Toggle it
-				options.airSpeedCap ^= 1
+				options.airSpeedCap ^= true
 
-				// Change the menu to match the new option setting
+				// Change the menu text to match the new option setting
 				if options.airSpeedCap == true
 					EditMenuEntry(MENU_2, "AIR SPD CAP@@*ON*", temp2, true)
 				else
@@ -466,16 +484,16 @@ event ObjectUpdate
 			end if
 			break
 
-		case 68
+		case SETTING_S1SPIKES
 			// Spike behavior
 			checkResult = keyPress[0].left
 			checkResult |= keyPress[0].right
 
 			if checkResult == true
 				// Toggle the option
-				options.spikeBehavior ^= 1
+				options.spikeBehavior ^= true
 				
-				// Update the menu
+				// Update the menu text
 				if options.spikeBehavior == true
 					EditMenuEntry(MENU_2, "S1 SPIKES@@@@*ON*", temp2, true)
 				else
@@ -484,10 +502,17 @@ event ObjectUpdate
 			end if
 			break
 
+<<<<<<< Updated upstream
 		case 69
 			// Monitors option
 			checkResult = keyPress[0].left
 			checkResult |= keyPress[0].right
+=======
+		case SETTING_ITEMS
+			// Items option
+			checkResult = inputPress.left
+			checkResult |= inputPress.right
+>>>>>>> Stashed changes
 
 			if checkResult == true
 				if keyPress[0].left == true
@@ -522,7 +547,7 @@ event ObjectUpdate
 			end if
 			break
 
-		case 70
+		case SETTING_EMERALDS
 			// Max emeralds setting
 			hexNo[+1].highlighted = 0
 			hexNo[+2].highlighted = 0
@@ -532,7 +557,7 @@ event ObjectUpdate
 
 			if checkResult == true
 				// Change the setting
-				options.superStates ^= 1
+				options.superStates ^= true
 
 				// And update the menu to match
 				if options.superStates == true
@@ -543,7 +568,7 @@ event ObjectUpdate
 			end if
 			break
 
-		case 71
+		case ENTRY_SOUNDTEST
 			// Sound test
 			if object.soundTestCooldown > 0
 				object.soundTestCooldown--
@@ -566,7 +591,7 @@ event ObjectUpdate
 				hexNo[+2].number++
 			end if
 
-			// 31 max
+			// There are only 32 entries
 			hexNo[+2].number &= 31
 
 			if keyPress[0].buttonA == true
@@ -637,7 +662,7 @@ event ObjectUpdate
 			GetTableValue(temp1, temp0, MenuControl_EntryTable)
 			temp0++
 
-			// Get the stage list pos
+			// And then get the stage's list pos
 			GetTableValue(temp2, temp0, MenuControl_EntryTable)
 
 			stage.activeList = temp1
@@ -665,7 +690,7 @@ event ObjectUpdate
 			GetTableValue(temp1, temp0, MenuControl_EntryTable)
 			temp0++
 
-			// Get the stage list pos
+			// And then get the stage's list position
 			GetTableValue(temp2, temp0, MenuControl_EntryTable)
 
 			stage.activeList = temp1
@@ -700,7 +725,7 @@ event ObjectStartup
 		object[arrayPos0].priority = 1
 	next
 
-	// Player is on stage select, set the flag
+	// Player is on stage select, so set the flag
 	options.stageSelectFlag = true
 
 	// Setup the menu and its entries
@@ -807,6 +832,10 @@ event ObjectStartup
 	SetTableValue(SPECIAL_STAGE, temp0, MenuControl_EntryTable)
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
