@@ -11,11 +11,16 @@
 private alias object.value1 : object.leftTextPos
 private alias object.value2 : object.rightTextPos
 private alias object.value3 : object.timer
+private alias object.value4 : object.timeOver
 
+// States
 private alias 0 : DEATHEVENT_GAMEOVER
 private alias 1 : DEATHEVENT_TIMEOVER
 private alias 2 : DEATHEVENT_DEATH
 private alias 3 : DEATHEVENT_DEATH_TA
+private alias 4 : DEATHEVENT_WAITFORCALLBACK
+private alias 5 : DEATHEVENT_RETRY
+private alias 6 : DEATHEVENT_SETSCREENFADE
 
 // Game Modes Aliases
 private alias 1 : MODE_NORMAL
@@ -23,7 +28,39 @@ private alias 1 : MODE_NORMAL
 event ObjectUpdate
 	switch object.state
 	case DEATHEVENT_GAMEOVER
+#platform: USE_ORIGINS
+		if game.playMode == BOOT_PLAYMODE_CLASSIC
+			CheckEqual(object.timeOver, false)
+			temp0 = checkResult
+			CheckEqual(stage.minutes, 9)
+			temp0 &= checkResult
+			CheckEqual(stage.seconds, 59)
+			temp0 &= checkResult
+			CheckEqual(stage.milliSeconds, 99)
+			temp0 &= checkResult
+			temp0 |= game.timeOver
+			
+			if temp0 != false
+				if player.continues == 0
+					object.timeOver = true
+				else
+					recMilliSeconds = 0
+					recSeconds = 0
+					recMinutes = 0
+					game.timeOver = false
+				end if
+			end if
+		end if
+		// Fall-through
+#endplatform
 	case DEATHEVENT_TIMEOVER
+#platform: USE_ORIGINS
+		object.timeOver |= object.state
+		
+		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			object.type = TypeName[Blank Object]
+		end if
+#endplatform
 
 		temp0 = screen.xcenter
 		temp0 -= 72
@@ -45,6 +82,21 @@ event ObjectUpdate
 		if object.timer < 288
 			object.timer += 4
 		else
+#platform: USE_ORIGINS
+			if object.timeOver == true
+				if lampPostID > 0
+					recMilliSeconds = 99
+					recSeconds = 59
+					recMinutes = 9
+					game.timeOver = true
+				else
+					recMilliSeconds = 0
+					recSeconds = 0
+					recMinutes = 0
+				end if
+			end if
+#endplatform
+
 			if object.state == DEATHEVENT_GAMEOVER
 				recStageList = stage.activeList
 				recStage = stage.listPos
@@ -52,11 +104,14 @@ event ObjectUpdate
 
 				if player.continues == 0
 					stage.listPos = 0
+#platform: USE_STANDALONE
 					engine.state = 8
+#endplatform
 					CallNativeFunction2(ShowPromoPopup, 0, "GameOverPromo")
 				else
 					stage.listPos = 4
 				end if
+				
 				lampPostID = 0
 
 				if options.gameMode == MODE_NORMAL
@@ -83,11 +138,23 @@ event ObjectUpdate
 				end if
 			end if
 
+#platform: USE_STANDALONE
 			if object.state == DEATHEVENT_TIMEOVER
 				recMilliSeconds = 0
 				recSeconds = 0
 				recMinutes = 0
 			end if
+#endplatform
+
+#platform: USE_ORIGINS
+			if object.state == DEATHEVENT_TIMEOVER
+				CallNativeFunction2(NotifyCallback, NOTIFY_TIME_OVER, game.timeOver)
+			end if
+			
+			if object.state == DEATHEVENT_GAMEOVER
+				player.deadResetRings = true
+			end if
+#endplatform
 
 			LoadStage()
 		end if
@@ -99,27 +166,33 @@ event ObjectUpdate
 			if keyPress[0].buttonA == true
 				object.timer = 0
 			end if
-
 			if keyPress[0].buttonB == true
 				object.timer = 0
 			end if
-
 			if keyPress[0].buttonC == true
 				object.timer = 0
 			end if
-
+			
+#platform: USE_STANDALONE
 			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 			if checkResult > -1
 				object.timer = 0
 			end if
+#endplatform
 		end if
 		break
 
 	case DEATHEVENT_DEATH
-		if object.timer < 288
-			music.volume -= 2
-			object.timer += 4
-		else
+#platform: USE_ORIGINS
+		CheckNotEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+		temp0 = checkResult
+		CheckNotEqual(game.oneStageFlag, false)
+		checkResult &= temp0
+		
+		if checkResult != false
+			game.callbackResult = -1
+			CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 0, stage.listPos, 0)
+			object.state = DEATHEVENT_WAITFORCALLBACK
 			if options.gameMode == MODE_NORMAL
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
@@ -127,9 +200,35 @@ event ObjectUpdate
 				saveRAM[arrayPos1] = player.lives
 				WriteSaveRAM()
 			end if
-			LoadStage()
+		else
+#endplatform
+			if object.timer < 288
+				music.volume -= 2
+				object.timer += 4
+			else
+				if options.gameMode == MODE_NORMAL
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+					WriteSaveRAM()
+				end if
+				
+#platform: USE_STANDALONE
+				LoadStage()
+#endplatform
+
+#platform: USE_ORIGINS
+				if game.playMode != BOOT_PLAYMODE_MISSION
+					LoadStage()
+				end if
+#endplatform
+			end if
+			
+			SetScreenFade(0, 0, 0, object.timer)
 		end if
-		SetScreenFade(0, 0, 0, object.timer)
+		
+		player.deadResetRings = true
 		break
 
 	case DEATHEVENT_DEATH_TA
@@ -137,7 +236,12 @@ event ObjectUpdate
 			music.volume -= 2
 			object.timer += 4
 		else
+#platform: USE_STANDALONE
 			timeAttack.result = 100000
+#endplatform
+#platform: USE_ORIGINS
+			timeAttack.result = 0x186A0
+#endplatform
 			player.score = 0
 			lampPostID = 0
 			recMilliSeconds = 0
@@ -146,12 +250,53 @@ event ObjectUpdate
 			stage.milliSeconds = 0
 			stage.seconds = 0
 			stage.minutes = 0
-			engine.state = 8
+			engine.state = 8	
+#platform: USE_ORIGINS
+			CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
+			StageStatsUsabilityParam1 = 0
+			StageStatsUsabilityParam2 = 0
+			StageStatsUsabilityParam3 = 0
+			StageStatsUsabilityParam4 = 0
+			StageStatsUsabilityParam5 = 0
+			StatsUsabilityParam1 = 0
+			StatsUsabilityParam2 = 0
+			StatsUsabilityParam3 = 0
+			StatsUsabilityParam4 = 0
+			StatsUsabilityParam5 = 0
+#endplatform
 		end if
+		
 		SetScreenFade(0, 0, 0, object.timer)
 		break
 
+#platform: USE_ORIGINS
+	case DEATHEVENT_WAITFORCALLBACK
+		if game.callbackResult >= 0
+			object.timer = 0
+			object.state = DEATHEVENT_RETRY
+		end if
+		break
+		
+	case DEATHEVENT_RETRY
+		if object.timer < 288
+			music.volume -= 2
+			object.timer += 4
+		else
+			if game.callbackResult == 0
+				engine.state = 8
+			else
+				LoadStage()
+			end if
+		end if
+		
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+		
+	case DEATHEVENT_SETSCREENFADE
+		SetScreenFade(0, 0, 0, 255)
+		break
 	end switch
+#endplatform
 end event
 
 
@@ -166,7 +311,6 @@ event ObjectDraw
 		DrawSpriteScreenXY(1, object.leftTextPos, 96)
 		DrawSpriteScreenXY(2, object.rightTextPos, 96)
 		break
-
 	end switch
 end event
 

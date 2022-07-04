@@ -18,13 +18,31 @@ private alias 4 : TRACK_BOSS
 private alias 0 : MUSICEVENT_FADETOBOSS
 private alias 1 : MUSICEVENT_FADETOSTAGE
 private alias 2 : MUSICEVENT_TRANSITION
+private alias 2 : MUSICEVENT_FADEOUT
 
 private alias 0 : MUSICEVENT_FLAG_NOCHANGE
 private alias 1 : MUSICEVENT_FLAG_SPEEDUP
 private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 
 event ObjectUpdate
+#platform: USE_ORIGINS
+	CallNativeFunction4(NotifyCallback, NOTIFY_DEBUGPRINT, 100, object.propertyValue, object.value0) // LOL
+#endplatform
+
 	switch object.propertyValue
+#platform: USE_ORIGINS
+	case MUSICEVENT_FADEOUT
+		if object.timer < 50
+			object.timer++
+			music.volume -= 2
+		else
+			StopMusic()
+			music.volume = 100
+			object.type = TypeName[Blank Object]
+		end if
+		break
+#endplatform
+
 	case MUSICEVENT_FADETOBOSS
 		if object.timer < 50
 			object.timer++
@@ -36,13 +54,21 @@ event ObjectUpdate
 		break
 
 	case MUSICEVENT_FADETOSTAGE
-		if object.timer < 50
-			object.timer++
-			music.volume += 2
+#platform: USE_ORIGINS
+		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			object.propertyValue = MUSICEVENT_FADEOUT
 		else
-			PlayMusic(TRACK_STAGE)
-			object.type = TypeName[Blank Object]
+#endplatform
+			if object.timer < 50
+				object.timer++
+				music.volume += 2
+			else
+				PlayMusic(0)
+				object.type = TypeName[Blank Object]
+			end if
+#platform: USE_ORIGINS
 		end if
+#endplatform
 		break
 
 	case MUSICEVENT_TRANSITION
@@ -60,12 +86,16 @@ event ObjectUpdate
 					break
 
 				case MUSICEVENT_FLAG_SPEEDUP
+#platform: USE_STANDALONE
 					CallFunction(SpeedUpMusic)
+#endplatform
 					stage.musicFlag = MUSICEVENT_FLAG_NOCHANGE
 					break
 
 				case MUSICEVENT_FLAG_SLOWDOWN
+#platform: USE_STANDALONE
 					CallFunction(SlowDownMusic)
+#endplatform
 					stage.musicFlag = MUSICEVENT_FLAG_NOCHANGE
 					break
 				end switch

@@ -10,6 +10,7 @@
 // ========================
 private alias object.value0 : object.drawFunction
 private alias object.value1 : object.flashTimer
+private alias object.value2 : object.timeOver
 
 private alias object.value0 : player.rings
 
@@ -24,85 +25,148 @@ reserve function HUD_DrawMobile
 
 public function HUD_DrawPC
 
-	DrawSpriteScreenXY(10, 17, 13)
-
-	if stage.minutes == 9
-		if object.flashTimer > 7
-			DrawSpriteScreenXY(11, 17, 29)
-		end if
-	end if
-
-	if player[0].rings == 0
-		if object.flashTimer > 7
-			DrawSpriteScreenXY(12, 17, 45)
-		end if
-	end if
-
-	DrawNumbers(0, 104, 13, player.score, 6, 8, 0)
+#platform: USE_ORIGINS
+	// temp4 will tell whether to draw lives or coins
+	temp4 = game.coinMode
 	
-	if options.gameMode < MODE_TIMEATTACK
-		// In standard mode, only seconds & minutes are shown, along with their corresponding ticks
-		DrawSpriteScreenXY(14, 67, 29)
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		if game.missionEnd == false
+			game.hudEnable = HUDENABLE_ON
+		end if
+		temp4 = true
 	else
-		// If in time attack, draw extended time with mulliseconds (and its extra ticks)
-		DrawSpriteScreenXY(13, 67, 29)
-		DrawNumbers(0, 104, 29, stage.milliSeconds, 2, 8, 1)
+	
+		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			game.hudEnable = HUDENABLE_ON
+			temp4 = false
+		else
+		
+			if game.coinMode != 0
+				game.hudEnable = HUDENABLE_ON
+			end if
+#endplatform
+
+			DrawSpriteScreenXY(10, 17, 13)
+
+#platform: USE_ORIGINS
+			temp1 = stage.minutes
+			temp2 = stage.seconds
+			
+			CheckGreater(temp1, 9)
+			temp3 = checkResult
+			CheckNotEqual(object.timeOver, false)
+			checkResult |= temp3
+			
+			if checkResult != false
+				temp1 = 9
+				temp2 = 59
+			end if
+			
+			if temp1 == 9
+#endplatform
+			
+#platform: USE_STANDALONE
+			if stage.minutes == 9
+#endplatform
+				if object.flashTimer > 7
+					DrawSpriteScreenXY(11, 17, 29)
+				end if
+			end if
+
+			if player[0].rings == 0
+				if object.flashTimer > 7
+					DrawSpriteScreenXY(12, 17, 45)
+				end if
+			end if
+
+			DrawNumbers(0, 104, 13, player.score, 6, 8, 0)
+			
+			if options.gameMode < MODE_TIMEATTACK
+				// In standard mode, only seconds & minutes are shown, along with their corresponding ticks
+				DrawSpriteScreenXY(14, 67, 29)
+			else
+				// If in time attack, draw extended time with mulliseconds (and its extra ticks)
+				DrawSpriteScreenXY(13, 67, 29)
+				DrawNumbers(0, 104, 29, stage.milliSeconds, 2, 8, 1)
+			end if
+			
+			// Rest of the time display, kept the same between modes
+#platform: USE_STANDALONE
+			DrawNumbers(0, 80, 29, stage.seconds, 2, 8, 1)
+			DrawNumbers(0, 56, 29, stage.minutes, 1, 8, 1)
+#endplatform
+
+#platform: USE_ORIGINS
+			DrawNumbers(0, 80, 29, temp2, 2, 8, 1)
+			DrawNumbers(0, 56, 29, temp1, 1, 8, 1)
+#endplatform
+
+			DrawNumbers(0, 80, 45, player[0].rings, 3, 8, 0)
+
+			if stage.debugMode == true
+				// If the player is in debug mode, draw X and Y positions
+
+				// First get the absolute X pos value, truncated down to essentially ixpos
+				temp0 = object[0].xpos
+				temp0 >>= 16
+				Abs(temp0)
+
+				// Get position to draw it
+				temp1 = screen.xsize
+				temp1 -= 24
+
+				// Draw the XPos value
+				DrawNumbers(0, temp1, 13, temp0, 5, 8, 1)
+
+				// Then get absolute Y pos value, also truncated down to iypos
+				temp0 = object[0].ypos
+				temp0 >>= 16
+				Abs(temp0)
+
+				// Draw the YPos value
+				DrawNumbers(0, temp1, 29, temp0, 5, 8, 1)
+
+				temp1 -= 42
+
+				// If XPos is in the negatives, draw the red version of the "X:" icon
+				if object[0].xpos >= 0
+					DrawSpriteScreenXY(18, temp1, 15)
+				else
+					DrawSpriteScreenXY(36, temp1, 15)
+				end if
+
+				// Same for YPos - if negative, draw red version of "Y:" icon
+				if object[0].ypos >= 0
+					DrawSpriteScreenXY(19, temp1, 31)
+				else
+					DrawSpriteScreenXY(37, temp1, 31)
+				end if
+			end if
+#platform: USE_ORIGINS
+		end if
 	end if
 	
-	// Rest of the time display, kept the same between modes
-	DrawNumbers(0, 80, 29, stage.seconds, 2, 8, 1)
-	DrawNumbers(0, 56, 29, stage.minutes, 1, 8, 1)
-
-	DrawNumbers(0, 80, 45, player[0].rings, 3, 8, 0)
-
-	if stage.debugMode == true
-		// If the player is in debug mode, draw X and Y positions
-
-		// First get the absolute X pos value, truncated down to essentially ixpos
-		temp0 = object[0].xpos
-		temp0 >>= 16
-		Abs(temp0)
-
-		// Get position to draw it
-		temp1 = screen.xsize
-		temp1 -= 24
-
-		// Draw the XPos value
-		DrawNumbers(0, temp1, 13, temp0, 5, 8, 1)
-
-		// Then get absolute Y pos value, also truncated down to iypos
-		temp0 = object[0].ypos
-		temp0 >>= 16
-		Abs(temp0)
-
-		// Draw the YPos value
-		DrawNumbers(0, temp1, 29, temp0, 5, 8, 1)
-
-		temp1 -= 42
-
-		// If XPos is in the negatives, draw the red version of the "X:" icon
-		if object[0].xpos >= 0
-			DrawSpriteScreenXY(18, temp1, 15)
-		else
-			DrawSpriteScreenXY(36, temp1, 15)
-		end if
-
-		// Same for YPos - if negative, draw red version of "Y:" icon
-		if object[0].ypos >= 0
-			DrawSpriteScreenXY(19, temp1, 31)
-		else
-			DrawSpriteScreenXY(37, temp1, 31)
+	if temp4 == false
+#endplatform
+		// Draw life indicator
+		temp0 = stage.playerListPos
+		temp0 += 15
+		DrawSpriteScreenXY(temp0, 16, 212)
+		temp0 += 6
+		DrawSpriteScreenXY(temp0, 33, 213)
+		DrawSpriteScreenXY(20, 38, 222)
+		DrawNumbers(24, 56, 220, player.lives, 2, 8, 0)
+#platform: USE_ORIGINS
+	else
+		if game.playMode != BOOT_PLAYMODE_MISSION
+			// Draw coins indicator
+			DrawSpriteScreenXY(38, 16, 212)
+			DrawSpriteScreenXY(39, 33, 213)
+			DrawSpriteScreenXY(20, 36, 222)
+			DrawNumbers(24, 59, 220, game.coinCount, 3, 8, 0)
 		end if
 	end if
-
-	// Draw life indicator
-	temp0 = stage.playerListPos
-	temp0 += 15
-	DrawSpriteScreenXY(temp0, 16, 212)
-	temp0 += 6
-	DrawSpriteScreenXY(temp0, 33, 213)
-	DrawSpriteScreenXY(20, 38, 222)
-	DrawNumbers(24, 56, 220, player.lives, 2, 8, 0)
+#endplatform
 
 end function
 
@@ -195,6 +259,12 @@ event ObjectDraw
 		end if
 	end if
 	
+#platform: USE_ORIGINS
+	if game.timeOver != false
+		object.timeOver = true
+	end if
+#endplatform
+
 	CallFunction(object.drawFunction)
 end event
 
@@ -249,6 +319,11 @@ event ObjectStartup
 	SpriteFrame(8, 0, 8, 8, 136, 64) 	// 35 - Small debug plus sign
 	SpriteFrame(0, 0, 8, 8, 145, 64) 	// 36 - Red "X" debug icon
 	SpriteFrame(0, 0, 8, 8, 154, 64) 	// 37 - Red "Y" debug icon
+
+#platform: USE_ORIGINS
+	SpriteFrame(0, 0, 16, 16, 199, 141) // 38 - Coins life icon
+	SpriteFrame(0, 0, 39, 7, 182, 158)  // 39 - Coins name tag
+#endplatform
 
 	foreach (TypeName[HUD], arrayPos0, ALL_ENTITIES)
 		if engine.deviceType == STANDARD

@@ -17,6 +17,10 @@ private alias 1 : START_STARTGAME
 private alias 2 : START_STARTLVLSEL
 private alias 3 : START_STARTLVLSEL_OLD
 private alias 4 : START_STARTATTRACT
+private alias 5 : START_NOTIFYCALLBACK
+private alias 6 : START_WAITFORCALLBACK
+private alias 7 : START_FADETOEXIT
+private alias 8 : START_EXIT
 
 
 // ========================
@@ -27,6 +31,8 @@ event ObjectUpdate
 	switch object.state
 	case START_FLASH
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+		
+#platform: USE_STANDALONE
 		if keyPress[0].start == true
 			checkResult = true
 		end if
@@ -34,16 +40,26 @@ event ObjectUpdate
 		if keyPress[0].buttonA == true
 			checkResult = true
 		end if
+#endplatform
 
 		if keyPress[0].buttonB == true
 			checkResult = true
 		end if
 
+#platform: USE_STANDALONE
 		if keyPress[0].buttonC == true
 			checkResult = true
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		if input.pressButton == true
+			checkResult = true
+		end if
+#endplatform
 
 		if checkResult > -1
+#platform: USE_STANDALONE
 			if options.stageSelectFlag == true
 				if checkResult > 0
 					object.state = START_STARTLVLSEL
@@ -56,6 +72,24 @@ event ObjectUpdate
 
 			PlaySfx(SfxName[Menu Select], false)
 			StopMusic()
+#endplatform
+			
+#platform: USE_ORIGINS
+			if options.stageSelectFlag == true
+				if checkResult > 0
+					object.state = START_STARTLVLSEL
+					StopMusic()
+				else
+					object.state = START_NOTIFYCALLBACK
+				end if
+			else
+				if keyPress[0].buttonB == true
+					CallNativeFunction2(NotifyCallback, NOTIFY_BACK_TO_MAINMENU, 1)
+				else
+					object.state = START_NOTIFYCALLBACK
+				end if
+			end if
+#endplatform
 		else
 			object.attractTimer++
 			if object.attractTimer == 360
@@ -149,6 +183,50 @@ event ObjectUpdate
 		end if
 		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
+
+#platform:USE_ORIGINS
+	case START_NOTIFYCALLBACK
+		game.continueFlag = false
+		game.callbackResult = -1
+		if game.playMode == BOOT_PLAYMODE_CLASSIC
+			CallNativeFunction2(NotifyCallback, NOTIFY_CHARACTER_SELECT, 1) // You can only play as Sonic???
+		else
+			CallNativeFunction2(NotifyCallback, NOTIFY_CHARACTER_SELECT, 0)
+		end if
+		object.state = START_WAITFORCALLBACK
+		break
+		
+	case START_WAITFORCALLBACK
+		if game.callbackResult > 0
+			if game.continueFlag != false
+				game.continueFlag = false
+				object.state = START_FADETOEXIT
+			else
+				object.state = START_STARTGAME
+			end if
+			object.timer = 0
+			StopMusic()
+		else
+			if game.callbackResult == 0
+				object.state = START_FLASH
+			end if
+		end if
+		break
+		
+	case START_FADETOEXIT
+		object.timer += 4
+		if object.timer >= 384
+			object.state = START_EXIT
+		end if
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+		
+	case START_EXIT
+		engine.state = RESET_GAME
+		SetScreenFade(0, 0, 0, 255)
+		break
+#endplatform
+
 	end switch
 end event
 
@@ -166,6 +244,10 @@ end event
 
 
 event ObjectStartup
+#platform: USE_ORIGINS
+	CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, 0)
+#endplatform
+
 	LoadSpriteSheet("Title/Title.gif")
 
 	switch engine.deviceType

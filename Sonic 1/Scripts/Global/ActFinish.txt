@@ -24,18 +24,22 @@ private alias object.scale  : object.ringPos
 private alias object.value0 : player.rings
 
 // States
-private alias 0  : ACTFINISH_INIT
-private alias 1  : ACTFINISH_ENTERACTFINISH
-private alias 2  : ACTFINISH_ENTERPASSEDTEXT
-private alias 3  : ACTFINISH_ENTERACTID
-private alias 4  : ACTFINISH_ENTERBONUSES
-private alias 5  : ACTFINISH_ACTFINISHJINGLE
-private alias 6  : ACTFINISH_TALLYSCORE
-private alias 7  : ACTFINISH_SHOWRESULTS
-private alias 8  : ACTFINISH_LOADNEXTSTAGE
-private alias 9  : ACTFINISH_EXITUISPRITES
+private alias -1 : ACTFINISH_NORESULTS
+private alias  0 : ACTFINISH_INIT
+private alias  1 : ACTFINISH_ENTERACTFINISH
+private alias  2 : ACTFINISH_ENTERPASSEDTEXT
+private alias  3 : ACTFINISH_ENTERACTID
+private alias  4 : ACTFINISH_ENTERBONUSES
+private alias  5 : ACTFINISH_ACTFINISHJINGLE
+private alias  6 : ACTFINISH_TALLYSCORE
+private alias  7 : ACTFINISH_SHOWRESULTS
+private alias  8 : ACTFINISH_LOADNEXTSTAGE
+private alias  9 : ACTFINISH_EXITUISPRITES
 private alias 10 : ACTFINISH_EXITTEXT
 private alias 11 : ACTFINISH_EXITSCORES
+private alias 12 : ACTFINISH_WAITFORCALLBACK
+private alias 13 : ACTFINISH_RETRY
+private alias 14 : ACTFINISH_SETSCREENFADE
 
 // Game Modes Aliases
 private alias 1 : MODE_NORMAL
@@ -128,7 +132,35 @@ event ObjectUpdate
 
 		object.ringBonus = player[0].rings
 		object.ringBonus *= 100
+		
+#platform: USE_ORIGINS
+		if game.playMode == BOOT_PLAYMODE_MISSION
+			object.state = ACTFINISH_NORESULTS
+		else
+			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+				object.state = ACTFINISH_NORESULTS
+			else
+				object.state++
+			end if
+		end if
+		CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
+		CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, object[0].value0)
+		CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 0)
+		StageStatsUsabilityParam1 = 0
+		StageStatsUsabilityParam2 = 0
+		StageStatsUsabilityParam3 = 0
+		StageStatsUsabilityParam4 = 0
+		StageStatsUsabilityParam5 = 0
+		StatsUsabilityParam1 = 0
+		StatsUsabilityParam2 = 0
+		StatsUsabilityParam3 = 0
+		StatsUsabilityParam4 = 0
+		StatsUsabilityParam5 = 0
+#endplatform
+
+#platform: USE_STANDALONE
 		object.state++
+#endplatform
 		break
 
 	case ACTFINISH_ENTERACTFINISH
@@ -242,16 +274,42 @@ event ObjectUpdate
 				temp0 = checkResult
 				CheckEqual(stage.actNum, 2)
 				temp0 &= checkResult
+#platform: USE_ORIGINS
+					CheckEqual(game.oneStageFlag, 0)
+					temp0 &= checkResult
+#endplatform
 				if temp0 == true
 					object.state = ACTFINISH_EXITUISPRITES
 				else
+#platform: USE_ORIGINS
+					if game.oneStageFlag != false
+						game.callbackResult = -1
+						CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 1, stage.listPos, 0)
+						object.state = 12
+					else
+						object.state++
+					end if
+#endplatform
+#platform: USE_STANDALONE
 					object.state++
+#endplatform
 					if object[0].type == TypeName[Blank Object]
 						PlaySfx(SfxName[Warp], false)
 					end if
 				end if
 			else
+#platform: USE_ORIGINS
+				if game.oneStageFlag != false
+					game.callbackResult = -1
+					CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 1, stage.listPos, 0)
+					object.state = 12
+				else
+					object.state++
+				end if
+#endplatform
+#platform: USE_STANDALONE
 				object.state++
+#endplatform
 				if object[0].type == TypeName[Blank Object]
 					PlaySfx(SfxName[Warp], false)
 				end if
@@ -444,6 +502,35 @@ event ObjectUpdate
 			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 			SetMusicTrack("Final.ogg", 0, 84680)
 			PlayMusic(0)
+		end if
+		break
+		
+
+	case ACTFINISH_WAITFORCALLBACK
+		if game.callbackResult >= 0
+			object.state = ACTFINISH_LOADNEXTSTAGE // I think this is supposed to set it to the next state instead of this one...
+		end if
+		break
+		
+	case ACTFINISH_RETRY
+		if game.callbackResult == 0
+			engine.state = 8
+		else
+			LoadStage()
+		end if
+		object.state++
+		if object[0].type == TypeName[Blank Object]
+			SetScreenFade(208, 255, 224, 255)
+		else
+			SetScreenFade(0, 0, 0, 255)
+		end if
+		break
+		
+	case ACTFINISH_SETSCREENFADE
+		if object[0].type == TypeName[Blank Object]
+			SetScreenFade(208, 255, 224, 255)
+		else
+			SetScreenFade(0, 0, 0, 255)
 		end if
 		break
 		

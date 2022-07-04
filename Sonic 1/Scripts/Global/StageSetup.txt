@@ -159,8 +159,20 @@ event ObjectUpdate
 		// Not for time attack
 		if options.gameMode != MODE_TIMEATTACK
 			if player.score >= player.scoreBonus
+#platform: USE_ORIGINS
+				// Player achieved a high enough score...
+				if game.coinMode == false
+					// ... give them an extra life
+					player.lives++
+				else
+					// ... give them a coin
+					CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+				end if
+#endplatform
+#platform: USE_STANDALONE
 				// Player achieved a high enough score, give them an extra life
 				player.lives++
+#endplatform
 				player.scoreBonus += 50000
 				PlaySfx(SfxName[Life], false)
 				PauseMusic()
@@ -178,22 +190,43 @@ event ObjectUpdate
 
 		// Check for Time Over
 		if stage.timeEnabled == true
+#platform: USE_STANDALONE
 			if stage.minutes == 10
-				CheckEqual(stage.debugMode, true)
+#endplatform
+#platform: USE_ORIGINS
+			if game.coinMode == false
+				CheckEqual(game.timeOver, false)
 				temp0 = checkResult
-				CheckEqual(options.gameMode, MODE_TIMEATTACK)
-				temp0 |= checkResult
-				if temp0 == false
-					currentPlayer = SLOT_PLAYER1
-					player[0].type = TypeName[Player Object]
-					CallFunction(PlayerObject_Kill)
-				end if
+				CheckEqual(stage.minutes, 10)
+				temp0 &= checkResult
+				if temp0 != false
+#endplatform
+					CheckEqual(stage.debugMode, true)
+					temp0 = checkResult
+					CheckEqual(options.gameMode, MODE_TIMEATTACK)
+					temp0 |= checkResult
+#platform: USE_ORIGINS
+					CheckEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+					temp0 |= checkResult
+#endplatform
+					if temp0 == false
+						currentPlayer = SLOT_PLAYER1
+						player[0].type = TypeName[Player Object]
+						CallFunction(PlayerObject_Kill)
+					end if
 
-				// Reset time to 9:59:99 and disable time progression so that it stays that way
-				stage.minutes 		= 9
-				stage.seconds 		= 59
-				stage.milliSeconds 	= 99
-				stage.timeEnabled 	= false
+#platform: USE_ORIGINS
+					if game.playMode == BOOT_PLAYMODE_CLASSIC
+#endplatform
+						// Reset time to 9:59:99 and disable time progression so that it stays that way
+						stage.minutes 		= 9
+						stage.seconds 		= 59
+						stage.milliSeconds 	= 99
+						stage.timeEnabled 	= false
+#platform: USE_ORIGINS
+					end if
+				end if
+#endplatform
 			end if
 		end if
 
@@ -238,6 +271,7 @@ event ObjectUpdate
 
 	end if
 
+#platform: USE_STANDALONE
 	// Show or hide touch controls UI based on what the player's situation is
 	// Do note, options.touchControls only controls whether or not the UI shows up,
 	// actual touch interaction is handled by the Player Object and its controlMode value
@@ -250,6 +284,7 @@ event ObjectUpdate
 	else
 		options.touchControls = false
 	end if
+#endplatform
 
 	// Sort players, player 1 should always be on top of player 2
 	currentPlayer = playerCount
