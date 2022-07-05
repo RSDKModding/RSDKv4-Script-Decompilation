@@ -89,52 +89,52 @@ public value SpecialSetup_blockTimer 	= 0
 // ========================
 private table SpecialSetup_replay_attract_STK
 	0x00F00000, 0x00340000
-	0b00000000, 68
-	0b00110000, 1
-	0b00100000, 2
-	0b00100100, 25
-	0b00000100, 12
-	0b00000000, 8
-	0b00001000, 28
-	0b00000000, 53
-	0b00110000, 1
-	0b00100000, 30
-	0b00101000, 8
-	0b00001000, 2
-	0b00000000, 3
-	0b00000100, 35
-	0b00000000, 85
-	0b00000100, 21
-	0b00000000, 66
-	0b00000100, 19
-	0b00000000, 68
-	0b00111000, 1
-	0b00101000, 24
-	0b00001000, 20
-	0b00111000, 1
-	0b00101000, 12
-	0b00001000, 124
-	0b00000000, 73
-	0b00001000, 12
-	0b00111000, 1
-	0b00101000, 7
-	0b00001000, 6
-	0b00000000, 7
-	0b00000100, 31
-	0b00000000, 31
-	0b00110000, 1
-	0b00100000, 5
-	0b00000000, 30
-	0b00001000, 24
-	0b00000000, 21
-	0b00111000, 1
-	0b00101000, 8
-	0b00001000, 6
-	0b00000000, 17
-	0b00001000, 43
-	0b00111000, 1
-	0b00101000, 12
-	0b00001000, 27
+	0x00, 68
+	0x30, 1
+	0x20, 2
+	0x24, 25
+	0x04, 12
+	0x00, 8
+	0x08, 28
+	0x00, 53
+	0x30, 1
+	0x20, 30
+	0x28, 8
+	0x08, 2
+	0x00, 3
+	0x04, 35
+	0x00, 85
+	0x04, 21
+	0x00, 66
+	0x04, 19
+	0x00, 68
+	0x38, 1
+	0x28, 24
+	0x08, 20
+	0x38, 1
+	0x28, 12
+	0x08, 124
+	0x00, 73
+	0x08, 12
+	0x38, 1
+	0x28, 7
+	0x08, 6
+	0x00, 7
+	0x04, 31
+	0x00, 31
+	0x30, 1
+	0x20, 5
+	0x00, 30
+	0x08, 24
+	0x00, 21
+	0x38, 1
+	0x28, 8
+	0x08, 6
+	0x00, 17
+	0x08, 43
+	0x38, 1
+	0x28, 12
+	0x08, 27
 end table
 
 
@@ -213,7 +213,7 @@ end function
 
 public function SpecialSetup_PlayerBlockCol
 	BoxCollisionTest(C_SOLID2, object.entityPos, -12, -12, 12, 12, 0, C_BOX, C_BOX, C_BOX, C_BOX)
-	if checkResult != 0
+	if checkResult != false
 		SetBit(player[0].collisionFlags, checkResult, true)
 	else
 		BoxCollisionTest(C_TOUCH, object.entityPos, -10, -10, 10, 10, 0, C_BOX, C_BOX, C_BOX, C_BOX)
@@ -698,6 +698,12 @@ event ObjectUpdate
 		ringFrame++
 		ringFrame &= 7
 	end if
+	
+#platform: USE_ORIGINS
+	if game.coinMode != false
+		game.hudEnable = HUDENABLE_ON // There's no HUD in the Special Stage, even with this enabled. What's the point of this?
+	end if
+#endplatform
 end event
 
 
@@ -724,12 +730,17 @@ event ObjectStartup
 		object[9].priority = 1
 		object[9].drawOrder = 6
 		object[9].propertyValue = object[arrayPos0].propertyValue // This doesn't actually do anything, just an old CD leftover
-
+#platform: USE_STANDALONE
 		stage.timeEnabled = true
+#endplatform
 	end if
 
+#platform: USE_ORIGINS
+	stage.timeEnabled = true
+#endplatform
+
 	object[19].type = TypeName[Special Setup]
-	object[19].priority = 1
+	object[19].priority = 1 // Always be active as long as the stage is running
 	object[19].drawOrder = 1
 	object[20].type = TypeName[Fade In]
 	object[20].priority = 1
@@ -740,7 +751,9 @@ event ObjectStartup
 	stage.activeLayer[3] = 9
 	
 	if options.attractMode == false
-		// some code... probably
+#platform: USE_ORIGINS
+		stage.pauseEnabled = true
+#endplatform
 	else
 		stage.pauseEnabled = false
 		options.touchControls = false

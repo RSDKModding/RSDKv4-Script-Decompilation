@@ -8,28 +8,30 @@
 // ========================
 // Aliases
 // ========================
-private alias object.value0 : object.timer
-private alias object.value1 : object.textPos
-private alias object.value2 : object.rotateSpeed
-private alias object.value3 : object.scorePos
-private alias object.value4 : object.ringPos
-private alias object.value5 : object.ringBonus
-private alias object.value6 : object.emeraldAlpha
-private alias object.value7 : object.continuePos
-private alias object.value8 : object.hasContinue
-private alias object.value9 : object.messageState
+private alias object.value0  : object.timer
+private alias object.value1  : object.textPos
+private alias object.value2  : object.rotateSpeed
+private alias object.value3  : object.scorePos
+private alias object.value4  : object.ringPos
+private alias object.value5  : object.ringBonus
+private alias object.value6  : object.emeraldAlpha
+private alias object.value7  : object.continuePos
+private alias object.value8  : object.hasContinue
+private alias object.value9  : object.messageState
+private alias object.value10 : object.specialListPos
+private alias object.value11 : object.emeralds
 
 // States
-private alias 0  : SPECIALFINISH_SETUPSPIN
-private alias 1  : SPECIALFINISH_SPINNING
-private alias 2  : SPECIALFINISH_SETUPRESULTS
-private alias 3  : SPECIALFINISH_FADEIN_DELAY
-private alias 4  : SPECIALFINISH_SETUPTEXT
-private alias 5  : SPECIALFINISH_ENTERTEXT
-private alias 6  : SPECIALFINISH_ENTERRESULTS
-private alias 7  : SPECIALFINISH_ENTEREMERALDS
-private alias 8  : SPECIALFINISH_TALLYSCORE
-private alias 9  : SPECIALFINISH_SHOWRESULTS
+private alias  0 : SPECIALFINISH_SETUPSPIN
+private alias  1 : SPECIALFINISH_SPINNING
+private alias  2 : SPECIALFINISH_SETUPRESULTS
+private alias  3 : SPECIALFINISH_FADEIN_DELAY
+private alias  4 : SPECIALFINISH_SETUPTEXT
+private alias  5 : SPECIALFINISH_ENTERTEXT
+private alias  6 : SPECIALFINISH_ENTERRESULTS
+private alias  7 : SPECIALFINISH_ENTEREMERALDS
+private alias  8 : SPECIALFINISH_TALLYSCORE
+private alias  9 : SPECIALFINISH_SHOWRESULTS
 private alias 10 : SPECIALFINISH_FADEOUT
 private alias 11 : SPECIALFINISH_SAVEANDRETURN
 private alias 12 : SPECIALFINISH_HASCONTINUE
@@ -38,6 +40,7 @@ private alias 14 : SPECIALFINISH_SETUPTATTACK
 private alias 15 : SPECIALFINISH_EXIT_TATTACK
 private alias 16 : SPECIALFINISH_SUPERMSG_DELAY
 private alias 17 : SPECIALFINISH_SHOW_SUPERMSG
+private alias 18 : SPECIALFINISH_WAITFORCALLBACK
 
 // Player aliases
 private alias object.value0 : player.rings
@@ -88,7 +91,7 @@ event ObjectUpdate
 		PlayerObject_rotateSpeed = 2
 		object.rotation <<= 2
 		object.rotateSpeed = 8
-		object.state++
+		object.state = SPECIALFINISH_SPINNING
 		break
 
 	case SPECIALFINISH_SPINNING
@@ -103,7 +106,7 @@ event ObjectUpdate
 		
 		if object.rotateSpeed > 248
 			if options.gameMode < MODE_TIMEATTACK
-				object.state++
+				object.state = SPECIALFINISH_SETUPRESULTS
 			else
 				object.state = SPECIALFINISH_SETUPTATTACK
 			end if
@@ -124,38 +127,73 @@ event ObjectUpdate
 			object.timer += 8
 			SetScreenFade(0xE0, 0xE0, 0xE0, object.timer)
 		else
+#platform: USE_ORIGINS
+			object.specialListPos = specialStage.listPos
+			object.emeralds = specialStage.emeralds
+#endplatform
+
 			if PlayerObject_isWinner == true
 				temp0 = stage.actNum
 				temp0--
+#platform: USE_STANDALONE
 				SetBit(specialStage.emeralds, temp0, true)
+#endplatform
+#platform: USE_ORIGINS
+				SetBit(object.emeralds, temp0, true)
+#endplatform
 			end if
 
+#platform: USE_ORIGINS
+			StageStatsUsabilityParam5 = player[0].rings
+#endplatform
 			object.ringBonus = player[0].rings
 			object.ringBonus *= 100
 			if player[0].rings >= 50
 				object.hasContinue = true
 			end if
 
+#platform: USE_STANDALONE
 			stage.listPos = specialStage.nextZone
 			stage.activeList = REGULAR_STAGE
 			switch specialStage.emeralds
+#endplatform
+#platform: USE_ORIGINS
+			switch object.emeralds
+#endplatform
 			case 63 // 6 emeralds
 				if options.superStates == false
 					object.frame = 3
+#platform: USE_STANDALONE
 					specialStage.listPos++
 					specialStage.listPos %= 6
+#endplatform
+#platform: USE_ORIGINS
+					object.specialListPos++
+					object.specialListPos %= 6
+#endplatform
 					temp0 = true
 				else
 					object.frame = 2
+#platform: USE_STANDALONE
 					specialStage.listPos = 6
+#endplatform
+#platform: USE_ORIGINS
+					object.specialListPos = 6
+#endplatform
 					temp0 = true
 				end if
 				break
 
 			case 127 // 7 emeralds
 				object.frame = 3
+#platform: USE_STANDALONE
 				specialStage.listPos++
 				specialStage.listPos %= 7
+#endplatform
+#platform: USE_ORIGINS
+				object.specialListPos++
+				object.specialListPos %= 7
+#endplatform
 				temp0 = true
 				break
 
@@ -163,18 +201,27 @@ event ObjectUpdate
 				object.frame = 2
 				temp0 = false
 				while temp0 == false
+#platform: USE_STANDALONE
 					specialStage.listPos++
 					if specialStage.listPos > 5
 						specialStage.listPos = 0
 					end if
 
 					GetBit(temp1, specialStage.emeralds, specialStage.listPos)
+#endplatform
+#platform: USE_ORIGINS
+					object.specialListPos++
+					if object.specialListPos > 5
+						object.specialListPos = 0
+					end if
+
+					GetBit(temp1, object.emeralds, object.specialListPos)
+#endplatform
 					if temp1 == false
 						temp0 = true
 					end if
 				loop
 				break
-
 			end switch
 
 			if PlayerObject_isWinner == false
@@ -187,7 +234,6 @@ event ObjectUpdate
 				ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
 				temp0++
 			loop
-
 			temp0++
 			while temp0 < 0x4A0
 				ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
@@ -202,7 +248,14 @@ event ObjectUpdate
 			keyDown[0].left  = false
 			keyDown[0].right = false
 			object.direction = 0
+			
+#platform: USE_ORIGINS
+			game.callbackResult = -1
+			CallNativeFunction4(NotifyCallback, NOTIFY_SPECIAL_RETRY, PlayerObject_value4, object.value10, object.value11)
+			object.state = SPECIALFINISH_WAITFORCALLBACK
+#endplatform
 
+#platform: USE_STANDALONE
 			if options.gameMode == MODE_NORMAL
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
@@ -233,7 +286,9 @@ event ObjectUpdate
 				saveRAM[arrayPos1] = specialStage.listPos
 				WriteSaveRAM()
 			end if
-			object.state++
+			object.state = SPECIALFINISH_FADEIN_DELAY
+#endplatform
+
 			SetScreenFade(244, 244, 244, 0xFF)
 		end if
 		break
@@ -364,6 +419,11 @@ event ObjectUpdate
 			if object.hasContinue == false
 				object.state++
 				if PlayerObject_isWinner == true
+#platform: USE_ORIGINS
+					if specialStage.emeralds >= 63
+						CallNativeFunction2(NotifyCallback, NOTIFY_STATS_PARAM_2, 0)
+					end if
+#endplatform
 					if specialStage.emeralds == 127
 						object.state = SPECIALFINISH_SUPERMSG_DELAY
 					end if
@@ -436,9 +496,19 @@ event ObjectUpdate
 				saveRAM[arrayPos1] = specialStage.listPos
 				
 				WriteSaveRAM()
+				
+#platform: USE_ORIGINS
+				recScore = player.score
+#endplatform
 			end if
 
 			fadeColor = 0
+			
+#platform: USE_ORIGINS
+			CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, StageStatsUsabilityParam5)
+			StageStatsUsabilityParam5 = 0
+#endplatform
+
 			if stage.listPos < stage.listSize
 				LoadStage()
 			else
@@ -456,6 +526,13 @@ event ObjectUpdate
 			object.timer = 0
 			object.hasContinue++
 			object.state++
+			
+#platform: USE_ORIGINS
+			if game.coinMode != false
+				CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 3)
+			end if
+#endplatform
+
 			PlaySfx(SfxName[Continue], false)
 		end if
 		break
@@ -548,6 +625,48 @@ event ObjectUpdate
 		end if
 		break
 
+#platform: USE_ORIGINS
+	case SPECIALFINISH_WAITFORCALLBACK
+		if game.callbackResult >= 0
+			object.state = SPECIALFINISH_FADEIN_DELAY
+			object.timer = 0
+			specialStage.listPos = object.specialListPos
+			specialStage.emeralds = object.emeralds
+			if options.gameMode == MODE_NORMAL
+				arrayPos1 = options.saveSlot
+				arrayPos1 <<= 3
+				if stage.player2Enabled == 1
+					saveRAM[arrayPos1] = 3
+				else
+					saveRAM[arrayPos1] = stage.playerListPos
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = player.lives
+				arrayPos1++
+				saveRAM[arrayPos1] = player.score
+				arrayPos1++
+				saveRAM[arrayPos1] = player.scoreBonus
+				arrayPos1++
+				temp0 = stage.listPos
+				temp0++
+				if temp0 > saveRAM[arrayPos1]
+					saveRAM[arrayPos1] = temp0
+				else
+					if saveRAM[arrayPos1] >= 128
+						saveRAM[arrayPos1] = temp0
+					end if
+				end if
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.emeralds
+				arrayPos1++
+				saveRAM[arrayPos1] = specialStage.listPos
+				WriteSaveRAM()
+				recScore = player.score
+			end if
+		end if
+		SetScreenFade(208, 255, 224, 0xFF)
+		break
+#endplatform
 	end switch
 end event
 
@@ -561,6 +680,9 @@ event ObjectDraw
 	case SPECIALFINISH_FADEIN_DELAY
 	case SPECIALFINISH_SETUPTATTACK
 	case SPECIALFINISH_EXIT_TATTACK
+#platform: USE_ORIGINS
+	case SPECIALFINISH_WAITFORCALLBACK
+#endplatform
 		break
 
 	case SPECIALFINISH_SETUPTEXT
@@ -614,21 +736,39 @@ event ObjectDraw
 		temp0 += 151
 		DrawNumbers(9, temp0, 169, object.ringBonus, 5, 8, 0)
 
-		// Continues
+		// Continues/Coins
 		if object.hasContinue != false
 			temp0 = screen.xcenter
 			temp0 -= 79
 			temp0 += object.continuePos
-			DrawSpriteScreenXY(6, temp0, 183)
-			if object.hasContinue == 2
-				temp0 += 151
-				GetBit(temp1, object.timer, 4)
-				temp1 += 7
-				if object.state != SPECIALFINISH_SHOWCONTINUE
-					temp1 = 7
+#platform: USE_ORIGINS
+			if game.coinMode == false
+#endplatform
+				DrawSpriteScreenXY(6, temp0, 183)
+				if object.hasContinue == 2
+					temp0 += 151
+					GetBit(temp1, object.timer, 4)
+					temp1 += 7
+					if object.state != SPECIALFINISH_SHOWCONTINUE
+						temp1 = 7
+					end if
+					DrawSpriteScreenXY(temp1, temp0, 196)
 				end if
-				DrawSpriteScreenXY(temp1, temp0, 196)
+#platform: USE_ORIGINS
+			else
+				DrawSpriteScreenXY(31, temp0, 183)
+				DrawSpriteScreenXY(32, temp0, 183)
+				if object.hasContinue == 2
+					temp0 += 124
+					DrawSpriteScreenXY(33, temp0, 183)
+					temp2 = object.timer
+					temp2 &= 15
+					temp2 >>= 2
+					temp2 += 34
+					DrawSpriteScreenXY(temp2, temp0, 183)
+				end if
 			end if
+#endplatform
 		end if
 
 		// Emerald Opacity
@@ -748,7 +888,6 @@ event ObjectStartup
 		SpriteFrame(-77, 12, 76, 16, 411, 469)   // "SUPER"
 		SpriteFrame(8, 12, 70, 16, 156, 435)     // "SONIC" (different offset)
 		break
-
 	case 1
 		if options.region == 0
 			SpriteFrame(-113, -12, 53, 16, 411, 435) // "NOW"
@@ -764,7 +903,6 @@ event ObjectStartup
 			SpriteFrame(8, 12, 70, 16, 156, 469)     // "MILES" (different offset)
 		end if
 		break
-
 	case 2
 		SpriteFrame(-134, -12, 53, 16, 411, 435) // "NOW"
 		SpriteFrame(-73, -12, 113, 16, 156, 486) // "KNUCKLES"
@@ -772,8 +910,17 @@ event ObjectStartup
 		SpriteFrame(-99, 12, 76, 16, 411, 469)   // "SUPER"
 		SpriteFrame(-14, 12, 113, 16, 156, 486)  // "KNUCKLES" (different offset)
 		break
-
 	end switch
+	
+#platform: USE_ORIGINS
+	SpriteFrame(0, 0, 32, 16, 1, 489)    // "COIN"
+	SpriteFrame(32, 0, 53, 16, 67, 475)  // " BONUS"
+	SpriteFrame(0, 0, 50, 16, 80, 458)   // Coin x 3
+	SpriteFrame(-4, -4, 24, 24, 401, 76) // Coin Sparkle 1
+	SpriteFrame(-4, -4, 24, 24, 426, 76) // Coin Sparkle 2
+	SpriteFrame(-4, -4, 24, 24, 451, 76) // Coin Sparkle 3
+	SpriteFrame(-4, -4, 24, 24, 476, 76) // Coin Sparkle 4
+#endplatform
 end event
 
 
