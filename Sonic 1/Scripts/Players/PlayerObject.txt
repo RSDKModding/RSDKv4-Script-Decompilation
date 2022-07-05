@@ -160,7 +160,8 @@ private alias object.value39 : player.hitboxBottom
 private alias object.value42 : player.prevGravity
 
 // Drop Dash values used in Origins
-private alias object.value16 : player.canDropDash
+// These use the same variables used for P2, causing the AI to behave in unintended ways
+private alias object.value16 : player.releasingDropDash
 private alias object.value43 : player.dropDashCharge
 
 // P2 values
@@ -196,7 +197,7 @@ reserve function PlayerObject_JumpAbilityT
 reserve function PlayerObject_JumpAbilityK
 reserve function PlayerObject_Ground
 #platform: USE_ORIGINS
-reserve function PlayerObject_CancelDropDash
+reserve function PlayerObject_AirPreventDropDash
 #endplatform
 reserve function PlayerObject_Air
 reserve function PlayerObject_AirCtrlLock
@@ -223,6 +224,8 @@ reserve function PlayerObject_TubeSwitch
 reserve function PlayerObject_Clinging
 #platform: USE_ORIGINS
 reserve function PlayerObject_DropDash
+reserve function PlayerObject_KnuxMissionClimb
+reserve function PlayerObject_KnuxMissionPullUp
 #endplatform
 reserve function PlayerObject_WaterSlide
 reserve function PlayerObject_FlyCarry
@@ -2086,7 +2089,7 @@ public function PlayerObject_StartJump
 	if game.playMode == BOOT_PLAYMODE_CLASSIC
 		player.dropDashCharge = -1
 	else
-		if options.spindash == 0
+		if options.spindash == false
 			player.dropDashCharge = -1
 		else
 			player.dropDashCharge = 0
@@ -2111,7 +2114,7 @@ public function PlayerObject_StartSpindash
 
 #platform: USE_ORIGINS
 	// Don't play the Charge sound effect if using the Drop Dash
-	CheckEqual(player.canDropDash, 1)
+	CheckEqual(player.releasingDropDash, true)
 	temp0 = checkResult
 	CheckGreater(20, player.dropDashCharge)
 	temp0 |= checkResult
@@ -2138,7 +2141,12 @@ public function PlayerObject_Transforming
 	// Delay is normally 24 frames, set in the transform script rather than here
 	player.timer--
 	if player.timer == 0
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.animation = ANI_WALKING
 	end if
 end function
@@ -2198,7 +2206,12 @@ public function PlayerObject_BubbleBounce
 
 	if temp0 == true
 		// At least one of the checks came back true, go back to normal air falling
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 	else
 		if player.gravity == 1
 			CallFunction(PlayerObject_AirMovement)
@@ -2246,7 +2259,13 @@ public function PlayerObject_BubbleBounce
 
 			CallFunction(PlayerObject_RollingAnimSpd)
 
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
+
 			PlaySfx(SfxName[Bubble Bounce], false)
 
 			// Set the bubble shield state to 4
@@ -2589,9 +2608,9 @@ end function
 
 
 #platform: USE_ORIGINS
-// Handles activating the Drop Dash (Check PlayerObject_Air for releasing it)
+// Handles activating the Drop Dash (Check PlayerObject_Air or PlayerObject_RollingJump for releasing it)
 public function PlayerObject_DropDash
-	if player.canDropDash == false
+	if player.releasingDropDash == false
 		if player.dropDashCharge >= 0
 			if player.dropDashCharge == 0
 				if player.jumpPress == true
@@ -2621,6 +2640,7 @@ public function PlayerObject_DropDash
 					end if
 					if player.dropDashCharge >= 20
 						// Set Sonic to always use the full ball sprite
+						// This code, when placed here, won't work properly; check ObjectUpdate for the same code in a more proper location
 						if player.animation == ANI_JUMPING
 							if PlayerObject_SuperState == SUPERSTATE_SUPER
 								player.frame = 0
@@ -2649,7 +2669,12 @@ public function PlayerObject_Ground
 	CallFunction(PlayerObject_Movement)
 
 	if player.gravity == 1
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		CallFunction(PlayerObject_AirMovement)
 	else
 		CallFunction(PlayerObject_ResetOnFloor)
@@ -2867,8 +2892,8 @@ end function
 
 
 #platform: USE_ORIGINS
-// Unused
-public function PlayerObject_CancelDropDash
+// Prevents the player from using the Drop Dash if they went in midair without jumping
+public function PlayerObject_AirPreventDropDash
 	player.dropDashCharge = -1
 	player.state = PlayerObject_Air
 	CallFunction(PlayerObject_Air)
@@ -2942,7 +2967,7 @@ public function PlayerObject_Air
 #endplatform
 
 #platform: USE_ORIGINS
-		CheckEqual(player.canDropDash, false)
+		CheckEqual(player.releasingDropDash, false)
 		temp0 = checkResult
 		CheckGreater(player.dropDashCharge, 19)
 		temp0 &= checkResult
@@ -2985,8 +3010,12 @@ public function PlayerObject_Rolling
 	CallFunction(PlayerObject_RollingDecel)
 
 	if player.gravity == 1
-
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.timer = 0
 		CallFunction(PlayerObject_AirMovement)
 	else
@@ -3032,7 +3061,7 @@ public function PlayerObject_RollingJump
 #endplatform
 
 #platform: USE_ORIGINS
-		CheckEqual(player.canDropDash, false)
+		CheckEqual(player.releasingDropDash, false)
 		temp0 = checkResult
 		CheckGreater(player.dropDashCharge, 19)
 		temp0 &= checkResult
@@ -3076,7 +3105,12 @@ public function PlayerObject_LookingUp
 		player.animation = ANI_LOOKINGUP
 
 		if player.gravity == 1
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 			player.timer = 0
 		else
 			if player.jumpPress == true
@@ -3109,7 +3143,12 @@ public function PlayerObject_Crouching
 		player.animation = ANI_LOOKINGDOWN
 
 		if player.gravityStrength == 1
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 			player.timer = 0
 		else
 			if player.jumpPress == true
@@ -3124,7 +3163,12 @@ end function
 public function PlayerObject_Spindash
 
 	if player.gravity == 1
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.speed = 0
 	end if
 
@@ -3148,16 +3192,16 @@ public function PlayerObject_Spindash
 
 #platform: USE_ORIGINS
 	temp1 = player.down
-	CheckEqual(player.canDropDash, false)
+	CheckEqual(player.releasingDropDash, false)
 	temp2 = checkResult
 	CheckGreater(player.dropDashCharge, 19)
 	temp2 &= checkResult
 	
-	if temp2 == 1
+	if temp2 == true
 		player.dropDashCharge = -1
 		Sin256(temp0, player.angle)
 		
-		if player.direction == FACING_LEFT
+		if player.direction == FACING_RIGHT
 			if temp0 >= 0
 				temp0 <<= 12
 			else
@@ -3357,7 +3401,12 @@ end function
 // Main character gets picked up by P2 Tails
 public function PlayerObject_FlyCarry
 	if player[1].state != PlayerObject_TailsFlight
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 	end if
 
 	temp0 = player[1].xpos
@@ -3377,7 +3426,12 @@ public function PlayerObject_FlyCarry
 		if player.gravity == 0
 			player.state = PlayerObject_Ground
 		else
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		end if
 	end if
 
@@ -3793,7 +3847,12 @@ end function
 
 
 public function PlayerObject_KnuxGlideSlide
+#platform: USE_STANDALONE
 	if player.gravityStrength == 0
+#endplatform
+#platform: USE_ORIGINS
+	if player.gravity == 0
+#endplatform
 		if player.speed == 0
 			player.scrollTracking = false
 			player.frame = 1
@@ -3961,11 +4020,145 @@ public function PlayerObject_KnuxWallClimb
 end function
 
 
+#platform: USE_ORIGINS
+public function PlayerObject_KnuxMissionClimb
+	if player.gravity == 1
+		player.animation = ANI_CLIMBING
+		if player.up == true
+			if PlayerObject_SuperState == SUPERSTATE_SUPER
+				player.yvel = -0x20000
+			else
+				player.yvel = -0x10000
+			end if
+
+			temp0 = player.collisionTop
+			temp0 *= -0x10000
+			if player.ypos < temp0
+				player.ypos = temp0
+			end if
+
+			player.timer++
+			if player.timer == 4
+				player.timer = 0
+				player.frame++
+				player.frame %= 6
+			end if
+		else
+			if player.down == true
+				if PlayerObject_SuperState == SUPERSTATE_SUPER
+					player.yvel = 0x20000
+				else
+					player.yvel = 0x10000
+				end if
+
+				player.timer++
+				if player.timer == 4
+					player.timer = 0
+					if player.frame < 1
+						player.frame += 6
+					end if
+					player.frame--
+				end if
+			else
+				player.yvel = 0
+			end if
+		end if
+
+		if player.jumpPress == true
+			player.animation = ANI_JUMPING
+			player.state = PlayerObject_Air
+			player.timer = 0
+
+			PlaySfx(SfxName[Jump], false)
+			if player.direction == FACING_LEFT
+				player.xvel = 0x40000
+				player.speed = 0x40000
+				player.direction = FACING_RIGHT
+			else
+				player.xvel = -0x40000
+				player.speed = -0x40000
+				player.direction = FACING_LEFT
+			end if
+
+			player.yvel = -0x40000
+			if player.gravityStrength != 0x3800
+				player.xvel >>= 1
+				player.speed >>= 1
+				player.yvel >>= 1
+			end if
+		else
+			arrayPos1 = -1
+			temp2 = player.xpos
+			temp3 = player.ypos
+			if player[0].direction == FACING_LEFT
+				player[0].xvel = -0x100000
+				foreach (player[0].p2InputFunction, arrayPos0, ACTIVE_ENTITIES)
+					BoxCollisionTest(C_SOLID, 0, C_BOX, C_BOX, C_BOX, C_BOX, arrayPos0, -16, -16, 16, 16)
+					if checkResult != false
+						if arrayPos1 == -1
+							arrayPos1 = arrayPos0
+						else
+							if object[arrayPos0].ypos < object[arrayPos1].ypos
+								arrayPos1 = arrayPos0
+							end if
+						end if
+					end if
+				next
+			else
+				player[0].xvel = 0x100000
+				foreach (player[0].p2InputFunction, arrayPos0, ACTIVE_ENTITIES)
+					BoxCollisionTest(C_SOLID, arrayPos0, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult != false
+						if arrayPos1 == -1
+							arrayPos1 = arrayPos0
+						else
+							if object[arrayPos0].ypos < object[arrayPos1].ypos
+								arrayPos1 = arrayPos0
+							end if
+						end if
+					end if
+				next
+			end if
+			player[0].xvel = 0
+			player.xpos = temp2
+			player.ypos = temp3
+			if arrayPos1 != -1
+				if player.yvel < 0
+					if player.ypos < object[arrayPos1].ypos
+						if object[arrayPos1].value0 != 0
+							player.animation = ANI_LEDGEPULLUP
+							player.yvel = 0
+							player.timer = 0
+							player.state = PlayerObject_KnuxMissionPullUp
+							player.tileCollisions = false
+							if player.direction == FACING_RIGHT
+								player.xpos += 0x10000
+							end if
+						end if
+					end if
+				end if
+			else
+				player.animation = ANI_GLIDING_DROP
+				player.prevAnimation = ANI_GLIDING_DROP
+				player.frame = 2
+				player.timer = 0
+				player.state = PlayerObject_KnuxGlideDrop
+			end if
+		end if
+	else
+		player.animation = ANI_WALKING
+		player.state = PlayerObject_Ground
+		CallFunction(PlayerObject_ResetOnFloor)
+	end if
+end function
+#endplatform
+
+
 public function PlayerObject_KnuxLedgePullUp
 	switch player.frame
 	case 0
 		if player.timer < 5
-			ObjectTileGrip(0, 12, -9, player.collisionPlane)
+			ObjectTileGrip(0, 12, -9, object.collisionPlane)
 			player.timer++
 		else
 			player.timer = 0
@@ -4000,13 +4193,67 @@ public function PlayerObject_KnuxLedgePullUp
 		else
 			player.timer = 0
 			player.animation = ANI_STOPPED
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 			player.ypos -= 0xA0000
 			player.tileCollisions = true
 		end if
 		break
 	end switch
 end function
+
+
+#platform: USE_ORIGINS
+public function PlayerObject_KnuxMissionPullUp
+	switch player.frame
+	case 0
+		if player.timer < 5
+			player.timer++
+		else
+			player.timer = 0
+			player.frame++
+			if player.direction == FACING_RIGHT
+				player.xpos += 0x90000
+			else
+				player.xpos -= 0x90000
+			end if
+			player.ypos -= 0xA0000
+		end if
+		break
+
+	case 1
+		if player.timer < 5
+			player.timer++
+		else
+			player.timer = 0
+			player.frame++
+			if player.direction == FACING_RIGHT
+				player.xpos += 0x50000
+			else
+				player.xpos -= 0x50000
+			end if
+			player.ypos -= 0x20000
+		end if
+		break
+
+	case 2
+		if player.timer < 5
+			player.timer++
+		else
+			player.timer = 0
+			player.animation = ANI_STOPPED
+			player.state = PlayerObject_AirPreventDropDash
+			player.ypos -= 0xA0000
+			player.tileCollisions = true
+		end if
+		break
+	end switch
+end function
+#endplatform
 
 
 // Ouch!
@@ -4391,7 +4638,12 @@ public function PlayerObject_HangingBar
 	Get16x16TileInfo(temp0, temp1, temp2, 8)
 
 	if temp0 != 3
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.speed = 0
 		player.animationSpeed = 0
 		player.yvel = 0
@@ -4417,7 +4669,12 @@ public function PlayerObject_CorkscrewRun
 	if player.speed < 0x60000
 		if player.speed > -0x60000
 			player.animation = ANI_WALKING
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 			player.rotation = 0
 			if player.speed < 0
 				player.direction = FACING_LEFT
@@ -4459,7 +4716,12 @@ public function PlayerObject_CorkscrewRoll
 
 	if player.speed < 0x60000
 		if player.speed > -0x60000
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		end if
 	end if
 
@@ -4564,7 +4826,12 @@ end function
 public function PlayerObject_WaterSlide
 	if player.gravity == 1
 		// If the player is in the air, make them move to the HandleAir state
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.angle = 0
 		player.collisionMode = 0
 		player.timer = 0
@@ -4722,6 +4989,7 @@ event ObjectUpdate
 		CallFunction(player.state)
 		
 #platform: USE_ORIGINS
+		// Set Sonic to always use the full ball sprite
 		if player.dropDashCharge >= 20
 			if object.animation == ANI_JUMPING
 				if PlayerObject_SuperState == SUPERSTATE_SUPER
