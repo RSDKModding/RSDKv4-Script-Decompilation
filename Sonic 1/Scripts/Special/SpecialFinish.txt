@@ -67,7 +67,6 @@ public function SpecialFinish_DisplaySuperMessage
 			object.messageState++
 		end if
 		break
-
 	case 1
 		object.textPos += 16
 		if object.textPos >= 0
@@ -75,7 +74,6 @@ public function SpecialFinish_DisplaySuperMessage
 			object.messageState++
 		end if
 		break
-
 	end switch
 end function
 
@@ -103,7 +101,7 @@ event ObjectUpdate
 		object.rotateSpeed += 2
 		PlayerObject_stageRotation = object.rotation
 		PlayerObject_stageRotation >>= 2
-		
+
 		if object.rotateSpeed > 248
 			if options.gameMode < MODE_TIMEATTACK
 				object.state = SPECIALFINISH_SETUPRESULTS
@@ -152,14 +150,18 @@ event ObjectUpdate
 				object.hasContinue = true
 			end if
 
+// Due to Origins crashing if I try to wrap "switch <variable>"
+// in a platform check, I'll have to use a temp value workaround.
+// I am truly sorry.
 #platform: USE_STANDALONE
 			stage.listPos = specialStage.nextZone
 			stage.activeList = REGULAR_STAGE
-			switch specialStage.emeralds
+			temp2 = specialStage.emeralds
 #endplatform
 #platform: USE_ORIGINS
-			switch object.emeralds
+			temp2 = object.emeralds
 #endplatform
+			switch temp2
 			case 63 // 6 emeralds
 				if options.superStates == false
 					object.frame = 3
@@ -248,10 +250,10 @@ event ObjectUpdate
 			keyDown[0].left  = false
 			keyDown[0].right = false
 			object.direction = 0
-			
+
 #platform: USE_ORIGINS
 			game.callbackResult = -1
-			CallNativeFunction4(NotifyCallback, NOTIFY_SPECIAL_RETRY, PlayerObject_value4, object.value10, object.value11)
+			CallNativeFunction4(NotifyCallback, NOTIFY_SPECIAL_RETRY, PlayerObject_isWinner, object.specialListPos, object.emeralds)
 			object.state = SPECIALFINISH_WAITFORCALLBACK
 #endplatform
 
@@ -400,7 +402,16 @@ event ObjectUpdate
 		end if
 
 		if player.score >= player.scoreBonus
+#platform: USE_STANDALONE
 			player.lives++
+#endplatform
+#platform: USE_ORIGINS
+			if game.coinMode == false
+				player.lives++
+			else
+				CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+			end if
+#endplatform
 			player.scoreBonus += 50000
 			PlaySfx(SfxName[Life], false)
 			PauseMusic()
@@ -494,16 +505,16 @@ event ObjectUpdate
 				arrayPos1++
 
 				saveRAM[arrayPos1] = specialStage.listPos
-				
+
 				WriteSaveRAM()
-				
+
 #platform: USE_ORIGINS
 				recScore = player.score
 #endplatform
 			end if
 
 			fadeColor = 0
-			
+
 #platform: USE_ORIGINS
 			CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, StageStatsUsabilityParam5)
 			StageStatsUsabilityParam5 = 0
@@ -526,7 +537,7 @@ event ObjectUpdate
 			object.timer = 0
 			object.hasContinue++
 			object.state++
-			
+
 #platform: USE_ORIGINS
 			if game.coinMode != false
 				CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 3)
@@ -582,6 +593,7 @@ event ObjectUpdate
 			stage.activeLayer[1] = 9
 			stage.activeLayer[2] = 9
 			stage.activeLayer[3] = 9
+
 			StopMusic()
 		end if
 		SetScreenFade(0xF8, 0xF8, 0xF8, object.timer)
@@ -699,7 +711,7 @@ event ObjectDraw
 	case SPECIALFINISH_SHOW_SUPERMSG
 		// BG
 		DrawRect(0, 0, screen.xsize, screen.ysize, 0xE0, 0xE0, 0xE0, 0xFF)
-		
+
 		// Message
 		temp0 = screen.xcenter
 		temp0 += object.xpos
@@ -727,7 +739,7 @@ event ObjectDraw
 		DrawSpriteScreenXY(4, temp0, 151)
 		temp0 += 151
 		DrawNumbers(9, temp0, 153, player.score, 6, 8, 0)
-		
+
 		// Ring Bonus
 		temp0 = screen.xcenter
 		temp0 -= 79
@@ -911,7 +923,7 @@ event ObjectStartup
 		SpriteFrame(-14, 12, 113, 16, 156, 486)  // "KNUCKLES" (different offset)
 		break
 	end switch
-	
+
 #platform: USE_ORIGINS
 	SpriteFrame(0, 0, 32, 16, 1, 489)    // "COIN"
 	SpriteFrame(32, 0, 53, 16, 67, 475)  // " BONUS"
@@ -932,6 +944,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
-	
+
 	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
