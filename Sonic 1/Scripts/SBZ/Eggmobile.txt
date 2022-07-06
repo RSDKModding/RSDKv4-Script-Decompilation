@@ -23,6 +23,7 @@ private alias 2 : EGGMOBILE_RISE
 private alias 3 : EGGMOBILE_FLEE
 private alias 4 : EGGMOBILE_HIT
 private alias 5 : EGGMOBILE_SEAT
+private alias 5 : EGGMOBILE_BOSSRUSH
 
 private alias 0 : EGGMOBILE_ANI_IDLE
 private alias 1 : EGGMOBILE_ANI_SEAT
@@ -115,7 +116,7 @@ event ObjectUpdate
 				object.timer = 0
 			end if
 		end if
-		// fallthrough
+		// Fall-through
 	case EGGMOBILE_FLEE
 		object.xpos += object.xvel
 		object.ypos += object.yvel
@@ -123,51 +124,111 @@ event ObjectUpdate
 		temp0 += 212
 		temp0 <<= 16
 		if object.xpos >= temp0
-			if options.gameMode == MODE_TIMEATTACK
-				object.type = TypeName[Blank Object]
-				ResetObjectEntity(30, TypeName[Act Finish], 0, 0, 0)
-				object[30].drawOrder = 6
-				object[30].priority = 1
-				stage.timeEnabled = false
-				PlayMusic(TRACK_ACTFINISH)
+#platform: USE_ORIGINS
+			CheckNotEqual(options.gameMode, MODE_TIMEATTACK)
+			temp0 = checkResult
+			CheckEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+			temp0 &= checkResult
+			if temp0 != 0
+				CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+				CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+				StopMusic()
+				object.state = EGGMOBILE_BOSSRUSH
+				object.fadeTimer = 0
 			else
-				object.fadeTimer += 4
-				music.volume -= 2
-				SetScreenFade(0, 0, 0, object.fadeTimer)
-				if object.fadeTimer == 384
-					if stage.debugMode == false
-						if options.stageSelectFlag == false
-							CallNativeFunction2(SetLeaderboard, 19, player.score)
+#endplatform
+#platform: USE_STANDALONE
+				if options.gameMode == MODE_TIMEATTACK
+#endplatform
+#platform: USE_ORIGINS
+				CheckEqual(options.gameMode, MODE_TIMEATTACK)
+				temp0 = checkResult
+				CheckNotEqual(game.oneStageFlag, false)
+				temp0 |= checkResult
+				if temp0 != false
+#endplatform
+					object.type = TypeName[Blank Object]
+					ResetObjectEntity(30, TypeName[Act Finish], 0, 0, 0)
+					object[30].drawOrder = 6
+					object[30].priority = 1
+					stage.timeEnabled = false
+					PlayMusic(TRACK_ACTFINISH)
+				else
+					object.fadeTimer += 4
+					music.volume -= 2
+					SetScreenFade(0, 0, 0, object.fadeTimer)
+					if object.fadeTimer == 384
+#platform: USE_ORIGINS
+						temp0 = StageStatsUsabilityParam5
+						temp0 &= 1
+						temp1 = StageStatsUsabilityParam5
+						temp1 &= 2
+						temp2 = StageStatsUsabilityParam5
+						temp2 &= 4
+						CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, temp0, temp1, temp2)
+						CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 0)
+						StageStatsUsabilityParam1 = 0
+						StageStatsUsabilityParam2 = 0
+						StageStatsUsabilityParam3 = 0
+						StageStatsUsabilityParam4 = 0
+						StageStatsUsabilityParam5 = 0
+						StatsUsabilityParam1 = 0
+						StatsUsabilityParam2 = 0
+						StatsUsabilityParam3 = 0
+						StatsUsabilityParam4 = 0
+						StatsUsabilityParam5 = 0
+#endplatform
+
+						if stage.debugMode == false
+							if options.stageSelectFlag == false
+								CallNativeFunction2(SetLeaderboard, 19, player.score)
+							end if
 						end if
-					end if
 
-					if options.gameMode == MODE_NORMAL
-						arrayPos1 = options.saveSlot
-						arrayPos1 <<= 3
-						arrayPos1 += 4
-						saveRAM[arrayPos1] = 20
-						WriteSaveRAM()
-					end if
+						if options.gameMode == MODE_NORMAL
+							arrayPos1 = options.saveSlot
+							arrayPos1 <<= 3
+							arrayPos1 += 4
+							saveRAM[arrayPos1] = 20
+							WriteSaveRAM()
+						end if
 
-					stage.activeList = PRESENTATION_STAGE
-					stage.listPos = 1
-					LoadStage()
+						stage.activeList = PRESENTATION_STAGE
+						stage.listPos = 1
+						LoadStage()
+					end if
 				end if
+#platform: USE_ORIGINS
 			end if
+#endplatform
 		end if
 
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if player[currentPlayer].xpos >= object.playerStopPos
 				CheckEqual(player[currentPlayer].state, PlayerObject_Ground)
 				temp0 = checkResult
+#platform: USE_ORIGINS
+				CheckEqual(player[currentPlayer].state, PlayerObject_AirPreventDropDash)
+				temp0 |= checkResult
+#endplatform
 				CheckEqual(player[currentPlayer].state, PlayerObject_Air)
 				temp0 |= checkResult
+#platform: USE_ORIGINS
+				CheckEqual(player[currentPlayer].state, PlayerObject_TailsFlight)
+				temp0 |= checkResult
+				CheckEqual(player[currentPlayer].state, PlayerObject_KnuxGlideRight)
+				temp0 |= checkResult
+#endplatform
 				CheckEqual(player[currentPlayer].state, PlayerObject_Rolling)
 				temp0 |= checkResult
 				CheckEqual(player[currentPlayer].state, PlayerObject_RollingJump)
 				temp0 |= checkResult
 				CheckEqual(player[currentPlayer].state, PlayerObject_Blank)
 				temp0 |= checkResult
+#platform: USE_ORIGINS
+				CheckEqual(player[currentPlayer].state, PlayerObject_Spindash)
+				temp0 |= checkResult
+#endplatform
 
 				if temp0 == true
 					player[currentPlayer].state = PlayerObject_Blank
