@@ -241,7 +241,7 @@ reserve function PlayerObject_SuperPalSonic
 reserve function PlayerObject_SuperPalTails
 reserve function PlayerObject_SuperPalKnux
 reserve function PlayerObject_UpdatePhysicsState
-reserve function PlayerObject_ProcessSuperForms
+reserve function PlayerObject_ProcessSuperState
 reserve function PlayerObject_CheckHit
 reserve function PlayerObject_BadnikBreak
 reserve function PlayerObject_Hit
@@ -732,7 +732,7 @@ public function PlayerObject_UpdatePhysicsState
 end function
 
 
-public function PlayerObject_ProcessSuperForms
+public function PlayerObject_ProcessSuperState
 
 	// Do the fancy palette stuff if Super or while untransforming back to normal
 	if PlayerObject_SuperState != SUPERSTATE_NONE
@@ -2652,7 +2652,7 @@ public function PlayerObject_DropDash
 					end if
 					if player.dropDashCharge >= 20
 						// Set Sonic to always use the full ball sprite
-						// This code, when placed here, won't work properly. Check ObjectUpdate for the same code in a more proper location
+						// This code, when placed here, doesn't work properly. Check ObjectUpdate for the same code in a more proper location
 						if player.animation == ANI_JUMPING
 							if PlayerObject_SuperState == SUPERSTATE_SUPER
 								player.frame = 0
@@ -3195,7 +3195,6 @@ public function PlayerObject_Spindash
 
 		player.frame = 0
 		PlaySfx(SfxName[Charge], false)
-
 	else
 		temp0 = player.abilityTimer
 		temp0 >>= 5
@@ -4517,7 +4516,12 @@ public function PlayerObject_Death
 #endplatform
 			stage.timeEnabled = false
 			player.type = TypeName[Death Event]
+#platform: USE_STANDALONE
 			deathEvent.drawOrder = 6
+#endplatform
+#platform: USE_ORIGINS
+			deathEvent.drawOrder = 7
+#endplatform
 			deathEvent.leftTextPos = screen.xcenter
 			deathEvent.leftTextPos -= 264
 			deathEvent.rightTextPos = screen.xcenter
@@ -4598,7 +4602,12 @@ public function PlayerObject_Drown
 #endplatform
 			stage.timeEnabled = false
 			player.type = TypeName[Death Event]
+#platform: USE_STANDALONE
 			deathEvent.drawOrder = 6
+#endplatform
+#platform: USE_ORIGINS
+			deathEvent.drawOrder = 7
+#endplatform
 			deathEvent.leftTextPos = screen.xcenter
 			deathEvent.leftTextPos -= 264
 			deathEvent.rightTextPos = screen.xcenter
@@ -5049,6 +5058,7 @@ event ObjectUpdate
 										if player.entityPos == camera[0].target
 											screen.adjustCameraY = 0
 										end if
+										
 										player.iypos += player.jumpOffset
 									end if
 								end if
@@ -5062,7 +5072,7 @@ event ObjectUpdate
 		end if
 	end if
 
-	CallFunction(PlayerObject_ProcessSuperForms)
+	CallFunction(PlayerObject_ProcessSuperState)
 
 #platform: USE_ORIGINS
 	if game.playMode == BOOT_PLAYMODE_BOSSRUSH
@@ -5077,7 +5087,7 @@ event ObjectUpdate
 				CheckEqual(player[0].state, PlayerObject_Blank)
 				temp0 |= checkResult
 				
-				if temp0 == 1
+				if temp0 == true
 					// Prevent the player from moving anymore
 					player[0].state = PlayerObject_Blank
 					player[0].controlMode = -1
