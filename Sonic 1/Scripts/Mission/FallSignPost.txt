@@ -1,0 +1,233 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: FallSignPost Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+private alias 76 : TYPE_FALLSIGNPOST
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case 0
+		if game.missionCondition == MISSION_CONDITION_CLEAR
+			game.missionCondition = 0
+			object.xpos = object[0].xpos
+			object.xpos -= 0x80000
+			object.ypos = screen.yoffset
+			object.ypos += 24
+			object.ypos <<= 16
+			screen.cameraStyle = 4
+			ObjectTileCollision(0, 0, 32, 0)
+			if checkResult == true
+				object.value3 = 1
+			end if
+			object.state = 1
+			PlaySfx(SfxName[Sign Post], 0)
+		end if
+		break
+		
+	case 1
+		object.value2++
+		object.ypos += object.yvel
+		object.yvel += 0xC00
+		ObjectTileCollision(0, 0, 32, 0)
+		if checkResult == 1
+			if object.value3 == 0
+				object.value0 = 4
+				object.state = 2
+			end if
+		else
+			object.value3 = 0
+		end if
+		
+		if object.outOfBounds == true
+			object.value0 = 4
+			object.state = 2
+		end if
+		
+		object.value1++
+		if object.value1 == 2
+			object.value1 = 0
+			object.frame++
+			if object.frame == 5
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+			end if
+			
+			if object.frame == 9
+				object.frame = 1
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+			end if
+		end if
+		break
+		
+	case 2
+		object.value2++
+		if stage.timeEnabled == true
+			music.volume -= 2
+		end if
+		
+		object.value1++
+		if object.value1 == 2
+			object.value1 = 0
+			object.frame++
+			if object.frame == 5
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+			end if
+			
+			if object.frame == 9
+				object.frame = 1
+				Rand(temp0, 48)
+				temp0 <<= 16
+				temp0 += object.xpos
+				temp0 -= 0x180000
+				Rand(temp1, 32)
+				temp1 <<= 16
+				temp1 += object.ypos
+				temp1 -= 0x140000
+				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+				object.value0--
+				if object.value0 == 0
+					object.frame = 5
+					object.state = 3
+				end if
+			end if
+		end if
+		break
+		
+	case 3
+		object[0].controlMode = -1
+		object[0].interaction = false
+		object[0].up = false
+		object[0].down = false
+		object[0].left = false
+		object[0].right = false
+		object[0].jumpHold = false
+		object[0].jumpPress = false
+		CheckEqual(object[0].state, 10)
+		temp0 = checkResult
+		CheckEqual(object[0].state, 1)
+		temp0 |= checkResult
+		CheckEqual(object[0].outOfBounds, true)
+		temp0 |= checkResult
+		temp1 = screen.xoffset
+		temp1 += screen.xsize
+		temp1 += 32
+		CheckGreater(object[0].ixpos, temp1)
+		temp0 |= checkResult
+		if temp0 == true
+			object[0].state = 1
+			object[0].controlMode = -1
+			object[0].interaction = 0
+			object[0].up = 0
+			object[0].down = 0
+			object[0].left = 0
+			object[0].right = 0
+			object[0].jumpHold = 0
+			object[0].jumpPress = 0
+			object[0].xvel = 0
+			object[0].yvel = 0
+			object[0].speed = 0
+			object[0].animation = 1
+			screen.cameraEnabled = 0
+		end if
+		break
+		
+	end switch
+	
+	if object.value2 > 0
+		object[0].value3 = 0
+		object[0].value7 = 80
+	end if
+	
+	CheckGreater(object.value2, 60)
+	temp0 = checkResult
+	CheckEqual(object[30].type, TypeName[Blank Object])
+	temp0 &= checkResult
+	if temp0 == 1
+		CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
+		stage.timeEnabled = 0
+		PlayMusic(1)
+		object[30].type = TypeName[Act Finish]
+		object[30].drawOrder = 6
+		object[30].priority = 1
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state > 0
+		DrawSprite(0)
+		DrawSprite(object.frame)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-24, 16, 48, 16, 34, 214)
+	SpriteFrame(-24, -16, 48, 32, 34, 182)
+	SpriteFrame(-16, -16, 32, 32, 1, 150)
+	SpriteFrame(-4, -16, 8, 32, 189, 131)
+	SpriteFrame(-16, -16, 32, 32, 1, 183)
+	SpriteFrame(-24, -16, 48, 32, 34, 83)
+	SpriteFrame(-16, -16, 32, 32, 1, 150)
+	SpriteFrame(-4, -16, 8, 32, 189, 131)
+	SpriteFrame(-16, -16, 32, 32, 1, 183)
+	
+	foreach (TypeName[FallSignPost], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].frame = 1
+		object[arrayPos0].value0 = 16
+		object[arrayPos0].priority = 1
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-24, 16, 48, 16, 34, 214)
+	SpriteFrame(-24, -16, 48, 32, 34, 182)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

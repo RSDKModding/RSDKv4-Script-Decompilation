@@ -8,7 +8,8 @@
 // ========================
 // Aliases
 // ========================
-private alias object.value0 : object.bombTime
+private alias object.value0 : object.time
+private alias object.value1 : object.bouncePos
 
 
 // ========================
@@ -16,61 +17,66 @@ private alias object.value0 : object.bombTime
 // ========================
 
 event ObjectUpdate
-
+	
+	// Update Bomb movement
 	object.xpos += object.xvel
 	object.ypos += object.yvel
 	object.yvel += 0x3800
-
+	
+	// If the Bomb is falling, then check for bouncing
 	if object.yvel > 0
+		
+		// First, see if the Bomb is below its depth threshold
+		// -> No idea why temp0 is used as a buffer here rather than directly checking position, it seems unnecessary...
 		temp0 = object.ypos
-
-		ObjectTileCollision(0, 0, 8, 0)
-		if checkResult == true
+		if temp0 >= object.bouncePos
+			
+			// Bounce the Bomb back up at a rate of 3 pixels per frame
 			object.yvel = -0x30000
-			object.ypos = temp0
-			ObjectTileGrip(0, -2, 8, 0)
-			temp1 = object.ypos
-			object.ypos = temp0
-			ObjectTileGrip(0, 2, 8, 0)
-			temp2 = object.ypos
-			object.ypos = temp0
-			if object.xvel > 0
-				if temp2 < temp1
-					FlipSign(object.xvel)
-				end if
-			else
-				if temp1 < temp2
-					FlipSign(object.xvel)
-				end if
+			
+		end if
+		
+		if object.xvel > 0
+			ObjectTileGrip(1, 8, 0, 0)
+			
+			// If we hit a wall, then turn around
+			if checkResult != false
+				FlipSign(object.xvel)
 			end if
 		end if
+		
 	end if
-
-	// Check collision with players
+	
+	// Check interaction with Players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		
 		if checkResult == true
 			CallFunction(PlayerObject_Hit)
 		end if
 	next
-
-	// Animate the object
+	
 	object.animationTimer++
 	if object.animationTimer >= 6
 		object.frame ^= 1
+		
 		object.animationTimer = 0
 	end if
-
-	// Update the bomb's countdown timer
-	if object.bombTime > 0
-		object.bombTime--
+	
+	// Note - object.time is set by the Ball Hog Object that spawns this Ball Hog Bomb
+	
+	if object.time > 0
+		object.time--
 	else
-		// Explode the bomb
+		// Once the Object's time is up, make it explode
+		
 		ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, object.xpos, object.ypos)
+		
 		CreateTempObject(TypeName[Explosion], 0, object.xpos, object.ypos)
 		object[tempObjectPos].drawOrder = 4
-		PlaySfx(SfxName[Explosion], false)
+		PlaySfx(SfxName[Explosion], 0)
 	end if
+	
 end event
 
 
@@ -86,7 +92,7 @@ event ObjectStartup
 		SpriteFrame(-7, -7, 14, 14, 82, 126)
 		SpriteFrame(-7, -7, 14, 14, 82, 143)
 	end if
-
+	
 	CheckCurrentStageFolder("Zone07")
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
@@ -95,6 +101,10 @@ event ObjectStartup
 	end if
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
