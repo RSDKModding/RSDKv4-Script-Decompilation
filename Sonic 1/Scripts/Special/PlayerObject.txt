@@ -70,45 +70,45 @@ private alias 8 : TITLECARD_FADETOTITLE
 // ========================
 // Function Declarations
 // ========================
-reserve function PlayerObject_ProcessPlayer
-reserve function PlayerObject_Blank
-reserve function PlayerObject_AniSpeed
-reserve function PlayerObject_Movement
-reserve function PlayerObject_InitReplay
-reserve function PlayerObject_GroundCol
-reserve function PlayerObject_AirCol
+reserve function Player_ProcessUpdate
+reserve function Player_State_Static
+reserve function Player_HandleRollAnimSpeed
+reserve function Player_State_SS_Roll
+reserve function Player_SetupAttractDemo
+reserve function Player_HandleGroundCollision
+reserve function Player_HandleAirCollision
 
 // ========================
 // Static Values
 // ========================
-public value PlayerObject_stageRotation 	= 0
-public value PlayerObject_rotateSpeed 		= 0
-public value PlayerObject_rotateDir 		= 0
-public value PlayerObject_isWinner 			= 0
-public value PlayerObject_replayData 		= 0
-public value PlayerObject_replayPos 		= 0
-public value PlayerObject_replaySize 		= 0
-public value PlayerObject_replayFrameCnt 	= 0
-public value PlayerObject_replayLength 		= 0
-public value PlayerObject_playerSlot 		= 0
+public value Player_stageRotation 		= 0
+public value Player_rotateSpeed 		= 0
+public value Player_rotateDir 			= 0
+public value Player_isWinner 			= 0
+public value Player_attractTable 		= 0
+public value Player_attractTablePos 	= 0
+public value Player_attractTableSize	= 0
+public value Player_attractFrameCount 	= 0
+public value Player_attractDuration 	= 0
+public value Player_playerSlot 			= 0
 
 // All these below are unused
-private value PlayerObject_unusedValue1 = 0
-private value PlayerObject_unusedValue2 = 0
-private value PlayerObject_unusedValue3 = 0
-private value PlayerObject_unusedValue4 = 0
-private value PlayerObject_unusedValue5 = 0
-private value PlayerObject_unusedValue6 = 0
-private value PlayerObject_unusedValue7 = 0
+private value Player_unusedValue1 = 0
+private value Player_unusedValue2 = 0
+private value Player_unusedValue3 = 0
+private value Player_unusedValue4 = 0
+private value Player_unusedValue5 = 0
+private value Player_unusedValue6 = 0
+private value Player_unusedValue7 = 0
 
-public function PlayerObject_InitReplay
-	PlayerObject_replayPos = 2
-	PlayerObject_replayFrameCnt = 1
+public function Player_SetupAttractDemo
+	Player_attractTablePos = 2
+	Player_attractFrameCount = 1
 	
 	currentPlayer = 0
 	while currentPlayer < playerCount
-		GetTableValue(player[currentPlayer].xpos, 0, PlayerObject_replayData)
-		GetTableValue(player[currentPlayer].ypos, 1, PlayerObject_replayData)
+		GetTableValue(player[currentPlayer].xpos, 0, Player_attractTable)
+		GetTableValue(player[currentPlayer].ypos, 1, Player_attractTable)
 		player[currentPlayer].controlMode 	= -1
 		player[currentPlayer].up 			= false
 		player[currentPlayer].down 			= false
@@ -126,7 +126,7 @@ public function PlayerObject_InitReplay
 end function
 
 
-public function PlayerObject_ProcessPlayer
+public function Player_ProcessUpdate
 	if options.attractMode == false
 #platform: USE_STANDALONE
 		if options.touchControls == true
@@ -231,29 +231,29 @@ public function PlayerObject_ProcessPlayer
 		end if
 
 		if checkResult > -1
-			if PlayerObject_replayLength > 1
-				PlayerObject_replayLength = 1
+			if Player_attractDuration > 1
+				Player_attractDuration = 1
 			end if
 		end if
 #endplatform
 
 		if keyPress[0].start == true
-			PlayerObject_replayLength = 1
+			Player_attractDuration = 1
 		end if
 
-		PlayerObject_replayFrameCnt--
-		if PlayerObject_replayFrameCnt < 1
-			if PlayerObject_replayPos < PlayerObject_replaySize
-				GetTableValue(temp0, PlayerObject_replayPos, PlayerObject_replayData)
+		Player_attractFrameCount--
+		if Player_attractFrameCount < 1
+			if Player_attractTablePos < Player_attractTableSize
+				GetTableValue(temp0, Player_attractTablePos, Player_attractTable)
 				GetBit(player.up, temp0, 0)
 				GetBit(player.down, temp0, 1)
 				GetBit(player.left, temp0, 2)
 				GetBit(player.right, temp0, 3)
 				GetBit(player.jumpPress, temp0, 4)
 				GetBit(player.jumpHold, temp0, 5)
-				PlayerObject_replayPos++
-				GetTableValue(PlayerObject_replayFrameCnt, PlayerObject_replayPos, PlayerObject_replayData)
-				PlayerObject_replayPos++
+				Player_attractTablePos++
+				GetTableValue(Player_attractFrameCount, Player_attractTablePos, Player_attractTable)
+				Player_attractTablePos++
 			end if
 		else
 			if player.jumpPress == true
@@ -261,11 +261,11 @@ public function PlayerObject_ProcessPlayer
 			end if
 		end if
 
-		if PlayerObject_replayLength > 0
-			PlayerObject_replayLength--
-			if PlayerObject_replayLength < 1
+		if Player_attractDuration > 0
+			Player_attractDuration--
+			if Player_attractDuration < 1
 				// Turn the player into a title card and fade out
-				arrayPos0 = PlayerObject_playerSlot
+				arrayPos0 = Player_playerSlot
 				player[arrayPos0].type = TypeName[Title Card]
 				player[arrayPos0].state = TITLECARD_FADETOTITLE
 				player[arrayPos0].priority = 1
@@ -277,12 +277,12 @@ end function
 
 
 // Dummy function
-public function PlayerObject_Blank
+public function Player_State_Static
 	checkResult = false
 end function
 
 
-public function PlayerObject_AniSpeed
+public function Player_HandleRollAnimSpeed
 	if stage.playerListPos == 1
 		player.animationSpeed = 120
 	else
@@ -295,7 +295,7 @@ public function PlayerObject_AniSpeed
 end function
 
 
-public function PlayerObject_GroundCol
+public function Player_HandleGroundCollision
 	if player.worldVelocity.x > 0
 		GetBit(temp0, player.collisionFlags, 2)
 	else
@@ -320,9 +320,9 @@ public function PlayerObject_GroundCol
 end function
 
 
-public function PlayerObject_AirCol
+public function Player_HandleAirCollision
 	// Get the nearest rotation quarter
-	temp0 = PlayerObject_stageRotation
+	temp0 = Player_stageRotation
 	temp0 >>= 1
 	temp0 -= 0xE0
 	temp0 &= 0xC0
@@ -368,8 +368,8 @@ public function PlayerObject_AirCol
 end function
 
 
-public function PlayerObject_Movement
-	CallFunction(PlayerObject_GroundCol)
+public function Player_State_SS_Roll
+	CallFunction(Player_HandleGroundCollision)
 	if player.gravity == 1
 		if player.rotateBlockTimer != 0
 			player.rotateBlockTimer--
@@ -380,7 +380,7 @@ public function PlayerObject_Movement
 		end if
 	end if
 
-	temp2 = PlayerObject_stageRotation
+	temp2 = Player_stageRotation
 	temp2 &= 504
 	if player.gravity == 0
 		if player.jumpPress == true
@@ -419,7 +419,7 @@ public function PlayerObject_Movement
 		player.worldVelocity.y += temp1
 	end if
 
-	CallFunction(PlayerObject_AirCol)
+	CallFunction(Player_HandleAirCollision)
 
 	temp0 = 0
 	if player.left == true
@@ -458,7 +458,7 @@ public function PlayerObject_Movement
 		end if
 	end if
 
-	temp0 = PlayerObject_stageRotation
+	temp0 = Player_stageRotation
 	temp0 += 0x40
 	temp0 &= 0x180
 
@@ -474,7 +474,7 @@ public function PlayerObject_Movement
 	player.xvel += player.moveVelocity.x
 	player.yvel = player.worldVelocity.y
 	player.yvel += player.moveVelocity.y
-	CallFunction(PlayerObject_AniSpeed)
+	CallFunction(Player_HandleRollAnimSpeed)
 end function
 
 
@@ -484,7 +484,7 @@ end function
 
 event ObjectUpdate
 	if stage.debugMode == true
-		CallFunction(PlayerObject_ProcessPlayer)
+		CallFunction(Player_ProcessUpdate)
 		if keyPress[0].buttonB == true
 			player.type = TypeName[Debug Mode]
 			
@@ -496,26 +496,26 @@ event ObjectUpdate
 			player.moveSpeed = 0
 			player.rotation = 0
 			player.frame = 0
-			PlayerObject_stageRotation = 0
-			PlayerObject_rotateSpeed = 2
+			Player_stageRotation = 0
+			Player_rotateSpeed = 2
 			player.frame = debugMode.currentSelection
 			player.interaction = false
 		else
 			CallFunction(player.state)
 			ProcessAnimation()
 
-			if player.state != PlayerObject_Blank
+			if player.state != Player_State_Static
 				ProcessObjectMovement()
 			end if
 
 			player.gravity = 1
 		end if
 	else
-		CallFunction(PlayerObject_ProcessPlayer)
+		CallFunction(Player_ProcessUpdate)
 		CallFunction(player.state)
 		ProcessAnimation()
 
-		if player.state != PlayerObject_Blank
+		if player.state != Player_State_Static
 			ProcessObjectMovement()
 		end if
 
@@ -545,7 +545,7 @@ event ObjectStartup
 		player[0].xvel = 0
 		player[0].yvel = 0
 		player[0].speed = 0
-		PlayerObject_playerSlot = player.entityPos
+		Player_playerSlot = player.entityPos
 
 		switch stage.playerListPos
 		case 0
@@ -566,7 +566,7 @@ event ObjectStartup
 		
 		// Note - player.animation never needs to be set since the desired animation is animation ID 0 in the file
 
-		player[0].state = PlayerObject_Movement
+		player[0].state = Player_State_SS_Roll
 		player[0].priority = 1
 		player[0].drawOrder = 4
 		player[0].acceleration = 0xC00
@@ -575,10 +575,10 @@ event ObjectStartup
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 		player[0].tileCollisions = false
 		player[0].gravity = 1
-		PlayerObject_stageRotation = 0
-		PlayerObject_rotateSpeed = 0
-		PlayerObject_rotateDir = 0
-		PlayerObject_isWinner = false
+		Player_stageRotation = 0
+		Player_rotateSpeed = 0
+		Player_rotateDir = 0
+		Player_isWinner = false
 	next
 	
 	options.touchControls = true

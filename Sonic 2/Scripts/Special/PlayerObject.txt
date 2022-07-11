@@ -85,43 +85,42 @@ private alias 8 : TITLECARD_FADETOTITLE
 // ========================
 // Function Declarations
 // ========================
-reserve function PlayerObject_ProcessP1Inputs
-reserve function PlayerObject_ProcessP2Inputs
-reserve function PlayerObject_Ground
-reserve function PlayerObject_Air
-reserve function PlayerObject_HurtSpin
-reserve function PlayerObject_RingLoss
-reserve function PlayerObject_ProcessDrawing
-reserve function PlayerObject_ProcessP2Controller
-reserve function PlayerObject_Process2PVSPlayer
+reserve function Player_Input_Gamepad
+reserve function Player_Input_AI_Follow
+reserve function Player_State_Ground
+reserve function Player_State_Air
+reserve function Player_State_Hurt
+reserve function Player_LoseRings
+reserve function Player_Draw_Normal
+reserve function Player_Input_Gamepad_2P
 
 
 // ========================
 // Static Values
 // ========================
-private value PlayerObject_stateUp = 0
-private value PlayerObject_stateDown = 0
-private value PlayerObject_stateLeft = 0
-private value PlayerObject_stateRight = 0
-private value PlayerObject_stateJumpPress = 0
-private value PlayerObject_stateJumpHold = 0
+private value Player_stateUp 		= 0
+private value Player_stateDown 		= 0
+private value Player_stateLeft 		= 0
+private value Player_stateRight 	= 0
+private value Player_stateJumpPress = 0
+private value Player_stateJumpHold 	= 0
 
-private value PlayerObject_ReplayTable = 0
-private value PlayerObject_ReplayTablePos = 0
-private value PlayerObject_ReplaySize = 0
-private value PlayerObject_ReplayFrameCnt = 0
-private value PlayerObject_ReplayLength = 0
-private value PlayerObject_ReplayManager = 0
+private value Player_attractTable 		= 0
+private value Player_attractTablePos 	= 0
+private value Player_attractTableSize 	= 0
+private value Player_attractFrameCount 	= 0
+private value Player_attractDuration 	= 0
+private value Player_attractManager 	= 0
 
 // What player is in front right now
-private value PlayerObject_leadingPlayer = 0
+private value Player_leadingPlayer = 0
 
 // ========================
 // Tables
 // ========================
 
 // Shadow Y Positions, with index 0 being as far left/right as it goes, and the last index being the center
-private table PlayerObject_shadowYPosTable
+private table Player_shadowYPosTable
 	-128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -128, -127, -127, -127, -127
 	-127, -127, -127, -127, -126, -126, -126, -126, -126, -126, -125, -125, -125, -125, -124, -124
 	-124, -124, -123, -123, -123, -123, -122, -122, -122, -121, -121, -121, -120, -120, -119, -119
@@ -132,7 +131,7 @@ private table PlayerObject_shadowYPosTable
 	-61,   -59,  -57,  -54,  -52,  -50,  -47,  -45,  -42,  -39,  -35,  -31,  -27,  -21,  -13,    0
 end table
 
-public function PlayerObject_ProcessDrawing
+public function Player_Draw_Normal
 	MatrixRotateXYZ(MAT_WORLD, halfpipe[0].worldRotation.x, halfpipe[0].worldRotation.y, halfpipe[0].worldRotation.z)
 	MatrixTranslateXYZ(MAT_TEMP, halfpipe[0].worldTranslation.x, halfpipe[0].worldTranslation.y, halfpipe[0].worldTranslation.z)
 	MatrixMultiply(MAT_WORLD, MAT_TEMP)
@@ -307,8 +306,8 @@ public function PlayerObject_ProcessDrawing
 end function
 
 
-public function PlayerObject_ProcessP1Inputs
-	if options.attractMode == false // Ah yes, the S2 Special Stage demo
+public function Player_Input_Gamepad
+	if options.attractMode == false
 #platform: USE_STANDALONE
 		if options.touchControls == true
 			if player.controlMode == 0
@@ -378,28 +377,28 @@ public function PlayerObject_ProcessP1Inputs
 		ProcessObjectControl()
 
 		if options.vsMode == true
-			player.currentLeader = PlayerObject_leadingPlayer
+			player.currentLeader = Player_leadingPlayer
 			CallNativeFunction2(SendEntity, 2, false)
 		end if
 	else
 		// There aren't even any demos in the Special Stages I believe, but may as well leave in the implementation for it anyways...
-
+		
 #platform: USE_STANDALONE
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 		if keyPress[0].start == true
-			checkResult = 0
+			checkResult = false
 		end if
 
 		if checkResult > -1
-			if PlayerObject_ReplayLength > 1
-				PlayerObject_ReplayLength = 1
+			if Player_attractDuration > 1
+				Player_attractDuration = 1
 			end if
 		end if
+#endplatform
 
 		if keyPress[0].start == true
-			PlayerObject_ReplayLength = 1
+			Player_attractDuration = 1
 		end if
-#endplatform
 
 #platform: USE_ORIGINS
 		if keyPress[0].start == true
@@ -407,20 +406,20 @@ public function PlayerObject_ProcessP1Inputs
 		end if
 #endplatform
 
-		PlayerObject_ReplayFrameCnt--
-		if PlayerObject_ReplayFrameCnt < 1
-			if PlayerObject_ReplayTablePos < PlayerObject_ReplaySize
-				GetTableValue(temp0, PlayerObject_ReplayTablePos, PlayerObject_ReplayTable)
+		Player_attractFrameCount--
+		if Player_attractFrameCount < 1
+			if Player_attractTablePos < Player_attractTableSize
+				GetTableValue(temp0, Player_attractTablePos, Player_attractTable)
 				GetBit(player.up, temp0, 0)
 				GetBit(player.down, temp0, 1)
 				GetBit(player.left, temp0, 2)
 				GetBit(player.right, temp0, 3)
 				GetBit(player.jumpPress, temp0, 4)
 				GetBit(player.jumpHold, temp0, 5)
-				PlayerObject_ReplayTablePos++
+				Player_attractTablePos++
 
-				GetTableValue(PlayerObject_ReplayFrameCnt, PlayerObject_ReplayTablePos, PlayerObject_ReplayTable)
-				PlayerObject_ReplayTablePos++
+				GetTableValue(Player_attractFrameCount, Player_attractTablePos, Player_attractTable)
+				Player_attractTablePos++
 			end if
 		else
 			if player.jumpPress == true
@@ -428,14 +427,14 @@ public function PlayerObject_ProcessP1Inputs
 			end if
 		end if
 
-		if PlayerObject_ReplayLength > 0
-			PlayerObject_ReplayLength--
-			if PlayerObject_ReplayLength < 1
+		if Player_attractDuration > 0
+			Player_attractDuration--
+			if Player_attractDuration < 1
 				// This code is copied directly from S1's version of the demo handler, including a fade out for ending the demo
 				// However, this includes a mention of the Title Card object, which doesn't exist in Sonic 2 Special Stages...
 				// (TypeName[Title Card] will resolve as 0, a Blank Object, for the reason above)
 				
-				arrayPos0 = PlayerObject_ReplayManager
+				arrayPos0 = Player_attractManager
 				object[arrayPos0].type = TypeName[Title Card]
 				object[arrayPos0].state = TITLECARD_FADETOTITLE
 				object[arrayPos0].priority = 1
@@ -456,52 +455,52 @@ public function PlayerObject_ProcessP1Inputs
 end function
 
 
-public function PlayerObject_ProcessP2Inputs
-	PlayerObject_stateUp <<= 1
-	PlayerObject_stateUp |= player[2].up
-	PlayerObject_stateUp &= 0xFFFF
+public function Player_Input_AI_Follow
+	Player_stateUp <<= 1
+	Player_stateUp |= player[2].up
+	Player_stateUp &= 0xFFFF
 
-	PlayerObject_stateDown <<= 1
-	PlayerObject_stateDown |= player[2].down
-	PlayerObject_stateDown &= 0xFFFF
+	Player_stateDown <<= 1
+	Player_stateDown |= player[2].down
+	Player_stateDown &= 0xFFFF
 
-	PlayerObject_stateLeft <<= 1
-	PlayerObject_stateLeft |= player[2].left
-	PlayerObject_stateLeft &= 0xFFFF
+	Player_stateLeft <<= 1
+	Player_stateLeft |= player[2].left
+	Player_stateLeft &= 0xFFFF
 
-	PlayerObject_stateRight <<= 1
-	PlayerObject_stateRight |= player[2].right
-	PlayerObject_stateRight &= 0xFFFF
+	Player_stateRight <<= 1
+	Player_stateRight |= player[2].right
+	Player_stateRight &= 0xFFFF
 
-	PlayerObject_stateJumpPress <<= 1
-	PlayerObject_stateJumpPress |= player[2].jumpPress
-	PlayerObject_stateJumpPress &= 0xFFFF
+	Player_stateJumpPress <<= 1
+	Player_stateJumpPress |= player[2].jumpPress
+	Player_stateJumpPress &= 0xFFFF
 
-	PlayerObject_stateJumpHold <<= 1
-	PlayerObject_stateJumpHold |= player[2].jumpHold
-	PlayerObject_stateJumpHold &= 0xFFFF
+	Player_stateJumpHold <<= 1
+	Player_stateJumpHold |= player[2].jumpHold
+	Player_stateJumpHold &= 0xFFFF
 
-	temp0 = PlayerObject_stateUp
+	temp0 = Player_stateUp
 	temp0 >>= 15
 	player.up = temp0
 
-	temp0 = PlayerObject_stateDown
+	temp0 = Player_stateDown
 	temp0 >>= 15
 	player.down = temp0
 
-	temp0 = PlayerObject_stateLeft
+	temp0 = Player_stateLeft
 	temp0 >>= 15
 	player.left = temp0
 
-	temp0 = PlayerObject_stateRight
+	temp0 = Player_stateRight
 	temp0 >>= 15
 	player.right = temp0
 
-	temp0 = PlayerObject_stateJumpPress
+	temp0 = Player_stateJumpPress
 	temp0 >>= 15
 	player.jumpPress = temp0
 
-	temp0 = PlayerObject_stateJumpHold
+	temp0 = Player_stateJumpHold
 	temp0 >>= 15
 	player.jumpHold = temp0
 
@@ -558,12 +557,12 @@ public function PlayerObject_ProcessP2Controller
 end function
 
 
-public function PlayerObject_Process2PVSPlayer
+public function Player_Input_Gamepad_2P
 #platform: USE_STANDALONE
 	temp0 = player.playerTagFrame
 	CallNativeFunction2(ReceiveEntity, 3, true)
 	player.type = TypeName[Player Object]
-	player.stateInput = PlayerObject_Process2PVSPlayer
+	player.stateInput = Player_Input_Gamepad_2P
 	player.playerTagFrame = temp0
 #endplatform
 
@@ -572,7 +571,7 @@ public function PlayerObject_Process2PVSPlayer
 #endplatform
 
 	if vs.playerID == 1
-		PlayerObject_leadingPlayer = player.currentLeader
+		Player_leadingPlayer = player.currentLeader
 	end if
 
 	if player.invincibilityTimer > 0
@@ -587,7 +586,7 @@ public function PlayerObject_Process2PVSPlayer
 end function
 
 
-public function PlayerObject_Ground
+public function Player_State_Ground
 	if player.right == true
 		player.speed -= 48
 		if player.speed < -0x600
@@ -664,7 +663,7 @@ public function PlayerObject_Ground
 		Cos(player.yvel, player.rotation)
 		player.yvel *= 0x980
 		player.yvel >>= 9
-		player.state = PlayerObject_Air
+		player.state = Player_State_Air
 		player.rotation = 0
 		player.frame = 8
 		player.frame += player.frameOffset
@@ -680,7 +679,7 @@ public function PlayerObject_Ground
 					if player.speed > -128
 						player.xvel = player.speed
 						player.speed = 0
-						player.state = PlayerObject_Air
+						player.state = Player_State_Air
 						player.yvel = 0
 					end if
 				end if
@@ -733,10 +732,10 @@ public function PlayerObject_Ground
 end function
 
 
-public function PlayerObject_Air
+public function Player_State_Air
 	if options.vsMode == true
 		if player.changedLeader == false
-			PlayerObject_leadingPlayer ^= 1
+			Player_leadingPlayer ^= 1
 			player.changedLeader = true
 		end if
 	end if
@@ -767,7 +766,7 @@ public function PlayerObject_Air
 		temp1 *= player.ypos
 		temp0 += temp1
 		if temp0 > player.groundPos
-			player.state = PlayerObject_Ground
+			player.state = Player_State_Ground
 			player.gravity = 0
 			ATan2(player.angle, player.ypos, player.xpos)
 			player.angle += 128
@@ -797,7 +796,7 @@ public function PlayerObject_Air
 	temp0 *= 45
 	temp0 >>= 13
 	Abs(temp0)
-	GetTableValue(player.shadowPos.y, temp0, PlayerObject_shadowYPosTable)
+	GetTableValue(player.shadowPos.y, temp0, Player_shadowYPosTable)
 	temp0 = player.shadowPos.y
 	player.shadowPos.y *= 105
 
@@ -822,14 +821,14 @@ public function PlayerObject_Air
 end function
 
 
-public function PlayerObject_HurtSpin
+public function Player_State_Hurt
 	if options.vsMode == true
 		if vs.playerID == 0
 			if player.changedLeader == false
-				PlayerObject_leadingPlayer = player.entityPos
-				PlayerObject_leadingPlayer -= 2
-				PlayerObject_leadingPlayer ^= vs.playerID
-				PlayerObject_leadingPlayer ^= 1
+				Player_leadingPlayer = player.entityPos
+				Player_leadingPlayer -= 2
+				Player_leadingPlayer ^= vs.playerID
+				Player_leadingPlayer ^= 1
 				player.changedLeader = true
 			end if
 		end if
@@ -843,15 +842,15 @@ public function PlayerObject_HurtSpin
 		player.spinTimer = 0
 		player.invincibilityTimer = 60
 		if player.gravity == 0
-			player.state = PlayerObject_Ground
+			player.state = Player_State_Ground
 		else
-			player.state = PlayerObject_Air
+			player.state = Player_State_Air
 		end if
 	end if
 end function
 
 
-public function PlayerObject_RingLoss
+public function Player_LoseRings
 	if player[currentPlayer].rings > 0
 		PlaySfx(SfxName[Lose Rings], false)
 		player[currentPlayer].rings -= 10
@@ -908,7 +907,7 @@ event ObjectUpdate
 		temp0 = player.entityPos
 		temp0 -= 2
 		temp0 ^= vs.playerID
-		temp0 ^= PlayerObject_leadingPlayer
+		temp0 ^= Player_leadingPlayer
 		if temp0 == 0
 			if player.zpos < 0x1000
 				player.zpos += 64
@@ -934,7 +933,7 @@ event ObjectUpdate
 		player.frame += player.frameOffset
 	end if
 
-	CallFunction(PlayerObject_ProcessDrawing)
+	CallFunction(Player_Draw_Normal)
 	player.playerFrame++
 	player.playerFrame %= 28
 end event
@@ -1025,8 +1024,8 @@ event ObjectStartup
 	player[2].type = TypeName[Player Object]
 	player[2].priority = 1
 	player[2].zpos = 0x1000
-	player[2].state = PlayerObject_Ground
-	player[2].stateInput = PlayerObject_ProcessP1Inputs
+	player[2].state = Player_State_Ground
+	player[2].stateInput = Player_Input_Gamepad
 	switch stage.playerListPos
 	case 0
 		player[2].xBoundsR = 88
@@ -1067,8 +1066,8 @@ event ObjectStartup
 			player[3].zpos = 0x1000
 		end if
 
-		player[3].state = PlayerObject_Ground
-		player[3].stateInput = PlayerObject_Process2PVSPlayer
+		player[3].state = Player_State_Ground
+		player[3].stateInput = Player_Input_Gamepad_2P
 		switch vs.player2Type
 		case 0
 			player[3].xBoundsR = 88
@@ -1104,8 +1103,8 @@ event ObjectStartup
 		player[3].type = TypeName[Player Object]
 		player[3].priority = 1
 		player[3].zpos = 0x400
-		player[3].state = PlayerObject_Air
-		player[3].stateInput = PlayerObject_ProcessP2Inputs
+		player[3].state = Player_State_Air
+		player[3].stateInput = Player_Input_AI_Follow
 		player[3].xBoundsR = 90
 		player[3].frameOffset = 16
 		player[3].xBoundsR <<= 8
