@@ -33,21 +33,24 @@ private alias 4 : TEXT_CANCHANGEFORM
 private alias 5 : TEXT_TOHIDDENPALACE
 
 // States
-private alias 0  : SPECIALSETUP_FADEIN
-private alias 1  : SPECIALSETUP_FADEIDLE
-private alias 2  : SPECIALSETUP_ENTERTEXT
-private alias 3  : SPECIALSETUP_ENTEREMERALDS
-private alias 4  : SPECIALSETUP_TALLYSCORE
-private alias 5  : SPECIALSETUP_FAILED
-private alias 6  : SPECIALSETUP_FADEOUT
-private alias 7  : SPECIALSETUP_EXITRESULTS
-private alias 8  : SPECIALSETUP_WINSHOWREWARD
-private alias 9  : SPECIALSETUP_WINENTERTEXT
-private alias 10 : SPECIALSETUP_WINEVENT
-private alias 11 : SPECIALSETUP_WINIDLE
+private alias 0  : SPECIALFINISH_FADEIN
+private alias 1  : SPECIALFINISH_FADEIDLE
+private alias 2  : SPECIALFINISH_ENTERTEXT
+private alias 3  : SPECIALFINISH_ENTEREMERALDS
+private alias 4  : SPECIALFINISH_TALLYSCORE
+private alias 5  : SPECIALFINISH_FAILED
+private alias 6  : SPECIALFINISH_FADEOUT
+private alias 7  : SPECIALFINISH_EXITRESULTS
+private alias 8  : SPECIALFINISH_WINSHOWREWARD
+private alias 9  : SPECIALFINISH_WINENTERTEXT
+private alias 10 : SPECIALFINISH_WINEVENT
+private alias 11 : SPECIALFINISH_WINIDLE
+private alias 12 : SPECIALFINISH_WAITFORCALLBACK
 
 // Player Aliases
 private alias object.value0 : player.rings
+
+private alias StageStatsUsabilityParam5 : stageStat.playerRings
 
 // ========================
 // Tables
@@ -64,7 +67,7 @@ end table
 event ObjectUpdate
 	options.touchControls = false
 	switch object.state
-	case SPECIALSETUP_FADEIN
+	case SPECIALFINISH_FADEIN
 		if object.timer < 256
 			object.timer += 8
 			SetScreenFade(224, 224, 224, object.timer)
@@ -76,6 +79,9 @@ event ObjectUpdate
 				if specialStage.emeralds == 127
 					object.resultsTextTop = TEXT_ALLEMERALDS_CHAOS
 					object.resultsTextMid = TEXT_ALLEMERALDS_CHAOS
+#platform: USE_ORIGINS
+					CallNativeFunction2(NotifyCallback, NOTIFY_STATS_PARAM_2, 0)
+#endplatform
 				else
 					object.resultsTextTop = TEXT_ONEEMERALD
 					object.resultsTextMid = TEXT_ONEEMERALD
@@ -90,15 +96,24 @@ event ObjectUpdate
 			end if
 			object.resultsTextBottom = 0
 
+#platform: USE_ORIGINS
+			stageStat.playerRings = player[2].rings
+#endplatform
 			object.p1RingBonus = player[2].rings
 			if stage.player2Enabled == true
 				object.p2RingBonus = player[3].rings
+#platform: USE_ORIGINS
+				stageStat.playerRings += player[3].rings
+#endplatform
 			else
 				object.p2RingBonus = 0
 			end if
 
+#platform: USE_STANDALONE
 			stage.listPos = specialStage.nextZone
 			stage.activeList = REGULAR_STAGE
+#endplatform
+
 			object.timer = 0
 			temp0 = 0
 			while temp0 < 20
@@ -114,35 +129,48 @@ event ObjectUpdate
 			stage.activeLayer[1] = 9
 			stage.activeLayer[2] = 9
 			stage.activeLayer[3] = 9
-			object.controlMode = 0
+			object.controlMode	= 0
 			keyDown[0].left 	= false
-			keyDown[0].right = false
-			object.direction = 0
-			object.textTopPos = -384
-			object.textMidPos = 384
-			object.scorePos = 640
-			object.p1RingPos = 656
-			object.p2RingPos = 672
-			object.gemPos = 688
-			object.scorePos += 128
-			object.p1RingPos += 128
-			object.p2RingPos += 128
-			object.gemPos += 128
-			object.inkEffect = 2
+			keyDown[0].right	= false
+			object.direction	= 0
+			object.textTopPos	= -384
+			object.textMidPos	= 384
+			object.scorePos		= 640
+			object.p1RingPos	= 656
+			object.p2RingPos	= 672
+			object.gemPos		= 688
+			object.scorePos		+= 128
+			object.p1RingPos	+= 128
+			object.p2RingPos	+= 128
+			object.gemPos		+= 128
+			object.inkEffect	= 2
 			PlayMusic(1)
+#platform: USE_ORIGINS
+			game.callbackResult = -1
+			CallNativeFunction4(NotifyCallback, NOTIFY_SPECIAL_RETRY, SpecialSetup_gotEmerald, specialStage.listPos, specialStage.emeralds)
+			object.state = SPECIALFINISH_WAITFORCALLBACK
+#endplatform
+#platform: USE_STANDALONE
 			object.state++
+#endplatform
 			SetScreenFade(224, 224, 224, 255)
 		end if
 		break
-	case SPECIALSETUP_FADEIDLE
+		
+	case SPECIALFINISH_FADEIDLE
 		object.timer++
 		if object.timer > 15
 			object.timer = 0
 			object.state++
+#platform: USE_ORIGINS
+			stage.activeList = REGULAR_STAGE
+			stage.listPos = specialStage.nextZone
+#endplatform
 		end if
 		SetScreenFade(224, 224, 224, 255)
 		break
-	case SPECIALSETUP_ENTERTEXT
+		
+	case SPECIALFINISH_ENTERTEXT
 		if object.textTopPos < 0
 			object.textTopPos += 16
 		end if
@@ -164,7 +192,8 @@ event ObjectUpdate
 			object.state++
 		end if
 		break
-	case SPECIALSETUP_ENTEREMERALDS
+		
+	case SPECIALFINISH_ENTEREMERALDS
 		object.timer++
 		if object.emeraldAlpha < 256
 			object.emeraldAlpha += 8
@@ -174,7 +203,8 @@ event ObjectUpdate
 			object.state++
 		end if
 		break
-	case SPECIALSETUP_TALLYSCORE
+		
+	case SPECIALFINISH_TALLYSCORE
 		if object.p1RingBonus > 0
 			object.p1RingBonus--
 			player.score += 100
@@ -208,17 +238,17 @@ event ObjectUpdate
 		else
 			if SpecialSetup_gotEmerald == true
 				if specialStage.emeralds == 0x3FFF
-					object.state = SPECIALSETUP_WINSHOWREWARD
+					object.state = SPECIALFINISH_WINSHOWREWARD
 				else
 					if specialStage.emeralds == 127
 						switch stage.playerListPos
 						case 0
 						case 2
-							object.state = SPECIALSETUP_WINSHOWREWARD
+							object.state = SPECIALFINISH_WINSHOWREWARD
 							break
 						case 1
 							if options.superTails == true
-								object.state = SPECIALSETUP_WINSHOWREWARD
+								object.state = SPECIALFINISH_WINSHOWREWARD
 							else
 								object.state++
 							end if
@@ -235,7 +265,8 @@ event ObjectUpdate
 			PlaySfx(SfxName[Score Total], false)
 		end if
 		break
-	case SPECIALSETUP_FAILED
+		
+	case SPECIALFINISH_FAILED
 		object.timer++
 		if object.timer == 160
 			object.timer = 0
@@ -243,7 +274,8 @@ event ObjectUpdate
 			PlaySfx(SfxName[Warp], false)
 		end if
 		break
-	case SPECIALSETUP_FADEOUT
+		
+	case SPECIALFINISH_FADEOUT
 		if object.timer < 400
 			object.timer += 8
 			SetScreenFade(248, 248, 248, object.timer)
@@ -253,11 +285,18 @@ event ObjectUpdate
 			SetScreenFade(248, 248, 248, 255)
 		end if
 		break
-	case SPECIALSETUP_EXITRESULTS
+		
+	case SPECIALFINISH_EXITRESULTS
 		if object.timer > 0
 			object.timer -= 8
 		else
+#platform: USE_ORIGINS
+			recScore = player.score
+#endplatform
 			fadeColor = 0
+#platform: USE_ORIGINS
+			CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, stageStat.playerRings)
+#endplatform
 			if stage.listPos < stage.listSize
 				LoadStage()
 			else
@@ -268,7 +307,8 @@ event ObjectUpdate
 		end if
 		SetScreenFade(object.timer, object.timer, object.timer, 255)
 		break
-	case SPECIALSETUP_WINSHOWREWARD
+		
+	case SPECIALFINISH_WINSHOWREWARD
 		object.timer++
 		if object.timer == 90
 			object.timer = 0
@@ -276,7 +316,8 @@ event ObjectUpdate
 			object.state++
 		end if
 		break
-	case SPECIALSETUP_WINENTERTEXT
+		
+	case SPECIALFINISH_WINENTERTEXT
 		if object.textTopPos > -384
 			object.textTopPos -= 32
 			object.textBottomPos -= 32
@@ -302,7 +343,8 @@ event ObjectUpdate
 			object.state++
 		end if
 		break
-	case SPECIALSETUP_WINEVENT
+		
+	case SPECIALFINISH_WINEVENT
 		if object.textTopPos < 0
 			object.textTopPos += 16
 			object.textBottomPos += 16
@@ -314,29 +356,40 @@ event ObjectUpdate
 			object.state++
 		end if
 		break
-	case SPECIALSETUP_WINIDLE
+		
+	case SPECIALFINISH_WINIDLE
 		object.timer++
 		if object.timer == 200
 			object.timer = 0
-			object.state = SPECIALSETUP_FADEOUT
+			object.state = SPECIALFINISH_FADEOUT
 			PlaySfx(SfxName[Warp], false)
 		end if
 		break
+		
+#platform: USE_ORIGINS
+	case SPECIALFINISH_WAITFORCALLBACK
+		if game.callbackResult >= 0
+			object.state = SPECIALFINISH_FADEIDLE
+			object.timer = 0
+		end if
+		SetScreenFade(224, 224, 224, 255)
+		break
+#endplatform
 	end switch
 end event
 
 
 event ObjectDraw
 	switch object.state
-	case SPECIALSETUP_ENTERTEXT
-	case SPECIALSETUP_ENTEREMERALDS
-	case SPECIALSETUP_TALLYSCORE
-	case SPECIALSETUP_FAILED
-	case SPECIALSETUP_FADEOUT
-	case SPECIALSETUP_WINSHOWREWARD
-	case SPECIALSETUP_WINENTERTEXT
-	case SPECIALSETUP_WINEVENT
-	case SPECIALSETUP_WINIDLE
+	case SPECIALFINISH_ENTERTEXT
+	case SPECIALFINISH_ENTEREMERALDS
+	case SPECIALFINISH_TALLYSCORE
+	case SPECIALFINISH_FAILED
+	case SPECIALFINISH_FADEOUT
+	case SPECIALFINISH_WINSHOWREWARD
+	case SPECIALFINISH_WINENTERTEXT
+	case SPECIALFINISH_WINEVENT
+	case SPECIALFINISH_WINIDLE
 		ClearScreen(152)
 
 		object.animationTimer += 16
@@ -355,7 +408,17 @@ event ObjectDraw
 				GetTableValue(temp2, temp0, SpecialFinish_emeraldXPosTable)
 				temp2 += screen.xcenter
 				GetTableValue(temp3, temp0, SpecialFinish_emeraldYPosTable)
+#platform: USE_ORIGINS
+				if game.playMode == BOOT_PLAYMODE_MIRRORING
+					object.direction = FACING_LEFT
+					DrawSpriteScreenFX(temp0, FX_FLIP, temp2, temp3)
+				else
+					DrawSpriteScreenFX(temp0, FX_INK, temp2, temp3)
+				end if
+#endplatform
+#platform: USE_STANDALONE
 				DrawSpriteScreenFX(temp0, FX_INK, temp2, temp3)
+#endplatform
 			end if
 			temp0++
 			temp1++
@@ -482,6 +545,9 @@ event ObjectDraw
 			end if
 		end if
 		break
+		
+	case SPECIALFINISH_WAITFORCALLBACK
+		break
 	end switch
 end event
 
@@ -528,7 +594,6 @@ event ObjectStartup
 		SpriteFrame(-72, 32, 72, 16, 189, 277) 	// sonic text - #24
 		SpriteFrame(8, 32, 72, 16, 412, 277) 	// "got a" text - #25
 		break
-
 	case 1
 		if options.region == 0
 			SpriteFrame(-69, 32, 69, 16, 262, 277) 	// tails text - #24
@@ -537,12 +602,10 @@ event ObjectStartup
 		end if
 		SpriteFrame(8, 32, 72, 16, 412, 277) 		// "got a" text - #25
 		break
-
 	case 2
 		SpriteFrame(-104, 32, 128, 16, 1, 294) 	// knuckles text - #24
 		SpriteFrame(32, 32, 72, 16, 412, 277) 	// "got a" text - #25
 		break
-
 	end switch
 	SpriteFrame(-104, 50, 208, 16, 130, 294) // "chaos emerald" text - #26
 
@@ -552,7 +615,6 @@ event ObjectStartup
 		SpriteFrame(-120, 32, 72, 16, 189, 277)	// sonic text - #37
 		SpriteFrame(-40, 32, 159, 16, 162, 311) // "has all the" text - #28
 		break
-
 	case 1
 		if options.region == 0
 			SpriteFrame(-117, 32, 69, 16, 262, 277) 	// tails text - #27
@@ -561,12 +623,10 @@ event ObjectStartup
 		end if
 		SpriteFrame(-40, 32, 159, 16, 162, 311)			// "has all the" text - #28
 		break
-
 	case 2
 		SpriteFrame(-148, 32, 128, 16, 1, 294) 	// knuckles text - #27
 		SpriteFrame(-12, 32, 159, 16, 162, 311)	// "has all the" text - #28
 		break
-
 	end switch
 	SpriteFrame(-112, 50, 224, 16, 130, 294) // "chaos emeralds" text - #29
 
@@ -577,7 +637,6 @@ event ObjectStartup
 		SpriteFrame(-32, 20, 72, 16, 189, 277)	// sonic text - #31
 		SpriteFrame(48, 20, 48, 16, 411, 294) 	// "can" text - #32
 		break
-
 	case 1
 		SpriteFrame(-96, 20, 55, 16, 355, 294)		// "now" text - #30
 		if options.region == 0
@@ -587,13 +646,11 @@ event ObjectStartup
 		end if
 		SpriteFrame(48, 20, 48, 16, 411, 294)		// "can" text - #32
 		break
-
 	case 2
 		SpriteFrame(-124, 20, 55, 16, 355, 294)	// "now" text - #30
 		SpriteFrame(-60, 20, 128, 16, 1, 294)	// knuckles text - #31
 		SpriteFrame(76, 20, 48, 16, 411, 294)	// "can" text - #32
 		break
-
 	end switch
 	SpriteFrame(-80, 38, 160, 16, 1, 311) 	// "go" text - #33
 
@@ -608,7 +665,6 @@ event ObjectStartup
 		SpriteFrame(-80, 56, 80, 16, temp0, 311) 	// super/hyper text - #34
 		SpriteFrame(8, 56, 72, 16, 189, 277)		// sonic text - #35
 		break
-
 	case 1
 		SpriteFrame(-80, 56, 80, 16, temp0, 311)	// super/hyper text - #34
 		if options.region == 0
@@ -617,7 +673,6 @@ event ObjectStartup
 			SpriteFrame(8, 56, 79, 16, 332, 277)	// miles text - #35
 		end if
 		break
-
 	case 2
 		SpriteFrame(-108, 56, 80, 16, temp0, 311)	// super/hyper text - #34
 		SpriteFrame(-20, 56, 128, 16, 1, 294)		// knuckles text - #35
@@ -631,7 +686,6 @@ event ObjectStartup
 		SpriteFrame(-72, 20, 55, 16, 355, 294) 	// "now" text - #36
 		SpriteFrame(0, 20, 72, 16, 189, 277) 	// sonic text - #37
 		break
-
 	case 1
 		SpriteFrame(-72, 20, 55, 16, 355, 294)		// "now" text - #36
 		if options.region == 0
@@ -641,7 +695,6 @@ event ObjectStartup
 		end if
 		break
 	case 2
-
 		SpriteFrame(-100, 20, 55, 16, 355, 294)	// "now" text - #36
 		SpriteFrame(-28, 20, 128, 16, 1, 294)	// knuckles text - #37
 		break

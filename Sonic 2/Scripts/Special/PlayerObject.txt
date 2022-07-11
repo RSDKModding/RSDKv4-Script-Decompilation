@@ -64,6 +64,7 @@ private alias object.value23 : player.playerTagFrame
 private alias object.value24 : player.currentLeader
 private alias object.value25 : player.changedLeader
 private alias object.value26 : player.automoveActive
+private alias object.value27 : player.p2InputFunction
 
 // Halfpipe Aliases
 private alias object.value13 : halfpipe.playerPos.z
@@ -91,6 +92,7 @@ reserve function PlayerObject_Air
 reserve function PlayerObject_HurtSpin
 reserve function PlayerObject_RingLoss
 reserve function PlayerObject_ProcessDrawing
+reserve function PlayerObject_ProcessP2Controller
 reserve function PlayerObject_Process2PVSPlayer
 
 
@@ -306,7 +308,8 @@ end function
 
 
 public function PlayerObject_ProcessP1Inputs
-	if options.attractMode == false
+	if options.attractMode == false // Ah yes, the S2 Special Stage demo
+#platform: USE_STANDALONE
 		if options.touchControls == true
 			if player.controlMode == 0
 				CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
@@ -360,6 +363,17 @@ public function PlayerObject_ProcessP1Inputs
 				end if
 			end if
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		if keyPress[0].start == true
+			if options.vsMode == false
+				StopSfx(SfxName[Flying])
+				StopSfx(SfxName[Tired])
+				engine.state = 5
+			end if
+		end if
+#endplatform
 
 		ProcessObjectControl()
 
@@ -369,7 +383,8 @@ public function PlayerObject_ProcessP1Inputs
 		end if
 	else
 		// There aren't even any demos in the Special Stages I believe, but may as well leave in the implementation for it anyways...
-		
+
+#platform: USE_STANDALONE
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 		if keyPress[0].start == true
 			checkResult = 0
@@ -384,6 +399,13 @@ public function PlayerObject_ProcessP1Inputs
 		if keyPress[0].start == true
 			PlayerObject_ReplayLength = 1
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		if keyPress[0].start == true
+			PlayerObject_ReplayLength = 1
+		end if
+#endplatform
 
 		PlayerObject_ReplayFrameCnt--
 		if PlayerObject_ReplayFrameCnt < 1
@@ -492,15 +514,62 @@ public function PlayerObject_ProcessP2Inputs
 			player.visible = true
 		end if
 	end if
+	
+#platform: USE_ORIGINS
+	temp0 = keyDown[2].left
+	temp0 |= keyDown[2].right
+	temp0 |= keyDown[2].buttonA
+	temp0 |= keyDown[2].buttonB
+	temp0 |= keyDown[2].buttonC
+	if temp0 == true
+		player.jumpInTimer = 0
+		player.stateInput = PlayerObject_ProcessP2Controller
+	end if
+#endplatform
+end function
+
+
+public function PlayerObject_ProcessP2Controller
+#platform: USE_ORIGINS
+	ProcessObjectControl()
+	if player.invincibilityTimer > 0
+		player.invincibilityTimer--
+		GetBit(temp0, player.invincibilityTimer, 2)
+		if temp0 == true
+			player.visible = false
+		else
+			player.visible = true
+		end if
+	end if
+	
+	temp0 = player.left
+	temp0 |= player.right
+	temp0 |= player.jumpHold
+	if temp0 == false
+		player.jumpInTimer++
+		if player.jumpInTimer >= 600
+			player.stateInput = PlayerObject_ProcessP2Inputs
+			AssignInputSlotToDevice(2, -1)
+		end if
+	else
+		player.jumpInTimer = 0
+	end if
+#endplatform
 end function
 
 
 public function PlayerObject_Process2PVSPlayer
+#platform: USE_STANDALONE
 	temp0 = player.playerTagFrame
 	CallNativeFunction2(ReceiveEntity, 3, true)
 	player.type = TypeName[Player Object]
 	player.stateInput = PlayerObject_Process2PVSPlayer
 	player.playerTagFrame = temp0
+#endplatform
+
+#platform: USE_ORIGINS
+	ProcessObjectControl()
+#endplatform
 
 	if vs.playerID == 1
 		PlayerObject_leadingPlayer = player.currentLeader
@@ -941,8 +1010,17 @@ event ObjectStartup
 	SpriteFrame(-11, -9, 16, 32, 407, 58)
 	SpriteFrame(-16, -9, 24, 24, 424, 58)
 	SpriteFrame(-16, -9, 24, 24, 323, 83)
-	SpriteFrame(-8, -40, 16, 7, 348, 100)
-	SpriteFrame(-8, -40, 16, 7, 348, 108)
+#platform: USE_ORIGINS
+	if game.playMode == BOOT_PLAYMODE_MIRRORING
+		SpriteFrame(-8, -40, 16, 7, 348, 145)
+		SpriteFrame(-8, -40, 16, 7, 348, 153)
+	else
+#endplatform
+		SpriteFrame(-8, -40, 16, 7, 348, 100)
+		SpriteFrame(-8, -40, 16, 7, 348, 108)
+#platform: USE_ORIGINS
+	end if
+#endplatform
 
 	player[2].type = TypeName[Player Object]
 	player[2].priority = 1
@@ -1037,6 +1115,9 @@ event ObjectStartup
 		player[3].groundPos *= player[3].xBoundsR
 		player[3].groundPos -= 0x10000
 		player[3].frame = player[3].frameOffset
+#platform: USE_ORIGINS
+		AssignInputSlotToDevice(2, -1)
+#endplatform
 	end if
 end event
 
