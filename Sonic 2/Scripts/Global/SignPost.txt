@@ -31,6 +31,7 @@ private alias object.type 			: player.type
 private alias object.propertyValue 	: player.character
 private alias object.xpos 			: player.xpos
 private alias object.ypos 			: player.ypos
+private alias object.ixpos			: player.ixpos
 private alias object.speed 			: player.speed
 private alias object.xvel 			: player.xvel
 private alias object.controlMode 	: player.controlMode
@@ -41,15 +42,9 @@ private alias object.up 			: player.up
 private alias object.down 			: player.down
 private alias object.left 			: player.left
 private alias object.right 			: player.right
+private alias object.value7 		: player.invincibleTimer
 private alias object.value21 		: player.acceleration
 
-#platform: USE_DECOMP
-
-// Alias only used in decomp-exclusive code
-// (It can't be indented because the compiler doesn't like that...)
-private alias object.ixpos : player.ixpos
-
-#endplatform
 
 private alias 0 : CHARACTER_SONIC
 private alias 1 : CHARACTER_TAILS
@@ -151,6 +146,9 @@ event ObjectUpdate
 					end if
 				end if
 
+#platform: USE_ORIGINS
+				CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
+#endplatform
 				stage.timeEnabled = false
 				object.state = SIGNPOST_SPUN
 				PlaySfx(SfxName[Sign Post], false)
@@ -373,10 +371,10 @@ event ObjectUpdate
 							CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
 							vsGame[tempObjectPos].timer = 384
 							object[tempObjectPos].state = 2
-							screen.cameraX = object[1].xpos
-							screen.cameraX >>= 16
-							screen.cameraY = object[1].ypos
-							screen.cameraY >>= 16
+							camera[0].xpos = object[1].xpos
+							camera[0].xpos >>= 16
+							camera[0].ypos = object[1].ypos
+							camera[0].ypos >>= 16
 						end if
 					else
 						object.state = SIGNPOST_FINISHED
@@ -425,6 +423,14 @@ event ObjectUpdate
 		end if
 		currentPlayer++
 	loop
+	
+#platform: USE_ORIGINS
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		if object.state > SIGNPOST_IDLE
+			player[0].invincibleTimer = 80
+		end if
+	end if
+#endplatform
 end event
 
 

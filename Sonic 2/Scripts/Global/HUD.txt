@@ -10,6 +10,7 @@
 // ========================
 private alias object.value0 : object.drawFunction
 private alias object.value1 : object.flashingTimer
+private alias object.value2 : object.timeOver
 
 // Player Aliases
 private alias object.value0 : player.rings
@@ -24,90 +25,175 @@ reserve function HUD_DrawMobile
 
 
 public function HUD_DrawPC
-	// Draw the base SCORE/TIME/RINGS text
-	DrawSpriteScreenXY(10, 17, 13)
 
-	// Overlay the red TIME text if needed
-	if stage.minutes == 9
-		if object.flashingTimer > 7
-			DrawSpriteScreenXY(11, 17, 29)
+#platform: USE_ORIGINS
+	// temp4 will tell whether to draw lives or coins
+	temp4 = game.coinMode
+	
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		if game.missionEnd == false
+			game.hudEnable = HUDENABLE_ON
 		end if
-	end if
-
-	// Overlay the red RINGS text if needed as well
-	if player[0].rings == 0
-		if object.flashingTimer > 7
-			DrawSpriteScreenXY(12, 17, 45)
-		end if
-	end if
-
-	DrawNumbers(0, 104, 13, player.score, 6, 8, 0)
-
-	if options.gameMode < MODE_TIMEATTACK
-		// Normal game - only minutes and seconds are shown
-		DrawSpriteScreenXY(14, 67, 29)
+		temp4 = true
 	else
-		// Time attack - draw milliseconds alongside of the other values
-		DrawSpriteScreenXY(13, 67, 29)
-		DrawNumbers(0, 104, 29, stage.milliSeconds, 2, 8, 1)
-	end if
-
-	// Rest of the time display
-	DrawNumbers(0, 80, 29, stage.seconds, 2, 8, 1)
-	DrawNumbers(0, 56, 29, stage.minutes, 1, 8, 1)
-
-	DrawNumbers(0, 80, 45, player[0].rings, 3, 8, 0)
-
-	if stage.debugMode == true
-		// Player position display, show it if they have debug mode on
-
-		// XPos display
-		temp0 = object[0].xpos
-		temp0 >>= 16
-		Abs(temp0)
-		temp1 = screen.xsize
-		temp1 -= 24
-		DrawNumbers(0, temp1, 13, temp0, 5, 8, 1)
-
-		// YPos display
-		temp0 = object[0].ypos
-		temp0 >>= 16
-		Abs(temp0)
-		DrawNumbers(0, temp1, 29, temp0, 5, 8, 1)
-
-		// Move 42 pixels to the left
-		temp1 -= 42
-
-		// Draw the "X:" and "Y:" icons
-
-		// Use red variant if player is in a negative pos
-		if object[0].xpos >= 0
-			DrawSpriteScreenXY(18, temp1, 15)
+		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			game.hudEnable = HUDENABLE_ON
+			temp4 = false
 		else
-			DrawSpriteScreenXY(36, temp1, 15)
-		end if
+			if game.coinMode != false
+				game.hudEnable = HUDENABLE_ON
+			end if
+#endplatform
 
-		if object[0].ypos >= 0
-			DrawSpriteScreenXY(19, temp1, 31)
-		else
-			DrawSpriteScreenXY(37, temp1, 31)
+			// Draw the base SCORE/TIME/RINGS text
+			DrawSpriteScreenXY(10, 17, 13)
+			
+#platform: USE_ORIGINS
+			temp2 = stage.minutes
+			temp3 = stage.seconds
+			
+			CheckGreater(temp2, 9)
+			temp5 = checkResult
+			CheckNotEqual(object.timeOver, false)
+			checkResult |= temp5
+			
+			if checkResult != false
+				temp2 = 9
+				temp3 = 59
+			end if
+			
+			if temp2 == 9
+#endplatform
+#platform: USE_STANDALONE
+			if stage.minutes == 9
+#endplatform
+				// Overlay the red TIME text
+				if object.flashingTimer > 7
+					DrawSpriteScreenXY(11, 17, 29)
+				end if
+			end if
+
+			// Overlay the red RINGS text if needed as well
+			if player[0].rings == 0
+				if object.flashingTimer > 7
+					DrawSpriteScreenXY(12, 17, 45)
+				end if
+			end if
+
+			DrawNumbers(0, 104, 13, player.score, 6, 8, 0)
+
+			if options.gameMode < MODE_TIMEATTACK
+				// Normal game - only minutes and seconds are shown
+				DrawSpriteScreenXY(14, 67, 29)
+			else
+				// Time attack - draw milliseconds alongside of the other values
+				DrawSpriteScreenXY(13, 67, 29)
+				DrawNumbers(0, 104, 29, stage.milliSeconds, 2, 8, 1)
+			end if
+
+			// Rest of the time display
+#platform: USE_STANDALONE
+			DrawNumbers(0, 80, 29, stage.seconds, 2, 8, 1)
+			DrawNumbers(0, 56, 29, stage.minutes, 1, 8, 1)
+#endplatform
+#platform: USE_ORIGINS
+			DrawNumbers(0, 80, 29, temp3, 2, 8, 1)
+			DrawNumbers(0, 56, 29, temp2, 1, 8, 1)
+#endplatform
+
+			DrawNumbers(0, 80, 45, player[0].rings, 3, 8, 0)
+
+			if stage.debugMode == true
+				// Player position display, show it if they have debug mode on
+
+				// XPos display
+				temp0 = object[0].xpos
+				temp0 >>= 16
+				Abs(temp0)
+				temp1 = screen.xsize
+				temp1 -= 24
+				DrawNumbers(0, temp1, 13, temp0, 5, 8, 1)
+
+				// YPos display
+				temp0 = object[0].ypos
+				temp0 >>= 16
+				Abs(temp0)
+				DrawNumbers(0, temp1, 29, temp0, 5, 8, 1)
+
+				// Move 42 pixels to the left
+				temp1 -= 42
+
+				// Draw the "X:" and "Y:" icons
+
+				// Use red variant if player is in a negative pos
+				if object[0].xpos >= 0
+					DrawSpriteScreenXY(18, temp1, 15)
+				else
+					DrawSpriteScreenXY(36, temp1, 15)
+				end if
+
+				if object[0].ypos >= 0
+					DrawSpriteScreenXY(19, temp1, 31)
+				else
+					DrawSpriteScreenXY(37, temp1, 31)
+				end if
+			end if
+			
+#platform: USE_STANDALONE
+			// Lives icon
+			temp0 = stage.playerListPos
+			temp0 += 15
+			DrawSpriteScreenXY(temp0, 16, 212)
+
+			// Character text
+			temp0 += 6
+			DrawSpriteScreenXY(temp0, 33, 213)
+
+			// X between icon and number
+			DrawSpriteScreenXY(20, 38, 222)
+
+			// The actual player lives number
+			DrawNumbers(24, 56, 220, player.lives, 2, 8, 0)
+#endplatform
+
+#platform: USE_ORIGINS
 		end if
 	end if
+	
+	if temp4 == false
+		// Lives icon
+		if currentPlayer == 0 // Player 1
+			temp0 = stage.playerListPos
+		else
+			temp0 = vs.player2Type
+		end if
+		temp0 += 15
+		DrawSpriteScreenXY(temp0, 16, 212)
+		
+		// Character text
+		temp0 += 6
+		DrawSpriteScreenXY(temp0, 33, 213)
 
-	// Lives icon
-	temp0 = stage.playerListPos
-	temp0 += 15
-	DrawSpriteScreenXY(temp0, 16, 212)
-
-	// Character text
-	temp0 += 6
-	DrawSpriteScreenXY(temp0, 33, 213)
-
-	// X between icon and number
-	DrawSpriteScreenXY(20, 38, 222)
-
-	// The actual player lives number
-	DrawNumbers(24, 56, 220, player.lives, 2, 8, 0)
+		// X between icon and number
+		DrawSpriteScreenXY(20, 38, 222)
+		
+		// The actual player lives number
+		arrayPos0 = 25
+#platform: USE_DECOMP
+		arrayPos0 = VarName[player.lives]
+#endplatform
+		arrayPos0 += currentPlayer
+		DrawNumbers(24, 56, 220, global[arrayPos0], 2, 8, 0)
+	else
+		if game.playMode != BOOT_PLAYMODE_MISSION
+			// Draw the Coins counter
+			DrawSpriteScreenXY(38, 16, 212)
+			DrawSpriteScreenXY(39, 33, 213)
+			DrawSpriteScreenXY(20, 36, 222)
+			DrawNumbers(24, 59, 220, game.coinCount, 3, 8, 0)
+		end if
+	end if
+#endplatform
 end function
 
 
@@ -193,9 +279,9 @@ end function
 // ========================
 
 event ObjectDraw
-
 	// Update flashing red stuff
 	// Only one can update at a time, with 0 rings having higher priority over low time
+#platform: USE_STANDALONE
 	if player[0].rings == 0
 		object.flashingTimer++
 
@@ -211,6 +297,24 @@ event ObjectDraw
 			end if
 		end if
 	end if
+#endplatform
+#platform: USE_ORIGINS
+	currentPlayer = screen.currentID
+	
+	if player[currentPlayer].rings == 0
+		object.flashingTimer = oscillation
+		object.flashingTimer &= 15
+	else
+		if stage.minutes == 9
+			object.flashingTimer = oscillation
+			object.flashingTimer &= 15
+		end if
+	end if
+	
+	if game.timeOver != false
+		object.timeOver = true
+	end if
+#endplatform
 
 	CallFunction(object.drawFunction)
 end event
@@ -271,6 +375,11 @@ event ObjectStartup
 	SpriteFrame(8, 0, 8, 8, 136, 64) 	// #35 - Small debug Minus sign
 	SpriteFrame(0, 0, 8, 8, 25, 98) 	// #36 - Red X Debug Icon
 	SpriteFrame(0, 0, 8, 8, 34, 98) 	// #37 - Red Y Debug Icon
+	
+#platform: USE_ORIGINS
+	SpriteFrame(0, 0, 16, 16, 179, 180)	// #38 - Coins life icon
+	SpriteFrame(0, 0, 39, 7, 179, 197)	// #39 - Coins name tag
+#endplatform
 
 	// Set the HUD's draw function based on the current platform
 	foreach (TypeName[HUD], arrayPos0, ALL_ENTITIES)

@@ -48,6 +48,9 @@ private alias 7 : TRACK_SUPER
 // Function Declarations
 // ========================
 reserve function Player2Object_ProcessP2InputLag
+#platform: USE_ORIGINS
+reserve function Player2Object_ProcessController
+#endplatform
 reserve function Player2Object_ProcessP2Input
 reserve function Player2Object_InputJumpIn
 reserve function Player2Object_ForceJump
@@ -85,6 +88,10 @@ end function
 public function Player2Object_JumpAbility_P2
 	CheckNotEqual(player.p2InputFunction, Player2Object_NoInput)
 	temp0 = checkResult
+#platform: USE_ORIGINS
+	CheckNotEqual(player.p2InputFunction, Player2Object_ProcessController)
+	temp0 &= checkResult
+#endplatform
 	CheckNotEqual(object.up, true)
 	temp0 &= checkResult
 	if temp0 == false
@@ -201,6 +208,33 @@ public function Player2Object_ProcessP2InputLag
 		GetTableValue(player.targetLeaderPos.y, temp0, Player2Object_leaderPosBufferY)
 	end if
 end function
+
+
+#platform: USE_ORIGINS
+public function Player2Object_ProcessController
+	IsInputSlotAssigned(2)
+	if checkResult == false
+		player.p2InputFunction = Player2Object_ProcessP2Input
+		AssignInputSlotToDevice(2, -1)
+		return
+	end if
+	ProcessObjectControl()
+	temp0 = object.up
+	temp0 |= object.down
+	temp0 |= object.left
+	temp0 |= object.right
+	temp0 |= object.jumpHold
+	if temp0 == false
+		player.autoJumpTimer++
+		if player.autoJumpTimer >= 600
+			player.p2InputFunction = Player2Object_ProcessP2Input
+			AssignInputSlotToDevice(2, -1)
+		end if
+	else
+		player.autoJumpTimer = 0
+	end if
+end function
+#endplatform
 
 
 public function Player2Object_ProcessP2Input
@@ -321,6 +355,22 @@ public function Player2Object_ProcessP2Input
 			end if
 		end if
 	end if
+	
+#platform: USE_ORIGINS
+	if game.playMode != BOOT_PLAYMODE_MISSION
+		temp0 = keyDown[2].up
+		temp0 |= keyDown[2].down
+		temp0 |= keyDown[2].left
+		temp0 |= keyDown[2].right
+		temp0 |= keyDown[2].buttonA
+		temp0 |= keyDown[2].buttonB
+		temp0 |= keyDown[2].buttonC
+		if temp0 == true
+			player.autoJumpTimer = 0
+			player.p2InputFunction = Player2Object_ProcessController
+		end if
+	end if
+#endplatform
 end function
 
 
@@ -1003,6 +1053,9 @@ event ObjectStartup
 		player[1].hitboxLeft 	= C_BOX
 		player[1].hitboxRight 	= C_BOX
 		temp7 = true
+#platform: USE_ORIGINS
+		AssignInputSlotToDevice(2, -1)
+#endplatform
 	end if
 
 	if temp7 == true

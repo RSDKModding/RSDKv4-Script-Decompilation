@@ -8,7 +8,8 @@
 // ========================
 // Aliases
 // ========================
-// Not all these aliases are actually used in this script necessarily, a good amount of them are just for general reference  as well
+
+// Not all these aliases are actually used in this script necessarily, a good amount of them are just here for general reference
 
 // Game Modes
 private alias 0 : MODE_NOSAVE
@@ -135,7 +136,6 @@ event ObjectUpdate
 	switch stage.state
 	case STAGE_PAUSED
 	case STAGE_FROZEN
-		// Do nothing
 		break
 
 	default
@@ -157,7 +157,16 @@ event ObjectUpdate
 		// Handle Player Score Bonus
 		if options.gameMode != MODE_TIMEATTACK
 			if player.score >= player.scoreBonus
+#platform: USE_ORIGINS
+				if game.coinMode == false
+					player.lives++
+				else
+					CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+				end if
+#endplatform
+#platform: USE_STANDALONE
 				player.lives++
+#endplatform
 				player.scoreBonus += 50000
 				PlaySfx(SfxName[Life], false)
 				PauseMusic()
@@ -173,24 +182,58 @@ event ObjectUpdate
 
 		// Handle Time Overs
 		if stage.timeEnabled == true
-			if stage.minutes == 10
-				CheckEqual(stage.debugMode, true)
+#platform: USE_ORIGINS
+			if game.coinMode == false
+				CheckEqual(game.timeOver, false)
 				temp0 = checkResult
-				CheckEqual(options.gameMode, MODE_TIMEATTACK)
-				temp0 |= checkResult
-				if temp0 == false
-					stage.timeOver = true
-					currentPlayer = 0
-					object[0].type = TypeName[Player Object]
-					CallFunction(PlayerObject_Kill)
-				end if
+				CheckEqual(stage.minutes, 10)
+				temp0 &= checkResult
 				
-				// Set the clock to 9:59:59 and disable timer progression so that it stays that way
-				stage.minutes 		= 9
-				stage.seconds 		= 59
-				stage.milliSeconds 	= 99
-				stage.timeEnabled 	= false
+				if temp0 != false
+					CheckEqual(stage.debugMode, true)
+					temp0 = checkResult
+					CheckEqual(options.gameMode, MODE_TIMEATTACK)
+					temp0 |= checkResult
+					CheckEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+					temp0 |= checkResult
+					
+					if temp0 == false
+#endplatform
+#platform: USE_STANDALONE
+				if stage.minutes == 10
+					CheckEqual(stage.debugMode, true)
+					temp0 = checkResult
+					CheckEqual(options.gameMode, MODE_TIMEATTACK)
+					temp0 |= checkResult
+					
+					if temp0 == false
+#endplatform
+						stage.timeOver = true
+						currentPlayer = 0
+						object[0].type = TypeName[Player Object]
+						CallFunction(PlayerObject_Kill)
+					end if
+					
+#platform: USE_ORIGINS
+					if game.playMode == BOOT_PLAYMODE_CLASSIC
+						// Set the clock to 9:59:59 and disable timer progression so that it stays that way
+						stage.minutes 		= 9
+						stage.seconds 		= 59
+						stage.milliSeconds 	= 99
+						stage.timeEnabled 	= false
+					end if
+#endplatform
+#platform: USE_STANDALONE
+					// Set the clock to 9:59:59 and disable timer progression so that it stays that way
+					stage.minutes 		= 9
+					stage.seconds 		= 59
+					stage.milliSeconds 	= 99
+					stage.timeEnabled 	= false
+#endplatform
+				end if
+#platform: USE_ORIGINS
 			end if
+#endplatform
 		end if
 
 		// Boundaries: Left & Bottom
@@ -227,8 +270,18 @@ event ObjectUpdate
 				end if
 			end if
 		next
+
+#platform: USE_ORIGINS
+		if game.forceKillPlayer == true
+			game.forceKillPlayer = false
+			currentPlayer = 0
+			object[0].type = TypeName[Player Object]
+			CallFunction(PlayerObject_Kill)
+		end if
+#endplatform
 	end switch
 
+#platform: USE_STANDALONE
 	// Show/hide touch controls based on whether the player's control is locked or not
 	if options.attractMode == false
 		if object[0].controlMode > -1
@@ -239,6 +292,7 @@ event ObjectUpdate
 	else
 		options.touchControls = false
 	end if
+#endplatform
 
 	// Sort players, player 1 should always be on top of player 2
 	currentPlayer = playerCount

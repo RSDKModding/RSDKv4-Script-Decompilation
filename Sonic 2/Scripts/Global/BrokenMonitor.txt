@@ -11,6 +11,7 @@
 private alias object.value0 : object.contentsPos.y
 private alias object.value1 : object.timer
 private alias object.value3 : object.rewardPlayer
+private alias object.value4 : object.drawContents
 
 // Monitor type aliases
 private alias 0  : MONITOR_BLANK
@@ -133,7 +134,16 @@ event ObjectUpdate
 				if player[0].rings >= ringExtraLife
 					if options.gameMode != MODE_TIMEATTACK
 						// this one doesn't have 2P code, its just like this
+#platform: USE_ORIGINS
+						if game.coinMode == false
+							player.lives++
+						else
+							CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+						end if
+#endplatform
+#platform: USE_STANDALONE
 						player.lives++
+#endplatform
 						PlaySfx(SfxName[Life], false)
 						PauseMusic()
 						ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
@@ -185,16 +195,25 @@ event ObjectUpdate
 			case MONITOR_1UP_SONIC
 			case MONITOR_1UP_TAILS
 			case MONITOR_1UP_KNUX
-				// global variable "array" (yes, this is actually how its done)
-				arrayPos0 = 25
-#platform: USE_DECOMP
-				arrayPos0 = VarName[player.lives]
+#platform: USE_ORIGINS
+				if game.coinMode == false
 #endplatform
-				if player[currentPlayer].isSidekick == false
-					arrayPos0 += currentPlayer
-				end if
+					// global variable "array" (yes, this is actually how its done)
+					arrayPos0 = 25
+#platform: USE_DECOMP
+					arrayPos0 = VarName[player.lives]
+#endplatform
+					if player[currentPlayer].isSidekick == false
+						arrayPos0 += currentPlayer
+					end if
 
-				global[arrayPos0]++
+					global[arrayPos0]++
+#platform: USE_ORIGINS
+				else
+					CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+				end if
+#endplatform
+				
 				PlaySfx(SfxName[Life], false)
 				PauseMusic()
 				ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
@@ -226,7 +245,18 @@ event ObjectUpdate
 
 				if player[0].rings >= ringExtraLife
 					if options.gameMode != MODE_TIMEATTACK
+						// this one doesn't have 2P code, its just like this
+#platform: USE_ORIGINS
+						if game.coinMode == false
+							player.lives++
+						else
+							CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+						end if
+#endplatform
+#platform: USE_STANDALONE
 						player.lives++
+#endplatform
+
 						PlaySfx(SfxName[Life], false)
 						PauseMusic()
 						ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
@@ -310,7 +340,7 @@ event ObjectUpdate
 				break
 
 			case MONITOR_DEBUG_EMERALDS
-				// Toggle emerald state - give the player all emeralds if they have them already but give them none if they have all
+				// Toggle emerald state - give the player all emeralds if they don't have them already but give them none if they have all
 				if specialStage.emeralds == 127
 					specialStage.emeralds = 0
 				else
@@ -345,11 +375,23 @@ end event
 
 
 event ObjectDraw
+#platform: USE_ORIGINS
+	if object.drawContents == 0
+		DrawSprite(0)
+		AddDrawListEntityRef(5, object.entityPos)
+	else
+		if object.propertyValue > 0
+			DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.value0)
+		end if
+	end if
+	object.drawContents ^= 1
+#endplatform
+#platform: USE_STANDALONE
 	DrawSprite(0)
-	
 	if object.propertyValue > MONITOR_BLANK
 		DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.contentsPos.y)
 	end if
+#endplatform
 end event
 
 
@@ -360,9 +402,19 @@ event ObjectStartup
 	SpriteFrame(-8, -9, 16, 14, 35, 66)
 	SpriteFrame(-8, -9, 16, 14, 18, 81)
 	SpriteFrame(-8, -9, 16, 14, 35, 81)
-	SpriteFrame(-8, -9, 16, 14, 18, 96)
-	SpriteFrame(-8, -9, 16, 14, 35, 96)
-	SpriteFrame(-8, -9, 16, 14, 18, 111)
+#platform: USE_ORIGINS
+	if game.coinMode == false
+#endplatform
+		SpriteFrame(-8, -9, 16, 14, 18, 96)
+		SpriteFrame(-8, -9, 16, 14, 35, 96)
+		SpriteFrame(-8, -9, 16, 14, 18, 111)
+#platform: USE_ORIGINS
+	else
+		SpriteFrame(-8, -9, 16, 14, 35, 186)
+		SpriteFrame(-8, -9, 16, 14, 35, 186)
+		SpriteFrame(-8, -9, 16, 14, 35, 186)
+	end if
+#endplatform
 	SpriteFrame(-8, -9, 16, 14, 35, 111)
 	SpriteFrame(-8, -9, 16, 14, 18, 141)
 	SpriteFrame(-8, -9, 16, 14, 35, 126)
