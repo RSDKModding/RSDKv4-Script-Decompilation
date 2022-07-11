@@ -1,0 +1,135 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: MissionBlock Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+private alias 87 : TYPE_MISSIONBLOCK
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.speed : player.speed
+private alias object.xvel  : player.xvel
+private alias object.yvel  : player.yvel
+
+private alias object.value1  : player.timer
+private alias object.value44 : player.missionBlockID
+
+
+// CSide Aliases
+private alias 1 : CSIDE_FLOOR
+private alias 2 : CSIDE_LWALL
+private alias 3 : CSIDE_RWALL
+private alias 4 : CSIDE_ROOF
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	CheckNotEqual(player[0].state, PlayerObject_Drown)
+	temp0 = checkResult
+	CheckNotEqual(player[0].state, PlayerObject_KnuxMissionPullUp)
+	checkResult &= temp0
+	if checkResult == true
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == CSIDE_ROOF
+			if object[currentPlayer].gravity == 0
+				
+				// The Player might need to be crushed...
+				
+				if object.angle > 384
+					CallFunction(PlayerObject_Kill)
+				end if
+				
+				if object.angle < 128
+					CallFunction(PlayerObject_Kill)
+				end if
+				
+			end if
+		end if
+		
+		// Store what collision type the Block got
+		temp0 = checkResult
+		
+		// See if the Player hit the left side of a Block, while gliding right
+		CheckEqual(temp0, CSIDE_LWALL)
+		temp1 = checkResult
+		CheckEqual(player[0].state, PlayerObject_KnuxGlideRight)
+		temp1 &= checkResult
+		
+		// And then see if the Player hit the Right side of a block, while gliding left
+		CheckEqual(temp0, CSIDE_RWALL)
+		temp2 = checkResult
+		CheckEqual(player[0].state, PlayerObject_KnuxGlideLeft)
+		temp2 &= checkResult
+		
+		temp1 |= temp2
+		
+		if temp1 != false
+			
+			// What? This Object's value0 doesn't seem to be used much at all...
+			CheckEqual(object.value0, false)
+			temp0 = checkResult
+			
+			temp1 = object.ypos
+			temp1 -= 0x100000
+			CheckLower(temp1, object[0].ypos)
+			
+			checkResult |= temp0
+			
+			if checkResult != false
+				
+				// This overlaps with normal values btw...
+				player[0].missionBlockID = TypeName[MissionBlock]
+				
+				player[0].state = PlayerObject_KnuxMissionClimb
+				
+				player[0].speed = 0
+				player[0].xvel = 0
+				player[0].yvel = 0
+				player[0].timer = 0
+				
+				PlaySfx(SfxName[Catch], 0)
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	
+	// Load what's essentially the Labyrinth Zone sheet...
+	LoadSpriteSheet("Mission/Objects.gif")
+	
+	// And of course, only use a tiny portion of it
+	SpriteFrame(-16, -16, 32, 32, 1, 18)
+	
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Mission/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 18)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event
