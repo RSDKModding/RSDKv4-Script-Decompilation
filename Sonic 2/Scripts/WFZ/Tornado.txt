@@ -413,65 +413,97 @@ event ObjectUpdate
 			starPostID 		= 0
 			object.direction = 0
 
-			stage.listPos++
-			if stage.listPos > 20
-				stage.listPos = 12
-			end if
-
-			if options.gameMode == MODE_NORMAL
-				arrayPos1 = options.saveSlot
-				arrayPos1 <<= 3
-				if stage.player2Enabled == true
-					saveRAM[arrayPos1] = 3
-				else
-					saveRAM[arrayPos1] = stage.playerListPos
-				end if
-				arrayPos1++
-
-				saveRAM[arrayPos1] = player.lives
-				arrayPos1++
-
-				saveRAM[arrayPos1] = player.score
-				arrayPos1++
-
-				saveRAM[arrayPos1] = player.scoreBonus
-				arrayPos1++
-
-				saveRAM[arrayPos1] = stage.listPos
-				saveRAM[arrayPos1]++
-				arrayPos1++
-
-				saveRAM[arrayPos1] = specialStage.emeralds
-				arrayPos1++
-
-				saveRAM[arrayPos1] = specialStage.listPos
-				WriteSaveRAM()
-			end if
-
-			if options.gameMode == MODE_TIMEATTACK
-				timeAttack.result = stage.seconds
-				timeAttack.result *= 100
-				temp0 = stage.minutes
-				temp0 *= 6000
-				timeAttack.result += temp0
-				timeAttack.result += stage.milliSeconds
-				stage.listPos--
-				CallNativeFunction2(SetLeaderboard, stage.listPos, timeAttack.result)
-				engine.state = 8
+#platform: USE_ORIGINS
+			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+				CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+				LoadStage()
 			else
-				temp0 = engine.trialMode
-				if stage.listPos >= stage.listSize
-					temp0 = true
+#endplatform
+				stage.listPos++
+				if stage.listPos > 20
+					stage.listPos = 12
 				end if
 
-				if temp0 == false
-					LoadStage()
-				else
-					stage.activeList = PRESENTATION_STAGE
-					stage.listPos = 0
-					LoadStage()
+				if options.gameMode == MODE_NORMAL
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					if stage.player2Enabled == true
+						saveRAM[arrayPos1] = 3
+					else
+						saveRAM[arrayPos1] = stage.playerListPos
+					end if
+					arrayPos1++
+
+					saveRAM[arrayPos1] = player.lives
+					arrayPos1++
+
+					saveRAM[arrayPos1] = player.score
+					arrayPos1++
+
+					saveRAM[arrayPos1] = player.scoreBonus
+					arrayPos1++
+
+					saveRAM[arrayPos1] = stage.listPos
+					saveRAM[arrayPos1]++
+					arrayPos1++
+
+					saveRAM[arrayPos1] = specialStage.emeralds
+					arrayPos1++
+
+					saveRAM[arrayPos1] = specialStage.listPos
+					WriteSaveRAM()
 				end if
+
+				if options.gameMode == MODE_TIMEATTACK
+					timeAttack.result = stage.seconds
+					timeAttack.result *= 100
+					temp0 = stage.minutes
+					temp0 *= 6000
+					timeAttack.result += temp0
+					timeAttack.result += stage.milliSeconds
+					stage.listPos--
+					CallNativeFunction2(SetLeaderboard, stage.listPos, timeAttack.result)
+					engine.state = 8
+				else
+					temp0 = engine.trialMode
+					if stage.listPos >= stage.listSize
+						temp0 = true
+					end if
+
+					if temp0 == false
+#platform: USE_ORIGINS
+						CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
+						CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, object[0].value0)
+						temp0 = StageStatsUsabilityParam5
+						temp0 &= 1
+						temp1 = StageStatsUsabilityParam5
+						temp1 &= 2
+						temp2 = StageStatsUsabilityParam5
+						temp2 &= 4
+						CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, temp0, temp1, temp2)
+						CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 0)
+						StageStatsUsabilityParam1 = 0
+						StageStatsUsabilityParam2 = 0
+						StageStatsUsabilityParam3 = 0
+						StageStatsUsabilityParam4 = 0
+						StageStatsUsabilityParam5 = 0
+						StatsUsabilityParam1 = 0
+						StatsUsabilityParam2 = 0
+						StatsUsabilityParam3 = 0
+						StatsUsabilityParam4 = 0
+						StatsUsabilityParam5 = 0
+#endplatform
+
+						LoadStage()
+					else
+						stage.activeList = PRESENTATION_STAGE
+						stage.listPos = 0
+						LoadStage()
+					end if
+				end if
+#platform: USE_ORIGINS
 			end if
+#endplatform
 		end if
 		break
 	end switch

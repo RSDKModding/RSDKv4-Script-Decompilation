@@ -87,8 +87,19 @@ event ObjectUpdate
 		else
 			object.flashPaletteIndex = 192
 		end if
+
+#platform: USE_STANDALONE
 		object.health = 8
+#endplatform
+#platform: USE_ORIGINS
+		if game.bossOneLife == false
+			object.health = 8
+		else
+			object.health = 1
+		end if
+#endplatform
 		// [Fallthrough]
+		
 	case WFZEGGMANLASER_ENTERDELAY
 		object.timer++
 		if object.timer >= 90
@@ -298,6 +309,14 @@ event ObjectUpdate
 
 		temp0 <<= 16
 		stage.deathBoundary = temp0
+		
+#platform: USE_ORIGINS
+		if game.oneStageFlag != false
+			game.callbackResult = -1
+			CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 1, stage.listPos, 0)
+			object.state = 16
+		end if
+#endplatform
 		break
 	end switch
 
@@ -321,6 +340,13 @@ event ObjectUpdate
 						if checkResult == true
 							object.health--
 							if object.health == 0
+#platform: USE_ORIGINS
+								CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
+								CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+								stage.timeEnabled = false
+								CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 0)
+#endplatform
+								
 								player.score += 1000
 								object.explodeState	= WFZEGGMANLASER_BOSS_EXPLODE
 								object.timer 		= 0
