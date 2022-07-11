@@ -36,12 +36,18 @@ private alias 3 : SUPERSTATE_END
 
 // Modes
 private alias 2 : MODE_TIMEATTACK
+private alias 8 : MISSIONMODE_MERCY
 
 // Tracks
 private alias 0 : TRACK_STAGE
 private alias 2 : TRACK_INVINCIBLE
 private alias 5 : TRACK_GAMEOVER
 private alias 7 : TRACK_SUPER
+
+// Stats Aliases
+private alias StageStatsUsabilityParam1 : stageStat.badnikDestroyCount
+private alias StageStatsUsabilityParam2 : stageStat.spindashDestroyCount
+private alias StageStatsUsabilityParam3 : stageStat.buzzerDestroyCount
 
 // Variables
 private alias object.type			 :	player.type
@@ -143,6 +149,12 @@ private alias object.value38 : player.hitboxTop
 private alias object.value41 : player.hitboxRight
 private alias object.value39 : player.hitboxBottom
 private alias object.value42 : player.prevGravity
+
+// Drop Dash values used in Origins
+// These use the same variables used for P2, causing the AI to behave in unintended ways
+private alias object.value16 : player.releasingDropDash
+private alias object.value43 : player.dropDashCharge
+
 // P2 values
 private alias object.value43 : player.jumpInTimer
 private alias object.value44 : player.p2InputFunction
@@ -186,6 +198,9 @@ reserve function PlayerObject_JumpAbilityT
 reserve function PlayerObject_JumpAbilityK
 reserve function PlayerObject_Ground
 reserve function PlayerObject_Bored2
+#platform: USE_ORIGINS
+reserve function PlayerObject_AirPreventDropDash
+#endplatform
 reserve function PlayerObject_Air
 reserve function PlayerObject_AirCtrlLock
 reserve function PlayerObject_Rolling
@@ -210,6 +225,9 @@ reserve function PlayerObject_Clinging
 reserve function PlayerObject_Waterslide
 reserve function PlayerObject_FlyCarry
 reserve function PlayerObject_ContRun
+#platform: USE_ORIGINS
+reserve function PlayerObject_DropDash
+#endplatform
 reserve function PlayerObject_InitReplay
 reserve function PlayerObject_RestorePowerup
 reserve function PlayerObject_ProcessSuperPalS
@@ -702,8 +720,7 @@ public function PlayerObject_ProcessSuperState
 
 	if PlayerObject_SuperState == SUPERSTATE_FADEOUT
 		if stage.playerListPos == 0
-			// Restore the normal Sonic sprites
-			LoadAnimation("Sonic.ani")
+			LoadAnimation("Sonic.ani") // Restore the normal Sonic sprites
 		end if
 
 		if music.currentTrack == TRACK_SUPER
@@ -754,7 +771,7 @@ public function PlayerObject_CheckHit
 		CheckGreater(player[currentPlayer].ypos, object.ypos)
 		temp0 |= checkResult
 	end if
-
+	
 	if temp0 == true
 		if player[currentPlayer].gravity == 1
 			FlipSign(player[currentPlayer].xvel)
@@ -814,8 +831,29 @@ public function PlayerObject_BadnikBreak
 		CheckGreater(player[currentPlayer].ypos, object.ypos)
 		temp0 |= checkResult
 	end if
+	
+#platform: USE_ORIGINS
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		if stage.timeEnabled == false
+			temp0 = false
+		end if
+	end if
+#endplatform
 
 	if temp0 == true
+#platform: USE_ORIGINS
+		CheckCurrentStageFolder("Zone01") // Emerald Hill Zone
+		if checkResult == true
+			CheckEqual(object.type, TypeName[Buzzer])
+			temp1 = checkResult
+			CheckEqual(object.type, TypeName[Bee])
+			temp1 |= checkResult
+			if temp1 == true
+				stageStat.buzzerDestroyCount++
+			end if
+		end if
+#endplatform
+
 		ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, object.xpos, object.ypos)
 		Rand(checkResult, 32)
 		if checkResult >= 16
@@ -850,9 +888,15 @@ public function PlayerObject_BadnikBreak
 		if options.vsMode == false
 			temp0 = currentPlayer
 			currentPlayer = 0
+			arrayPos0 = 22
+#platform: USE_DECOMP
 			arrayPos0 = VarName[player.score]
+#endplatform
 		else
+			arrayPos0 = 22
+#platform: USE_DECOMP
 			arrayPos0 = VarName[player.score]
+#endplatform
 			arrayPos0 += currentPlayer
 		end if
 
@@ -897,11 +941,52 @@ public function PlayerObject_BadnikBreak
 			currentPlayer = temp0
 		end if
 		arrayPos0 = temp1
+		
+#platform: USE_ORIGINS
+		temp0 = false
+		
+		CheckEqual(object[currentPlayer].state, PlayerObject_Rolling)
+		temp1 = checkResult
+		CheckEqual(object[currentPlayer].state, PlayerObject_RollingJump)
+		temp1 |= checkResult
+		if temp1 == 1
+			if player.character == 0
+				temp0 = KILL_ENEMY_ATTR_SPINDASH
+				stageStat.spindashDestroyCount++
+			end if
+		end if
+		
+		CheckEqual(object[currentPlayer].state, PlayerObject_KnuxGlideLeft)
+		temp1 = checkResult
+		CheckEqual(object[currentPlayer].state, PlayerObject_KnuxGlideRight)
+		temp1 |= checkResult
+		if temp1 == 1
+			temp0 = KILL_ENEMY_ATTR_GLIDING
+		end if
+		
+		stageStat.badnikDestroyCount++
+		
+		CallNativeFunction2(NotifyCallback, NOTIFY_KILL_ENEMY, temp0)
+		if game.playMode == BOOT_PLAYMODE_MISSION
+			if game.missionFunctionNo == MISSIONMODE_MERCY
+				game.forceKillPlayer = true
+			end if
+		end if
+#endplatform
 	else
 		if player[currentPlayer].state != PlayerObject_Death
 			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
 					player[currentPlayer].state = PlayerObject_Hurt
+					
+#platform: USE_ORIGINS
+					if game.playMode == BOOT_PLAYMODE_MISSION
+						if game.missionFunctionNo == MISSIONMODE_MERCY
+							game.missionValue = true
+						end if
+					end if
+#endplatform
+					
 					if player[currentPlayer].xpos > object.xpos
 						player[currentPlayer].speed = 0x20000
 					else
@@ -1094,6 +1179,7 @@ public function PlayerObject_ProcessPlayer
 		if player.controlMode == 0
 			// No control lock active right now, process player control
 
+#platform: USE_STANDALONE
 			// Check if the player's touched the bottom left of the screen
 			CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
 
@@ -1178,6 +1264,12 @@ public function PlayerObject_ProcessPlayer
 				end if
 			end if
 		end if
+#endplatform
+#platform: USE_ORIGINS
+		if keyPress[1].start == true
+			engine.state = 5
+		end if
+#endplatform
 
 		// Call the function for supporting physical gamepads as well
 		ProcessObjectControl()
@@ -1190,7 +1282,8 @@ public function PlayerObject_ProcessPlayer
 		// No pausing during credits
 		// (I don't think this actually does anything, though..?)
 		if credits.screen == 0
-
+		
+#platform: USE_STANDALONE
 			// Allow skipping of the demo by pausing
 			CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 			if keyPress[0].start == true
@@ -1208,6 +1301,16 @@ public function PlayerObject_ProcessPlayer
 					PlayerObject_ReplayLength = 1
 				end if
 			end if
+#endplatform
+
+#platform: USE_ORIGINS
+			if keyPress[1].start == true
+				if PlayerObject_ReplayLength > 1
+					PlayerObject_ReplayLength = 1
+				end if
+			end if
+#endplatform
+
 		end if
 
 		if player.controlMode == 0
@@ -1847,6 +1950,14 @@ public function PlayerObject_StartJump
 		player.collisionDisabled = true
 		player.jumpAbilityState = 1
 	end if
+	
+#platform: USE_ORIGINS
+	if game.playMode == BOOT_PLAYMODE_CLASSIC
+		player.dropDashCharge = -1
+	else
+		player.dropDashCharge = 0
+	end if
+#endplatform
 end function
 
 
@@ -1854,7 +1965,21 @@ public function PlayerObject_StartSpindash
 	player.state = PlayerObject_Spindash
 	player.animation = ANI_SPINDASH
 	player.abilityTimer = 0
+	
+#platform: USE_ORIGINS
+	// Don't play the Charge sound effect if using the Drop Dash
+	CheckEqual(player.releasingDropDash, true)
+	temp0 = checkResult
+	CheckGreater(20, player.dropDashCharge)
+	temp0 |= checkResult
+	if temp0 == true
+		PlaySfx(SfxName[Charge], false)
+	end if
+#endplatform
+
+#platform: USE_STANDALONE
 	PlaySfx(SfxName[Charge], false)
+#endplatform
 
 	CreateTempObject(TypeName[Dust Puff], player.entityPos, player.xpos, player.ypos)
 	object[tempObjectPos].iypos = player.collisionBottom
@@ -1870,7 +1995,12 @@ public function PlayerObject_Transforming
 
 	player.timer--
 	if player.timer == 0
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.animation = ANI_WALKING
 	end if
 end function
@@ -1917,7 +2047,12 @@ public function PlayerObject_BubbleBounce
 	temp0 |= checkResult
 
 	if temp0 == true
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 	else
 		if player.gravity == 1
 			CallFunction(PlayerObject_AirMovement)
@@ -1951,7 +2086,12 @@ public function PlayerObject_BubbleBounce
 			player.collisionMode = 0
 			player.timer = 1
 			CallFunction(PlayerObject_RollAnimSpd)
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 			PlaySfx(SfxName[Bubble Bounce], false)
 			object[+playerCount].state = 4
 		end if
@@ -1960,7 +2100,27 @@ end function
 
 
 public function PlayerObject_JumpAbilityS
+#platform: USE_ORIGINS
+	if keyPress[1].buttonY != false
+		CheckEqual(specialStage.emeralds, 127)
+		temp0 = checkResult
+		CheckGreater(player.rings, 49)
+		temp0 &= checkResult
+		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
+		temp0 &= checkResult
+		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		temp0 &= checkResult
+
+		if temp0 == true
+			currentPlayer = player.entityPos
+			CallFunction(PlayerObject_SuperTransform)
+			CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, 1, 0, 0)
+		end if
+	end if
+#endplatform
+
 	if player.jumpPress == true
+#platform: USE_STANDALONE
 		CheckEqual(specialStage.emeralds, 127)
 		temp0 = checkResult
 		CheckGreater(player.rings, 49)
@@ -1974,6 +2134,7 @@ public function PlayerObject_JumpAbilityS
 			currentPlayer = player.entityPos
 			CallFunction(PlayerObject_SuperTransform)
 		else
+#endplatform
 			CheckEqual(player.invincibleTimer, 0)
 			temp0 = checkResult
 			CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
@@ -2029,7 +2190,7 @@ public function PlayerObject_JumpAbilityS
 					player.jumpAbilityState = 2
 					if player.entityPos == camera[0].target
 						player.scrollDelay = 15
-						camera[0].style = CAMERASTYLE_HLOCKED
+						camera[0].style = 4
 					end if
 
 					if player.state == PlayerObject_RollingJump
@@ -2067,20 +2228,39 @@ public function PlayerObject_JumpAbilityS
 					break
 				end switch
 			end if
+#platform: USE_STANDALONE
 		end if
+#endplatform
 	end if
 end function
 
 
 public function PlayerObject_JumpAbilityT
-	if player.jumpPress == true
+#platform: USE_ORIGINS
+	if keyPress[1].buttonY != false
 		CheckEqual(specialStage.emeralds, 127)
 		temp0 = checkResult
 		CheckGreater(player.rings, 49)
 		temp0 &= checkResult
 		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckEqual(options.superTails, true)
+		temp0 &= checkResult
+
+		if temp0 == true
+			currentPlayer = player.entityPos
+			CallFunction(PlayerObject_SuperTransform)
+		end if
+	end if
+#endplatform
+
+	if player.jumpPress == true
+#platform: USE_STANDALONE
+		CheckEqual(specialStage.emeralds, 127)
+		temp0 = checkResult
+		CheckGreater(player.rings, 49)
+		temp0 &= checkResult
+		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
 		CheckEqual(options.superTails, true)
 		temp0 &= checkResult
@@ -2089,6 +2269,13 @@ public function PlayerObject_JumpAbilityT
 			currentPlayer = player.entityPos
 			CallFunction(PlayerObject_SuperTransform)
 		else
+#endplatform
+#platform: USE_ORIGINS
+			if player.isSidekick == false
+				CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, 0, 1, 0)
+			end if
+#endplatform
+
 			player.timer = 0
 			player.state = PlayerObject_TailsFlight
 			player.flightVelocity = 0x800
@@ -2099,13 +2286,32 @@ public function PlayerObject_JumpAbilityT
 			else
 				player.animation = ANI_SWIMMING
 			end if
+#platform: USE_STANDALONE
 		end if
+#endplatform
 	end if
 end function
 
 
 public function PlayerObject_JumpAbilityK
+#platform: USE_ORIGINS
+	if keyPress[1].buttonY != false
+		CheckEqual(specialStage.emeralds, 127)
+		temp0 = checkResult
+		CheckGreater(player.rings, 49)
+		temp0 &= checkResult
+		CheckNotEqual(PlayerObject_SuperState, SUPERSTATE_SUPER)
+		temp0 &= checkResult
+
+		if temp0 == true
+			currentPlayer = player.entityPos
+			CallFunction(PlayerObject_SuperTransform)
+		end if
+	end if
+#endplatform
+		
 	if player.jumpPress == true
+#platform: USE_STANDALONE
 		CheckEqual(specialStage.emeralds, 127)
 		temp0 = checkResult
 		CheckGreater(player.rings, 49)
@@ -2117,6 +2323,13 @@ public function PlayerObject_JumpAbilityK
 			currentPlayer = player.entityPos
 			CallFunction(PlayerObject_SuperTransform)
 		else
+#endplatform
+#platform: USE_ORIGINS
+			if player.isSidekick == false // Knuckles is never a sidekick LOL
+				CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, 0, 0, 1)
+			end if
+#endplatform
+			
 			player.speed = 0x40000
 			if player.yvel < 0
 				player.yvel = 0
@@ -2134,9 +2347,59 @@ public function PlayerObject_JumpAbilityK
 
 			player.animation = ANI_GLIDING
 			player.frame = 2
+#platform: USE_STANDALONE
+		end if
+#endplatform
+	end if
+end function
+
+
+#platform: USE_ORIGINS
+// Handles activating the Drop Dash (Check PlayerObject_Air or PlayerObject_RollingJump for releasing it)
+public function PlayerObject_DropDash
+	if player.releasingDropDash == false
+		if player.dropDashCharge >= 0
+			if player.dropDashCharge == 0
+				if player.jumpPress == true
+					CheckEqual(player.character, PLAYER_SONIC_ALONE)
+					temp0 = checkResult
+					// You can't use the Drop Dash with elemental shields
+					CheckNotEqual(player.shield, SHIELD_BUBBLE)
+					temp0 &= checkResult
+					CheckNotEqual(player.shield, SHIELD_FIRE)
+					temp0 &= checkResult
+					CheckNotEqual(player.shield, SHIELD_LIGHTNING)
+					temp0 &= checkResult
+					
+					if temp0 == true
+						player.dropDashCharge = 1
+					else
+						player.dropDashCharge = -1
+					end if
+				end if
+			else
+				if player.jumpHold == false
+					player.dropDashCharge = -1
+				else
+					player.dropDashCharge++
+					if player.dropDashCharge == 20
+						PlaySfx(SfxName[DropDash], false)
+					end if
+					if player.dropDashCharge >= 20
+						// Set Sonic to always use the full ball sprite
+						// This code, when placed here, doesn't work properly. Check ObjectUpdate for the same code in a more proper location
+						if player.animation == ANI_JUMPING
+							player.frame = 1
+							player.animationTimer = 0
+							player.animationSpeed = 1
+						end if
+					end if
+				end if
+			end if
 		end if
 	end if
 end function
+#endplatform
 
 
 public function PlayerObject_Ground
@@ -2148,7 +2411,12 @@ public function PlayerObject_Ground
 
 	CallFunction(PlayerObject_Movement)
 	if player.gravity == 1
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		CallFunction(PlayerObject_AirMovement)
 	else
 		CallFunction(PlayerObject_ResetOnFloor)
@@ -2413,7 +2681,12 @@ end function
 
 public function PlayerObject_Bored2
 	if player.gravity == 1
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		CallFunction(PlayerObject_AirMovement)
 	else
 		CallFunction(PlayerObject_ResetOnFloor)
@@ -2448,8 +2721,22 @@ public function PlayerObject_Bored2
 end function
 
 
+#platform: USE_ORIGINS
+// Prevents the player from using the Drop Dash if they went in midair without jumping
+public function PlayerObject_AirPreventDropDash
+	player.dropDashCharge = -1
+	player.state = PlayerObject_AirPreventDropDash
+	CallFunction(PlayerObject_Air)
+end function
+#endplatform
+
+
 public function PlayerObject_Air
 	CallFunction(PlayerObject_AirAcceleration)
+#platform: USE_ORIGINS
+	CallFunction(PlayerObject_DropDash)
+#endplatform
+
 	if player.gravity == 1
 		CallFunction(PlayerObject_AirMovement)
 
@@ -2517,9 +2804,29 @@ public function PlayerObject_Air
 			end if
 		end if
 	else
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Ground
 		CallFunction(PlayerObject_ResetOnFloor)
 		player.skidding = 0
+#endplatform
+
+#platform: USE_ORIGINS
+		CheckEqual(player.releasingDropDash, false)
+		temp0 = checkResult
+		CheckGreater(player.dropDashCharge, 19)
+		temp0 &= checkResult
+		
+		if temp0 == true
+			CallFunction(PlayerObject_StartSpindash) // Good ol' Sonic Team programming
+			if PlayerObject_SuperState == SUPERSTATE_SUPER
+				screen.shakeY = 6
+			end if
+		else
+			player.state = PlayerObject_Ground
+			CallFunction(PlayerObject_ResetOnFloor)
+			player.skidding = 0
+		end if
+#endplatform
 	end if
 end function
 
@@ -2544,7 +2851,12 @@ public function PlayerObject_Rolling
 	CallFunction(PlayerObject_RollingDecel)
 
 	if player.gravity == 1
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.timer = 0
 		CallFunction(PlayerObject_AirMovement)
 	else
@@ -2562,6 +2874,9 @@ public function PlayerObject_RollingJump
 	player.left = false
 	player.right = false
 	CallFunction(PlayerObject_AirAcceleration)
+#platform: USE_ORIGINS
+	CallFunction(PlayerObject_DropDash)
+#endplatform
 	
 	if player.gravity == 1
 		if player.animation == ANI_JUMPING
@@ -2574,9 +2889,29 @@ public function PlayerObject_RollingJump
 
 		CallFunction(PlayerObject_AirMovement)
 	else
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Ground
 		CallFunction(PlayerObject_ResetOnFloor)
 		player.skidding = 0
+#endplatform
+
+#platform: USE_ORIGINS
+		CheckEqual(player.releasingDropDash, false)
+		temp0 = checkResult
+		CheckGreater(player.dropDashCharge, 19)
+		temp0 &= checkResult
+		
+		if temp0 == true
+			CallFunction(PlayerObject_StartSpindash) // Good ol' Sonic Team programming
+			if PlayerObject_SuperState == SUPERSTATE_SUPER
+				screen.shakeY = 6
+			end if
+		else
+			player.state = PlayerObject_Ground
+			CallFunction(PlayerObject_ResetOnFloor)
+			player.skidding = 0
+		end if
+#endplatform
 	end if
 end function
 
@@ -2600,7 +2935,12 @@ public function PlayerObject_LookingUp
 
 		player.animation = ANI_LOOKINGUP
 		if player.gravity == 1
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 			player.timer = 0
 		else
 			if player.jumpPress == true
@@ -2630,7 +2970,12 @@ public function PlayerObject_Crouching
 
 		player.animation = ANI_LOOKINGDOWN
 		if player.gravity == 1
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 			player.timer = 0
 		else
 			if player.jumpPress == true
@@ -2643,7 +2988,12 @@ end function
 
 public function PlayerObject_Spindash
 	if player.gravity == 1
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.speed = 0
 	end if
 
@@ -2661,15 +3011,52 @@ public function PlayerObject_Spindash
 		temp0 >>= 5
 		player.abilityTimer -= temp0
 	end if
+	
+#platform: USE_ORIGINS
+	temp1 = player.down
+	CheckEqual(player.releasingDropDash, false)
+	temp2 = checkResult
+	CheckGreater(player.dropDashCharge, 19)
+	temp2 &= checkResult
+	
+	if temp2 == true
+		player.dropDashCharge = -1
+		Sin256(temp0, player.angle)
+		
+		if player.direction == FACING_RIGHT
+			if temp0 >= 0
+				temp0 <<= 12
+			else
+				temp0 <<= 11
+			end if
+		else
+			if temp0 >= 0
+				temp0 <<= 11
+			else
+				temp0 <<= 12
+			end if
+			FlipSign(temp0)
+		end if
+		
+		player.abilityTimer = temp0
+		temp1 = false
+	end if
+	
+	if temp1 == false
+#endplatform
 
+#platform: USE_STANDALONE
 	if player.down == false
+#endplatform
+		// Release the spindash!
+
 		player.timer = 0
 		player.state = PlayerObject_Rolling
 		player.animation = ANI_JUMPING
 		player.iypos -= player.jumpOffset
 		if player.entityPos == camera[0].target
 			player.scrollDelay = 15
-			camera[0].style = CAMERASTYLE_HLOCKED
+			camera[0].style = 4
 		end if
 
 		temp0 = player.abilityTimer
@@ -2809,7 +3196,12 @@ end function
 
 public function PlayerObject_FlyCarry
 	if player[1].state != PlayerObject_TailsFlight
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 	end if
 
 	temp0 = player[1].xpos
@@ -2827,7 +3219,12 @@ public function PlayerObject_FlyCarry
 		if player.gravity == 0
 			player.state = PlayerObject_Ground
 		else
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		end if
 	end if
 
@@ -3485,7 +3882,12 @@ public function PlayerObject_KnuxLedgePullUp
 		else
 			player.timer = 0
 			player.animation = ANI_STOPPED
+#platform: USE_STANDALONE
 			player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+			player.state = PlayerObject_AirPreventDropDash
+#endplatform
 			player.ypos -= 0xA0000
 			player.tileCollisions = true
 		end if
@@ -3495,6 +3897,18 @@ end function
 
 
 public function PlayerObject_Hurt
+#platform: USE_ORIGINS
+	temp2 = false
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		if game.missionFunctionNo == MISSIONMODE_MERCY
+			if game.missionValue == true
+				game.missionValue = false
+				temp2 = true
+			end if
+		end if
+	end if
+#endplatform
+
 	if player.isSidekick == false
 		arrayPos0 = player.entityPos
 		arrayPos0 += playerCount
@@ -3534,7 +3948,24 @@ public function PlayerObject_Hurt
 		end if
 	end if
 
+#platform: USE_ORIGINS
+	if game.playMode == BOOT_PLAYMODE_MISSION
+		// For the mission "Bodyguard" (Player 2 isn't in any other mission)
+		if object.type == TypeName[Player 2 Object]
+			temp0 = 3
+			game.forceKillPlayer = true
+		end if
+	end if
+#endplatform
+	
 	player.visible = true
+	
+#platform: USE_ORIGINS
+	if temp2 != 0
+		temp0 = 3
+	end if
+#endplatform
+
 	switch temp0
 	default
 	case 0
@@ -3721,28 +4152,58 @@ public function PlayerObject_Death
 	if player.yvel > 0x100000
 		if player.isSidekick == false
 			// global variable "array" (yes, this is actually how its done)
+			arrayPos0 = 25
+#platform: USE_DECOMP
 			arrayPos0 = VarName[player.lives]
+#endplatform
 			arrayPos0 += player.entityPos
+
+#platform: USE_ORIGINS
+			if game.coinMode == false
+				if game.playMode != BOOT_PLAYMODE_MISSION
+					global[arrayPos0]--
+				end if
+			end if
+#endplatform
+
+#platform: USE_STANDALONE
 			global[arrayPos0]--
+#endplatform
 
 			if options.vsMode == false
 				stage.timeEnabled = false
 
 				player.type = TypeName[Death Event]
-				deathEvent.drawOrder 	= 6
+#platform: USE_STANDALONE
+				deathEvent.drawOrder	= 6
 				deathEvent.leftTextPos 	= screen.xcenter
 				deathEvent.leftTextPos -= 264
 				deathEvent.rightTextPos = screen.xcenter
 				deathEvent.rightTextPos += 200
+#endplatform
+#platform: USE_ORIGINS
+				deathEvent.drawOrder	= 7
+				deathEvent.leftTextPos 	= screen.xcenter
+				deathEvent.leftTextPos -= 232
+				deathEvent.rightTextPos = screen.xcenter
+				deathEvent.rightTextPos += 232
+#endplatform
 				if options.gameMode == MODE_TIMEATTACK
 					deathEvent.timer = 0
 					deathEvent.state = DEATHEVENT_DEATH_TA
 				else
-					if global[arrayPos0] == true
+					if global[arrayPos0] == 0 // If the player has no lives left
 						deathEvent.timer = -2880
 						deathEvent.state = DEATHEVENT_GAMEOVER
 						PlayMusic(TRACK_GAMEOVER)
 						stage.pauseEnabled = false
+#platform: USE_ORIGINS
+						if game.oneStageFlag != false
+							if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+								CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 0, stage.listPos, 0)
+							end if
+						end if
+#endplatform
 					else
 						deathEvent.timer = 0
 						deathEvent.state = DEATHEVENT_DEATH
@@ -3766,16 +4227,30 @@ public function PlayerObject_Death
 				end if
 
 				if player.type == TypeName[Death Event]
-					deathEvent.drawOrder = 6
-					deathEvent.leftTextPos = screen.xcenter
+#platform: USE_STANDALONE
+					deathEvent.drawOrder	= 6
+					deathEvent.leftTextPos 	= screen.xcenter
 					deathEvent.leftTextPos -= 264
 					deathEvent.rightTextPos = screen.xcenter
 					deathEvent.rightTextPos += 200
-					deathEvent.timer = -2880
+#endplatform
+#platform: USE_ORIGINS
+					deathEvent.drawOrder	= 7
+					deathEvent.leftTextPos 	= screen.xcenter
+					deathEvent.leftTextPos -= 232
+					deathEvent.rightTextPos = screen.xcenter
+					deathEvent.rightTextPos += 232
+#endplatform
+					deathEvent.timer		= -2880
 					PlayMusic(TRACK_GAMEOVER)
 					stage.pauseEnabled = false
 				else
-					player.state 		= PlayerObject_Air
+#platform: USE_STANDALONE
+					player.state		= PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+					player.state		= PlayerObject_AirPreventDropDash
+#endplatform
 					player.rings 		= 0
 					player.priority 	= 1
 					player.gravity 		= 1
@@ -3791,12 +4266,18 @@ public function PlayerObject_Death
 					player.tileCollisions 	= true
 					player.interaction 		= true
 					player.visible 			= true
+#platform: USE_STANDALONE
 					player.controlMode 		= 0
+#endplatform
+#platform: USE_ORIGINS
+					player.controlMode 		= currentPlayer
+#endplatform
 					player.scrollTracking 	= true
 					player.drawOrder 		= DRAWORDER_PLAYER
 					player.sortedDrawOrder 	= 4
 					player.collisionPlane 	= 0
 
+#platform: USE_STANDALONE
 					if player.entityPos == camera[0].target
 						CreateTempObject(TypeName[VS Game], 0, player.xpos, player.ypos)
 						vsGame[tempObjectPos].timer = 384
@@ -3805,6 +4286,16 @@ public function PlayerObject_Death
 						screen.cameraY = player.iypos
 						camera[0].enabled = true
 					end if
+#endplatform
+#platform: USE_ORIGINS
+					CreateTempObject(TypeName[VS Game], currentPlayer, player.xpos, player.ypos)
+					vsGame[tempObjectPos].timer = 384
+					vsGame[tempObjectPos].state = VSGAME_FADEOUT
+					camera[currentPlayer].xpos = player.ixpos
+					camera[currentPlayer].ypos = player.iypos
+					camera[currentPlayer].style = 0
+					camera[currentPlayer].enabled = true
+#endplatform
 				end if
 			end if
 		end if
@@ -3834,26 +4325,56 @@ public function PlayerObject_Drown
 	if player.yvel > 0x80000
 		if player.isSidekick == false
 			// global variable "array" (yes, this is actually how its done)
+			arrayPos0 = 25
+#platform: USE_DECOMP
 			arrayPos0 = VarName[player.lives]
+#endplatform
 			arrayPos0 += player.entityPos
+			
+#platform: USE_ORIGINS
+			if global[arrayPos0] > 0
+				if game.coinMode == false
+					if game.playMode != BOOT_PLAYMODE_MISSION
+						global[arrayPos0]--
+					end if
+				end if
+			end if
+#endplatform
+
+#platform: USE_STANDALONE
 			if global[arrayPos0] > 0
 				global[arrayPos0]--
 			end if
+#endplatform
 
 			if options.vsMode == false
 				stage.timeEnabled 		= false
 
 				player.type 			= TypeName[Death Event]
-				deathEvent.drawOrder 	= 6
+#platform: USE_STANDALONE
+				deathEvent.drawOrder	= 6
 				deathEvent.leftTextPos 	= screen.xcenter
 				deathEvent.leftTextPos -= 264
 				deathEvent.rightTextPos = screen.xcenter
 				deathEvent.rightTextPos += 200
+#endplatform
+#platform: USE_ORIGINS
+				deathEvent.drawOrder	= 7
+				deathEvent.leftTextPos 	= screen.xcenter
+				deathEvent.leftTextPos -= 232
+				deathEvent.rightTextPos = screen.xcenter
+				deathEvent.rightTextPos += 232
+#endplatform
 				if options.gameMode == MODE_TIMEATTACK
 					deathEvent.timer = 0
 					deathEvent.state = DEATHEVENT_DEATH_TA
 				else
+#platform: USE_STANDALONE
 					if global[arrayPos0] == 0
+#endplatform
+#platform: USE_ORIGINS
+					if player.lives == 0
+#endplatform
 						deathEvent.timer = -2880
 						deathEvent.state = DEATHEVENT_GAMEOVER
 						PlayMusic(TRACK_GAMEOVER)
@@ -3864,7 +4385,12 @@ public function PlayerObject_Drown
 					end if
 				end if
 			else
-				player.state 		= PlayerObject_Air
+#platform: USE_STANDALONE
+				player.state		= PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+				player.state		= PlayerObject_AirPreventDropDash
+#endplatform
 				player.rings 		= 0
 				player.priority 	= 1
 				player.gravity 		= 1
@@ -3886,6 +4412,8 @@ public function PlayerObject_Drown
 				player.drawOrder 		= DRAWORDER_PLAYER
 				player.sortedDrawOrder 	= 4
 				player.collisionPlane 	= 0
+				
+#platform: USE_STANDALONE
 				if player.entityPos == camera[0].target
 					CreateTempObject(TypeName[VS Game], 0, player.xpos, player.ypos)
 					vsGame[tempObjectPos].timer = 384
@@ -3894,6 +4422,16 @@ public function PlayerObject_Drown
 					screen.cameraY = player.iypos
 					camera[0].enabled = true
 				end if
+#endplatform
+#platform: USE_ORIGINS
+				CreateTempObject(TypeName[VS Game], currentPlayer, player.xpos, player.ypos)
+				vsGame[tempObjectPos].timer = 384
+				vsGame[tempObjectPos].state = VSGAME_FADEOUT
+				camera[currentPlayer].xpos = player.ixpos
+				camera[currentPlayer].ypos = player.iypos
+				camera[currentPlayer].style = 0
+				camera[currentPlayer].enabled = true
+#endplatform
 			end if
 		end if
 	end if
@@ -3925,7 +4463,12 @@ public function PlayerObject_HangingBar
 	temp2 += player.collisionTop
 	Get16x16TileInfo(temp0, temp1, temp2, 8)
 	if temp0 != 3
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.speed = 0
 		player.animationSpeed = 0
 		player.yvel = 0
@@ -4035,7 +4578,12 @@ end function
 
 public function PlayerObject_Waterslide
 	if player.gravity == 1
+#platform: USE_STANDALONE
 		player.state = PlayerObject_Air
+#endplatform
+#platform: USE_ORIGINS
+		player.state = PlayerObject_AirPreventDropDash
+#endplatform
 		player.angle = 0
 		player.collisionMode = 0
 		player.timer = 0
@@ -4130,6 +4678,9 @@ event ObjectUpdate
 			end if
 
 			CallFunction(player.state)
+			
+			// They didn't put the Drop Dash "animation" code seen later here...
+			
 			ProcessAnimation()
 
 			if player.entityPos == camera[0].target
@@ -4185,6 +4736,20 @@ event ObjectUpdate
 		end if
 
 		CallFunction(player.state)
+		
+#platform: USE_ORIGINS
+		currentPlayer = player.entityPos
+		
+		// Set Sonic to always use the full ball sprite
+		if player.dropDashCharge >= 20
+			if player.animation == ANI_JUMPING
+				player.frame = 1
+				player.animationTimer = 0
+				player.animationSpeed = 1
+			end if
+		end if
+#endplatform
+
 		ProcessAnimation()
 
 		if player.entityPos == camera[0].target
@@ -4234,13 +4799,47 @@ event ObjectUpdate
 	end if
 
 	CallFunction(PlayerObject_ProcessSuperState)
+	
+#platform: USE_ORIGINS
+	if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+		if game.missionCondition == MISSION_CONDITION_CLEAR
+			player.invincibleTimer = 80
+			
+			// Death Egg Zone handles the following itself
+			CheckCurrentStageFolder("BR9Zone12")
+			if checkResult == false
+				CheckEqual(player[0].state, PlayerObject_Ground)
+				temp0 = checkResult
+				CheckEqual(player[0].state, PlayerObject_Blank)
+				temp0 |= checkResult
+				
+				if temp0 == true
+					// Prevent the player from moving anymore
+					player[0].state = PlayerObject_Blank
+					player[0].controlMode = -1
+					player[0].interaction = false
+					player[0].up = false
+					player[0].down = false
+					player[0].left = false
+					player[0].right = false
+					player[0].jumpHold = false
+					player[0].jumpPress = false
+					player[0].xvel = 0
+					player[0].yvel = 0
+					player[0].speed = 0
+					player[0].animation = ANI_WAITING
+				end if
+			end if
+		end if
+	end if
+#endplatform
 end event
 
 
 event ObjectDraw
 	if player.animation != player.prevAnimation
 		// If the player's animation is different than the one they had last frame,
-		// eeset all the other animation values too
+		// reset all the other animation values too
 		player.prevAnimation = player.animation
 		player.frame = 0
 		player.animationTimer = 0
@@ -4260,10 +4859,24 @@ event ObjectStartup
 		camera[0].target = 0
 
 		currentPlayer = 0
-		if stage.playerListPos >= 3
+		
+#platform: USE_STANDALONE
+		if stage.playerListPos >= 3 // If playing as Sonic & Tails
 			stage.playerListPos = 0
 			stage.player2Enabled = true
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		if stage.playerListPos > 3 // If playing as Knuckles & Tails
+			stage.playerListPos = 2
+			stage.player2Enabled = 1
+		end if
+		if stage.playerListPos > 2 // If playing as Sonic & Tails
+			stage.playerListPos = 0
+			stage.player2Enabled = 1
+		end if
+#endplatform
 
 		ResetObjectEntity(0, TypeName[Player Object], 0, player[arrayPos0].xpos, player[arrayPos0].ypos)
 		screen.cameraX = player[0].ixpos
@@ -4329,6 +4942,7 @@ event ObjectStartup
 			ANI_PEELOUT 			= ANI_RUNNING
 			
 			// Note this check is actually bugged, this only checks for the last three save slots, ignoring the first one
+			// Also yes this check is still in Origins LOL
 			if options.saveSlot > 0
 				stage.player2Enabled = false
 			end if
