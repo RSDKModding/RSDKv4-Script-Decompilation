@@ -10,17 +10,39 @@
 // ========================
 private alias object.value0 : object.timer
 private alias object.value4 : object.attractTimer
+private alias object.value5 : object.menuSelection
 
 // States
-private alias 0 : START_AWAITACTION
-private alias 1 : START_NEWGAME
-private alias 2 : START_LEVELSELECT
-private alias 3 : START_CONTINUESCREEN
-private alias 4 : START_ATTRACTMODE
+private alias  0 : START_AWAITACTION
+private alias  1 : START_NEWGAME
+private alias  1 : START_FLASHPRESSBUTTON
+private alias  2 : START_LEVELSELECT
+private alias  3 : START_CONTINUESCREEN
+private alias  4 : START_ATTRACTMODE
+private alias  5 : START_ORIGINSMENU
+private alias  6 : START_FLASHOPTION
+private alias  7 : START_1PSENDCALLBACK
+private alias  8 : START_1PWAITFORCHARSELECT
+private alias  9 : START_ORIGINSSTARTGAME
+private alias 10 : START_2PSENDCALLBACK
+
+// Origins Menu
+private alias 0 : MENU_1PLAYER
+private alias 1 : MENU_2PLAYERVS
 
 event ObjectUpdate
+#platform: USE_ORIGINS
+	CheckTouchRect(0, 0, screen.xsize, screen.ysize) // Funny this is here since mouse input is mapped to buttonA in Origins
+	if keyPress[0].buttonB == true
+		checkResult = 1
+	end if
+	if input.pressButton == 1
+		checkResult = 2
+	end if
+#endplatform
 	switch object.state
 	case START_AWAITACTION
+#platform: USE_STANDALONE
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 		if keyPress[0].start == true
 			checkResult = true
@@ -37,8 +59,14 @@ event ObjectUpdate
 		if keyPress[0].buttonC == true
 			checkResult = true
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		game.continueFlag = false
+#endplatform
 
 		if checkResult > -1
+#platform: USE_STANDALONE
 			if options.stageSelectFlag == true
 				if checkResult > 0
 					object.state = START_LEVELSELECT
@@ -51,6 +79,20 @@ event ObjectUpdate
 
 			PlaySfx(SfxName[Menu Select], false)
 			StopMusic()
+#endplatform
+#platform: USE_ORIGINS
+			if options.stageSelectFlag == true
+				object.state = START_LEVELSELECT
+				StopMusic()
+				PlaySfx(SfxName[Menu Select], false)
+			else
+				if keyPress[0].buttonB == true
+					CallNativeFunction2(NotifyCallback, NOTIFY_BACK_TO_MAINMENU, 0)
+				else
+					object.state = START_FLASHPRESSBUTTON
+				end if
+			end if
+#endplatform
 		else
 			object.attractTimer++
 			if object.attractTimer == 420
@@ -59,6 +101,7 @@ event ObjectUpdate
 		end if
 		break
 
+#platform: USE_STANDALONE
 	case START_NEWGAME
 		object.timer += 8
 		if object.timer == 320
@@ -79,6 +122,19 @@ event ObjectUpdate
 		end if
 		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
+#endplatform
+
+#platform: USE_ORIGINS
+	case START_FLASHPRESSBUTTON
+		object.animationTimer += 10
+		object.timer++
+		if object.timer >= 30
+			object.animationTimer = 0
+			object.menuSelection = MENU_1PLAYER
+			object.state = START_ORIGINSMENU
+		end if
+		break
+#endplatform
 		
 	case START_LEVELSELECT
 		object.timer += 8
@@ -114,7 +170,7 @@ event ObjectUpdate
 
 	case START_ATTRACTMODE
 		object.timer += 8
-		if object.timer == 320
+		if object.timer >= 320
 			player.lives 			= 3
 			player.continues 		= 0
 			player.score 			= 0
@@ -138,11 +194,126 @@ event ObjectUpdate
 		end if
 		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
+
+#platform: USE_ORIGINS
+	case START_ORIGINSMENU
+		temp0 = false
+		
+		if keyPress[0].up == true
+			temp0 = true
+		end if
+		if keyPress[0].down == true
+			temp0 = true
+		end if
+		
+		if checkResult > 0
+			object.animationTimer = 0
+			object.timer = 0
+			
+			if checkResult > 1
+				object.state = START_FLASHOPTION
+			else
+				object.state = START_AWAITACTION
+			end if
+			
+			temp0 = false
+		end if
+		
+		if temp0 != false
+			if object.menuSelection == MENU_1PLAYER
+				object.menuSelection = MENU_2PLAYERVS
+			else
+				object.menuSelection = MENU_1PLAYER
+			end if
+		end if
+		break
+		
+	case START_FLASHOPTION
+		object.animationTimer += 11
+		if object.animationTimer > 59
+			object.animationTimer = 0
+		end if
+		object.timer++
+		if object.timer >= 30
+			object.timer = 0
+			object.animationTimer = 0
+			
+			if object.menuSelection == MENU_1PLAYER
+				object.state = START_1PSENDCALLBACK
+			else
+				CallNativeFunction2(NotifyCallback, NOTIFY_CONTROLLER_SUPPORT, 0) // Opens the controller setup screen on Switch
+				game.callbackResult = -1
+				object.state = START_2PSENDCALLBACK
+			end if
+		end if
+		break
+		
+	case START_1PSENDCALLBACK
+		game.continueFlag = false
+		game.callbackResult = -1
+		CallNativeFunction2(NotifyCallback, NOTIFY_CHARACTER_SELECT, 0)
+		object.state = START_1PWAITFORCHARSELECT
+		break
+		
+	case START_1PWAITFORCHARSELECT
+		if game.callbackResult > 0
+			object.state = START_ORIGINSSTARTGAME
+			if stage.playerListPos > 2
+				CallNativeFunction2(NotifyCallback, NOTIFY_1P_VS_SELECT, 0)
+			end if
+			StopMusic()
+		else
+			if game.callbackResult == 0
+				object.state = START_AWAITACTION
+			end if
+		end if
+		
+	case START_ORIGINSSTARTGAME
+		object.timer += 8
+		if object.timer >= 320
+			if game.continueFlag != false
+				game.continueFlag = false
+				engine.state = RESET_GAME
+			else
+				options.attractMode = false
+				player.lives = 3
+				player.continues = 0
+				player.score = 0
+				player.scoreBonus = 0xC350
+				starPostID = 0
+				specialStage.listPos = 0
+				specialStage.emeralds = 0
+				specialStage.nextZone = 0
+				
+				if object.menuSelection == MENU_1PLAYER
+					stage.activeList = REGULAR_STAGE
+					stage.listPos = 0
+				else
+					stage.activeList = PRESENTATION_STAGE
+					stage.listPos = 3
+				end if
+				LoadStage()
+			end if
+		end if
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+		
+	case START_2PSENDCALLBACK
+		if game.callbackResult > 0
+			object.state = START_ORIGINSSTARTGAME
+		else
+			if game.callbackResult == 0
+				object.state = START_ORIGINSMENU
+			end if
+		end if
+		break
+#endplatform
 	end switch
 end event
 
 
 event ObjectDraw
+#platform: USE_STANDALONE
 	object.animationTimer++
 	if object.animationTimer > 59
 		object.animationTimer = 0
@@ -151,20 +322,75 @@ event ObjectDraw
 	if object.animationTimer > 29
 		DrawSpriteScreenXY(0, screen.xcenter, object.ypos)
 	end if
+#endplatform
+
+#platform: USE_ORIGINS
+	switch object.state
+	case START_AWAITACTION
+	case START_FLASHPRESSBUTTON
+	case START_LEVELSELECT
+	case START_CONTINUESCREEN
+	case START_ATTRACTMODE
+		object.animationTimer++
+		if object.animationTimer > 59
+			object.animationTimer = 0
+		end if
+		if object.animationTimer > 29
+			DrawSpriteScreenXY(0, screen.xcenter, object.ypos)
+		end if
+		break
+		
+	case START_ORIGINSMENU
+	case START_FLASHOPTION
+	case START_1PSENDCALLBACK
+		temp0 = object.ypos
+		temp1 = object.ypos
+		temp1 += 12
+		if object.menuSelection == MENU_1PLAYER
+			if object.animationTimer < 29
+				DrawSpriteScreenXY(2, screen.xcenter, temp0)
+			end if
+			DrawSpriteScreenXY(3, screen.xcenter, temp1)
+			DrawSpriteScreenXY(5, screen.xcenter, temp0)
+		else
+			DrawSpriteScreenXY(1, screen.xcenter, temp0)
+			if object.animationTimer < 29
+				DrawSpriteScreenXY(4, screen.xcenter, temp1)
+			end if
+			DrawSpriteScreenXY(5, screen.xcenter, temp1)
+		end if
+		break
+		
+	case START_1PWAITFORCHARSELECT
+	case START_ORIGINSSTARTGAME
+	case START_2PSENDCALLBACK
+		break
+	end switch
+#endplatform
 end event
 
 
 event ObjectStartup
+#platform: USE_ORIGINS
+	CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, 0) // On the title screen??
+#endplatform
 	LoadSpriteSheet("Title/Title.gif")
 	switch engine.deviceType
 	case STANDARD
 		SpriteFrame(-49, -1, 98, 9, 1, 380)		// Press Button 	- #0
 		break
-
 	case MOBILE
 		SpriteFrame(-57, -1, 114, 9, 1, 390)	// Touch To Start 	- #0
 		break
 	end switch
+	
+#platform: USE_ORIGINS
+	SpriteFrame(-40, -1, 66, 9, 1, 400)		// 1 PLAYER						- #1
+	SpriteFrame(-40, -1, 66, 9, 92, 400)	// 1 PLAYER (Highlighted)		- #2
+	SpriteFrame(-40, -1, 90, 9, 1, 410)		// 2 PLAYER VS					- #3
+	SpriteFrame(-40, -1, 90, 9, 92, 410)	// 2 PLAYER VS (Highlighted)	- #4
+	SpriteFrame(-60, -5, 16, 16, 104, 370)	// Sonic Icon					- #5
+#endplatform
 end event
 
 
