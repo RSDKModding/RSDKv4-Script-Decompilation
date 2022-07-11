@@ -46,6 +46,14 @@ private alias object.value21 : player.acceleration
 private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_UNTRANSFORM
 
+// Newtron Fly Aliases
+private alias 2 : NEWTRONFLY_APPEARED
+private alias 3 : NEWTRONFLY_MOVING
+
+// Newtron Shoot Aliases
+private alias 2 : NEWTRONSHOOT_SHOOT
+private alias 3 : NEWTRONSHOOT_SHOOTDELAY
+
 // Monitor Aliases
 private alias object.value0 : monitor.contentsPos.y
 private alias object.value1 : monitor.timer
@@ -161,6 +169,10 @@ private table CheckeredBall_unusedTable
 end table
 
 
+// ========================
+// Function Definitions
+// ========================
+
 private function CheckeredBall_DebugDraw
 	DrawSprite(1)
 end function
@@ -176,7 +188,7 @@ private function CheckeredBall_DebugSpawn
 end function
 
 
-public function CheckeredBall_HandlePlayerMove
+private function CheckeredBall_HandlePlayerMove
 	object.activePlayers = 0
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -252,22 +264,12 @@ public function CheckeredBall_HandlePlayerMove
 end function
 
 
-public function CheckeredBall_PlayerInteraction
+private function CheckeredBall_PlayerInteraction
 	temp6 = object.xpos
-#platform: USE_STANDALONE
 	temp6 &= 0xFFFF0000
-#endplatform
-#platform: USE_ORIGINS
-	temp6 &= -0x10000
-#endplatform
 	temp6 -= object.roundedPos.x
 	temp7 = object.ypos
-#platform: USE_STANDALONE
 	temp7 &= 0xFFFF0000
-#endplatform
-#platform: USE_ORIGINS
-	temp7 &= -0x10000
-#endplatform
 	temp7 -= object.roundedPos.y
 	temp4 = object.xpos
 	temp5 = object.ypos
@@ -346,7 +348,7 @@ public function CheckeredBall_PlayerInteraction
 end function
 
 
-public function CheckeredBall_BadnikBreak
+private function CheckeredBall_BadnikBreak
 	temp0 = object.xvel
 	temp0 |= object.yvel
 
@@ -408,7 +410,7 @@ public function CheckeredBall_BadnikBreak
 end function
 
 
-public function CheckeredBall_ReflectProjectile
+private function CheckeredBall_ReflectProjectile
 	// Do some maths to find where the projectile should go now
 	temp0 = object.xpos
 	temp0 -= object[arrayPos0].xpos
@@ -426,7 +428,7 @@ public function CheckeredBall_ReflectProjectile
 end function
 
 
-public function CheckeredBall_SpringBounce
+private function CheckeredBall_SpringBounce
 	switch object[arrayPos0].propertyValue
 	case 0
 		temp0 = spring[arrayPos0].active
@@ -522,7 +524,7 @@ public function CheckeredBall_SpringBounce
 end function
 
 
-public function CheckeredBall_CLedgeCollapse
+private function CheckeredBall_CLedgeCollapse
 	if object[arrayPos0].state < CLEDGE_NONE
 		if object.yvel >= 0
 			temp0 = object.xpos
@@ -561,7 +563,7 @@ public function CheckeredBall_CLedgeCollapse
 end function
 
 
-public function CheckeredBall_HandlePhysics
+private function CheckeredBall_HandlePhysics
 	if object.gravity == 1
 		object.yvel += 0x3800
 		object.speed = object.xvel
@@ -603,847 +605,35 @@ end function
 // Events
 // ========================
 
-
 event ObjectUpdate
 	if object.priority != 4
 		object.priority = 1
 	end if
-
+	
 	CallFunction(CheckeredBall_HandlePlayerMove)
-
+	
 	object.ballAngle += object.angleVel
-
+	
 	// These don't actually do anything - the engine doesn't support direct setting of these values by script
 	// Instead, the Checkered Ball's collision values are set with the ani file
 	object.collisionLeft = -22
 	object.collisionTop = -22
 	object.collisionRight = 22
 	object.collisionBottom = 22
-
-	CallFunction(CheckeredBall_HandlePhysics)
-
-	ProcessObjectMovement()
-
-	object.groundAngle = object.angle
-
-	// At some point, Taxman updated this code to use separate foreach checks instead of one big foreach with a case switch
-	// This updated script was never implemented into the mobile version of Sonic 1 but it is in Origins
-	// However, the script compiler for Origins is a bit wacky with how platform checks work, so I'm gonna have to include the entirety of both of these...
-	// I know this is annoyingly messy in an already long script, but the only other option was to get rid of one of these entirely, and I don't want to do that
 	
-#platform: USE_STANDALONE
-	// Cycle through all objects
-	foreach (0, arrayPos0, ACTIVE_ENTITIES)
-		// Jump to the object's type
-		// If not listed here, it has no interaction
-		switch object[arrayPos0].type
-		case TypeName[Motobug]
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -14, -14, 14, 14)
-			if checkResult == true
-				CallFunction(CheckeredBall_BadnikBreak)
-			end if
-			break
-
-		case TypeName[Buzz Bomber]
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -16, -7, 16, 7)
-			if checkResult == true
-				CallFunction(CheckeredBall_BadnikBreak)
-			end if
-			break
-
-		case TypeName[Crabmeat]
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -14, -14, 14, 14)
-			if checkResult == true
-				CallFunction(CheckeredBall_BadnikBreak)
-			end if
-			break
-
-		case TypeName[Chopper]
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -12, -14, 12, 14)
-			if checkResult == true
-				CallFunction(CheckeredBall_BadnikBreak)
-			end if
-			break
-
-		case TypeName[Splats]
-			// A fellow unused object, go ahead and interact with Splats too
-			// Something interesting - this interaction didn't even exist in the original S1 release,
-			// it was only added later in an update
-			// Why they decided to update an unused object to add an unused interaction for an unused enemy is beyond me, though...
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -10, -20, 6, 20)
-			if checkResult == true
-				CallFunction(CheckeredBall_BadnikBreak)
-			end if
-			break
-
-		case TypeName[Newtron Fly]
-			// Only hurt Newtrons when they're active, not in their hidden states
-			switch object[arrayPos0].state
-			case 2
-			case 3
-				BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -16, -8, 16, 8)
-				if checkResult == true
-					CallFunction(CheckeredBall_BadnikBreak)
-				end if
-				break
-			end switch
-			break
-
-		case TypeName[Newtron Shoot]
-			// Only hurt Newtrons when they're active, not in their hidden states
-			switch object[arrayPos0].state
-			case 2
-			case 3
-				BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -12, -14, 12, 14)
-				if checkResult == true
-					CallFunction(CheckeredBall_BadnikBreak)
-				end if
-				break
-			end switch
-			break
-
-		case TypeName[Buzz Bomber Shot]
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -6, -6, 6, 6)
-			if checkResult == true
-				CallFunction(CheckeredBall_ReflectProjectile)
-			end if
-			break
-
-		case TypeName[Crabmeat Shot]
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -6, -6, 6, 6)
-			if checkResult == true
-				CallFunction(CheckeredBall_ReflectProjectile)
-			end if
-			break
-
-		case TypeName[Newtron Shot]
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -6, -6, 6, 6)
-			if checkResult == true
-				CallFunction(CheckeredBall_ReflectProjectile)
-			end if
-			break
-
-		case TypeName[Monitor]
-			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -16, -14, 16, 16)
-			if checkResult == true
-				object[arrayPos0].state = 0
-				CreateTempObject(TypeName[Smoke Puff], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
-				object[tempObjectPos].drawOrder = 4
-				object[arrayPos0].type = TypeName[Broken Monitor]
-
-				if object[arrayPos0].priority != 4
-					object[arrayPos0].priority = 1
-				end if
-
-				object[arrayPos0].alpha = 0xFF
-				monitor[arrayPos0].contentsPos.y = object[arrayPos0].ypos
-				monitor[arrayPos0].timer = -0x30000
-				PlaySfx(SfxName[Destroy], false)
-			end if
-			break
-
-		case TypeName[Rock]
-			BoxCollisionTest(C_SOLID, arrayPos0, -16, -16, 16, 16, object.entityPos, -22, -22, 22, 22)
-			switch checkResult
-			case 1
-				object.gravity = 0
-				break
-
-			case 2
-				if object.speed > 0
-					object.speed = 0
-				end if
-				break
-
-			case 3
-				if object.speed < 0
-					object.speed = 0
-				end if
-				break
-			end switch
-			break
-
-		case TypeName[Spikes]
-			// Have different tests for each of the spike types
-			switch object[arrayPos0].propertyValue
-			case 0 // 3 Spikes (Up)
-				BoxCollisionTest(C_SOLID, arrayPos0, -20, -16, 20, 16, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 1 // 3 Spikes (Right)
-				BoxCollisionTest(C_SOLID, arrayPos0, -16, -20, 15, 20, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 2 // 3 Spikes (Left)
-				BoxCollisionTest(C_SOLID, arrayPos0, -15, -20, 16, 20, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 3 // 3 Spikes (Down)
-				BoxCollisionTest(C_SOLID, arrayPos0, -20, -16, 20, 15, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 4 // 1 Spike (Up)
-				BoxCollisionTest(C_SOLID, arrayPos0, -4, -16, 4, 16, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 5 // 1 Spike (Right)
-				BoxCollisionTest(C_SOLID, arrayPos0, -16, -4, 15, 4, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 6 // 1 Spike (Left)
-				BoxCollisionTest(C_SOLID, arrayPos0, -15, -4, 16, 4, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 7 // 1 Spike (Down)
-				BoxCollisionTest(C_SOLID, arrayPos0, -4, -16, 4, 15, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 8 // 3 Spikes (Spaced Out) (Up)
-				BoxCollisionTest(C_SOLID, arrayPos0, -28, -16, 28, 16, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 9 // 3 Spikes (Spaced Out) (Right)
-				BoxCollisionTest(C_SOLID, arrayPos0, -16, -28, 15, 28, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 10 // 3 Spikes (Spaced Out) (Left)
-				BoxCollisionTest(C_SOLID, arrayPos0, -15, -28, 16, 28, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 11 // 3 Spikes (Spaced Out) (Down)
-				BoxCollisionTest(C_SOLID, arrayPos0, -28, -16, 28, 15, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 12 // 6 Spikes (Spaced Out) (Up)
-				BoxCollisionTest(C_SOLID, arrayPos0, -64, -16, 64, 16, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 13 // 6 Spikes (Spaced Out) (Right)
-				BoxCollisionTest(C_SOLID, arrayPos0, -16, -64, 15, 64, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 14 // 6 Spikes (Spaced Out) (Left)
-				BoxCollisionTest(C_SOLID, arrayPos0, -15, -64, 16, 64, object.entityPos, -22, -22, 22, 22)
-				break
-
-			case 15 // 6 Spikes (Spaced Out) (Down)
-				BoxCollisionTest(C_SOLID, arrayPos0, -64, -16, 64, 15, object.entityPos, -22, -22, 22, 22)
-				break
-
-			end switch
-
-			switch checkResult
-			case 1
-				object.gravity = 0
-				break
-
-			case 2
-				if object.speed > 0
-					object.speed = 0
-				end if
-				break
-
-			case 3
-				if object.speed < 0
-					object.speed = 0
-				end if
-				break
-			end switch
-			break
-
-		case TypeName[Breakable Wall]
-			// Only interact with solid walls, not wall fragments
-			if object[arrayPos0].propertyValue < 3
-
-				// Get the absolute version of this object's speed
-				temp0 = object.speed
-				Abs(temp0)
-
-				// Going with a speed of at least 0x20000?
-				if temp0 >= 0x20000
-					BoxCollisionTest(C_TOUCH, arrayPos0, -17, -32, 17, 32, object.entityPos, -22, -22, 22, 22)
-					if checkResult == true
-						// Destroy the wall
-
-						// Delete the wall object
-						object[arrayPos0].type = TypeName[Blank Object]
-
-						// This is bugged, the earliest revisions of S1 only had "Ledge Break" as opposed to "Ledge Break L"/"Ledge Break R"
-						// but this sfx name wasn't update to accomidate so when it's compiled, it's compiled as "0", which is the jump sfx
-						PlaySfx(SfxName[Ledge Break], false)
-
-						temp0 = object[arrayPos0].propertyValue
-						temp0 <<= 1
-						temp0 += 3
-
-						temp1 = temp0
-						temp1++
-
-						temp2 = object[arrayPos0].xpos
-						temp2 -= 0x80000
-
-						temp3 = object[arrayPos0].xpos
-						temp3 += 0x80000
-
-						temp4 = object[arrayPos0].ypos
-						temp4 -= 0x180000
-
-						// Determine which way to blow wall fragments based on which way the ball is "facing"
-						if object.xpos < object[arrayPos0].xpos
-							CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
-							object[tempObjectPos].xvel = -0x60000
-							object[tempObjectPos].yvel = -0x60000
-							object[tempObjectPos].drawOrder = 4
-
-							CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
-							object[tempObjectPos].xvel = -0x40000
-							object[tempObjectPos].yvel = -0x50000
-							object[tempObjectPos].drawOrder = 4
-
-							temp4 += 0x100000
-
-							CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
-							object[tempObjectPos].xvel = -0x80000
-							object[tempObjectPos].yvel = -0x20000
-							object[tempObjectPos].drawOrder = 4
-
-							CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
-							object[tempObjectPos].xvel = -0x60000
-							object[tempObjectPos].yvel = -0x10000
-							object[tempObjectPos].drawOrder = 4
-
-							temp4 += 0x100000
-
-							CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
-							object[tempObjectPos].xvel = -0x80000
-							object[tempObjectPos].yvel = 0x20000
-							object[tempObjectPos].drawOrder = 4
-
-							CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
-							object[tempObjectPos].xvel = -0x60000
-							object[tempObjectPos].yvel = 0x10000
-							object[tempObjectPos].drawOrder = 4
-
-							temp4 += 0x100000
-
-							CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
-							object[tempObjectPos].xvel = -0x60000
-							object[tempObjectPos].yvel = 0x60000
-							object[tempObjectPos].drawOrder = 4
-
-							CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
-							object[tempObjectPos].xvel = -0x40000
-							object[tempObjectPos].yvel = 0x50000
-							object[tempObjectPos].drawOrder = 4
-						else
-
-							CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
-							object[tempObjectPos].xvel = 0x40000
-							object[tempObjectPos].yvel = -0x50000
-							object[tempObjectPos].drawOrder = 4
-
-							CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
-							object[tempObjectPos].xvel = 0x60000
-							object[tempObjectPos].yvel = -0x60000
-							object[tempObjectPos].drawOrder = 4
-
-							temp4 += 0x100000
-
-							CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
-							object[tempObjectPos].xvel = 0x60000
-							object[tempObjectPos].yvel = -0x10000
-							object[tempObjectPos].drawOrder = 4
-
-							CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
-							object[tempObjectPos].xvel = 0x80000
-							object[tempObjectPos].yvel = -0x20000
-							object[tempObjectPos].drawOrder = 4
-
-							temp4 += 0x100000
-
-							CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
-							object[tempObjectPos].xvel = 0x60000
-							object[tempObjectPos].yvel = 0x10000
-							object[tempObjectPos].drawOrder = 4
-
-							CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
-							object[tempObjectPos].xvel = 0x80000
-							object[tempObjectPos].yvel = 0x20000
-							object[tempObjectPos].drawOrder = 4
-
-							temp4 += 0x100000
-
-							CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
-							object[tempObjectPos].xvel = 0x40000
-							object[tempObjectPos].yvel = 0x50000
-							object[tempObjectPos].drawOrder = 4
-
-							CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
-							object[tempObjectPos].xvel = 0x60000
-							object[tempObjectPos].yvel = 0x60000
-							object[tempObjectPos].drawOrder = 4
-						end if
-					end if
-				else
-					BoxCollisionTest(C_SOLID, arrayPos0, -17, -32, 17, 32, object.entityPos, -22, -22, 22, 22)
-					switch checkResult
-					case 1
-						object.gravity = 0
-						break
-
-					case 2
-						if object.speed > 0
-							object.speed = 0
-						end if
-						break
-
-					case 3
-						if object.speed < 0
-							object.speed = 0
-						end if
-						break
-					end switch
-				end if
-			end if
-			break
-
-		case TypeName[Bridge]
-			if object.xpos > bridge[arrayPos0].startPos
-				if object.xpos < bridge[arrayPos0].endPos
-					if object.entityPos == bridge[arrayPos0].playerID
-						bridge[arrayPos0].stoodPos = object.xpos
-						bridge[arrayPos0].stoodPos -= bridge[arrayPos0].startPos
-						temp0 = bridge[arrayPos0].stoodPos
-						temp0 >>= 8
-						temp1 = bridge[arrayPos0].endPos
-						temp1 -= bridge[arrayPos0].startPos
-						temp2 = temp1
-						temp2 >>= 16
-						temp0 /= temp2
-						Sin(bridge[arrayPos0].depression, temp0)
-						temp1 >>= 13
-						bridge[arrayPos0].depression *= temp1
-						temp0 = object[arrayPos0].ypos
-						temp0 -= 0x300000
-						if object.ypos > temp0
-							if object.yvel >= 0
-								temp2 = object.collisionBottom
-								FlipSign(temp2)
-								temp2 <<= 16
-								temp2 += bridge[arrayPos0].bridgeDepth
-								temp2 -= 0x80000
-								bridge[arrayPos0].activePlayerCount++
-								object.ypos = object[arrayPos0].ypos
-								object.ypos += temp2
-								object.gravity = 0
-								object.yvel = 0
-								object.floorSensorL = true
-								object.floorSensorC = true
-								object.floorSensorR = true
-							else
-								bridge[arrayPos0].playerID = -2
-							end if
-						end if
-					else
-						if object.yvel >= 0
-							temp0 = object.xpos
-							temp0 -= bridge[arrayPos0].startPos
-							if temp0 > bridge[arrayPos0].stoodPos
-								temp0 = bridge[arrayPos0].endPos
-								temp0 -= object.xpos
-								temp3 = bridge[arrayPos0].endPos
-								temp3 -= bridge[arrayPos0].startPos
-								temp3 -= bridge[arrayPos0].stoodPos
-								temp1 = temp0
-								temp1 <<= 7
-								temp1 /= temp3
-							else
-								temp1 = temp0
-								temp1 <<= 7
-								temp1 /= bridge[arrayPos0].stoodPos
-							end if
-							Sin(temp2, temp1)
-							temp2 *= bridge[arrayPos0].bridgeDepth
-							temp2 >>= 9
-							temp2 -= 0x80000
-							if object.yvel < 0x8000
-								temp3 = temp2
-								temp3 >>= 16
-								temp4 = temp3
-								temp3 -= 8
-							else
-								temp3 = temp2
-								temp3 >>= 16
-								temp4 = temp3
-								temp4 += 8
-							end if
-
-							BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, -0x400, temp3, 0x400, temp4, object.entityPos, -18, -22, 18, 22)
-							if checkResult == true
-								bridge[arrayPos0].activePlayerCount++
-								object.ypos = object.collisionBottom
-								FlipSign(object.ypos)
-								object.ypos <<= 16
-								object.ypos += object[arrayPos0].ypos
-								object.ypos += temp2
-								object.floorSensorL = true
-								object.floorSensorC = true
-								object.floorSensorR = true
-								bridge[arrayPos0].playerID = object.entityPos
-								object.gravity = 0
-								object.yvel = 0
-							end if
-						end if
-					end if
-				else
-					if object.entityPos == bridge[arrayPos0].playerID
-						bridge[arrayPos0].playerID = -2
-						bridge[arrayPos0].stoodPos = 32
-					end if
-				end if
-			else
-				if object.entityPos == bridge[arrayPos0].playerID
-					bridge[arrayPos0].playerID = -2
-					bridge[arrayPos0].stoodPos = 32
-				end if
-			end if
-			break
-
-		case TypeName[Yellow Spring]
-			temp7 = 0xA0000
-			CallFunction(CheckeredBall_SpringBounce)
-			break
-
-		case TypeName[Red Spring]
-			temp7 = 0x100000
-			CallFunction(CheckeredBall_SpringBounce)
-			break
-
-		case TypeName[Fall Platform]
-			object[arrayPos0].ypos -= fallPlatform[arrayPos0].collisionOffset.y
-			BoxCollisionTest(C_PLATFORM, object[arrayPos0].entityPos, -32, -8, 32, 0, object.entityPos, -18, -22, 18, 22)
-			if checkResult == true
-				fallPlatform[arrayPos0].stood = true
-				object.collisionOffset.y = fallPlatform[arrayPos0].collisionOffset.y
-			end if
-			object[arrayPos0].ypos += fallPlatform[arrayPos0].collisionOffset.y
-			break
-
-		case TypeName[H Platform]
-			object[arrayPos0].xpos -= hPlatform[arrayPos0].collisionOffset.x
-			object[arrayPos0].ypos -= hPlatform[arrayPos0].collisionOffset.y
-			BoxCollisionTest(C_PLATFORM, object[arrayPos0].entityPos, -32, -8, 32, 12, object.entityPos, -18, -22, 18, 22)
-			if checkResult == true
-				hPlatform[arrayPos0].stood = true
-				object.collisionOffset.x = hPlatform[arrayPos0].collisionOffset.x
-				object.collisionOffset.y = hPlatform[arrayPos0].collisionOffset.y
-			end if
-			object[arrayPos0].xpos += hPlatform[arrayPos0].collisionOffset.x
-			object[arrayPos0].ypos += hPlatform[arrayPos0].collisionOffset.y
-			break
-
-		case TypeName[V Platform]
-			object[arrayPos0].ypos -= vPlatform[arrayPos0].collisionOffset.y
-			BoxCollisionTest(C_PLATFORM, object[arrayPos0].entityPos, -32, -8, 32, 12, object.entityPos, -18, -22, 18, 22)
-			if checkResult == true
-				object.collisionOffset.y = vPlatform[arrayPos0].collisionOffset.y
-			end if
-			object[arrayPos0].ypos += vPlatform[arrayPos0].collisionOffset.y
-			break
-
-		case TypeName[V Platform 2]
-			object[arrayPos0].ypos -= vPlatform2[arrayPos0].collisionOffset.y
-			BoxCollisionTest(C_PLATFORM, object[arrayPos0].entityPos, -32, -2, 32, 12, object.entityPos, -18, -22, 18, 22)
-			if checkResult == true
-				object.collisionOffset.y = vPlatform2[arrayPos0].collisionOffset.y
-			end if
-			object[arrayPos0].ypos += vPlatform2[arrayPos0].collisionOffset.y
-			break
-
-		case TypeName[Swing Platform]
-			temp0 = object[arrayPos0].xpos
-			temp1 = object[arrayPos0].ypos
-			object[arrayPos0].xpos = swingPlatform[arrayPos0].drawPos.x
-			object[arrayPos0].ypos = swingPlatform[arrayPos0].drawPos.y
-			object[arrayPos0].xpos -= swingPlatform[arrayPos0].collisionOffset.x
-			object[arrayPos0].ypos -= swingPlatform[arrayPos0].collisionOffset.y
-			BoxCollisionTest(C_PLATFORM, object[arrayPos0].entityPos, -24, -8, 24, 8, object.entityPos, -18, -22, 18, 22)
-			if checkResult == true
-				object.collisionOffset.x = swingPlatform[arrayPos0].collisionOffset.x
-				object.collisionOffset.y = swingPlatform[arrayPos0].collisionOffset.y
-			end if
-			object[arrayPos0].xpos = temp0
-			object[arrayPos0].ypos = temp1
-			break
-
-		case TypeName[C Ledge Left]
-			temp7 = true
-			CallFunction(CheckeredBall_CLedgeCollapse)
-			break
-
-		case TypeName[C Ledge Right]
-			temp7 = false
-			CallFunction(CheckeredBall_CLedgeCollapse)
-			break
-
-		case TypeName[Plane Sw V]
-			CheckEqual(planeSwV[arrayPos0].onGround, false)
-			temp0 = checkResult
-			CheckEqual(object.gravity, 0)
-			temp0 |= checkResult
-			if temp0 == true
-				BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, -12, planeSwV[arrayPos0].extendTop, 12, planeSwV[arrayPos0].extendBottom, object.entityPos, -10, -22, 10, 22)
-				if checkResult == true
-					if object.xvel > 0
-						object.collisionPlane = planeSwV[arrayPos0].planeL
-						object.drawOrder = planeSwV[arrayPos0].drawOrderL
-					else
-						object.collisionPlane = planeSwV[arrayPos0].planeR
-						object.drawOrder = planeSwV[arrayPos0].drawOrderR
-					end if
-				end if
-			end if
-			break
-
-		case TypeName[Plane Sw H]
-			CheckEqual(planeSwH[arrayPos0].onGround, false)
-			temp0 = checkResult
-			CheckEqual(object.gravity, 0)
-			temp0 |= checkResult
-			if temp0 == true
-				BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, planeSwH[arrayPos0].extendLeft, -12, planeSwH[arrayPos0].extendRight, 12, object.entityPos, -22, -10, 22, 10)
-				if checkResult == true
-					if object.yvel > 0
-						object.collisionPlane = planeSwH[arrayPos0].planeL
-						object.drawOrder = planeSwH[arrayPos0].drawOrderL
-					else
-						object.collisionPlane = planeSwH[arrayPos0].planeL
-						object.drawOrder = planeSwH[arrayPos0].drawOrderR
-					end if
-				end if
-			end if
-			break
-
-		case TypeName[Eggman]
-			arrayPos1 = arrayPos0
-			arrayPos1--
-			if ghzEggman[arrayPos1].invincibilityTimer == 0
-				switch object[arrayPos0].state
-				case GHZEGGMAN_INITIALSWING
-				case GHZEGGMAN_MOVELEFT
-				case GHZEGGMAN_MOVERIGHT
-					BoxCollisionTest(C_TOUCH, arrayPos0, -20, -16, 20, 16, object.entityPos, -22, -22, 22, 22)
-					if checkResult == true
-						ghzEggman[arrayPos0].health--
-						if ghzEggman[arrayPos0].health == 0
-							player.score += 1000
-							object[arrayPos0].animationTimer = 0
-							object[arrayPos0].animation = GHZEGGANI_DEFEATED
-							object[arrayPos1].state = WRECKINGBALL_EXPLODE
-							ghzEggman[arrayPos1].flameAnim = FLAME_INACTIVE
-							arrayPos1--
-							ResetObjectEntity(arrayPos1, TypeName[Explosion], 0, object[arrayPos1].xpos, object[arrayPos1].ypos)
-							arrayPos1--
-							ResetObjectEntity(arrayPos1, TypeName[Explosion], 0, object[arrayPos1].xpos, object[arrayPos1].ypos)
-							arrayPos1--
-							ResetObjectEntity(arrayPos1, TypeName[Explosion], 0, object[arrayPos1].xpos, object[arrayPos1].ypos)
-							arrayPos1--
-							ResetObjectEntity(arrayPos1, TypeName[Explosion], 0, object[arrayPos1].xpos, object[arrayPos1].ypos)
-							arrayPos1--
-							ResetObjectEntity(arrayPos1, TypeName[Explosion], 0, object[arrayPos1].xpos, object[arrayPos1].ypos)
-							ghzEggman[arrayPos0].timer = 0
-							object[arrayPos0].state = GHZEGGMAN_EXPLODE
-						else
-							object[arrayPos0].animationTimer = 0
-							object[arrayPos0].animation = GHZEGGANI_HIT
-							ghzEggman[arrayPos1].invincibilityTimer = 32
-							PlaySfx(SfxName[Boss Hit], false)
-						end if
-					end if
-					break
-				end switch
-			end if
-			break
-
-		case TypeName[Wrecking Ball]
-			if object[arrayPos0].state == WRECKINGBALL_ACTIVE
-				BoxCollisionTest(C_TOUCH, arrayPos0, -22, -22, 22, 22, object.entityPos, -22, -22, 22, 22)
-				if checkResult == true
-					temp0 = object[arrayPos0].xpos
-					temp0 -= object.wreckingBallPos.x
-					temp1 = object[arrayPos0].ypos
-					temp1 -= object.wreckingBallPos.y
-					if object.xvel == 0
-						object.xvel = temp0
-						object.speed = object.xvel
-					else
-						if object.xvel < 0
-							if temp0 > 0
-								temp2 = temp0
-								temp2 >>= 1
-								temp0 += temp2
-								object.xvel = temp0
-								object.speed = object.xvel
-							end if
-						else
-							if temp0 < 0
-								temp2 = temp0
-								temp2 >>= 1
-								temp0 += temp2
-								object.xvel = temp0
-								object.speed = object.xvel
-							end if
-						end if
-					end if
-
-					if object.yvel == 0
-						object.yvel = temp1
-					else
-						if object.yvel < 0
-							if temp1 > 0
-								temp2 = temp1
-								temp2 >>= 1
-								temp1 += temp2
-								object.yvel = temp1
-							end if
-						else
-							if temp1 < 0
-								temp2 = temp1
-								temp2 >>= 1
-								temp1 += temp2
-								object.yvel = temp1
-							end if
-						end if
-					end if
-				end if
-			end if
-
-			object.wreckingBallPos.x = object[arrayPos0].xpos
-			object.wreckingBallPos.y = object[arrayPos0].ypos
-			break
-
-		case TypeName[Checkered Ball]
-			// It can interact with other checkered balls, too!
-			if arrayPos0 != object.entityPos // (Check to make sure this object isn't interacting with itself)
-				temp0 = object.xpos
-				temp0 -= object[arrayPos0].xpos
-				Abs(temp0)
-				temp0 >>= 17
-				if temp0 >= 24
-					temp0 = 23
-				end if
-				GetTableValue(temp6, temp0, CheckeredBall_heightArray)
-				temp0 = temp6
-				temp0 >>= 1
-				temp6 += temp0
-				temp6 -= 22
-				temp7 = temp6
-				FlipSign(temp7)
-				temp0 = object.xvel
-				temp1 = object.yvel
-				temp2 = object.speed
-				BoxCollisionTest(C_SOLID, arrayPos0, -22, temp6, 22, temp7, object.entityPos, -22, -22, 22, 22)
-				switch checkResult
-				case 2
-				case 3
-					CheckGreater(temp0, 0)
-					temp3 = checkResult
-					CheckLower(object.xpos, object[arrayPos0].xpos)
-					temp3 &= checkResult
-					CheckLower(temp0, 0)
-					temp4 = checkResult
-					CheckGreater(object.xpos, object[arrayPos0].xpos)
-					temp4 &= checkResult
-					temp3 |= temp4
-					if temp3 != 0
-						object.xvel = object[arrayPos0].xvel
-						object.speed = object[arrayPos0].speed
-						object[arrayPos0].xvel = temp0
-						object[arrayPos0].speed = temp2
-					end if
-					break
-
-				case 1
-					if object.xpos < object[arrayPos0].xpos
-						object.speed -= 0xC00
-						object.xvel -= 0xC00
-						object[arrayPos0].speed += 0xC00
-						object[arrayPos0].xvel += 0xC00
-						object[arrayPos0].angleVel += 0xC00
-					else
-						object.speed += 0xC00
-						object.xvel += 0xC00
-						object[arrayPos0].speed -= 0xC00
-						object[arrayPos0].xvel -= 0xC00
-						object[arrayPos0].angleVel -= 0xC00
-					end if
-					// [Fallthrough]
-				case 4
-					CheckGreater(temp1, 0)
-					temp3 = checkResult
-					CheckLower(object.ypos, object[arrayPos0].ypos)
-					temp3 &= checkResult
-					CheckLower(temp1, 0)
-					temp4 = checkResult
-					CheckGreater(object.ypos, object[arrayPos0].ypos)
-					temp4 &= checkResult
-					temp3 |= temp4
-					if temp3 != 0
-						object.yvel = object[arrayPos0].yvel
-						object[arrayPos0].yvel = temp1
-					end if
-					break
-
-				end switch
-
-				BoxCollisionTest(C_TOUCH, arrayPos0, -22, temp6, 22, temp7, object.entityPos, -22, -22, 22, 22)
-				if checkResult == true
-					if object.xpos < object[arrayPos0].xpos
-						object.xpos -= 0x10000
-					else
-						object.xpos += 0x10000
-					end if
-					if object.ypos < object[arrayPos0].ypos
-						object.ypos -= 0x10000
-					else
-						object.ypos += 0x10000
-					end if
-				end if
-			end if
-			break
-
-		case TypeName[Animal Prison]
-			switch object[arrayPos0].state
-			case 0
-				BoxCollisionTest(C_SOLID, arrayPos0, -32, -24, 32, 32, object.entityPos, -18, -22, 18, 22)
-				BoxCollisionTest(C_SOLID, arrayPos0, -11, -48, 11, -24, object.entityPos, -18, -22, 18, 22)
-				if checkResult == true
-					// Open the prison
-					object[arrayPos0].state = 1
-					stage.timeEnabled = false
-					if PlayerObject_SuperState == SUPERSTATE_SUPER
-						PlayerObject_SuperState = SUPERSTATE_UNTRANSFORM
-					end if
-
-					object[0].controlMode = -1
-				end if
-				break
-
-			case 1
-				BoxCollisionTest(C_SOLID, arrayPos0, -32, -24, 32, 32, object.entityPos, -18, -22, 18, 22)
-				BoxCollisionTest(C_SOLID, arrayPos0, -11, -40, 11, -24, object.entityPos, -18, -22, 18, 22)
-				break
-			end switch
-			break
-
-		end switch
-
-	next
-#endplatform
-
-#platform: USE_ORIGINS
+	CallFunction(CheckeredBall_HandlePhysics)
+	
+	ProcessObjectMovement()
+	
+	object.groundAngle = object.angle
+	
+	// Originally, this whole interaction system would cycle though all objects in the stage and use a case-switch statement containing all possible interactions
+	// Later, however, Taxman updated this code to use separate foreach checks for every interaction instead of one giant foreach + case-switch
+	// This updated script was never implemented into the mobile version of Sonic 1, but it was in Origins
+	
 	foreach (TypeName[Motobug], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -14, -14, 14, 14)
+		
 		if checkResult == true
 			CallFunction(CheckeredBall_BadnikBreak)
 		end if
@@ -1451,6 +641,7 @@ event ObjectUpdate
 	
 	foreach (TypeName[Buzz Bomber], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -16, -7, 16, 7)
+		
 		if checkResult == true
 			CallFunction(CheckeredBall_BadnikBreak)
 		end if
@@ -1458,6 +649,7 @@ event ObjectUpdate
 	
 	foreach (TypeName[Crabmeat], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -14, -14, 14, 14)
+		
 		if checkResult == true
 			CallFunction(CheckeredBall_BadnikBreak)
 		end if
@@ -1465,6 +657,7 @@ event ObjectUpdate
 	
 	foreach (TypeName[Chopper], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -12, -14, 12, 14)
+		
 		if checkResult == true
 			CallFunction(CheckeredBall_BadnikBreak)
 		end if
@@ -1484,9 +677,10 @@ event ObjectUpdate
 	foreach (TypeName[Newtron Fly], arrayPos0, ACTIVE_ENTITIES)
 		// Only hurt Newtrons when they're active, not in their hidden states
 		switch object[arrayPos0].state
-		case 2
-		case 3
+		case NEWTRONFLY_APPEARED
+		case NEWTRONFLY_MOVING
 			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -16, -8, 16, 8)
+			
 			if checkResult == true
 				CallFunction(CheckeredBall_BadnikBreak)
 			end if
@@ -1497,9 +691,10 @@ event ObjectUpdate
 	foreach (TypeName[Newtron Shoot], arrayPos0, ACTIVE_ENTITIES)
 		// Only hurt Newtrons when they're active, not in their hidden states
 		switch object[arrayPos0].state
-		case 2
-		case 3
+		case NEWTRONSHOOT_SHOOT
+		case NEWTRONSHOOT_SHOOTDELAY
 			BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -12, -14, 12, 14)
+			
 			if checkResult == true
 				CallFunction(CheckeredBall_BadnikBreak)
 			end if
@@ -1509,6 +704,7 @@ event ObjectUpdate
 	
 	foreach (TypeName[Buzz Bomber Shot], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -6, -6, 6, 6)
+		
 		if checkResult == true
 			CallFunction(CheckeredBall_ReflectProjectile)
 		end if
@@ -1516,6 +712,7 @@ event ObjectUpdate
 	
 	foreach (TypeName[Crabmeat Shot], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -6, -6, 6, 6)
+		
 		if checkResult == true
 			CallFunction(CheckeredBall_ReflectProjectile)
 		end if
@@ -1523,6 +720,7 @@ event ObjectUpdate
 	
 	foreach (TypeName[Newtron Shot], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -6, -6, 6, 6)
+		
 		if checkResult == true
 			CallFunction(CheckeredBall_ReflectProjectile)
 		end if
@@ -1530,19 +728,21 @@ event ObjectUpdate
 	
 	foreach (TypeName[Monitor], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -16, -14, 16, 16)
+		
 		if checkResult == true
 			object[arrayPos0].state = 0
 			CreateTempObject(TypeName[Smoke Puff], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
 			object[tempObjectPos].drawOrder = 4
 			object[arrayPos0].type = TypeName[Broken Monitor]
-
+			
 			if object[arrayPos0].priority != 4
 				object[arrayPos0].priority = 1
 			end if
-
+			
 			object[arrayPos0].alpha = 0xFF
 			monitor[arrayPos0].contentsPos.y = object[arrayPos0].ypos
 			monitor[arrayPos0].timer = -0x30000
+			
 			PlaySfx(SfxName[Destroy], false)
 		end if
 	next
@@ -1553,235 +753,255 @@ event ObjectUpdate
 		case 1
 			object.gravity = 0
 			break
-
+			
 		case 2
 			if object.speed > 0
 				object.speed = 0
 			end if
 			break
-
+			
 		case 3
 			if object.speed < 0
 				object.speed = 0
 			end if
 			break
+			
 		end switch
 	next
 	
 	foreach (TypeName[Spikes], arrayPos0, ACTIVE_ENTITIES)
 		// Have different tests for each of the spike types
 		switch object[arrayPos0].propertyValue
-		case 0 // 3 Spikes (Up)
+		case 0
+			// 3 Spikes (Up)
 			BoxCollisionTest(C_SOLID, arrayPos0, -20, -16, 20, 16, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 1 // 3 Spikes (Right)
+			
+		case 1
+			// 3 Spikes (Right)
 			BoxCollisionTest(C_SOLID, arrayPos0, -16, -20, 15, 20, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 2 // 3 Spikes (Left)
+			
+		case 2
+			// 3 Spikes (Left)
 			BoxCollisionTest(C_SOLID, arrayPos0, -15, -20, 16, 20, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 3 // 3 Spikes (Down)
+			
+		case 3
+			// 3 Spikes (Down)
 			BoxCollisionTest(C_SOLID, arrayPos0, -20, -16, 20, 15, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 4 // 1 Spike (Up)
+			
+		case 4
+			// 1 Spike (Up)
 			BoxCollisionTest(C_SOLID, arrayPos0, -4, -16, 4, 16, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 5 // 1 Spike (Right)
+			
+		case 5
+			// 1 Spike (Right)
 			BoxCollisionTest(C_SOLID, arrayPos0, -16, -4, 15, 4, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 6 // 1 Spike (Left)
+			
+		case 6
+			// 1 Spike (Left)
 			BoxCollisionTest(C_SOLID, arrayPos0, -15, -4, 16, 4, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 7 // 1 Spike (Down)
+			
+		case 7
+			// 1 Spike (Down)
 			BoxCollisionTest(C_SOLID, arrayPos0, -4, -16, 4, 15, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 8 // 3 Spikes (Spaced Out) (Up)
+			
+		case 8
+			// 3 Spikes (Spaced Out) (Up)
 			BoxCollisionTest(C_SOLID, arrayPos0, -28, -16, 28, 16, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 9 // 3 Spikes (Spaced Out) (Right)
+			
+		case 9
+			// 3 Spikes (Spaced Out) (Right)
 			BoxCollisionTest(C_SOLID, arrayPos0, -16, -28, 15, 28, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 10 // 3 Spikes (Spaced Out) (Left)
+			
+		case 10
+			// 3 Spikes (Spaced Out) (Left)
 			BoxCollisionTest(C_SOLID, arrayPos0, -15, -28, 16, 28, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 11 // 3 Spikes (Spaced Out) (Down)
+			
+		case 11
+			// 3 Spikes (Spaced Out) (Down)
 			BoxCollisionTest(C_SOLID, arrayPos0, -28, -16, 28, 15, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 12 // 6 Spikes (Spaced Out) (Up)
+			
+		case 12
+			// 6 Spikes (Spaced Out) (Up)
 			BoxCollisionTest(C_SOLID, arrayPos0, -64, -16, 64, 16, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 13 // 6 Spikes (Spaced Out) (Right)
+			
+		case 13
+			// 6 Spikes (Spaced Out) (Right)
 			BoxCollisionTest(C_SOLID, arrayPos0, -16, -64, 15, 64, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 14 // 6 Spikes (Spaced Out) (Left)
+			
+		case 14
+			// 6 Spikes (Spaced Out) (Left)
 			BoxCollisionTest(C_SOLID, arrayPos0, -15, -64, 16, 64, object.entityPos, -22, -22, 22, 22)
 			break
-
-		case 15 // 6 Spikes (Spaced Out) (Down)
+			
+		case 15
+			// 6 Spikes (Spaced Out) (Down)
 			BoxCollisionTest(C_SOLID, arrayPos0, -64, -16, 64, 15, object.entityPos, -22, -22, 22, 22)
 			break
+			
 		end switch
-
+		
 		switch checkResult
 		case 1
 			object.gravity = 0
 			break
-
+			
 		case 2
 			if object.speed > 0
 				object.speed = 0
 			end if
 			break
-
+			
 		case 3
 			if object.speed < 0
 				object.speed = 0
 			end if
 			break
+			
 		end switch
 	next
 	
 	foreach (TypeName[Breakable Wall], arrayPos0, ACTIVE_ENTITIES)
 		// Only interact with solid walls, not wall fragments
 		if object[arrayPos0].propertyValue < 3
-
+			
 			// Get the absolute version of this object's speed
 			temp0 = object.speed
 			Abs(temp0)
-
+			
 			// Going with a speed of at least 0x20000?
 			if temp0 >= 0x20000
 				BoxCollisionTest(C_TOUCH, arrayPos0, -17, -32, 17, 32, object.entityPos, -22, -22, 22, 22)
 				if checkResult == true
 					// Destroy the wall
-
+					
 					// Delete the wall object
 					object[arrayPos0].type = TypeName[Blank Object]
-
+					
 					// This is bugged, the earliest revisions of S1 only had "Ledge Break" as opposed to "Ledge Break L"/"Ledge Break R"
-					// but this sfx name wasn't update to accomidate so when it's compiled, it's compiled as "0", which is the jump sfx
+					// However, an update split the SFX into two, but this use of SfxName wasn't update to accomidate so when it's compiled, it's resolved as the default "0", which is the jump sfx
 					PlaySfx(SfxName[Ledge Break], false)
-
+					
 					temp0 = object[arrayPos0].propertyValue
 					temp0 <<= 1
 					temp0 += 3
-
+					
 					temp1 = temp0
 					temp1++
-
+					
 					temp2 = object[arrayPos0].xpos
 					temp2 -= 0x80000
-
+					
 					temp3 = object[arrayPos0].xpos
 					temp3 += 0x80000
-
+					
 					temp4 = object[arrayPos0].ypos
 					temp4 -= 0x180000
-
+					
 					// Determine which way to blow wall fragments based on which way the ball is "facing"
 					if object.xpos < object[arrayPos0].xpos
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = -0x60000
 						object[tempObjectPos].yvel = -0x60000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = -0x40000
 						object[tempObjectPos].yvel = -0x50000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						temp4 += 0x100000
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = -0x80000
 						object[tempObjectPos].yvel = -0x20000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = -0x60000
 						object[tempObjectPos].yvel = -0x10000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						temp4 += 0x100000
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = -0x80000
 						object[tempObjectPos].yvel = 0x20000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = -0x60000
 						object[tempObjectPos].yvel = 0x10000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						temp4 += 0x100000
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = -0x60000
 						object[tempObjectPos].yvel = 0x60000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = -0x40000
 						object[tempObjectPos].yvel = 0x50000
 						object[tempObjectPos].drawOrder = 4
+						
 					else
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = 0x40000
 						object[tempObjectPos].yvel = -0x50000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = 0x60000
 						object[tempObjectPos].yvel = -0x60000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						temp4 += 0x100000
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = 0x60000
 						object[tempObjectPos].yvel = -0x10000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = 0x80000
 						object[tempObjectPos].yvel = -0x20000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						temp4 += 0x100000
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = 0x60000
 						object[tempObjectPos].yvel = 0x10000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = 0x80000
 						object[tempObjectPos].yvel = 0x20000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						temp4 += 0x100000
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = 0x40000
 						object[tempObjectPos].yvel = 0x50000
 						object[tempObjectPos].drawOrder = 4
-
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = 0x60000
 						object[tempObjectPos].yvel = 0x60000
@@ -1794,18 +1014,19 @@ event ObjectUpdate
 				case 1
 					object.gravity = 0
 					break
-
+					
 				case 2
 					if object.speed > 0
 						object.speed = 0
 					end if
 					break
-
+					
 				case 3
 					if object.speed < 0
 						object.speed = 0
 					end if
 					break
+					
 				end switch
 			end if
 		end if
@@ -1881,7 +1102,7 @@ event ObjectUpdate
 							temp4 = temp3
 							temp4 += 8
 						end if
-
+						
 						BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, -0x400, temp3, 0x400, temp4, object.entityPos, -18, -22, 18, 22)
 						if checkResult == true
 							bridge[arrayPos0].activePlayerCount++
@@ -2101,7 +1322,7 @@ event ObjectUpdate
 						end if
 					end if
 				end if
-
+				
 				if object.yvel == 0
 					object.yvel = temp1
 				else
@@ -2123,7 +1344,7 @@ event ObjectUpdate
 				end if
 			end if
 		end if
-
+		
 		object.wreckingBallPos.x = object[arrayPos0].xpos
 		object.wreckingBallPos.y = object[arrayPos0].ypos
 	next
@@ -2168,7 +1389,7 @@ event ObjectUpdate
 					object[arrayPos0].speed = temp2
 				end if
 				break
-
+				
 			case 1
 				if object.xpos < object[arrayPos0].xpos
 					object.speed -= 0xC00
@@ -2199,9 +1420,9 @@ event ObjectUpdate
 					object[arrayPos0].yvel = temp1
 				end if
 				break
-
+				
 			end switch
-
+			
 			BoxCollisionTest(C_TOUCH, arrayPos0, -22, temp6, 22, temp7, object.entityPos, -22, -22, 22, 22)
 			if checkResult == true
 				if object.xpos < object[arrayPos0].xpos
@@ -2230,19 +1451,19 @@ event ObjectUpdate
 				if PlayerObject_SuperState == SUPERSTATE_SUPER
 					PlayerObject_SuperState = SUPERSTATE_UNTRANSFORM
 				end if
-
+				
 				object[0].controlMode = -1
 			end if
 			break
-
+			
 		case 1
 			BoxCollisionTest(C_SOLID, arrayPos0, -32, -24, 32, 32, object.entityPos, -18, -22, 18, 22)
 			BoxCollisionTest(C_SOLID, arrayPos0, -11, -40, 11, -24, object.entityPos, -18, -22, 18, 22)
 			break
+			
 		end switch
 	next
-#endplatform
-
+	
 	CallFunction(CheckeredBall_PlayerInteraction)
 	
 	temp0 = object.collisionOffset.x
@@ -2260,15 +1481,15 @@ event ObjectUpdate
 		object.collisionOffset.x = 0
 		object.collisionOffset.y = 0
 	end if
-
+	
 	if object.outOfBounds == true
-
+	
 		// Store the ball's current position and move it to its origin pos
 		temp0 = object.xpos
 		temp1 = object.ypos
 		object.xpos = object.startPos.x
 		object.ypos = object.startPos.y
-
+	
 		// Is it still out of bounds?
 		if object.outOfBounds == true
 			object.roundedPos.x = object.xpos
@@ -2291,40 +1512,40 @@ event ObjectUpdate
 			object.ypos = temp1
 		end if
 	end if
-
+	
 	object.roundedPos.x = object.xpos
 	object.roundedPos.x &= 0xFFFF0000
 	object.roundedPos.y = object.ypos
 	object.roundedPos.y &= 0xFFFF0000
-
+	
 end event
 
 
 event ObjectDraw
-
+	
 	object.rotation = object.ballAngle
 	object.rotation >>= 14
-
+	
 	temp0 = object.rotation
 	temp0 += 8
 	temp0 >>= 4
 	temp0 &= 7
 	temp0++
-
+	
 	DrawSprite(temp0)
-
+	
 	// Draw the shine on top of the ball too
 	object.inkEffect = 3
 	object.alpha = 160
 	DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
-
+	
 end event
 
 
 event ObjectStartup
-
+	
 	LoadSpriteSheet("GHZ/Objects2.gif")
-
+	
 	// Ball frames
 	SpriteFrame(-24, -24, 48, 48, 1, 77)
 	SpriteFrame(-24, -24, 48, 48, 50, 77)
@@ -2335,11 +1556,11 @@ event ObjectStartup
 	SpriteFrame(-24, -24, 48, 48, 197, 77)
 	SpriteFrame(-24, -24, 48, 48, 148, 77)
 	SpriteFrame(-24, -24, 48, 48, 99, 77)
-
+	
 	// Load the animation file
 	// - Note that, even if loaded, the object is never drawn with this animation
 	// - A script-based animation and drawing system is used, instead
-
+	
 	// A note from RDC: this isn't here for sprites, it's here to provide the inner/outer boxes for ProcessObjectMovement()
 	// since that requires the animation file to work with what's been setup here
 	
@@ -2348,24 +1569,29 @@ event ObjectStartup
 	// Hitboxes are set via script, instead
 	
 	// TODO: Remove/"steamline" the above two comment note sections, I thought it would be funny but nah it hardly works at all :(
-
+	
 	LoadAnimation("WreckingBall.ani")
-
+	
 	// Cycle through all Checkered Ball objects and init their values
 	// Note that this never actually does anything, as no Checkered Ball objects exist in S1's levels
 	foreach (TypeName[Checkered Ball], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].gravity = 1
+		
 		object[arrayPos0].startPos.x = object.xpos
 		object[arrayPos0].startPos.y = object.ypos
 	next
-
+	
 	SetTableValue(TypeName[Checkered Ball], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(CheckeredBall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(CheckeredBall_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
-
+	
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	object.inkEffect = 3
