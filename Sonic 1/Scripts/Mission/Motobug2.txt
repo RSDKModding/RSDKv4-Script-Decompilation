@@ -8,7 +8,22 @@
 // ========================
 // Aliases
 // ========================
-private alias 67 : TYPE_MOTOBUG
+private alias object.value0 : object.timer
+private alias object.value1 : object.startPos.x
+private alias object.value2 : object.startPos.y
+private alias object.value3 : object.exhaustTimer
+
+// Player aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+private alias 0 : MOTOBUG_MOVING
+private alias 1 : MOTOBUG_PAUSED
+
+private alias 0 : MOTOBUG_ANI_MOVING
+private alias 1 : MOTOBUG_ANI_IDLE
 
 // ========================
 // Function Declarations
@@ -16,45 +31,52 @@ private alias 67 : TYPE_MOTOBUG
 reserve function Motobug_DebugDraw
 reserve function Motobug_DebugSpawn
 
-// ========================
-// Static Values
-// ========================
 
 // ========================
-// Tables
+// Function Definitions
 // ========================
 
-public function Motobug_DebugDraw
+private function Motobug_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end function
 
 
-public function Motobug_DebugSpawn
+private function Motobug_DebugSpawn
 	CreateTempObject(TypeName[Motobug], 0, object.xpos, object.ypos)
 	GetBit(temp0, object.direction, 0)
-	if temp0 == 0
-		object[tempObjectPos].direction = 0
+
+	if temp0 == false
+		object[tempObjectPos].direction = FACING_RIGHT
 		object[tempObjectPos].xvel = -0x10000
 	else
-		object[tempObjectPos].direction = 1
+		object[tempObjectPos].direction = FACING_LEFT
 		object[tempObjectPos].xvel = 0x10000
 	end if
 end function
 
 
+// ========================
+// Events
+// ========================
+
 event ObjectUpdate
 	switch object.state
-	case 0
+	case MOTOBUG_MOVING
 		object.priority = 1
+
 		object.xpos += object.xvel
+
+		// Check object collision
 		ObjectTileGrip(0, 0, 15, 0)
-		if checkResult == 0
-			object.state = 1
-			object.animation = 1
+		if checkResult == false
+			// If on the edge, then pause to turn around
+			object.state = MOTOBUG_PAUSED
+			object.animation = MOTOBUG_ANI_IDLE
 		end if
-		if object.state == 1
+		
+		if object.state == MOTOBUG_PAUSED // This is never gonna pass since it's in the MOTOBUG_MOVING case LOL
 			foreach (TypeName[MissionBlock], arrayPos0, ACTIVE_ENTITIES)
-				temp1 = 0
+				temp1 = false
 				temp2 = object[arrayPos0].ixpos
 				temp2 -= object.ixpos
 				CheckGreater(temp2, -18)
@@ -67,16 +89,19 @@ event ObjectUpdate
 				temp1 &= checkResult
 				CheckLower(temp2, 40)
 				temp1 &= checkResult
-				if temp1 == 1
-					object.state = 0
-					object.animation = 0
+				
+				if temp1 == true
+					object.state = MOTOBUG_MOVING
+					object.animation = MOTOBUG_ANI_MOVING
 				end if
 			next
 		end if
-		if object.state == 0
-			temp0 = 0
+		
+		if object.state == MOTOBUG_MOVING
+			temp0 = false
+			
 			foreach (TypeName[MissionBlock], arrayPos0, ACTIVE_ENTITIES)
-				temp1 = 0
+				temp1 = false
 				temp2 = object[arrayPos0].ixpos
 				temp2 -= object.ixpos
 				CheckGreater(temp2, -36)
@@ -91,42 +116,64 @@ event ObjectUpdate
 				temp1 &= checkResult
 				temp0 |= temp1
 			next
-			if temp0 != 0
-				object.state = 1
-				object.animation = 1
+			
+			if temp0 != false
+				object.state = MOTOBUG_PAUSED
+				object.animation = MOTOBUG_ANI_IDLE
 			end if
 		end if
-		if object.value3 < 20
-			object.value3++
+
+		// Update exhaust process
+		if object.exhaustTimer < 20
+			object.exhaustTimer++
 		else
-			object.value3 = 0
+
+			object.exhaustTimer = 0
+
+			// Create the exhaust object
 			CreateTempObject(TypeName[Motobug Exhaust], 0, object.xpos, object.ypos)
+			
+			// Offset the exhaust based on the Motobug's direction
 			if object.direction == 0
 				object[tempObjectPos].xpos += 0x160000
 			else
 				object[tempObjectPos].xpos -= 0x160000
 			end if
+
+			// Set the object to match the Motobug's direction
 			object[tempObjectPos].direction = object.direction
+
 		end if
 		break
-	case 1
-		if object.value0 < 59
-			object.value0++
+
+	case MOTOBUG_PAUSED
+		if object.timer < 59
+			// Stay still for a moment...
+			object.timer++
 		else
-			object.value0 = 0
-			object.state = 0
-			object.animation = 0
+			// Start moving again
+			object.timer = 0
+
+			object.state = MOTOBUG_MOVING
+			object.animation = MOTOBUG_ANI_MOVING
+
+			// Flip the Motobug
 			object.direction ^= 1
 			FlipSign(object.xvel)
 		end if
 		break
+
 	end switch
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.value1
-		object.ypos = object.value2
-		if object.outOfBounds == 1
+
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+
+		if object.outOfBounds == true
+
 			if object.propertyValue == 0
 				object.direction = 0
 				object.xvel = -0x10000
@@ -134,21 +181,27 @@ event ObjectUpdate
 				object.direction = 1
 				object.xvel = 0x10000
 			end if
-			object.animation = 0
+
+			object.animation = MOTOBUG_ANI_MOVING
 			object.priority = 0
-			object.state = 0
+			object.state = MOTOBUG_MOVING
+
 		else
 			object.xpos = temp0
 			object.ypos = temp1
 		end if
+
 	end if
+
+	// Check collision with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
+		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
 			CallFunction(Player_BadnikBreak)
 		end if
 	next
-	if object.animation == 0
+
+	if object.animation == MOTOBUG_ANI_MOVING
 		object.frame = object.animationTimer
 		object.frame >>= 3
 		object.animationTimer++
@@ -158,7 +211,7 @@ end event
 
 
 event ObjectDraw
-	if object.state != 2
+	if object.state != 2 // This state doesn't exist???
 		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
 	end if
 end event
@@ -172,23 +225,30 @@ event ObjectStartup
 		SpriteFrame(-20, -13, 39, 28, 98, 156)
 		SpriteFrame(-20, -14, 39, 29, 139, 127)
 	end if
-	
+
+	// Setup all Motobugs
 	foreach (TypeName[Motobug], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].xpos
-		object[arrayPos0].value2 = object[arrayPos0].ypos
+
+		// Set their base positions
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+
+		// Set their direction based on their propertyValue
 		if object[arrayPos0].propertyValue == 0
-			object[arrayPos0].direction = 0
+			object[arrayPos0].direction = FACING_RIGHT
 			object[arrayPos0].xvel = -0x10000
 		else
-			object[arrayPos0].direction = 1
+			object[arrayPos0].direction = FACING_LEFT
 			object[arrayPos0].xvel = 0x10000
 		end if
 	next
-	
+
+	// Add Motobug to the debug item list
 	SetTableValue(TypeName[Motobug], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Motobug_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Motobug_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
+
 end event
 
 
@@ -224,7 +284,12 @@ end event
 
 
 event RSDKDraw
-	GetBit(object.direction, object.propertyValue, 0)
+	if object.propertyValue == 0
+		object.direction = FACING_RIGHT
+	else
+		object.direction = FACING_LEFT
+	end if
+
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
@@ -232,7 +297,7 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("GHZ/Objects.gif")
 	SpriteFrame(-21, -13, 40, 28, 98, 127)
-	
+
 	AddEditorVariable("direction")
 	SetActiveVariable("direction")
 	AddEnumVariable("Left", 0)

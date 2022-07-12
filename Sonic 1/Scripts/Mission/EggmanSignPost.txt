@@ -8,7 +8,24 @@
 // ========================
 // Aliases
 // ========================
-private alias 65 : TYPE_EGGMANSIGNPOST
+
+// Aliases (As Eggman Watcher)
+private alias object.value0 : object.eggmanID
+
+// Aliases (As Sign Post)
+private alias object.value0 : object.spinCount
+private alias object.value1 : object.spinTimer
+// value2 is unused
+private alias object.value3 : object.landingYPos
+
+// States
+private alias 0 : EGGMANSIGNPOST_AWAITEGGMAN
+private alias 1 : EGGMANSIGNPOST_AWAITDEFEAT
+private alias 2 : EGGMANSIGNPOST_FALLTOGROUND
+private alias 3 : EGGMANSIGNPOST_SPINNINGONGROUND
+private alias 4 : EGGMANSIGNPOST_MISSIONCOMPLETE
+
+private alias 4 : EGGMAN_EXPLODE
 
 
 // ========================
@@ -17,46 +34,46 @@ private alias 65 : TYPE_EGGMANSIGNPOST
 
 event ObjectUpdate
 	switch object.state
-	case 0
+	case EGGMANSIGNPOST_AWAITEGGMAN
 		foreach (TypeName[Eggman], arrayPos0, ACTIVE_ENTITIES)
-			object.value0 = arrayPos0
-			object.state = 1
+			object.eggmanID = arrayPos0
+			object.state = EGGMANSIGNPOST_AWAITDEFEAT
 		next
 		break
 		
-	case 1
-		arrayPos0 = object.value0
-		if object[arrayPos0].state == 4
-			stage.timeEnabled = 0
+	case EGGMANSIGNPOST_AWAITDEFEAT
+		arrayPos0 = object.eggmanID
+		if object[arrayPos0].state == EGGMAN_EXPLODE
+			stage.timeEnabled = false
 		end if
 		
 		if object[arrayPos0].type == TypeName[Blank Object]
 			object.frame = 1
-			object.value0 = 16
+			object.spinCount = 16
 			object.priority = 3
-			object.value3 = object.ypos
+			object.landingYPos = object.ypos
 			object.ypos = screen.cameraY
 			object.ypos -= screen.ycenter
 			object.ypos -= 32
 			object.ypos <<= 16
-			screen.cameraEnabled = 0
-			object.state = 2
+			screen.cameraEnabled = false
+			object.state = EGGMANSIGNPOST_FALLTOGROUND
 		end if
 		break
 		
-	case 2
+	case EGGMANSIGNPOST_FALLTOGROUND
 		object.ypos += object.yvel
 		object.yvel += 0xC00
-		if object.ypos >= object.value3
-			object.ypos = object.value3
+		if object.ypos >= object.landingYPos
+			object.ypos = object.landingYPos
 			PlaySfx(SfxName[Sliding], 0)
-			object.value0 = 4
-			object.state = 3
+			object.spinCount = 4
+			object.state = EGGMANSIGNPOST_SPINNINGONGROUND
 		end if
 		
-		object.value1++
-		if object.value1 == 2
-			object.value1 = 0
+		object.spinTimer++
+		if object.spinTimer == 2
+			object.spinTimer = 0
 			object.frame++
 			if object.frame == 5
 				Rand(temp0, 48)
@@ -85,11 +102,11 @@ event ObjectUpdate
 		end if
 		break
 		
-	case 3
+	case EGGMANSIGNPOST_SPINNINGONGROUND
 		music.volume -= 2
-		object.value1++
-		if object.value1 == 2
-			object.value1 = 0
+		object.spinTimer++
+		if object.spinTimer == 2
+			object.spinTimer = 0
 			object.frame++
 			if object.frame == 5
 				Rand(temp0, 48)
@@ -114,28 +131,27 @@ event ObjectUpdate
 				temp1 += object.ypos
 				temp1 -= 0x140000
 				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
-				object.value0--
-				if object.value0 == 0
+				object.spinCount--
+				if object.spinCount == 0
 					object.frame = 5
-					object.state = 4
+					object.state = EGGMANSIGNPOST_MISSIONCOMPLETE
 				end if
 			end if
 		end if
 		break
 		
-	case 4
+	case EGGMANSIGNPOST_MISSIONCOMPLETE
 		CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
 		object[30].type = TypeName[Act Finish]
 		object[30].drawOrder = 6
 		object[30].priority = 1
 		break
-		
 	end switch
 end event
 
 
 event ObjectDraw
-	if object.state > 1
+	if object.state > EGGMANSIGNPOST_AWAITDEFEAT
 		DrawSprite(0)
 		DrawSprite(object.frame)
 	end if

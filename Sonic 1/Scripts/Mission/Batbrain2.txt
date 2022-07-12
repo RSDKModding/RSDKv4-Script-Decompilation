@@ -40,7 +40,7 @@ private alias object.value41 : player.hitboxRight
 // ========================
 reserve function Batbrain_DebugDraw
 reserve function Batbrain_DebugSpawn
-reserve function Batbrain_Function156
+reserve function Batbrain_CheckOutOfRange
 
 
 // ========================
@@ -59,33 +59,38 @@ private function Batbrain_DebugSpawn
 end function
 
 
-// ========================
-// Events
-// ========================
-
-public function Batbrain_Function156
+public function Batbrain_CheckOutOfRange
 	temp1 = object.ixpos
 	temp1 -= screen.xoffset
 	CheckLower(temp1, 0)
 	temp0 = checkResult
+	
 	CheckGreater(temp1, screen.xsize)
 	temp0 |= checkResult
+	
 	temp1 = object.iypos
 	temp1 -= screen.yoffset
 	CheckLower(temp1, 0)
 	temp0 |= checkResult
+	
 	CheckGreater(temp1, screen.ysize)
 	checkResult |= temp0
 end function
 
 
+// ========================
+// Events
+// ========================
+
+
 event ObjectUpdate
 	switch object.state
-	case 0
+	case BATBRAIN_AWAITPLAYER
 		object.priority = 1
 		object.targetDistance = 0x7FFFFFFF
 		object.backupPlayer = 0
 		object.targetPlayer = 0xFFFF
+		
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = player[currentPlayer].xpos
 			temp0 -= object.xpos
@@ -94,6 +99,7 @@ event ObjectUpdate
 				object.targetDistance = temp0
 				object.backupPlayer = currentPlayer
 			end if
+			
 			if temp0 < 0x800000
 				if player[currentPlayer].ypos >= object.ypos
 					if object.targetPlayer != 0xFFFF
@@ -107,6 +113,7 @@ event ObjectUpdate
 				end if
 			end if
 		next
+		
 		if object.targetPlayer != 0xFFFF
 			arrayPos0 = object.targetPlayer
 			temp0 = object[arrayPos0].ypos
@@ -124,13 +131,15 @@ event ObjectUpdate
 		else
 			arrayPos0 = object.backupPlayer
 		end if
+		
 		if object[arrayPos0].xpos < object.xpos
 			object.direction = 0
 		else
 			object.direction = 1
 		end if
 		break
-	case 1
+		
+	case BATBRAIN_DROPPING
 		object.ypos += object.yvel
 		object.yvel += 0x1800
 		arrayPos0 = object.targetPlayer
@@ -152,7 +161,8 @@ event ObjectUpdate
 			object.state = 2
 		end if
 		break
-	case 2
+		
+	case BATBRAIN_FLYING
 		object.xpos += object.xvel
 		arrayPos0 = object.targetPlayer
 		temp0 = object[arrayPos0].xpos
@@ -165,12 +175,14 @@ event ObjectUpdate
 			end if
 		end if
 		break
-	case 3
+		
+	case BATBRAIN_RETURNTOROOF
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel -= 0x1800
+		
 		ObjectTileCollision(3, 0, -12, 0)
-		if checkResult == 1
+		if checkResult == true
 			object.xvel = 0
 			object.yvel = 0
 			object.state = 0
@@ -217,7 +229,7 @@ event ObjectUpdate
 		
 	case BATBRAIN_ANI_FLYING
 		if object.animationTimer == 0
-			CallFunction(Batbrain_Function156)
+			CallFunction(Batbrain_CheckOutOfRange)
 			if checkResult == 0
 				PlaySfx(SfxName[Batbrain Fly], 0)
 			end if
@@ -228,9 +240,7 @@ event ObjectUpdate
 		object.animationTimer++
 		object.animationTimer &= 15
 		break
-		
 	end switch
-	
 end event
 
 
@@ -298,7 +308,6 @@ event RSDKLoad
 	temp0 |= checkResult
 	if temp0 == true
 		// This following sheet *should* be only in Zone02, but Sonic Team kinda just didn't wanna...
-		
 		LoadSpriteSheet("MZ/Objects.gif")
 		SpriteFrame(-7, -12, 14, 24, 37, 98)
 		SpriteFrame(-12, -14, 32, 30, 52, 81)
