@@ -8,122 +8,181 @@
 // ========================
 // Aliases
 // ========================
-private alias 40 : TYPE_SCZSETUP
+private alias object.value0 : object.timer
+private alias object.value1 : object.palRotateTimer
+private alias object.value2 : object.palRotateIndex
+
+private alias -1 : SCZSETUP_STATIC
+private alias  0 : SCZSETUP_FORWARD
+private alias  1 : SCZSETUP_WINGFORTRESS
+private alias  2 : SCZSETUP_GIVECHASE
+private alias  3 : SCZSETUP_TOWINGFORTRESS
+private alias  4 : SCZSETUP_FADEOUT
+private alias  5 : SCZSETUP_RESULTS
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.controlMode : player.controlMode
+private alias object.collisionRight : player.collisionRight
+private alias object.jumpPress : player.jumpPress
+private alias object.jumpHold : player.jumpHold
+private alias object.up	: player.up
+private alias object.down : player.down
+private alias object.left : player.left
+private alias object.right : player.right
+
+// Game Modes
+private alias 0 : MODE_NOSAVE
+private alias 1 : MODE_NORMAL
+private alias 2 : MODE_TIMEATTACK
+
+// Tracks
+private alias 0 : TRACK_STAGE
+
+// Reserved object slots
+private alias 10 : SLOT_ZONESETUP
+
+// Music Loops
+private alias 198253 : MUSIC_LOOP_SCZ
 
 
 // ========================
 // Static Values
 // ========================
-public value SCZSetup_value38 = 0;
-public value SCZSetup_value39 = 0;
-public value SCZSetup_value40 = 0;
+public value SCZSetup_scrollPos.x 		= 0
+public value SCZSetup_scrollPos.y 		= 0
+public value SCZSetup_scrollVelocity.x 	= 0
+public value SCZSetup_scrollVelocity.y 	= 0
+public value SCZSetup_hPropellerFrame 	= 0
+public value SCZSetup_hPropellerTimer 	= 0
+public value SCZSetup_vPropellerFrame 	= 0
+public value SCZSetup_vPropellerTimer 	= 0
 
 // ========================
 // Tables
 // ========================
-public table SCZSetup_table38
+
+public table SCZSetup_palRotationTable
 	0xE0E040, 0xE0A020, 0xE06000, 0xC02000, 0xE0E0E0, 0xE0E040, 0xE0A020, 0xE06000, 0xE0E040, 0xE0A020, 0xE06000, 0xC02000, 0xE0A020, 0xE06000, 0xC02000, 0x802000
-	
 end table
 
-
-//Unknown Variables
-private value value0x107B3 = 0;
-private value value0x107B4 = 0;
-private value value0x107B5 = 0;
-private value value0x107B6 = 0;
-private value value0x107B7 = 0;
-
 event ObjectUpdate
-	object.value1++
-	if object.value1 == 2
-		object.value1 = 0
-		GetTableValue(temp0, object.value2, SCZSetup_table38)
+
+	object.palRotateTimer++
+	if object.palRotateTimer == 2
+		object.palRotateTimer = 0
+
+		GetTableValue(temp0, object.palRotateIndex, SCZSetup_palRotationTable)
 		SetPaletteEntry(0, 167, temp0)
-		object.value2++
-		object.value2 &= 15
-		GetTableValue(temp0, object.value2, SCZSetup_table38)
+
+		object.palRotateIndex++
+		object.palRotateIndex &= 15
+		GetTableValue(temp0, object.palRotateIndex, SCZSetup_palRotationTable)
 		SetPaletteEntry(0, 168, temp0)
-		object.value2++
-		object.value2 &= 15
-		GetTableValue(temp0, object.value2, SCZSetup_table38)
+
+		object.palRotateIndex++
+		object.palRotateIndex &= 15
+		GetTableValue(temp0, object.palRotateIndex, SCZSetup_palRotationTable)
 		SetPaletteEntry(0, 169, temp0)
-		object.value2++
-		object.value2 &= 15
-		GetTableValue(temp0, object.value2, SCZSetup_table38)
+
+		object.palRotateIndex++
+		object.palRotateIndex &= 15
+		GetTableValue(temp0, object.palRotateIndex, SCZSetup_palRotationTable)
 		SetPaletteEntry(0, 170, temp0)
-		object.value2++
-		object.value2 &= 15
+
+		object.palRotateIndex++
+		object.palRotateIndex &= 15
 	end if
+
+	// Always keep the camera moving
 	camera[0].style = 0
+
 	object[0].gravity = 1
-	object[0].tileCollisions = 0
+	object[0].tileCollisions = false
+
 	switch object.state
-	case 0
-		SCZSetup_value33 += SCZSetup_value35
-		temp0 = SCZSetup_value33
+	case SCZSETUP_FORWARD // initial flight
+		SCZSetup_scrollPos.x += SCZSetup_scrollVelocity.x
+
+		temp0 = SCZSetup_scrollPos.x
 		temp0 >>= 16
 		stage.curXBoundary1 = temp0
+
 		temp0 += screen.xsize
 		stage.curXBoundary2 = temp0
-		if stage.curXBoundary1 >= 0x1180
-			object[0].controlMode = -1
-			object[0].jumpPress = 0
-			object[0].jumpHold = 0
-			object[0].left = 0
-			object[0].right = 1
-			object[0].up = 0
-			object[0].down = 0
+
+		if stage.curXBoundary1 >= 4480
+			player[0].controlMode = -1
+			player[0].jumpPress = false
+			player[0].jumpHold = false
+			player[0].left = false
+			player[0].right = true
+			player[0].up = false
+			player[0].down = false
 			hParallax[0].scrollSpeed = 0
-			object.state = 3
+			object.state = SCZSETUP_TOWINGFORTRESS
 		end if
 		break
-	case 1
-		SCZSetup_value35 = -0x10000
-		SCZSetup_value36 = 0x10000
-		SCZSetup_value33 += SCZSetup_value35
-		SCZSetup_value34 += SCZSetup_value36
-		temp0 = SCZSetup_value33
+
+	case SCZSETUP_WINGFORTRESS // see wing fortress "fly past" (we actually just move down+left LOL)
+		SCZSetup_scrollVelocity.x = -0x10000
+		SCZSetup_scrollVelocity.y = 0x10000
+		SCZSetup_scrollPos.x += SCZSetup_scrollVelocity.x
+		SCZSetup_scrollPos.y += SCZSetup_scrollVelocity.y
+
+		temp0 = SCZSetup_scrollPos.x
 		temp0 >>= 16
 		stage.curXBoundary1 = temp0
+
 		temp0 += screen.xsize
 		stage.curXBoundary2 = temp0
-		temp0 = SCZSetup_value34
+		temp0 = SCZSetup_scrollPos.y
+
 		temp0 >>= 16
 		stage.curYBoundary1 = temp0
+
 		temp0 += screen.ysize
 		stage.curYBoundary2 = temp0
+
 		temp0 <<= 16
 		stage.deathBoundary = temp0
-		if stage.curYBoundary1 >= 0x500
+
+		if stage.curYBoundary1 >= 1280
 			object.state++
 		end if
 		break
-	case 2
-		SCZSetup_value35 = 0x10000
-		SCZSetup_value36 = 0
-		SCZSetup_value33 += SCZSetup_value35
-		temp0 = SCZSetup_value33
+
+	case SCZSETUP_GIVECHASE // we saw wing fortress, continue to chase that egghead down!
+		SCZSetup_scrollVelocity.x = 0x10000
+		SCZSetup_scrollVelocity.y = 0
+		SCZSetup_scrollPos.x += SCZSetup_scrollVelocity.x
+		temp0 = SCZSetup_scrollPos.x
 		temp0 >>= 16
 		stage.curXBoundary1 = temp0
 		temp0 += screen.xsize
 		stage.curXBoundary2 = temp0
-		if stage.curXBoundary1 >= 0x1488
+		if stage.curXBoundary1 >= 5256
 			object[0].controlMode = -1
-			object[0].jumpPress = 0
-			object[0].jumpHold = 0
-			object[0].left = 0
-			object[0].right = 1
-			object[0].up = 0
-			object[0].down = 0
+			object[0].jumpPress = false
+			object[0].jumpHold 	= false
+			object[0].left 		= false
+			object[0].right 	= true
+			object[0].up 		= false
+			object[0].down 		= false
 			hParallax[0].scrollSpeed = 0
 			object.state++
 		end if
 		break
-	case 3
-		object[0].right = 1
-		object[0].xpos += object[0].xvel
-		SCZSetup_value35 = 0
+
+	case SCZSETUP_TOWINGFORTRESS // player holds right and goes off screen
+		player[0].right = true
+		player[0].xpos += player[0].xvel
+		
+		SCZSetup_scrollVelocity.x = 0
 		temp0 = stage.curXBoundary2
 		temp0 -= 32
 		temp0 <<= 16
@@ -131,14 +190,15 @@ event ObjectUpdate
 			object.state++
 		end if
 		break
-	case 4
-		object[0].xvel = 0
-		object[0].yvel = 0
-		object.value0 += 4
+
+	case SCZSETUP_FADEOUT // fade to WFZ
+		player[0].xvel = 0
+		player[0].yvel = 0
+		object.timer += 4
 		music.volume -= 2
-		if object.value0 == 320
-			fadeColor = 0
-			object.value0 = 0
+		if object.timer == 320
+			fadeColor = 0x000000
+			object.timer = 0
 			starPostID = 0
 			object.direction = 0
 			CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
@@ -146,65 +206,77 @@ event ObjectUpdate
 			PlayMusic(1)
 		end if
 		break
-	case 5
-		object[0].gravity = 0
-		object[0].xpos = 0
-		object[0].xvel = 0
+
+	case SCZSETUP_RESULTS
+		player[0].gravity = 0
+		player[0].xpos = 0
+		player[0].xvel = 0
 		break
 	end switch
-	if object.state < 3
+
+	// R Boundary
+	if object.state < SCZSETUP_TOWINGFORTRESS
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			temp0 = object[currentPlayer].collisionRight
+			temp0 = player[currentPlayer].collisionRight
 			temp0 <<= 16
-			temp0 += object[currentPlayer].xpos
+			temp0 += player[currentPlayer].xpos
 			temp1 = stage.curXBoundary2
 			temp1 <<= 16
 			if temp0 > temp1
-				object[currentPlayer].xvel = 0
-				object[currentPlayer].speed = 0
-				object[currentPlayer].xpos = temp1
-				temp0 = object[currentPlayer].collisionRight
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos = temp1
+				temp0 = player[currentPlayer].collisionRight
 				temp0 <<= 16
-				object[currentPlayer].xpos -= temp0
+				player[currentPlayer].xpos -= temp0
 			end if
 		next
 	end if
-	SCZSetup_value37 = SCZSetup_value38
-	SCZSetup_value37 >>= 1
-	SCZSetup_value38++
-	SCZSetup_value38 %= 12
-	SCZSetup_value39 = SCZSetup_value40
-	SCZSetup_value39 >>= 1
-	SCZSetup_value40++
-	SCZSetup_value40 %= 6
+
+	SCZSetup_hPropellerFrame = SCZSetup_hPropellerTimer
+	SCZSetup_hPropellerFrame >>= 1
+	SCZSetup_hPropellerTimer++
+	SCZSetup_hPropellerTimer %= 12
+
+	SCZSetup_vPropellerFrame = SCZSetup_vPropellerTimer
+	SCZSetup_vPropellerFrame >>= 1
+	SCZSetup_vPropellerTimer++
+	SCZSetup_vPropellerTimer %= 6
 end event
 
 
 event ObjectStartup
-	SetMusicTrack("SkyChase.ogg", 0, 0x3066D)
+
+	SetMusicTrack("SkyChase.ogg", TRACK_STAGE, MUSIC_LOOP_SCZ)
+
+	// Set the "inhabitants" of this zone
+	// I sure hope they can fly...
 	animalType1 = TypeName[Cucky]
 	animalType2 = TypeName[Tocky]
-	object[10].type = TypeName[SCZSetup]
-	object[10].priority = 1
-	SCZSetup_value33 = screen.xcenter
-	SCZSetup_value33 *= -0x10000
-	SCZSetup_value33 += object[0].xpos
-	SCZSetup_value34 = 0
-	SCZSetup_value35 = 0x10000
-	SCZSetup_value36 = 0
-	SCZSetup_value37 = 0
-	SCZSetup_value38 = 0
-	SCZSetup_value39 = 0
-	SCZSetup_value40 = 0
+
+	object[SLOT_ZONESETUP].type = TypeName[SCZSetup]
+	object[SLOT_ZONESETUP].priority = 1
+
+	SCZSetup_scrollPos.x = screen.xcenter
+	SCZSetup_scrollPos.x *= -0x10000
+	SCZSetup_scrollPos.x += object[0].xpos
+
+	SCZSetup_scrollPos.y = 0
+
+	SCZSetup_scrollVelocity.x = 0x10000
+	SCZSetup_scrollVelocity.y = 0
+	
+	SCZSetup_hPropellerFrame = 0
+	SCZSetup_hPropellerTimer = 0
+	SCZSetup_vPropellerFrame = 0
+	SCZSetup_vPropellerTimer = 0
+
 	stage.curYBoundary2 = 240
 	stage.deathBoundary = 0xF00000
 	hParallax[0].scrollSpeed = 0x8000
+
 end event
 
-
-// ========================
-// Editor Events
-// ========================
 
 event RSDKDraw
 	DrawSprite(0)

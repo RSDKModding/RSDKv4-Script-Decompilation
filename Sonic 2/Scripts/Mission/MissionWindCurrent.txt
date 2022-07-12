@@ -10,35 +10,53 @@
 // ========================
 // Aliases
 // ========================
-private alias 51 : TYPE_WINDCURRENT
+
+// Player Aliases
+private alias object.gravity		: player.gravity
+private alias object.animation		: player.animation
+private alias object.speed			: player.speed
+private alias object.xpos			: player.xpos
+private alias object.ypos			: player.ypos
+private alias object.xvel			: player.xvel
+private alias object.yvel			: player.yvel
+private alias object.state			: player.state
+private alias object.tileCollisions	: player.tileCollisions
+private alias object.up				: player.up
+private alias object.down			: player.down
+private alias object.left			: player.left
+private alias object.right			: player.right
 
 // ========================
 // Function declarations
 // ========================
 
-reserve function WindCurrent_Function120
+reserve function WFZSetup_StateClinging
 
 // ========================
 // Function Definitions
 // ========================
 
-public function WindCurrent_Function120
-	object.gravity = 1
-	if object.animation != ANI_CLINGING
-		object.xvel = 0x80000
-		object.speed = 0x80000
+// Custom state given to the player in this stage only
+// Identical to the (unused) Player_State_Clinging function in the Player Object script
+public function WFZSetup_StateClinging
+	player.gravity = 1
+	if player.animation != ANI_CLINGING
+		player.xvel = -0x80000
+		player.speed = -0x80000
 	else
-		object.xvel = 0
-		object.speed = 0
+		player.xvel = 0
+		player.speed = 0
 	end if
-	if object.up == 1
-		object.ypos -= 0x10000
+
+	if player.up == true
+		player.ypos -= 0x10000
 	else
-		if object.down == 1
-			object.ypos += 0x10000
+		if player.down == true
+			player.ypos += 0x10000
 		end if
 	end if
-	object.yvel = 0
+
+	player.yvel = 0
 end function
 
 
@@ -49,57 +67,60 @@ end function
 
 event ObjectUpdate
 	temp6 = 3
+	
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		CheckLower(object[currentPlayer].xpos, object.value0)
+		CheckLower(player[currentPlayer].xpos, object.value0)
 		temp0 = checkResult
-		CheckGreater(object[currentPlayer].xpos, object.value1)
+		CheckGreater(player[currentPlayer].xpos, object.value1)
 		temp0 |= checkResult
-		CheckLower(object[currentPlayer].ypos, object.value2)
+		CheckLower(player[currentPlayer].ypos, object.value2)
 		temp0 |= checkResult
-		CheckGreater(object[currentPlayer].ypos, object.value3)
+		CheckGreater(player[currentPlayer].ypos, object.value3)
 		temp0 |= checkResult
-		if temp0 == 0
+		
+		if temp0 == false
 			temp6 = 1
-			CheckEqual(object[currentPlayer].state, Player_State_GotHit)
+			
+			CheckEqual(player[currentPlayer].state, Player_State_GotHit)
 			temp0 = checkResult
-			CheckEqual(object[currentPlayer].state, Player_State_Hurt)
+			CheckEqual(player[currentPlayer].state, Player_State_Hurt)
 			temp0 |= checkResult
-			CheckEqual(object[currentPlayer].state, Player_State_Death)
+			CheckEqual(player[currentPlayer].state, Player_State_Death)
 			temp0 |= checkResult
-			CheckEqual(object[currentPlayer].state, Player_State_Drown)
+			CheckEqual(player[currentPlayer].state, Player_State_Drown)
 			temp0 |= checkResult
-			CheckEqual(object[currentPlayer].state, WindCurrent_Function120)
+			CheckEqual(player[currentPlayer].state, WFZSetup_StateClinging)
 			temp0 |= checkResult
-			if temp0 == 0
-				object[currentPlayer].state = WindCurrent_Function120
-				object[currentPlayer].animation = ANI_FANROTATE
-				object[currentPlayer].tileCollisions = 1
+			
+			if temp0 == false
+				player[currentPlayer].state = WFZSetup_StateClinging
+				player[currentPlayer].animation = ANI_FANROTATE
+				player[currentPlayer].tileCollisions = true
 			end if
-			if object[currentPlayer].animation == ANI_FANROTATE
-				if object[currentPlayer].xvel == 0
+			
+			if player[currentPlayer].animation == ANI_FANROTATE
+				if player[currentPlayer].xvel == 0
 					temp1 = object.value3
 					temp1 -= object.value2
 					temp1 >>= 1
 					temp1 += object.value2
-					if object[currentPlayer].ypos < temp1
-						object[currentPlayer].ypos += 0x40000
+					if player[currentPlayer].ypos < temp1
+						player[currentPlayer].ypos += 0x40000
 					else
-						object[currentPlayer].ypos -= 0x40000
+						player[currentPlayer].ypos -= 0x40000
 					end if
 				end if
 			end if
 		else
-			if object[currentPlayer].state == WindCurrent_Function120
+			if player[currentPlayer].state == WFZSetup_StateClinging
+				player[currentPlayer].state = Player_State_Air_NoDropDash
 				
-				// note to MegAmi - this is a state new to Origins, so i can't label it here
-				// it's below Bored2
-				object[currentPlayer].state = 12
-				
-				object[currentPlayer].xvel = 0x40000
-				object[currentPlayer].speed = 0x40000
+				player[currentPlayer].xvel = 0x40000
+				player[currentPlayer].speed = 0x40000
 			end if
 		end if
 	next
+	
 	object.priority = temp6
 	if object.propertyValue == 0
 		object[+1].priority = temp6

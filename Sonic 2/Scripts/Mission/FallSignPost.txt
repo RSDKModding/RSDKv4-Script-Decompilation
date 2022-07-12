@@ -8,20 +8,25 @@
 // ========================
 // Aliases
 // ========================
-private alias 79 : TYPE_FALLSIGNPOST
 
+// Variables
+// Just like the normal Sign Post, value0 is unused
+private alias object.value1 : object.spinCount
+private alias object.value2 : object.spinTimer
+// value3 is unused
+private alias object.value4 : object.signpostCharYPos
 
-// ========================
-// Static Values
-// ========================
+// States
+private alias 0 : FALLSIGNPOST_AWAITMISSIONCLEAR
+private alias 1 : FALLSIGNPOST_FALLTOGROUND
+private alias 2 : FALLSIGNPOST_SPINNINGONGROUND
+private alias 3 : FALLSIGNPOST_RESETSIGNPOST
+private alias 4 : FALLSIGNPOST_LANDONGROUND
 
-// ========================
-// Tables
-// ========================
 
 event ObjectUpdate
 	switch object.state
-	case 0
+	case FALLSIGNPOST_AWAITMISSIONCLEAR
 		if game.missionCondition == MISSION_CONDITION_CLEAR
 			game.missionCondition = 0
 			object.xpos = screen.xoffset
@@ -30,23 +35,29 @@ event ObjectUpdate
 			object.ypos = screen.yoffset
 			object.ypos += 24
 			object.ypos <<= 16
-			screen.cameraStyle = 4
-			object.state = 1
+			screen.cameraStyle = 4 // Huh? They lock the camera like this?
+			object.state = FALLSIGNPOST_FALLTOGROUND
 		end if
 		break
-	case 1
+		
+	case FALLSIGNPOST_FALLTOGROUND
+		// Fall down
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0xC00
+		
+		// Check if we hit the ground and stop falling if we did
 		ObjectTileCollision(0, 0, 32, 0)
-		if checkResult == 1
-			PlaySfx(SfxName[Sliding], 0)
-			object.value1 = 4
-			object.state = 2
+		if checkResult == true
+			PlaySfx(SfxName[Sliding], false)
+			object.spinCount = 4
+			object.state = FALLSIGNPOST_SPINNINGONGROUND
 		end if
-		object.value2++
-		if object.value2 == 2
-			object.value2 = 0
+		
+		// Spin!!
+		object.spinTimer++
+		if object.spinTimer == 2
+			object.spinTimer = 0
 			object.frame++
 			if object.frame == 5
 				Rand(temp0, 48)
@@ -59,6 +70,7 @@ event ObjectUpdate
 				temp1 -= 0x140000
 				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
 			end if
+			
 			if object.frame == 9
 				object.frame = 1
 				Rand(temp0, 48)
@@ -69,20 +81,24 @@ event ObjectUpdate
 				temp1 <<= 16
 				temp1 += object.ypos
 				temp1 -= 0x140000
-				object.value4 += 33
-				if object.value4 > 67
-					object.value4 = 1
+				
+				object.signpostCharYPos += 33
+				if object.signpostCharYPos > 67
+					object.signpostCharYPos = 1
 				end if
-				EditFrame(5, -24, -16, 48, 32, 34, object.value4)
+				EditFrame(5, -24, -16, 48, 32, 34, object.signpostCharYPos)
+				
 				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
 			end if
 		end if
 		break
-	case 2
+		
+	case FALLSIGNPOST_SPINNINGONGROUND
 		music.volume -= 2
-		object.value2++
-		if object.value2 == 2
-			object.value2 = 0
+		object.spinTimer++
+		if object.spinTimer == 2
+			object.spinTimer = 0
+			
 			object.frame++
 			if object.frame == 5
 				Rand(temp0, 48)
@@ -95,6 +111,7 @@ event ObjectUpdate
 				temp1 -= 0x140000
 				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
 			end if
+			
 			if object.frame == 9
 				Rand(temp0, 48)
 				temp0 <<= 16
@@ -104,14 +121,17 @@ event ObjectUpdate
 				temp1 <<= 16
 				temp1 += object.ypos
 				temp1 -= 0x140000
-				object.value4 += 33
-				if object.value4 > 67
-					object.value4 = 1
+				
+				object.signpostCharYPos += 33
+				if object.signpostCharYPos > 67
+					object.signpostCharYPos = 1
 				end if
-				EditFrame(5, -24, -16, 48, 32, 34, object.value4)
+				EditFrame(5, -24, -16, 48, 32, 34, object.signpostCharYPos)
+				
 				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
-				object.value1--
-				if object.value1 == 0
+				
+				object.spinCount--
+				if object.spinCount == 0
 					object.frame = 5
 					object.state = 3
 				else
@@ -120,25 +140,27 @@ event ObjectUpdate
 			end if
 		end if
 		break
-	case 3
-		ResetObjectEntity(object.entityPos, TypeName[Sign Post], 0, object.xpos, object.ypos)
+		
+	case FALLSIGNPOST_RESETSIGNPOST
+		ResetObjectEntity(object.entityPos, TypeName[Sign Post], 0, object.xpos, object.ypos) // Become a real Sign Post!
 		object.frame = 1
-		object.value1 = 16
+		object.spinCount = 16
 		object.priority = 3
 		break
-	case 4
-		PlaySfx(SfxName[Sliding], 0)
-		object.value1 = 4
-		object.state = 2
+		
+	case FALLSIGNPOST_LANDONGROUND // Only set by other objects such as Eggman Sign Post
+		PlaySfx(SfxName[Sliding], false)
+		object.spinCount = 4
+		object.state = FALLSIGNPOST_SPINNINGONGROUND
 		break
 	end switch
 end event
 
 
 event ObjectDraw
-	if object.state > 0
+	if object.state > FALLSIGNPOST_AWAITMISSIONCLEAR
 		DrawSprite(0)
-		if object.value1 > 8
+		if object.spinCount > 8
 			DrawSprite(object.frame)
 		else
 			temp0 = object.frame
@@ -160,9 +182,10 @@ event ObjectStartup
 	SpriteFrame(-16, -16, 32, 32, 149, 99)
 	SpriteFrame(-4, -16, 8, 32, 247, 2)
 	SpriteFrame(-16, -16, 32, 32, 116, 99)
+	
 	foreach (TypeName[FallSignPost], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].frame = 1
-		object[arrayPos0].value1 = 16
+		object[arrayPos0].spinCount = 16
 		object[arrayPos0].priority = 1
 	next
 end event
