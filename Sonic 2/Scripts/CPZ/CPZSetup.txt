@@ -12,8 +12,6 @@ private alias object.value0  : object.aniTileTimer
 // value1 is unused?
 private alias object.value2 : object.scrollPos
 
-// TODO: these values got mixed up when aliasing it seems, fix them
-
 // Values used for updating the underwater Super Palette
 private alias object.value6  : object.clrDivisor_R
 private alias object.value7  : object.clrDivisor_G
@@ -78,8 +76,9 @@ reserve function CPZSetup_SlowDownMusic
 // ========================
 public value CPZSetup_rotatingStairTimer 	= 0
 public value Water_flashTimer 				= 0
-public value CPZSetup_enteredWater 			= false
-private value CPZSetup_hasAchievement 		= false
+public value CPZSetup_enteredWater 			= 0
+private value CPZSetup_hasAchievement 		= 0
+private value CPZSetup_waterTintActive		= 0
 
 // ========================
 // Tables
@@ -847,46 +846,62 @@ event ObjectUpdate
 			end if
 		end if
 	end if
+	
+#platform: USE_ORIGINS
+	object.drawingIndex = 0
+	CPZSetup_waterTintActive = 0
+#endplatform
 end event
 
 
 event ObjectDraw
-	if object.drawingIndex == 0
-		temp0 = stage.waterLevel
-		temp0 -= screen.yoffset
-		if temp0 < 0
-			temp0 = 0
-		end if
-		if temp0 > screen.ysize
-			temp0 = screen.ysize
-		end if
+#platform: USE_ORIGINS
+	// If this check passes, the water is drawn without its purple tint
+	// Unfortunately, this check never passes because the value is always set to 0 as seen above LOL
+	if CPZSetup_waterTintActive < 4
+#endplatform
+		if object.drawingIndex == 0
+			temp0 = stage.waterLevel
+			temp0 -= screen.yoffset
+			if temp0 < 0
+				temp0 = 0
+			end if
+			if temp0 > screen.ysize
+				temp0 = screen.ysize
+			end if
 
-		SetActivePalette(0, 0, temp0)
-		if Water_flashTimer > 0
-			SetActivePalette(2, temp0, screen.ysize)
+			SetActivePalette(0, 0, temp0)
+			if Water_flashTimer > 0
+				SetActivePalette(2, temp0, screen.ysize)
+			else
+				SetActivePalette(1, temp0, screen.ysize)
+			end if
+
+			AddDrawListEntityRef(2, object.entityPos)
 		else
-			SetActivePalette(1, temp0, screen.ysize)
+			temp0 = screen.xoffset
+			temp0 *= 6
+			temp0 >>= 3
+			temp0 &= 0x1FF
+			FlipSign(temp0)
+			temp0 += object.scrollPos
+
+			temp1 = screen.yoffset
+			temp1 >>= 1
+			temp1 &= 0xFF
+			FlipSign(temp1)
+
+			DrawSpriteScreenXY(0, temp0, temp1)
+			DrawSpriteScreenXY(1, temp0, temp1)
 		end if
-
-		AddDrawListEntityRef(2, object.entityPos)
-	else
-		temp0 = screen.xoffset
-		temp0 *= 6
-		temp0 >>= 3
-		temp0 &= 0x1FF
-		FlipSign(temp0)
-		temp0 += object.scrollPos
-
-		temp1 = screen.yoffset
-		temp1 >>= 1
-		temp1 &= 0xFF
-		FlipSign(temp1)
-
-		DrawSpriteScreenXY(0, temp0, temp1)
-		DrawSpriteScreenXY(1, temp0, temp1)
+#platform: USE_ORIGINS
 	end if
+#endplatform
 
 	object.drawingIndex ^= 1
+#platform: USE_ORIGINS
+	CPZSetup_waterTintActive++
+#endplatform
 end event
 
 
