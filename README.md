@@ -9,7 +9,11 @@ These scripts have been manually reverted back to what the original scripts coul
 * Functions are in the proper order
 * Default aliases have been re-added where possible
 * Re-added static variables, tables, and values
+* Origins code has been added into scripts via the use of `#platform:` markers
 
-To use these scripts in mods, extract the scripts folder to the exe's root directory: eg `[rootdir]/Scripts/`. Mods are only required to include the scripts that have been changed.
+To use these scripts in mods:
+* RSDKv4 Decompilation: Extract the scripts folder to the exe's root directory: eg `[rootdir]/Scripts/`.
+
+Mods are only required to include the scripts that have been changed.
 
 For anyone curious about how Sonic 1/2's scripting language works, check out the handbook (RetroScript Handbook v4.pdf) we made to help get people into using RetroScript v4. We recommend downloading the handbook as it makes it easier to navigate.
