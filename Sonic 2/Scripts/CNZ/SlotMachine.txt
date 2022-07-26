@@ -24,11 +24,11 @@ private alias object.value12 : object.rewardRingCount
 
 // States
 private alias 0 : SLOTMACHINE_IDLE
-private alias 1 : SLOTMACHINE_COMBOMACHINE
-private alias 2 : SLOTMACHINE_SLOTS_SPIN
+private alias 1 : SLOTMACHINE_READY
+private alias 2 : SLOTMACHINE_HOLD
 private alias 3 : SLOTMACHINE_UNUSED
-private alias 4 : SLOTMACHINE_SLOTS_GIVEPRIZES
-private alias 5 : SLOTMACHINE_RESET
+private alias 4 : SLOTMACHINE_REWARD
+private alias 5 : SLOTMACHINE_WAIT
 
 // Active Slots
 private alias 0 : SLOTMACHINE_SLOT_L
@@ -126,11 +126,11 @@ public table SlotMachine_prizeRTable
 	2 // SLOTPRIZE_RING
 end table
 
-public table SlotMachine_jackpotRewardTable
+public table SlotMachine_slotRewardTable
 	30, 25, 10, 20, 150, -1
 end table
 
-public table SlotMachine_table47
+private table SlotMachine_randomizeTable
 	8, 0, 0, 0, 18, 4, 4, 4, 18, 3, 3, 3, 36, 2, 2, 2
 	30, 5, 5, 5, 30, 1, 1, 1, 0xFF, 15, 15, 15
 end table
@@ -171,7 +171,7 @@ event ObjectUpdate
 		object.frame = 0
 		break
 		
-	case SLOTMACHINE_COMBOMACHINE
+	case SLOTMACHINE_READY
 		object.frame = object.animationTimer
 		object.frame >>= 1
 		object.animationTimer++
@@ -204,7 +204,7 @@ event ObjectUpdate
 		object.timer++
 		if object.timer == 128
 			object.timer = 0
-			object.state = SLOTMACHINE_RESET
+			object.state = SLOTMACHINE_WAIT
 			object.priority = 0
 			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 				if player[currentPlayer].state == Player_State_Static
@@ -218,7 +218,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case SLOTMACHINE_SLOTS_SPIN
+	case SLOTMACHINE_HOLD
 		object.frame = object.animationTimer
 		object.frame >>= 1
 		object.animationTimer++
@@ -374,7 +374,7 @@ event ObjectUpdate
 					// All Slots Stopped, its prize time!
 					object.slotSpinTimer	= 0
 					object.activeSlot		= SLOTMACHINE_SLOT_L
-					object.state 			= SLOTMACHINE_SLOTS_GIVEPRIZES
+					object.state 			= SLOTMACHINE_REWARD
 
 					GetTableValue(temp1, object.prizeTablePosL, SlotMachine_prizeLTable)	// temp1 == prizeL
 					GetTableValue(temp2, object.prizeTablePosM, SlotMachine_prizeMTable)	// temp2 == prizeM
@@ -405,14 +405,14 @@ event ObjectUpdate
 					object.rewardRingCount = 0
 					if temp1 == temp2 // PrizeL == PrizeM
 						if temp2 == temp3 // PrizeM == PrizeR
-							GetTableValue(object.rewardRingCount, temp1, SlotMachine_jackpotRewardTable)
+							GetTableValue(object.rewardRingCount, temp1, SlotMachine_slotRewardTable)
 						else
 							if temp1 == SLOTPRIZE_JACKPOT	 // PrizeM != PrizeR && PrizeL == Jackpot 
-								GetTableValue(object.rewardRingCount, temp3, SlotMachine_jackpotRewardTable)
+								GetTableValue(object.rewardRingCount, temp3, SlotMachine_slotRewardTable)
 								object.rewardRingCount <<= 2
 							else
 								if temp3 == SLOTPRIZE_JACKPOT	 // PrizeM != PrizeR && PrizeR == Jackpot 
-									GetTableValue(object.rewardRingCount, temp1, SlotMachine_jackpotRewardTable)
+									GetTableValue(object.rewardRingCount, temp1, SlotMachine_slotRewardTable)
 									object.rewardRingCount <<= 1
 								end if
 							end if
@@ -420,22 +420,22 @@ event ObjectUpdate
 					else
 						if temp1 == temp3 // PrizeL == PrizeR
 							if temp1 == SLOTPRIZE_JACKPOT	 // PrizeL == PrizeR && PrizeL != PrizeM && PrizeL == Jackpot 
-								GetTableValue(object.rewardRingCount, temp2, SlotMachine_jackpotRewardTable)
+								GetTableValue(object.rewardRingCount, temp2, SlotMachine_slotRewardTable)
 								object.rewardRingCount <<= 2
 							else
 								if temp2 == SLOTPRIZE_JACKPOT	 // PrizeL == PrizeR && PrizeL != PrizeM && PrizeR == Jackpot 
-									GetTableValue(object.rewardRingCount, temp1, SlotMachine_jackpotRewardTable)
+									GetTableValue(object.rewardRingCount, temp1, SlotMachine_slotRewardTable)
 									object.rewardRingCount <<= 1
 								end if
 							end if
 						else
 							if temp2 == temp3 // PrizeM == PrizeR
 								if temp2 == SLOTPRIZE_JACKPOT	 // PrizeM == PrizeR && PrizeL != PrizeM && PrizeL != PrizeR && PrizeM == Jackpot 
-									GetTableValue(object.rewardRingCount, temp1, SlotMachine_jackpotRewardTable)
+									GetTableValue(object.rewardRingCount, temp1, SlotMachine_slotRewardTable)
 									object.rewardRingCount <<= 2
 								else
 									if temp1 == SLOTPRIZE_JACKPOT	 // PrizeM == PrizeR && PrizeL != PrizeM && PrizeL != PrizeR && PrizeL == Jackpot 
-										GetTableValue(object.rewardRingCount, temp2, SlotMachine_jackpotRewardTable)
+										GetTableValue(object.rewardRingCount, temp2, SlotMachine_slotRewardTable)
 										object.rewardRingCount <<= 1
 									end if
 								end if
@@ -481,7 +481,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case SLOTMACHINE_SLOTS_GIVEPRIZES
+	case SLOTMACHINE_REWARD
 		object.frame = object.animationTimer
 		object.frame >>= 1
 		object.animationTimer++
@@ -491,7 +491,7 @@ event ObjectUpdate
 			if object.timer <= 0
 				object.angle = 0
 				object.priority = 0
-				object.state = SLOTMACHINE_RESET
+				object.state = SLOTMACHINE_WAIT
 				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 					if player[currentPlayer].state == Player_State_Static
 						BoxCollisionTest(C_TOUCH, object.entityPos, -24, -20, 24, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
@@ -533,7 +533,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case SLOTMACHINE_RESET
+	case SLOTMACHINE_WAIT
 		object.frame = 0
 		object.timer++
 		if object.timer == 30
@@ -543,7 +543,7 @@ event ObjectUpdate
 		break
 	end switch
 
-	if object.state == SLOTMACHINE_RESET
+	if object.state == SLOTMACHINE_WAIT
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_SOLID, object.entityPos, -24, -20, -17, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 			BoxCollisionTest(C_SOLID, object.entityPos, 17, -20, 24, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
@@ -557,9 +557,9 @@ event ObjectUpdate
 				if object.state == SLOTMACHINE_IDLE
 					object.priority = 1
 					if object.propertyValue == 0
-						object.state = SLOTMACHINE_COMBOMACHINE
+						object.state = SLOTMACHINE_READY
 					else
-						object.state = SLOTMACHINE_SLOTS_SPIN
+						object.state = SLOTMACHINE_HOLD
 						if options.vsMode == false
 							Rand(object.targetSpinSpeedL, 4)
 							object.targetSpinSpeedL += 2
@@ -608,7 +608,7 @@ event ObjectUpdate
 						temp2 = oscillation
 						temp2 &= 0xFF
 						while temp1 != 0xFF
-							GetTableValue(temp1, temp0, SlotMachine_table47)
+							GetTableValue(temp1, temp0, SlotMachine_randomizeTable)
 							temp2 -= temp1
 							if temp2 >= 0
 								temp0 += 4
@@ -617,16 +617,16 @@ event ObjectUpdate
 							end if
 						loop
 
-						GetTableValue(temp1, temp0, SlotMachine_table47)
+						GetTableValue(temp1, temp0, SlotMachine_randomizeTable)
 						if temp1 != 0xFF
 							temp0++
-							GetTableValue(object.prizeTablePosL, temp0, SlotMachine_table47)
+							GetTableValue(object.prizeTablePosL, temp0, SlotMachine_randomizeTable)
 
 							temp0++
-							GetTableValue(object.prizeTablePosM, temp0, SlotMachine_table47)
+							GetTableValue(object.prizeTablePosM, temp0, SlotMachine_randomizeTable)
 
 							temp0++
-							GetTableValue(object.prizeTablePosR, temp0, SlotMachine_table47)
+							GetTableValue(object.prizeTablePosR, temp0, SlotMachine_randomizeTable)
 						else
 							if options.vsMode == false
 								Rand(object.prizeTablePosL, 8)

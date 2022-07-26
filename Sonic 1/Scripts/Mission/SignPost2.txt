@@ -9,9 +9,40 @@
 // Aliases
 // ========================
 
-// Super States
+private alias object.value0 : object.spinCount
+private alias object.value1 : object.timer
+private alias object.value2 : object.centerOffset	 // x center offset
+private alias object.value3 : object.enableMoveRight // should player move right when done spinning?
+
+private alias 0 : SIGNPOST2_AWAITPLAYER
+private alias 1 : SIGNPOST2_SPINNING
+private alias 2 : SIGNPOST2_HANDLEACTFINISH
+private alias 3 : SIGNPOST2_EXITSTAGERIGHT
+private alias 4 : SIGNPOST2_TOSPECIALSTAGE
+
+// Tracks
+private alias 1 : TRACK_ACTFINISH
+
+// Player Aliases
 private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_UNTRANSFORM
+
+private alias object.type 			: player.type
+private alias object.xpos 			: player.xpos
+private alias object.ypos 			: player.ypos
+private alias object.xvel 			: player.xvel
+private alias object.yvel 			: player.yvel
+private alias object.speed 			: player.speed
+private alias object.gravity 		: player.gravity
+private alias object.up 			: player.up
+private alias object.down 			: player.down
+private alias object.left 			: player.left
+private alias object.right 			: player.right
+private alias object.jumpPress 		: player.jumpPress
+private alias object.jumpHold 		: player.jumpHold
+private alias object.interaction 	: player.interaction
+private alias object.controlMode 	: player.controlMode
+private alias object.value7 		: player.invincibleTimer
 
 // ========================
 // Function Declarations
@@ -34,7 +65,7 @@ end function
 private function SignPost2_DebugSpawn
 	CreateTempObject(TypeName[SignPost2], 0, object.xpos, object.ypos)
 	object[tempObjectPos].frame = 1
-	object[tempObjectPos].value0 = 16
+	object[tempObjectPos].spinCount = 16
 end function
 
 
@@ -44,20 +75,20 @@ end function
 
 event ObjectUpdate
 	switch object.state
-	case 0
+	case SIGNPOST2_AWAITPLAYER
 		temp0 = object.ypos
 		temp0 += 0x400000
-		if object[0].ypos < temp0
-			if object.value2 > 0
+		if player[0].ypos < temp0
+			if object.centerOffset > 0
 				temp0 = object.ixpos
-				temp0 -= object[0].ixpos
+				temp0 -= player[0].ixpos
 				CheckGreater(temp0, 0)
 				temp1 = checkResult
-				CheckLower(temp0, object.value2)
+				CheckLower(temp0, object.centerOffset)
 				checkResult &= temp1
-				if checkResult == 1
+				if checkResult == true
 					stage.newXBoundary1 = object.ixpos
-					stage.newXBoundary1 -= object.value2
+					stage.newXBoundary1 -= object.centerOffset
 					stage.newXBoundary2 = object.xpos
 					stage.newXBoundary2 >>= 16
 					stage.newXBoundary2 += screen.xcenter
@@ -71,11 +102,12 @@ event ObjectUpdate
 				stage.newXBoundary2 >>= 16
 				stage.newXBoundary2 += screen.xcenter
 			end if
-			if object[0].xpos > object.xpos
+			
+			if player[0].xpos > object.xpos
 				stage.newXBoundary1 = object.xpos
 				stage.newXBoundary1 >>= 16
 				stage.newXBoundary1 -= screen.xcenter
-				if stage.debugMode == 0
+				if stage.debugMode == false
 					if stage.listPos == 0
 						if stage.minutes == 0
 							if stage.seconds < 30
@@ -84,21 +116,23 @@ event ObjectUpdate
 						end if
 					end if
 				end if
+
 				CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
-				stage.timeEnabled = 0
-				object.state = 1
-				PlaySfx(SfxName[Sign Post], 0)
+				stage.timeEnabled = false
+				object.state = SIGNPOST2_SPINNING
+				PlaySfx(SfxName[Sign Post], false)
 				if Player_superState == SUPERSTATE_SUPER
 					Player_superState = SUPERSTATE_UNTRANSFORM
 				end if
 			end if
 		end if
 		break
-	case 1
+
+	case SIGNPOST2_SPINNING
 		music.volume--
-		object.value1++
-		if object.value1 == 2
-			object.value1 = 0
+		object.timer++
+		if object.timer == 2
+			object.timer = 0
 			object.frame++
 			if object.frame == 5
 				object.frame = 1
@@ -111,169 +145,190 @@ event ObjectUpdate
 				temp1 += object.ypos
 				temp1 -= 0x140000
 				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
-				object.value0--
-				if object.value0 == 0
-					if object[0].type == TypeName[Blank Object]
-						object.state = 4
+
+				object.spinCount--
+				if object.spinCount == 0
+					if player[0].type == TypeName[Blank Object]
+						object.state = SIGNPOST2_TOSPECIALSTAGE
 						if object.propertyValue < 3
-							PlayMusic(1)
+							PlayMusic(TRACK_ACTFINISH)
 						else
 							if object.outOfBounds == false
-								PlayMusic(1)
+								PlayMusic(TRACK_ACTFINISH)
 							end if
 						end if
-						object[30].type = TypeName[Act Finish]
-						object[30].drawOrder = 6
-						object[30].priority = 1
-						object[0].controlMode = -1
-						object[0].interaction = 0
-						if stage.player2Enabled == 1
-							object[1].interaction = 0
-							object[1].controlMode = -1
-							object[1].up = 0
-							object[1].down = 0
-							object[1].left = 0
-							object[1].jumpPress = 0
-							object[1].jumpHold = 0
+
+						object[30].type 		= TypeName[Act Finish]
+						object[30].drawOrder 	= 6
+						object[30].priority 	= 1
+
+						player[0].controlMode 	= -1
+						player[0].interaction 	= false
+
+						if stage.player2Enabled == true
+							player[1].interaction 	= false
+							player[1].controlMode 	= -1
+							player[1].up 			= false
+							player[1].down 			= false
+							player[1].left 			= false
+							player[1].jumpPress 	= false
+							player[1].jumpHold 		= false
 						end if
 					else
-						object[0].controlMode = -1
-						object[0].interaction = 0
-						object[0].up = 0
-						object[0].down = 0
-						object[0].left = 0
-						object[0].jumpPress = 0
-						object[0].jumpHold = 0
-						if stage.player2Enabled == 1
-							object[1].controlMode = -1
-							object[1].interaction = 0
-							object[1].up = 0
-							object[1].down = 0
-							object[1].left = 0
-							object[1].jumpPress = 0
-							object[1].jumpHold = 0
+						player[0].controlMode 	= -1
+						player[0].interaction 	= false
+						player[0].up 			= false
+						player[0].down 			= false
+						player[0].left 			= false
+						player[0].jumpPress 	= false
+						player[0].jumpHold 		= false
+
+						if stage.player2Enabled == true
+							player[1].controlMode 	= -1
+							player[1].interaction 	= false
+							player[1].up 			= false
+							player[1].down 			= false
+							player[1].left 			= false
+							player[1].jumpPress 	= false
+							player[1].jumpHold 		= false
 						end if
-						object.state = 2
+						object.state = SIGNPOST2_HANDLEACTFINISH
 					end if
 				end if
 			end if
 		end if
+
 		temp0 = 40
 		temp0 += screen.xcenter
 		temp0 <<= 16
 		temp0 += object.xpos
-		if object[0].xpos > temp0
-			object[0].xpos = temp0
-			object[0].speed = 0
-			object[0].xvel = 0
+		if player[0].xpos > temp0
+			player[0].xpos = temp0
+			player[0].speed = 0
+			player[0].xvel = 0
 		end if
-		if stage.player2Enabled == 1
-			if object[1].xpos > temp0
-				object[1].xpos = temp0
-				object[1].speed = 0
-				object[1].xvel = 0
+
+		if stage.player2Enabled == true
+			if player[1].xpos > temp0
+				player[1].xpos = temp0
+				player[1].speed = 0
+				player[1].xvel = 0
 			end if
 		end if
 		break
-	case 2
-		if object[0].type == TypeName[Blank Object]
-			object.state = 4
+
+	case SIGNPOST2_HANDLEACTFINISH
+		if player[0].type == TypeName[Blank Object]
+			object.state = SIGNPOST2_TOSPECIALSTAGE
+
 			if object.propertyValue < 3
-				PlayMusic(1)
+				PlayMusic(TRACK_ACTFINISH)
 			else
 				if object.outOfBounds == false
-					PlayMusic(1)
+					PlayMusic(TRACK_ACTFINISH)
 				end if
 			end if
-			object[30].type = TypeName[Act Finish]
-			object[30].drawOrder = 6
-			object[30].priority = 1
+
+			object[30].type 		= TypeName[Act Finish]
+			object[30].drawOrder 	= 6
+			object[30].priority 	= 1
 		end if
-		if object.value3 != 0
-			if object[0].controlMode == -1
-				object[0].right = 1
+
+		if object.enableMoveRight != false
+			if player[0].controlMode == -1
+				player[0].right = true
 			end if
 		end if
-		if stage.player2Enabled == 1
-			object[1].controlMode = object[0].controlMode
-			if object[1].controlMode == -1
-				if object[1].left == 0
-					object[1].right = 1
+
+		if stage.player2Enabled == true
+			player[1].controlMode = player[0].controlMode
+			if player[1].controlMode == -1
+				if player[1].left == false
+					player[1].right = true
 				end if
 			end if
 		end if
+
 		temp0 = screen.xcenter
 		temp0 <<= 16
 		temp0 += object.xpos
-		CheckGreater(object[0].xpos, temp0)
+		CheckGreater(player[0].xpos, temp0)
 		temp1 = checkResult
-		CheckEqual(object.value3, 0)
+		CheckEqual(object.enableMoveRight, false)
 		checkResult |= temp1
-		if checkResult == 1
+		if checkResult == true
 			if object.propertyValue < 3
-				PlayMusic(1)
+				PlayMusic(TRACK_ACTFINISH)
 			else
 				if object.outOfBounds == false
-					PlayMusic(1)
+					PlayMusic(TRACK_ACTFINISH)
 				end if
 			end if
-			object.state = 3
+
+			object.state = SIGNPOST2_EXITSTAGERIGHT
 			object[30].type = TypeName[Act Finish]
 			object[30].drawOrder = 6
 			object[30].priority = 1
 		end if
 		break
-	case 3
-		if object.value3 != 0
-			if object[0].controlMode == -1
-				object[0].right = 1
+
+	case SIGNPOST2_EXITSTAGERIGHT
+		if object.enableMoveRight != false
+			if player[0].controlMode == -1
+				player[0].right = true
 			end if
 		end if
+
 		temp0 = 40
 		temp0 += screen.xcenter
 		temp0 <<= 16
 		temp0 += object.xpos
-		if object[0].xpos > temp0
-			object[0].xpos = temp0
-			object[0].speed = 0
-			object[0].xvel = 0
+		if player[0].xpos > temp0
+			player[0].xpos = temp0
+			player[0].speed = 0
+			player[0].xvel = 0
 		end if
-		if stage.player2Enabled == 1
-			if object[1].controlMode == -1
-				object[1].right = 1
+
+		if stage.player2Enabled == true
+			if player[1].controlMode == -1
+				player[1].right = 1
 			end if
-			if object[1].xpos > temp0
-				object[1].xpos = temp0
-				object[1].speed = 0
-				object[1].xvel = 0
+
+			if player[1].xpos > temp0
+				player[1].xpos = temp0
+				player[1].speed = 0
+				player[1].xvel = 0
 			end if
 		end if
 		break
-	case 4
-		if stage.player2Enabled == 1
+
+	case SIGNPOST2_TOSPECIALSTAGE
+		if stage.player2Enabled == true
 			temp0 = 40
 			temp0 += screen.xcenter
 			temp0 <<= 16
 			temp0 += object.xpos
-			object[1].right = 1
-			object[1].controlMode = -1
-			if object[1].xpos > temp0
-				object[1].xpos = temp0
-				object[1].speed = 0
-				object[1].xvel = 0
+
+			player[1].right = true
+			player[1].controlMode = -1
+			if player[1].xpos > temp0
+				player[1].xpos 	= temp0
+				player[1].speed = 0
+				player[1].xvel 	= 0
 			end if
 		end if
 		break
 	end switch
-	if object.state > 0
-		object[0].value7 = 80
+
+	if object.state > SIGNPOST2_AWAITPLAYER
+		player[0].invincibleTimer = 80
 	end if
 end event
 
 
 event ObjectDraw
 	DrawSprite(0)
-	if object.value0 > 8
+	if object.spinCount > 8
 		DrawSprite(object.frame)
 	else
 		temp0 = object.frame
@@ -286,6 +341,7 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("Global/Items2.gif")
 	SpriteFrame(-24, 16, 48, 16, 34, 214)
+
 	switch stage.playerListPos
 	case 0
 		SpriteFrame(-24, -16, 48, 32, 34, 182)
@@ -297,6 +353,7 @@ event ObjectStartup
 		SpriteFrame(-4, -16, 8, 32, 189, 131)
 		SpriteFrame(-16, -16, 32, 32, 1, 183)
 		break
+
 	case 1
 		SpriteFrame(-24, -16, 48, 32, 34, 182)
 		SpriteFrame(-16, -16, 32, 32, 83, 131)
@@ -307,6 +364,7 @@ event ObjectStartup
 		SpriteFrame(-4, -16, 8, 32, 189, 131)
 		SpriteFrame(-16, -16, 32, 32, 83, 163)
 		break
+
 	case 2
 		SpriteFrame(-24, -16, 48, 32, 34, 182)
 		SpriteFrame(-16, -16, 32, 32, 83, 131)
@@ -318,14 +376,16 @@ event ObjectStartup
 		SpriteFrame(-16, -16, 32, 32, 83, 163)
 		break
 	end switch
+
 	foreach (TypeName[SignPost2], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value2 = object[arrayPos0].value0
-		object[arrayPos0].value2 <<= 4
-		object[arrayPos0].value0 = 0
-		object[arrayPos0].value3 = object[arrayPos0].value1
-		object[arrayPos0].value1 = 0
+		object[arrayPos0].centerOffset = object[arrayPos0].value0
+		object[arrayPos0].centerOffset <<= 4
+		object[arrayPos0].spinCount = 0
+		object[arrayPos0].enableMoveRight = object[arrayPos0].value1
+		object[arrayPos0].timer = 0
+
 		object[arrayPos0].frame = 1
-		object[arrayPos0].value0 = 16
+		object[arrayPos0].spinCount = 16
 		object[arrayPos0].priority = 3
 	next
 	
@@ -378,4 +438,9 @@ event RSDKLoad
 	SetActiveVariable("type")
 	AddEnumVariable("Normal", 0)
 	AddEnumVariable("Follow Bounds", 3)
+	
+	SetVariableAlias(ALIAS_VAR_VAL0, "centerOffset")
+	SetVariableAlias(ALIAS_VAR_VAL1, "enableMoveRight")
+	SetVariableAlias(ALIAS_VAR_VAL2, "unused")
+	SetVariableAlias(ALIAS_VAR_VAL3, "unused")
 end event
