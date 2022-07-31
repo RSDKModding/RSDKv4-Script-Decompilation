@@ -129,7 +129,7 @@ private alias object.value1  : player.timer
 private alias object.value2  : player.abilityTimer
 private alias object.value3  : player.drownTimer			// Drowning values are progressed in the Water script, rather than here
 private alias object.value4  : player.drownLevel
-private alias object.value5  : player.customRollAnimSpeed
+private alias object.value5  : player.rollAnimationSpeed
 private alias object.value6  : player.speedShoesTimer
 private alias object.value7  : player.invincibleTimer
 private alias object.value8  : player.blinkTimer
@@ -215,7 +215,7 @@ reserve function Player_State_RollJump
 reserve function Player_State_LookUp
 reserve function Player_State_Crouch
 reserve function Player_State_Spindash
-reserve function Player_State_TailsFlight
+reserve function Player_State_Fly
 reserve function Player_State_GlideLeft
 reserve function Player_State_GlideRight
 reserve function Player_State_GlideDrop
@@ -1508,7 +1508,7 @@ public function Player_ProcessUpdate
 		end if
 	end if
 
-	if player.state != Player_State_TailsFlight
+	if player.state != Player_State_Fly
 		if player.flightVelocity != 0
 			StopSfx(SfxName[Flying])
 			StopSfx(SfxName[Tired])
@@ -1529,20 +1529,20 @@ public function Player_HandleRollAnimSpeed
 
 	if player.character == PLAYER_TAILS_ALONE
 		// Tails gets a constant anim speed of 120
-		player.customRollAnimSpeed = 120
+		player.rollAnimationSpeed = 120
 	else
 		// S&K's animation speeds are dependant on their speed
-		player.customRollAnimSpeed = player.speed
+		player.rollAnimationSpeed = player.speed
 
 		// Get the absolute value of their speed
-		if player.customRollAnimSpeed < 0
-			FlipSign(player.customRollAnimSpeed)
+		if player.rollAnimationSpeed < 0
+			FlipSign(player.rollAnimationSpeed)
 		end if
 
 		// Do some maths to get the final speed
-		player.customRollAnimSpeed *= 240
-		player.customRollAnimSpeed /= 0x60000
-		player.customRollAnimSpeed += 48
+		player.rollAnimationSpeed *= 240
+		player.rollAnimationSpeed /= 0x60000
+		player.rollAnimationSpeed += 48
 	end if
 
 end function
@@ -1993,7 +1993,7 @@ public function Player_HandleAirMovement
 	player.collisionMode = 0
 
 	if player.animation == ANI_JUMPING
-		player.animationSpeed = player.customRollAnimSpeed
+		player.animationSpeed = player.rollAnimationSpeed
 	end if
 end function
 
@@ -2533,7 +2533,7 @@ public function Player_Action_DblJumpTails
 			CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, 0, 1, 0)
 #endplatform
 			player.timer = 0
-			player.state = Player_State_TailsFlight
+			player.state = Player_State_Fly
 			player.flightVelocity = 0x800
 			if player.gravityStrength == 0x3800
 				PlaySfx(SfxName[Flying], true)
@@ -3040,7 +3040,7 @@ public function Player_State_Roll
 	else
 		CallFunction(Player_HandleRollAnimSpeed)
 
-		player.animationSpeed = player.customRollAnimSpeed
+		player.animationSpeed = player.rollAnimationSpeed
 		CallFunction(Player_HandleOnGround)
 
 		if player.jumpPress == true
@@ -3418,7 +3418,7 @@ end function
 
 // Main character gets picked up by P2 Tails
 public function Player_State_Carried
-	if player[1].state != Player_State_TailsFlight
+	if player[1].state != Player_State_Fly
 #platform: USE_STANDALONE
 		player.state = Player_State_Air
 #endplatform
@@ -3482,7 +3482,7 @@ end function
 
 
 // Used by both normal Tails and P2/AI Tails
-public function Player_State_TailsFlight
+public function Player_State_Fly
 
 	CallFunction(Player_HandleAirFriction)
 
@@ -4826,7 +4826,7 @@ public function Player_State_TubeRoll
 		end if
 
 		CallFunction(Player_HandleRollAnimSpeed)
-		player.animationSpeed = player.customRollAnimSpeed
+		player.animationSpeed = player.rollAnimationSpeed
 		CallFunction(Player_HandleOnGround)
 	end if
 end function

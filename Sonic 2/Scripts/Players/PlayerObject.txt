@@ -112,7 +112,7 @@ private alias object.value1  : player.timer
 private alias object.value2  : player.abilityTimer			// Note: Also used by death/drowning state
 private alias object.value3  : player.drownTimer			// Countdown before player moves to next drown "level"
 private alias object.value4  : player.drownLevel
-private alias object.value5  : player.customRollAnimSpeed
+private alias object.value5  : player.rollAnimationSpeed
 private alias object.value6  : player.speedShoesTimer
 private alias object.value7  : player.invincibleTimer
 private alias object.value8  : player.blinkTimer
@@ -207,7 +207,7 @@ reserve function Player_State_RollJump
 reserve function Player_State_LookUp
 reserve function Player_State_Crouch
 reserve function Player_State_Spindash
-reserve function Player_State_TailsFlight
+reserve function Player_State_Fly
 reserve function Player_State_GlideLeft
 reserve function Player_State_GlideRight
 reserve function Player_State_GlideDrop
@@ -1437,7 +1437,7 @@ public function Player_ProcessUpdate
 		end if
 	end if
 
-	if player.state != Player_State_TailsFlight
+	if player.state != Player_State_Fly
 		if player.flightVelocity != 0
 			// As a fail-safe, if not flying, enfore that the SFX stop playing as well
 			StopSfx(SfxName[Flying])
@@ -1456,17 +1456,17 @@ end function
 public function Player_HandleRollAnimSpeed
 	if player.character == 1
 		// Tails gets a constant 120
-		player.customRollAnimSpeed = 120
+		player.rollAnimationSpeed = 120
 	else
 		// S&K get anim speeds dependant on their actual speed
-		player.customRollAnimSpeed = player.speed
-		if player.customRollAnimSpeed < 0
-			FlipSign(player.customRollAnimSpeed)
+		player.rollAnimationSpeed = player.speed
+		if player.rollAnimationSpeed < 0
+			FlipSign(player.rollAnimationSpeed)
 		end if
 
-		player.customRollAnimSpeed *= 240
-		player.customRollAnimSpeed /= 0x60000
-		player.customRollAnimSpeed += 48
+		player.rollAnimationSpeed *= 240
+		player.rollAnimationSpeed /= 0x60000
+		player.rollAnimationSpeed += 48
 	end if
 end function
 
@@ -1876,7 +1876,7 @@ public function Player_HandleAirMovement
 
 	player.collisionMode = 0
 	if player.animation == ANI_JUMPING
-		player.animationSpeed = player.customRollAnimSpeed
+		player.animationSpeed = player.rollAnimationSpeed
 	end if
 end function
 
@@ -2281,7 +2281,7 @@ public function Player_Action_DblJumpTails
 #endplatform
 
 			player.timer = 0
-			player.state = Player_State_TailsFlight
+			player.state = Player_State_Fly
 			player.flightVelocity = 0x800
 
 			if player.gravityStrength == 0x3800
@@ -2863,7 +2863,7 @@ public function Player_State_Roll
 		CallFunction(Player_HandleAirMovement)
 	else
 		CallFunction(Player_HandleRollAnimSpeed)
-		player.animationSpeed = player.customRollAnimSpeed
+		player.animationSpeed = player.rollAnimationSpeed
 		CallFunction(Player_HandleOnGround)
 		if player.jumpPress == true
 			CallFunction(Player_Action_Jump)
@@ -3198,7 +3198,7 @@ end function
 
 
 public function Player_State_Carried
-	if player[1].state != Player_State_TailsFlight
+	if player[1].state != Player_State_Fly
 #platform: USE_STANDALONE
 		player.state = Player_State_Air
 #endplatform
@@ -3259,7 +3259,7 @@ public function Player_State_Carried
 end function
 
 
-public function Player_State_TailsFlight
+public function Player_State_Fly
 	CallFunction(Player_HandleAirFriction)
 	if player.gravity == GRAVITY_AIR
 		player.xvel = player.speed
@@ -4566,7 +4566,7 @@ public function Player_State_TubeRoll
 		end if
 
 		CallFunction(Player_HandleRollAnimSpeed)
-		player.animationSpeed = player.customRollAnimSpeed
+		player.animationSpeed = player.rollAnimationSpeed
 		CallFunction(Player_HandleOnGround)
 	end if
 end function
