@@ -12,6 +12,66 @@ public alias 0x100		: GROUP_PLAYERS
 public alias arrayPos6 	: currentPlayer
 public alias arrayPos7 	: playerCount
 
+// Gravity
+public alias 0 : GRAVITY_GROUND
+public alias 1 : GRAVITY_AIR
+
+// Priority
+public alias 0 : PRIORITY_ACTIVE_BOUNDS
+public alias 1 : PRIORITY_ACTIVE
+public alias 2 : PRIORITY_ACTIVE_PAUSED
+public alias 3 : PRIORITY_XBOUNDS
+public alias 4 : PRIORITY_XBOUNDS_DESTROY
+public alias 5 : PRIORITY_INACTIVE
+public alias 6 : PRIORITY_BOUNDS_SMALL
+public alias 7 : PRIORITY_ACTIVE_SMALL
+
+// Control Modes
+public alias -1 : CONTROLMODE_NONE
+public alias  0 : CONTROLMODE_P1
+public alias  1 : CONTROLMODE_P2
+public alias  2 : CONTROLMODE_P3
+public alias  3 : CONTROLMODE_P4
+
+// Camera Styles
+public alias 0 : CAMERASTYLE_FOLLOW
+public alias 1 : CAMERASTYLE_EXTENDED
+public alias 2 : CAMERASTYLE_EXTENDED_OFFSET_L
+public alias 3 : CAMERASTYLE_EXTENDED_OFFSET_R
+public alias 4 : CAMERASTYLE_HLOCKED
+
+// Ink Effects
+public alias 0 : INK_NONE
+public alias 1 : INK_BLEND
+public alias 2 : INK_ALPHA
+public alias 3 : INK_ADD
+public alias 4 : INK_SUB
+
+// Flip Directions
+public alias 0 : FLIP_NONE
+public alias 1 : FLIP_X
+public alias 2 : FLIP_Y
+public alias 3 : FACING_LEFTY
+
+// Collision Sides
+public alias 0 : CSIDE_FLOOR
+public alias 1 : CSIDE_LWALL
+public alias 2 : CSIDE_RWALL
+public alias 3 : CSIDE_ROOF
+
+// Collision Modes
+public alias 0 : CMODE_FLOOR
+public alias 1 : CMODE_LWALL
+public alias 2 : CMODE_ROOF
+public alias 3 : CMODE_RWALL
+
+// Collision Directions
+public alias 0 : COL_NONE
+public alias 1 : COL_TOP
+public alias 2 : COL_LEFT
+public alias 3 : COL_RIGHT
+public alias 4 : COL_BOTTOM
+
 // Reserved Object Slot Aliases
 private alias 0 : SLOT_PLAYER1
 
@@ -50,10 +110,6 @@ private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_UNTRANSFORM
 private alias 3 : SUPERSTATE_END
 
-// Gravity States
-private alias 0 : GRAVITY_GROUND
-private alias 1 : GRAVITY_AIR
-
 // Tracks
 private alias 0 : TRACK_STAGE
 private alias 1 : TRACK_ACTFINISH
@@ -67,7 +123,7 @@ private alias 6 : TRACK_DROWNING
 // It's an unused (broken) animation 
 private alias 34 : ANI_CORKSCREW_V
 
-// Stats Aliases
+// Origins Stats Aliases
 private alias StageStatsUsabilityParam1 : stageStat.badnikDestroyCount
 private alias StageStatsUsabilityParam2 : stageStat.spindashDestroyCount
 private alias StageStatsUsabilityParam3 : stageStat.motobugDestroyCount
@@ -435,7 +491,7 @@ public function Player_SetupAttractDemo
 	while currentPlayer < playerCount
 		GetTableValue(player[currentPlayer].xpos, 0, Player_attractTable)
 		GetTableValue(player[currentPlayer].ypos, 1, Player_attractTable)
-		player[currentPlayer].controlMode = -1
+		player[currentPlayer].controlMode = CONTROLMODE_NONE
 		player[currentPlayer].up = false
 		player[currentPlayer].down = false
 		player[currentPlayer].left = false
@@ -462,24 +518,24 @@ public function Player_ApplyShield
 
 	case SHIELD_NORMAL // Blue shield, restore it and also set its alpha properties
 		ResetObjectEntity(arrayPos0, blueShieldType, 0, 0, 0)
-		object[arrayPos0].priority = 1
-		object[arrayPos0].inkEffect = 2
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+		object[arrayPos0].inkEffect = INK_ALPHA
 		object[arrayPos0].alpha = 160
 		break
 
 	case SHIELD_BUBBLE // Bubble shield, restore it and set it to active
 		ResetObjectEntity(arrayPos0, TypeName[Bubble Shield], 0, 0, 0)
-		object[arrayPos0].priority = 1
+		object[arrayPos0].priority = PRIORITY_ACTIVE
 		break
 
 	case SHIELD_FIRE // Flame shield, restore it and set it to active
 		ResetObjectEntity(arrayPos0, TypeName[Fire Shield], 0, 0, 0)
-		object[arrayPos0].priority = 1
+		object[arrayPos0].priority = PRIORITY_ACTIVE
 		break
 
 	case SHIELD_LIGHTNING // Lightning shield, restore it and set it to active
 		ResetObjectEntity(arrayPos0, TypeName[LightningShield], 0, 0, 0)
-		object[arrayPos0].priority = 1
+		object[arrayPos0].priority = PRIORITY_ACTIVE
 		break
 
 	case SHIELD_GOGGLES // LZ Googles, restore them and set them to draw right infront of the player
@@ -929,7 +985,7 @@ public function Player_BadnikBreak
 		else
 			CreateTempObject(animalType2, 0, object.xpos, object.ypos)
 		end if
-		object[tempObjectPos].priority = 7
+		object[tempObjectPos].priority = PRIORITY_ACTIVE_SMALL
 
 		CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
 		object[tempObjectPos].drawOrder = 4
@@ -1236,9 +1292,9 @@ public function Player_Kill
 
 	// Is this the main character?
 	if currentPlayer == 0
-		player[currentPlayer].priority = 2
+		player[currentPlayer].priority = PRIORITY_ACTIVE_PAUSED
 		if player[1].type == TypeName[Player 2 Object]
-			player[1].priority = 2
+			player[1].priority = PRIORITY_ACTIVE_PAUSED
 		end if
 
 		// Stop the game flow
@@ -1418,7 +1474,7 @@ public function Player_ProcessUpdate
 					
 					ResetObjectEntity(11, TypeName[Title Card], 0, 0, 0)
 					object[11].state = 8
-					object[11].priority = 1
+					object[11].priority = PRIORITY_ACTIVE
 #platform: USE_STANDALONE
 					object[11].drawOrder = 6
 #endplatform
@@ -1504,7 +1560,7 @@ public function Player_ProcessUpdate
 		player.scrollDelay--
 
 		if player.scrollDelay == 0
-			camera[0].style = 0 // "Free" the camera
+			camera[0].style = CAMERASTYLE_FOLLOW // "Free" the camera
 		end if
 	end if
 
@@ -1752,7 +1808,7 @@ public function Player_HandleGroundMovement
 				if player.speed < 0x20000
 					player.gravity = GRAVITY_AIR
 					player.angle = 0
-					player.collisionMode = 0
+					player.collisionMode = CMODE_FLOOR
 					player.speed = player.xvel
 				end if
 			end if
@@ -1764,7 +1820,7 @@ public function Player_HandleGroundMovement
 			if player.speed < 0x20000
 				player.gravity = GRAVITY_AIR
 				player.angle = 0
-				player.collisionMode = 0
+				player.collisionMode = CMODE_FLOOR
 				player.speed = player.xvel
 			end if
 		end if
@@ -1776,7 +1832,7 @@ public function Player_HandleGroundMovement
 				if player.speed < 0x20000
 					player.gravity = GRAVITY_AIR
 					player.angle = 0
-					player.collisionMode = 0
+					player.collisionMode = CMODE_FLOOR
 					player.speed = player.xvel
 				end if
 			end if
@@ -1990,7 +2046,7 @@ public function Player_HandleAirMovement
 		end if
 	end if
 
-	player.collisionMode = 0
+	player.collisionMode = CMODE_FLOOR
 
 	if player.animation == ANI_JUMPING
 		player.animationSpeed = player.rollAnimationSpeed
@@ -2084,7 +2140,7 @@ public function Player_Action_Jump
 
 		player.angle = 0
 
-		player.collisionMode = 0
+		player.collisionMode = CMODE_FLOOR
 		player.timer = 1
 
 		// Set initial animation speed
@@ -2182,7 +2238,7 @@ public function Player_TryTransform
 		arrayPos0 = currentPlayer
 		arrayPos0 += playerCount
 		ResetObjectEntity(arrayPos0, TypeName[Super Spark], 0, player[0].xpos, player[0].ypos)
-		object[arrayPos0].priority = 1
+		object[arrayPos0].priority = PRIORITY_ACTIVE
 
 		PlaySfx(SfxName[Transform], false)
 		PlayMusic(2) // Invincibility music
@@ -2274,7 +2330,7 @@ public function Player_State_BubbleBounce
 			player.animation = ANI_JUMPING
 
 			player.angle = 0
-			player.collisionMode = 0
+			player.collisionMode = CMODE_FLOOR
 			player.timer = 1
 
 			CallFunction(Player_HandleRollAnimSpeed)
@@ -2371,7 +2427,7 @@ public function Player_Action_DblJumpSonic
 							arrayPos0 = currentPlayer
 							arrayPos0 += playerCount
 							ResetObjectEntity(arrayPos0, TypeName[Insta Shield], 0, 0, 0)
-							object[arrayPos0].priority = 1
+							object[arrayPos0].priority = PRIORITY_ACTIVE
 						end if
 
 
@@ -2426,7 +2482,7 @@ public function Player_Action_DblJumpSonic
 
 					// Lock the camera momentarily
 					player.scrollDelay = 15
-					camera[0].style = 4
+					camera[0].style = CAMERASTYLE_HLOCKED
 
 					// Remove roll jump lock
 					if player.state == Player_State_RollJump
@@ -3253,7 +3309,7 @@ public function Player_State_Spindash
 
 		if player.entityPos == 0
 			player.scrollDelay = 15
-			camera[0].style = 4
+			camera[0].style = CAMERASTYLE_HLOCKED
 		end if
 
 		temp0 = player.abilityTimer
@@ -4408,7 +4464,7 @@ public function Player_State_GotHit
 			object[tempObjectPos].xvel <<= 8
 			object[tempObjectPos].yvel <<= 8
 			object[tempObjectPos].animationSpeed = 256
-			object[tempObjectPos].inkEffect = 2
+			object[tempObjectPos].inkEffect = INK_ALPHA
 			object[tempObjectPos].alpha = 256
 			temp3++
 			temp2 += 32
@@ -4433,7 +4489,7 @@ public function Player_State_GotHit
 			object[tempObjectPos].xvel <<= 9
 			object[tempObjectPos].yvel <<= 9
 			object[tempObjectPos].animationSpeed = 256
-			object[tempObjectPos].inkEffect = 2
+			object[tempObjectPos].inkEffect = INK_ALPHA
 			object[tempObjectPos].alpha = 256
 			temp3++
 			temp2 += 32
@@ -4452,9 +4508,9 @@ public function Player_State_GotHit
 		player.tileCollisions = false
 		player.interaction = false
 		if player.entityPos == 0
-			player.priority = 2
+			player.priority = PRIORITY_ACTIVE_PAUSED
 			if object[1].type == TypeName[Player 2 Object]
-				object[1].priority = 2
+				object[1].priority = PRIORITY_ACTIVE_PAUSED
 			end if
 			camera[0].enabled = false
 			stage.state = STAGE_FROZEN
@@ -4501,7 +4557,7 @@ public function Player_State_Death
 	// Lock player control
 	if player.controlMode != -1
 		player.yvel = -0x70000
-		player.controlMode = -1
+		player.controlMode = CONTROLMODE_NONE
 	end if
 
 	// Remove player invulnerability and make the player visible
@@ -4594,7 +4650,7 @@ public function Player_State_Drown
 		end if
 	end if
 
-	player.controlMode = -1
+	player.controlMode = CONTROLMODE_NONE
 	player.yvel += player.gravityStrength
 	player.animation = ANI_DROWNING
 	if player.yvel > 0x80000
@@ -4867,7 +4923,7 @@ public function Player_State_WaterSlide
 		player.state = Player_State_Air_NoDropDash
 #endplatform
 		player.angle = 0
-		player.collisionMode = 0
+		player.collisionMode = CMODE_FLOOR
 		player.timer = 0
 		CallFunction(Player_HandleAirMovement)
 		player.animation = ANI_WATERSLIDE
@@ -4951,7 +5007,7 @@ event ObjectUpdate
 			end if
 
 			if player[1].type == TypeName[Player 2 Object]
-				player[1].priority = 1
+				player[1].priority = PRIORITY_ACTIVE
 			end if
 
 			if object[+playerCount].propertyValue == 3
@@ -5104,7 +5160,7 @@ event ObjectUpdate
 				if temp0 == true
 					// Prevent the player from moving anymore
 					player[0].state = Player_State_Static
-					player[0].controlMode = -1
+					player[0].controlMode = CONTROLMODE_NONE
 					player[0].interaction = false
 					player[0].up = false
 					player[0].down = false
@@ -5166,7 +5222,7 @@ event ObjectStartup
 	// 0 = SLOT_PLAYER1
 	foreach (TypeName[Player Object], arrayPos0, ALL_ENTITIES)
 		camera[0].enabled = true
-		camera[0].style = 0
+		camera[0].style = CAMERASTYLE_FOLLOW
 		camera[0].target = 0
 		currentPlayer = SLOT_PLAYER1
 
@@ -5184,7 +5240,7 @@ event ObjectStartup
 
 		player[0].groupID = GROUP_PLAYERS
 		player[0].state = Player_State_Air
-		player[0].priority = 1
+		player[0].priority = PRIORITY_ACTIVE
 		player[0].drawOrder = DRAWORDER_PLAYER
 		player[0].sortedDrawOrder = 4
 
