@@ -225,10 +225,8 @@ private alias object.value39 : player.hitboxBottom
 private alias object.value42 : player.prevGravity
 
 // Values used in Origins
-// These overlap with variables used for P2, causing the AI to behave in unintended ways
 private alias object.value16 : player.releasingDropDash
-private alias object.value43 : player.dropDashCharge
-private alias object.value44 : player.missionBlockID // This never affects P2 in practice since it's only used in a single player mission
+private alias object.value44 : player.missionBlockID
 
 // P2 values
 private alias object.value43 : player.jumpInTimer
@@ -290,9 +288,12 @@ reserve function Player_State_Clinging
 reserve function Player_HandleDropDash
 reserve function Player_State_Climb_Mission
 reserve function Player_State_LPullUp_Mission
+reserve function Player_SetDropDashCharge
+reserve function Player_GetDropDashCharge
 reserve function Player_State_WaterSlide
 reserve function Player_State_Carried
 reserve function Player_State_ContinueRun
+reserve function Player_CheckIfOnScreen
 reserve function Player_SetupAttractDemo
 reserve function Player_ApplyShield
 reserve function Player_HandleSuperPalette_Sonic
@@ -1271,7 +1272,16 @@ end function
 // Used by other objects to kill currentPlayer, not to be confused with Player_State_Death
 public function Player_Kill
 	// Play the corresponding SFX
+#platform: USE_STANDALONE
 	PlaySfx(SfxName[Hurt], false)
+#endplatform
+
+#platform: USE_ORIGINS
+	CallFunction(Player_CheckIfOnScreen)
+	if checkResult != false
+		PlaySfx(SfxName[Hurt], false)
+	end if
+#endplatform
 
 	// Reset player stuff
 	player[currentPlayer].speed = 0
@@ -2082,7 +2092,6 @@ public function Player_Action_Jump
 
 	if player.collisionMode == 0
 		// Check if there's a roof right above the player
-
 		temp6 = player.xpos
 		temp7 = player.ypos
 		temp0 = player.collisionTop
@@ -2108,7 +2117,6 @@ public function Player_Action_Jump
 	if temp1 == false
 		// No roof - start jumping
 		player.controlLock = 0
-
 		player.gravity = GRAVITY_AIR
 
 		temp1 = player.jumpStrength
@@ -2153,7 +2161,17 @@ public function Player_Action_Jump
 			player.state = Player_State_Air
 		end if
 
+#platform: USE_ORIGINS
+		currentPlayer = player.entityPos
+		CallFunction(Player_CheckIfOnScreen)
+		if checkResult != false
+			PlaySfx(SfxName[Jump], false)
+		end if
+#endplatform
+
+#platform: USE_STANDALONE
 		PlaySfx(SfxName[Jump], false)
+#endplatform
 
 		player.collisionDisabled = true
 
@@ -2163,25 +2181,23 @@ public function Player_Action_Jump
 	
 #platform: USE_ORIGINS
 	if game.playMode == BOOT_PLAYMODE_CLASSIC
-		player.dropDashCharge = -1
+		temp7 = -1
 	else
 		if options.spindash == false
-			player.dropDashCharge = -1
+			temp7 = -1
 		else
-			player.dropDashCharge = 0
+			temp7 = 0
 		end if
 	end if
+	CallFunction(Player_SetDropDashCharge)
 #endplatform
 end function
 
 
 // Only starts the spindash, the actual spindash state is Player_State_Spindash
 public function Player_Action_Spindash
-
 	player.state = Player_State_Spindash
-
 	player.animation = ANI_SPINDASH
-
 	player.abilityTimer = 0
 
 #platform: USE_STANDALONE
@@ -2192,7 +2208,8 @@ public function Player_Action_Spindash
 	// Don't play the Charge sound effect if using the Drop Dash
 	CheckEqual(player.releasingDropDash, true)
 	temp0 = checkResult
-	CheckGreater(20, player.dropDashCharge)
+	CallFunction(Player_GetDropDashCharge)
+	CheckGreater(20, temp7)
 	temp0 |= checkResult
 	if temp0 == true
 		PlaySfx(SfxName[Charge], false)
@@ -2687,8 +2704,9 @@ end function
 public function Player_HandleDropDash
 #platform: USE_ORIGINS
 	if player.releasingDropDash == false
-		if player.dropDashCharge >= 0
-			if player.dropDashCharge == 0
+		CallFunction(Player_GetDropDashCharge)
+		if temp7 >= 0
+			if temp7 == 0
 				if player.jumpPress == true
 					CheckEqual(player.character, PLAYER_SONIC_ALONE)
 					temp0 = checkResult
@@ -2701,20 +2719,20 @@ public function Player_HandleDropDash
 					temp0 &= checkResult
 					
 					if temp0 == true
-						player.dropDashCharge = 1
+						temp7 = 1
 					else
-						player.dropDashCharge = -1
+						temp7 = -1
 					end if
 				end if
 			else
 				if player.jumpHold == false
-					player.dropDashCharge = -1
+					temp7 = -1
 				else
-					player.dropDashCharge++
-					if player.dropDashCharge == 20
+					temp7++
+					if temp7 == 20
 						PlaySfx(SfxName[DropDash], false)
 					end if
-					if player.dropDashCharge >= 20
+					if temp7 >= 20
 						// Set Sonic to always use the full ball sprite
 						// This code, when placed here, doesn't work properly. Check ObjectUpdate for the same code in a more proper location
 						if player.animation == ANI_JUMPING
@@ -2727,6 +2745,56 @@ public function Player_HandleDropDash
 							player.animationSpeed = 1
 						end if
 					end if
+				end if
+			end if
+			CallFunction(Player_SetDropDashCharge)
+		end if
+	end if
+#endplatform
+end function
+
+
+public function Player_SetDropDashCharge
+#platform: USE_ORIGINS
+	if player.entityPos == 0 // Player 1
+		player.dropdashCount0 = temp7
+	else
+		player.dropdashCount1 = temp7
+	end if
+#endplatform
+end function
+
+
+public function Player_GetDropDashCharge
+#platform: USE_ORIGINS
+	if player.entityPos == 0 // Player 1
+		temp7 = player.dropdashCount0
+	else
+		temp7 = player.dropdashCount1
+	end if
+#endplatform
+end function
+
+
+public function Player_CheckIfOnScreen
+#platform: USE_ORIGINS
+	checkResult = false
+	
+	temp0 = screen.xoffset
+	temp0 -= 20
+	if player[currentPlayer].ixpos > temp0
+		temp0 = screen.xoffset
+		temp0 += screen.xsize
+		temp0 += 20
+		if player[currentPlayer].ixpos < temp0
+			temp0 = screen.yoffset
+			temp0 -= 40
+			if player[currentPlayer].iypos > temp0
+				temp0 = screen.yoffset
+				temp0 += screen.ysize
+				temp0 += 40
+				if player[currentPlayer].iypos < temp0
+					checkResult = true
 				end if
 			end if
 		end if
@@ -2970,7 +3038,8 @@ end function
 // Prevents the player from using the Drop Dash if they went in midair without jumping
 public function Player_State_Air_NoDropDash
 #platform: USE_ORIGINS
-	player.dropDashCharge = -1
+	temp7 = -1
+	CallFunction(Player_SetDropDashCharge)
 	player.state = Player_State_Air
 	CallFunction(Player_State_Air)
 #endplatform
@@ -3045,7 +3114,8 @@ public function Player_State_Air
 #platform: USE_ORIGINS
 		CheckEqual(player.releasingDropDash, false)
 		temp0 = checkResult
-		CheckGreater(player.dropDashCharge, 19)
+		CallFunction(Player_GetDropDashCharge)
+		CheckGreater(temp7, 19)
 		temp0 &= checkResult
 		
 		if temp0 == true
@@ -3069,7 +3139,6 @@ public function Player_State_TubeAirRoll
 	if player.gravity == GRAVITY_AIR
 		CallFunction(Player_HandleAirMovement)
 	else
-
 		player.state = Player_State_TubeRoll
 		CallFunction(Player_HandleOnGround)
 
@@ -3118,7 +3187,6 @@ public function Player_State_RollJump
 #endplatform
 
 	if player.gravity == GRAVITY_AIR
-
 		if player.animation == ANI_JUMPING
 			if player.jumpAbilityState == 1
 				if player.yvel >= player.jumpCap // Did the player actually jump? Rolling off of a ledge shouldn't count!
@@ -3138,7 +3206,8 @@ public function Player_State_RollJump
 #platform: USE_ORIGINS
 		CheckEqual(player.releasingDropDash, false)
 		temp0 = checkResult
-		CheckGreater(player.dropDashCharge, 19)
+		CallFunction(Player_GetDropDashCharge)
+		CheckGreater(temp7, 19)
 		temp0 &= checkResult
 		
 		if temp0 == true
@@ -3268,11 +3337,13 @@ public function Player_State_Spindash
 	temp1 = player.down
 	CheckEqual(player.releasingDropDash, false)
 	temp2 = checkResult
-	CheckGreater(player.dropDashCharge, 19)
+	CallFunction(Player_GetDropDashCharge)
+	CheckGreater(temp7, 19)
 	temp2 &= checkResult
 	
 	if temp2 == true
-		player.dropDashCharge = -1
+		temp7 = -1
+		CallFunction(Player_SetDropDashCharge)
 		Sin256(temp0, player.angle)
 		
 		if player.direction == FACING_RIGHT
@@ -4579,8 +4650,14 @@ public function Player_State_Death
 
 #platform: USE_ORIGINS
 			CallNativeFunction2(NotifyCallback, NOTIFY_DEATH_EVENT, 0)
-			if game.coinMode == 0
-				player.lives--
+			if game.coinMode == false
+				CheckEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+				temp0 = checkResult
+				CheckEqual(game.oneStageFlag, false)
+				temp0 |= checkResult
+				if temp0 != false
+					player.lives--
+				end if
 			end if
 #endplatform
 			stage.timeEnabled = false
@@ -4617,17 +4694,23 @@ public function Player_State_Death
 					deathEvent.state = 2
 
 #platform: USE_ORIGINS
-					if game.coinMode == 0
+					if game.coinMode == false
 						if game.playMode != BOOT_PLAYMODE_BOSSRUSH
 #endplatform
 							// Check for Time Over
 							if stage.minutes == 9
 								if stage.seconds == 59
 									if stage.milliSeconds == 99
-										deathEvent.timer = -2880
-										deathEvent.state = 1
-										PlayMusic(TRACK_GAMEOVER)
-										stage.pauseEnabled = false
+#platform: USE_ORIGINS
+										if game.oneStageFlag == false
+#endplatform
+											deathEvent.timer = -2880
+											deathEvent.state = 1
+											PlayMusic(TRACK_GAMEOVER)
+											stage.pauseEnabled = false
+#platform: USE_ORIGINS
+										end if
+#endplatform
 									end if
 								end if
 							end if
@@ -4663,12 +4746,19 @@ public function Player_State_Drown
 
 #platform: USE_ORIGINS
 			CallNativeFunction2(NotifyCallback, NOTIFY_DEATH_EVENT, 0)
-			if game.coinMode == 0
-				if player.lives > 0
-					player.lives--
+			if game.coinMode == false
+				CheckEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+				temp0 = checkResult
+				CheckEqual(game.oneStageFlag, false)
+				temp0 |= checkResult
+				if temp0 != 0
+					if player.lives > 0
+						player.lives--
+					end if
 				end if
 			end if
 #endplatform
+
 			stage.timeEnabled = false
 			player.type = TypeName[Death Event]
 #platform: USE_STANDALONE
@@ -5080,7 +5170,8 @@ event ObjectUpdate
 		
 #platform: USE_ORIGINS
 		// Set Sonic to always use the full ball sprite while drop dashing
-		if player.dropDashCharge >= 20
+		CallFunction(Player_GetDropDashCharge)
+		if temp7 >= 20
 			if object.animation == ANI_JUMPING
 				if Player_superState == SUPERSTATE_SUPER
 					object.frame = 0

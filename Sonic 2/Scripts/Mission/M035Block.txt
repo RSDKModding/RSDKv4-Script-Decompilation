@@ -1,0 +1,122 @@
+// ----------------------------------
+// RSDK Project: Sonic 2
+// Script Description: M035Block Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp6 = PRIORITY_XBOUNDS
+	
+	if object.propertyValue == 0
+		temp0 = object[+1].ixpos
+		temp0 -= object.ixpos
+		temp0 += 16
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, temp0, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+	end if
+	
+	if object.propertyValue == 0
+		if object.xpos <= object[currentPlayer].xpos
+			temp6 = PRIORITY_ACTIVE
+		end if
+	else
+		if object[currentPlayer].xpos <= object.xpos
+			temp6 = PRIORITY_ACTIVE
+		end if
+	end if
+	
+	object.priority = temp6
+	if object.propertyValue == 0
+		object[+1].priority = temp6
+	else
+		object[-1].priority = temp6
+	end if
+end event
+
+
+event ObjectDraw
+	if object.propertyValue == 0
+		CheckNotEqual(object[+1].type, TypeName[M035Block])
+		temp0 = checkResult
+		CheckNotEqual(object[+1].propertyValue, 1)
+		temp0 |= checkResult
+		if temp0 != false
+			DrawSprite(0)
+		else
+			temp0 = object.xpos
+			temp1 = object[+1].xpos
+			object[+1].ypos = object.ypos
+			temp2 = 32
+			temp2 <<= 16
+			while temp0 < temp1
+				DrawSpriteXY(0, temp0, object.ypos)
+				temp0 += temp2
+			loop
+		end if
+	else
+		CheckNotEqual(object[-1].type, TypeName[M035Block])
+		temp0 = checkResult
+		CheckNotEqual(object[-1].propertyValue, 0)
+		temp0 |= checkResult
+		if temp0 != false
+			DrawSprite(0)
+		else
+			temp0 = object[-1].xpos
+			temp1 = object.xpos
+			object.ypos = object[-1].ypos
+			temp2 = 32
+			temp2 <<= 16
+			while temp0 < temp1
+				DrawSpriteXY(0, temp0, object.ypos)
+				temp0 += temp2
+			loop
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[M035Block], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].priority = PRIORITY_INACTIVE
+		if object[arrayPos0].propertyValue == 0
+			arrayPos1 = arrayPos0
+			arrayPos1++
+			if object[arrayPos1].type == TypeName[M035Block]
+				object[arrayPos0].priority = PRIORITY_XBOUNDS
+				object[arrayPos1].ypos = object[arrayPos0].ypos
+			end if
+		else
+			arrayPos1 = arrayPos0
+			arrayPos1--
+			if object[arrayPos1].type == TypeName[M035Block]
+				object[arrayPos0].priority = PRIORITY_XBOUNDS
+				object[arrayPos0].ypos = object[arrayPos1].ypos
+			end if
+		end if
+	next
+	
+	LoadSpriteSheet("Mission/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 18) // Mission Block Frame
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Mission/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 18)
+	
+	// todo: kete
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "blockCheck")
+end event
