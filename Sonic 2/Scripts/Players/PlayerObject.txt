@@ -39,6 +39,9 @@ public alias 1 : CAMERASTYLE_EXTENDED
 public alias 2 : CAMERASTYLE_EXTENDED_OFFSET_L
 public alias 3 : CAMERASTYLE_EXTENDED_OFFSET_R
 public alias 4 : CAMERASTYLE_HLOCKED
+// Origins-Only
+public alias 5 : CAMERASTYLE_FIXED
+public alias 6 : CAMERASTYLE_STATIC
 
 // Ink Effects
 public alias 0 : INK_NONE
@@ -1222,9 +1225,17 @@ public function Player_Kill
 			stage.state = STAGE_FROZEN
 		end if
 	else
+#platform: USE_STANDALONE
 		if currentPlayer == camera[0].target
 			camera[0].enabled = false
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		if currentPlayer == camera[currentPlayer].target
+			camera[currentPlayer].style = CAMERASTYLE_STATIC
+		end if
+#endplatform
 	end if
 
 	// Move to the shield object slot
@@ -1411,7 +1422,7 @@ public function Player_ProcessUpdate
 					object[11].priority = PRIORITY_ACTIVE
 					object[11].drawOrder = 6
 					player.invincibleTimer = 80
-					camera[0].enabled = 0
+					camera[0].enabled = false
 				end if
 			end if
 		end if
@@ -1495,10 +1506,20 @@ public function Player_ProcessUpdate
 		player.scrollDelay--
 
 		if player.scrollDelay == 0
+#platform: USE_STANDALONE
 			if player.entityPos == camera[0].target
 				// Restore the camera's state
 				camera[0].style = CAMERASTYLE_FOLLOW
 			end if
+#endplatform
+
+#platform: USE_ORIGINS
+			currentPlayer = player.entityPos
+			if player.entityPos == camera[currentPlayer].target
+				// Restore the camera's state
+				camera[currentPlayer].style = CAMERASTYLE_FOLLOW
+			end if
+#endplatform
 		end if
 	end if
 
@@ -2269,10 +2290,20 @@ public function Player_Action_DblJumpSonic
 					player.speed = player.xvel
 					player.yvel = 0
 					player.jumpAbilityState = 2
+#platform: USE_STANDALONE
 					if player.entityPos == camera[0].target
 						player.scrollDelay = 15
 						camera[0].style = CAMERASTYLE_HLOCKED
 					end if
+#endplatform
+
+#platform: USE_ORIGINS
+					currentPlayer = player.entityPos
+					if player.entityPos == camera[currentPlayer].target
+						player.scrollDelay = 15
+						camera[currentPlayer].style = CAMERASTYLE_HLOCKED
+					end if
+#endplatform
 
 					if player.state == Player_State_RollJump
 						player.state = Player_State_Air
@@ -3052,6 +3083,10 @@ end function
 
 
 public function Player_State_LookUp
+#platform: USE_ORIGINS
+	currentPlayer = object.entityPos
+#endplatform
+
 	if player.up == false
 		player.state = Player_State_Ground
 		player.timer = 0
@@ -3061,7 +3096,13 @@ public function Player_State_LookUp
 		else
 			temp0 = player.ypos
 			temp0 >>= 16
+#platform: USE_STANDALONE
 			temp0 -= camera[0].ypos
+#endplatform
+
+#platform: USE_ORIGINS
+			temp0 -= camera[currentPlayer].ypos
+#endplatform
 			temp0 -= 112
 			if player.lookPosY > temp0
 				player.lookPosY -= 2
@@ -3087,6 +3128,10 @@ end function
 
 
 public function Player_State_Crouch
+#platform: USE_ORIGINS
+	currentPlayer = object.entityPos
+#endplatform
+
 	if player.down == false
 		player.state = Player_State_Ground
 		player.timer = 0
@@ -3096,7 +3141,13 @@ public function Player_State_Crouch
 		else
 			temp0 = player.ypos
 			temp0 >>= 16
+#platform: USE_STANDALONE
 			temp0 -= camera[0].ypos
+#endplatform
+
+#platform: USE_ORIGINS
+			temp0 -= camera[currentPlayer].ypos
+#endplatform
 			temp0 += 96
 			if player.lookPosY < temp0
 				player.lookPosY += 2
@@ -3191,8 +3242,9 @@ public function Player_State_Spindash
 		player.state = Player_State_Roll
 		player.animation = ANI_JUMPING
 		player.iypos -= player.jumpOffset
-		currentPlayer = object.entityPos
-		if object.entityPos == camera[currentPlayer].target
+
+		currentPlayer = player.entityPos
+		if player.entityPos == camera[currentPlayer].target
 			player.scrollDelay = 15
 			camera[currentPlayer].style = CAMERASTYLE_HLOCKED
 		end if
@@ -4224,12 +4276,13 @@ public function Player_State_GotHit
 				stage.state = STAGE_FROZEN
 			end if
 #endplatform
+
 #platform: USE_ORIGINS
 			if options.vsMode == false
 				stage.state = STAGE_FROZEN
 				camera[currentPlayer].enabled = false
 			else
-				camera[currentPlayer].style = 6
+				camera[currentPlayer].style = CAMERASTYLE_STATIC
 			end if
 #endplatform
 		end if
