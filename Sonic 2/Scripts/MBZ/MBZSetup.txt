@@ -19,8 +19,6 @@ private alias object.value8  : object.oilAniTileFrame
 private alias object.value9  : object.deformTimer
 private alias object.value10 : object.isDimming
 
-private alias 3 : SHIELD_FIRE
-
 // Player Aliases
 private alias object.state : player.state
 private alias object.xpos : player.xpos
@@ -34,6 +32,8 @@ private alias object.value1  : player.timer
 private alias object.value14 : player.skidding
 private alias object.value18 : player.sortedDrawOrder
 private alias object.value37 : player.shield
+
+private alias 3 : SHIELD_FIRE
 
 // Tile Flags
 private alias 0 : TILE_NORMAL
@@ -55,7 +55,6 @@ private alias 10 : SLOT_ZONESETUP
 private alias 25 : SLOT_MUSICEVENT_CHANGE
 private alias 26 : SLOT_MUSICEVENT_BOSS
 
-
 // Music Events
 private alias  0 : MUSICEVENT_FADETOBOSS
 private alias  1 : MUSICEVENT_FADETOSTAGE
@@ -68,7 +67,7 @@ private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 // ========================
 // Function Declarations
 // ========================
-reserve function MBZSetup_HandlePlayerOilPool
+reserve function MBZSetup_State_OilPool
 
 // These two are unused
 reserve function MBZSetup_SpeedUpMusic
@@ -111,7 +110,7 @@ end table
 
 
 // Modified version of Player_State_Ground
-public function MBZSetup_HandlePlayerOilPool
+public function MBZSetup_State_OilPool
 	if object.animation != ANI_SKIDDING
 		temp7 = true
 	else
@@ -389,7 +388,7 @@ event ObjectUpdate
 
 		case TILE_OILPOOL
 			if player[currentPlayer].yvel > -1
-				player[currentPlayer].state = MBZSetup_HandlePlayerOilPool
+				player[currentPlayer].state = MBZSetup_State_OilPool
 				if player[currentPlayer].animation == ANI_JUMPING
 					player[currentPlayer].animation = ANI_WALKING
 				end if
@@ -410,26 +409,32 @@ event ObjectUpdate
 	next
 
 	if object.isDimming == true
+		// Fade in, if needed
 		if object.alpha < 0x80
 			object.alpha += 4
 		end if
 	else
+		// Fade out, when needed
 		if object.alpha > 0
 			object.alpha -= 4
 		end if
 	end if
-
+	
+	// Reset it for the next frame
 	object.isDimming = false
 end event
 
 
 event ObjectDraw
+	// Draw a tint in the background, right between the BG and the FG
 	DrawRect(0, 0, 512, 240, 0x00, 0x20, 0x50, object.alpha)
 end event
 
 
 event ObjectStartup
 	SetMusicTrack("DeathEgg.ogg", TRACK_STAGE, true)
+	
+	// Reset the black colour used in boss flashes
 	SetPaletteEntry(0, 192, 0x000000)
 
 	object[SLOT_ZONESETUP].type 		 = TypeName[MBZ Setup]
@@ -438,6 +443,8 @@ event ObjectStartup
 	object[SLOT_ZONESETUP].lavaPalIndex2 = 1
 	object[SLOT_ZONESETUP].lavaPalIndex3 = 2
 	object[SLOT_ZONESETUP].lavaPalIndex4 = 3
+	
+	// Most Zone Setups don't have a Draw Order specified, but this one needs it for the black fade in places like the MCZ boss
 	object[SLOT_ZONESETUP].drawOrder 	 = 1
 
 	// Interesting note - most of this does nothing!

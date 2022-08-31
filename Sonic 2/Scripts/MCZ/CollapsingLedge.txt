@@ -87,7 +87,6 @@ event ObjectUpdate
 
 	case CLEDGE_NONE
 		break
-	// Nothing for state 3 ("CLEDGE_NONE")
 
 	case CLEDGE_TILEDELAY
 		if object.timer < object.delay
@@ -165,11 +164,23 @@ event ObjectStartup
 	SpriteFrame(-16, -24, 16, 16, 152, 66)
 	SpriteFrame(-32, -24, 16, 16, 136, 66)
 
+	// Huh? Blank Object?
+	// Prolly meant to be [C Ledge] instead, but it might be [C Ledge R] or [C Ledge L] in
+	// the original source and that doesn't work here
 	foreach (TypeName[Blank Object], arrayPos0, ALL_ENTITIES)
+		// This uses Property Value as direction, though that isn't the case for this object
+		// -> Interestingly, there are a few C Ledges that do have their prop val set to 1, the majority are
+		//    right-facing ones, though there is a single left-facing one with it too
+		// -> Once again though, this doesn't matter anyways - check out down below
+		
 		object[arrayPos0].direction = object[arrayPos0].propertyValue
 		object[arrayPos0].direction &= 1
 	next
-
+	
+	// The above is meant to set up the directions of all C Ledges in the scene, but
+	// this attribute is already set from the scene so it doesn't matter too much
+	// There are many ledges that have something in their property value, but that value isn't used by the game
+	
 	SetTableValue(TypeName[C Ledge], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(CLedge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(CLedge_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -187,8 +198,8 @@ event RSDKEdit
 		case EDIT_VAR_PROPVAL // property value
 			checkResult = object.propertyValue
 			break
-		case 0 // collapseDir
-			checkResult = object.propertyValue
+		case 0 // direction
+			checkResult = object.direction
 			checkResult &= 1
 			break
 		end switch
@@ -197,9 +208,9 @@ event RSDKEdit
 		case EDIT_VAR_PROPVAL // property value
 			object.propertyValue = editor.variableValue
 			break
-		case 0 // collapseDir
-			object.propertyValue = editor.variableValue
-			object.propertyValue &= 1
+		case 0 // direction
+			object.direction = editor.variableValue
+			object.direction &= 1
 			break
 		end switch
 	end if
@@ -207,9 +218,6 @@ end event
 
 
 event RSDKDraw
-	object.direction = object.propertyValue
-	object.direction &= 1
-
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
@@ -217,11 +225,13 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
 	SpriteFrame(-32, -24, 64, 48, 136, 66)
-
-	AddEditorVariable("collapseDir")
-	SetActiveVariable("collapseDir")
-	AddEnumVariable("Right", 0)
-	AddEnumVariable("Left", 1)
 	
-	// Although propertyValue is used by the object, it shouldn't be set from the editor
+	// Redundant to the actual direction attribute, but this helps to highlight this, over property value
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+	
+	// May as well chuck this here too, y'know?
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
