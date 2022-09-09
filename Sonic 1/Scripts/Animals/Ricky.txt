@@ -16,10 +16,10 @@ private alias object.value1 : object.randomizeDir
 
 private alias 0 : ANIMAL_WAIT
 private alias 1 : ANIMAL_FALL
-private alias 2 : ANIMAL_BOUNCING_NOBOUNDS
-private alias 3 : ANIMAL_BOUNCING_SWAPDIR
-private alias 4 : ANIMAL_BOUNCING_PLAYERDIR
-private alias 5 : ANIMAL_BOUNCING
+private alias 2 : ANIMAL_BOUNCING_PLACED
+private alias 3 : ANIMAL_BOUNCING_FIXED
+private alias 4 : ANIMAL_BOUNCING_FOLLOW
+private alias 5 : ANIMAL_BOUNCING_FREE
 
 private alias 0x38000  : ANIMAL_XVEL
 private alias -0x28000 : ANIMAL_YVEL
@@ -40,7 +40,7 @@ private function Ricky_DebugSpawn
 
 	GetBit(temp0, object.direction, 0)
 	if temp0 == false
-		object[tempObjectPos].state = ANIMAL_BOUNCING_SWAPDIR
+		object[tempObjectPos].state = ANIMAL_BOUNCING_FIXED
 		object[tempObjectPos].xvel = ANIMAL_XVEL
 		object[tempObjectPos].yvel = ANIMAL_YVEL
 
@@ -50,7 +50,7 @@ private function Ricky_DebugSpawn
 			FlipSign(object[tempObjectPos].xvel)
 		end if
 	else
-		object[tempObjectPos].state = ANIMAL_BOUNCING_PLAYERDIR
+		object[tempObjectPos].state = ANIMAL_BOUNCING_FOLLOW
 	end if
 end function
 
@@ -97,16 +97,16 @@ event ObjectUpdate
 		end if
 		break
 
-	case ANIMAL_BOUNCING_PLAYERDIR
+	case ANIMAL_BOUNCING_FOLLOW
 		if object[0].xpos < object.xpos
 			object.direction = FACING_LEFT
 		else
 			object.direction = FACING_RIGHT
 		end if
  	// Fall through
-	case ANIMAL_BOUNCING_NOBOUNDS
-	case ANIMAL_BOUNCING_SWAPDIR
-	case ANIMAL_BOUNCING
+	case ANIMAL_BOUNCING_PLACED
+	case ANIMAL_BOUNCING_FIXED
+	case ANIMAL_BOUNCING_FREE
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x3800
@@ -114,7 +114,7 @@ event ObjectUpdate
 		if object.yvel > 0
 			ObjectTileCollision(0, 0, 8, 0)
 			if checkResult == true
-				if object.state == ANIMAL_BOUNCING_SWAPDIR
+				if object.state == ANIMAL_BOUNCING_FIXED
 					if object.bounceDir == 1
 						FlipSign(object.xvel)
 						object.direction ^= 1
@@ -129,7 +129,7 @@ event ObjectUpdate
 
 	end switch
 	
-	if object.state < ANIMAL_BOUNCING_SWAPDIR
+	if object.state < ANIMAL_BOUNCING_FIXED
 		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
@@ -144,10 +144,10 @@ event ObjectDraw
 		DrawSprite(2)
 		break
 
-	case ANIMAL_BOUNCING_NOBOUNDS
-	case ANIMAL_BOUNCING_SWAPDIR
-	case ANIMAL_BOUNCING_PLAYERDIR
-	case ANIMAL_BOUNCING
+	case ANIMAL_BOUNCING_PLACED
+	case ANIMAL_BOUNCING_FIXED
+	case ANIMAL_BOUNCING_FOLLOW
+	case ANIMAL_BOUNCING_FREE
 		if object.yvel < 0
 			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 		else
@@ -166,7 +166,7 @@ event ObjectStartup
 
 	foreach (TypeName[Ricky], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue == 1
-			object[arrayPos0].state = ANIMAL_BOUNCING_SWAPDIR
+			object[arrayPos0].state = ANIMAL_BOUNCING_FIXED
 			object[arrayPos0].xvel = ANIMAL_XVEL
 			object[arrayPos0].yvel = ANIMAL_YVEL
 
@@ -177,11 +177,11 @@ event ObjectStartup
 			end if
 		else
 			if object[arrayPos0].propertyValue == 2
-				object[arrayPos0].state = ANIMAL_BOUNCING_PLAYERDIR
+				object[arrayPos0].state = ANIMAL_BOUNCING_FOLLOW
 			end if
 
 			if object[arrayPos0].propertyValue == 3
-				object[arrayPos0].state = ANIMAL_BOUNCING
+				object[arrayPos0].state = ANIMAL_BOUNCING_FREE
 				object[arrayPos0].xvel = ANIMAL_XVEL
 				FlipSign(object[arrayPos0].xvel)
 				object[arrayPos0].direction = FACING_LEFT
@@ -233,11 +233,11 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Items2.gif")
 	SpriteFrame(-7, -12, 16, 24, 83, 196)
-
-	AddEditorVariable("behaviour")
-	SetActiveVariable("behaviour")
-	AddEnumVariable("Bounce Around (No Bounds)", 0)
-	AddEnumVariable("Swap Direction Each Bounce", 1)
-	AddEnumVariable("Follow Player", 2)
-	AddEnumVariable("Bounce Around (Bounds)", 3)
+	
+	AddEditorVariable("behavior")
+	SetActiveVariable("behavior")
+	AddEnumVariable("Placed", 0)
+	AddEnumVariable("Fixed", 1)
+	AddEnumVariable("Follow", 2)
+	AddEnumVariable("Free", 3)
 end event
