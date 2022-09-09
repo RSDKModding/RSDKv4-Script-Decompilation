@@ -64,14 +64,17 @@ private alias 0 : MUSICEVENT_FLAG_NOCHANGE
 private alias 1 : MUSICEVENT_FLAG_SPEEDUP
 private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 
+
 // ========================
 // Function Declarations
 // ========================
+
 reserve function MBZSetup_State_OilPool
 
 // These two are unused
 reserve function MBZSetup_SpeedUpMusic
 reserve function MBZSetup_SlowDownMusic
+
 
 // ========================
 // Static Values
@@ -109,8 +112,12 @@ private table MBZSetup_deformationTable
 end table
 
 
+// ========================
+// Function Definitions
+// ========================
+
 // Modified version of Player_State_Ground
-public function MBZSetup_State_OilPool
+private function MBZSetup_State_OilPool
 	if object.animation != ANI_SKIDDING
 		temp7 = true
 	else
@@ -275,7 +282,7 @@ end function
 // ========================
 
 event ObjectUpdate
-	// Pulsing palette
+	// Pulsing palette, for the lava
 	object.lavaPalTimer++
 	if object.lavaPalTimer == 12
 		object.lavaPalTimer = 0
@@ -308,7 +315,7 @@ event ObjectUpdate
 		RotatePalette(0, 100, 105, false)
 	end if
 
-	// Ani Tiles
+	// Ani Tiles, for the oil
 	if object.oilAniTileDelay < 2
 		temp0 = object.oilAniTileFrame
 		temp0 += 462
@@ -341,27 +348,31 @@ event ObjectUpdate
 	else
 		object.oilAniTileDelay--
 	end if
-
+	
 	// Water shining
 	object.deformTimer++
 	if object.deformTimer > 7
 		tileLayer[1].deformationOffset++
 		object.deformTimer = 0
 	end if
-
+	
+	// Update some value, though this value never really does anything beyond this
 	GetTableValue(temp0, 21, StageSetup_oscillationTable)
 	if temp0 == 0
 		MBZSetup_unknownTimer++
 		MBZSetup_unknownTimer &= 3
 	end if
 
-	// Randomize the animals
+	// Randomize the animals, looping around all the animals in the game
 	temp0 = oscillation
 	temp0 &= 15
 	if temp0 > 11
 		temp0 = 5
 	end if
+	
+	// In the object list, all the animals are listed right after one another, starting from the Flicky
 	temp0 += TypeName[Flicky]
+	
 	animalType1 = temp0
 	animalType2 = temp0
 
@@ -405,16 +416,18 @@ event ObjectUpdate
 				CallFunction(Player_Hit)
 			end if
 			break
+			
 		end switch
 	next
-
+	
+	// object.isDimming is normally set by a BG Dimmer object placed in the scene
 	if object.isDimming == true
-		// Fade in, if needed
+		// Fade in, with a max of halfway full
 		if object.alpha < 0x80
 			object.alpha += 4
 		end if
 	else
-		// Fade out, when needed
+		// Fade out, if not fading in
 		if object.alpha > 0
 			object.alpha -= 4
 		end if
@@ -427,6 +440,7 @@ end event
 
 event ObjectDraw
 	// Draw a tint in the background, right between the BG and the FG
+	// -> This is always drawn, it's just that object.alpha is 0 most of the time so nothing is really seen
 	DrawRect(0, 0, 512, 240, 0x00, 0x20, 0x50, object.alpha)
 end event
 

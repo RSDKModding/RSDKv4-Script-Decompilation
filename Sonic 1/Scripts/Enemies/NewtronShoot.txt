@@ -8,9 +8,12 @@
 // ========================
 // Aliases
 // ========================
-private alias object.propertyValue : object.appearFrame
+
+// 
+private alias object.propertyValue : object.fireDirection
 
 private alias object.value0 : object.timer
+private alias object.value1 : object.fireInDir
 
 private alias 0 : NEWTRONSHOOT_WAITFORPLAYER
 private alias 1 : NEWTRONSHOOT_APPEAR
@@ -62,19 +65,23 @@ event ObjectUpdate
 #endplatform
 					object.state = NEWTRONSHOOT_APPEAR
 					if player[currentPlayer].xpos < object.xpos
-						object.appearFrame = 1
+						// Firing to the left
+						object.fireDirection = 1
 					else
-						object.appearFrame = 0
+						// Firing to the right
+						object.fireDirection = 0
 					end if
 #platform: USE_ORIGINS
 				else
-					if object.value1 != false // TODO: figure out what object.value1 is
+					// fireInDir is set from the editor, in Missions where the Newtrons should only fire in a specific direction (M006)
+					if object.fireInDir != false
+						// woah that's actually like, a really cool way of doing it, especially when compared to how Origins does a bunch of other stuff
 						CheckLower(object[currentPlayer].xpos, object.xpos)
-						CheckEqual(object.propertyValue, checkResult)
+						CheckEqual(object.fireDirection, checkResult)
 						object.state = checkResult
 					else
 						CheckLower(object[currentPlayer].xpos, object.xpos)
-						object.propertyValue = checkResult
+						object.fireDirection = checkResult
 						object.state = NEWTRONSHOOT_APPEAR
 					end if
 				end if
@@ -98,10 +105,14 @@ event ObjectUpdate
 		else
 			object.timer = 0
 			CreateTempObject(TypeName[Newtron Shot], 0, object.xpos, object.ypos)
-			if object.appearFrame == 1
+			if object.fireDirection == 1
+				// Shooting left
+				
 				object[tempObjectPos].xpos -= 0x140000
 				object[tempObjectPos].xvel = -0x20000
 			else
+				// Shooting right
+				
 				object[tempObjectPos].xpos += 0x140000
 				object[tempObjectPos].xvel = 0x20000
 			end if
@@ -131,6 +142,7 @@ event ObjectUpdate
 			object.type = TypeName[Blank Object]
 		end if
 		break
+		
 	end switch
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -148,6 +160,7 @@ event ObjectUpdate
 				CallFunction(Player_BadnikBreak)
 			end if
 			break
+			
 		end switch
 	next
 end event
@@ -156,14 +169,18 @@ end event
 event ObjectDraw
 	switch object.animation
 	case NEWTRONSHOOT_ANI_IDLE
-		DrawSpriteFX(object.appearFrame, FX_INK, object.xpos, object.ypos)
+		// Fire Direction matches with a Sprite Frame (0 for right, 1 for left)
+		// FX effects don't allow for flipping sprites, which is why we used pre-flipped sprites instead
+		DrawSpriteFX(object.fireDirection, FX_INK, object.xpos, object.ypos)
 		break
 
 	case NEWTRONSHOOT_ANI_SHOOT
-		temp0 = object.appearFrame
+		// Same from above applies here too about Fire Direction, yup
+		temp0 = object.fireDirection
 		temp0 += 2
 		DrawSprite(temp0)
 		break
+		
 	end switch
 end event
 
@@ -172,26 +189,26 @@ event ObjectStartup
 	CheckCurrentStageFolder("Zone01")
 	if checkResult == true
 		LoadSpriteSheet("GHZ/Objects2.gif")
-		SpriteFrame(-20, -20, 39, 39, 1, 1)
-		SpriteFrame(-19, -20, 39, 39, 81, 1)
-		SpriteFrame(-20, -20, 39, 39, 41, 1)
-		SpriteFrame(-19, -20, 39, 39, 121, 1)
+		SpriteFrame(-20, -20, 39, 39, 1, 1)   // 0 - Idle facing right frame
+		SpriteFrame(-19, -20, 39, 39, 81, 1)  // 1 - Idle facing left frame
+		SpriteFrame(-20, -20, 39, 39, 41, 1)  // 2 - Shooting facing left
+		SpriteFrame(-19, -20, 39, 39, 121, 1) // 3 - Shoting facing right frame
 	end if
-
+	
 	CheckCurrentStageFolder("Zone07")
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
-		SpriteFrame(-20, -20, 39, 39, 1, 164)
-		SpriteFrame(-19, -20, 39, 39, 81, 164)
-		SpriteFrame(-20, -20, 39, 39, 41, 164)
-		SpriteFrame(-19, -20, 39, 39, 121, 164)
+		SpriteFrame(-20, -20, 39, 39, 1, 164)   // 0 - Idle facing right frame
+		SpriteFrame(-19, -20, 39, 39, 81, 164)  // 1 - Idle facing left frame
+		SpriteFrame(-20, -20, 39, 39, 41, 164)  // 2 - Shooting facing left
+		SpriteFrame(-19, -20, 39, 39, 121, 164) // 3 - Shoting facing right frame
 	end if
-
+	
 	foreach (TypeName[Newtron Shoot], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].inkEffect = INK_ALPHA
 		object[arrayPos0].alpha = 0
 	next
-
+	
 	SetTableValue(TypeName[Newtron Shoot], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(NewtronShoot_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(NewtronShoot_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -203,8 +220,40 @@ end event
 // Editor Events
 // ========================
 
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+		case 0 // fireInDir
+			GetBit(checkResult, object.value1, 0)
+			break
+		case 1 // fireDirection
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+		case 0 // fireInDir
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.value1, 0, checkResult)
+			break
+		case 1 // fireDirection
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+		end switch
+	end if
+end event
+
+
 event RSDKDraw
-	DrawSprite(0)
+	GetBit(temp0, object.propertyValue, 0)
+	DrawSprite(temp0)
 end event
 
 
@@ -213,14 +262,27 @@ event RSDKLoad
 	if checkResult == true
 		LoadSpriteSheet("GHZ/Objects2.gif")
 		SpriteFrame(-20, -20, 39, 39, 1, 1)
+		SpriteFrame(-19, -20, 39, 39, 81, 1)
 	end if
-
+	
 	CheckCurrentStageFolder("Zone07")
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-20, -20, 39, 39, 1, 164)
+		SpriteFrame(-19, -20, 39, 39, 81, 164)
 	end if
 	
-	// not used via editor
-	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+	// If the Newtron should only Shoot when the player is in a specific direction
+	// Only used in Origins's Mission Mode
+	AddEditorVariable("fireInDir")
+	SetActiveVariable("fireInDir")
+	AddEnumVariable("False", 0)
+	AddEnumVariable("True", 1)
+	
+	// Related to above, also only used in Mission Mode
+	// Otherwise, it's ignored
+	AddEditorVariable("fireDirection")
+	SetActiveVariable("fireDirection")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Left", 1)
 end event

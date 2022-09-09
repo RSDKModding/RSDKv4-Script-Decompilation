@@ -1,6 +1,6 @@
 // ----------------------------------
 // RSDK Project: Sonic 1
-// Script Description: Player Object Object
+// Script Description: "Player Object" Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
@@ -79,16 +79,21 @@ private alias 0 : SLOT_PLAYER1
 private alias 2 : MODE_TIMEATTACK
 private alias 8 : MISSIONNO_MERCY
 
-// Draw Order
+// Draw Order Aliases
 private alias -1 : DRAWORDER_PLAYER
 
-// Players
+// Player List Pos Aliases
 private alias 0 : PLAYER_SONIC_ALONE
 private alias 1 : PLAYER_TAILS_ALONE
 private alias 2 : PLAYER_KNUX_ALONE
 private alias 3 : PLAYER_SONIC_AND_TAILS
 
-// Shields
+// Individual Character (player.character) Aliases
+private alias 0 : CHARACTER_SONIC
+private alias 1 : CHARACTER_TAILS
+private alias 2 : CHARACTER_KNUCKLES
+
+// Shield Aliases
 private alias 0 : SHIELD_NONE
 private alias 1 : SHIELD_NORMAL
 private alias 2 : SHIELD_BUBBLE
@@ -133,7 +138,7 @@ private alias object.groupID		 : player.groupID 			// Normally GROUP_PLAYERS, un
 private alias object.entityPos		 : player.entityPos 		// Where the player is on the object list - P1 should be 0, P2 should be 1
 private alias object.state			 : player.state
 private alias object.visible		 : player.visible
-private alias object.propertyValue	 : player.character 		// Individual character type of the object, see PLAYER_* constants above
+private alias object.propertyValue	 : player.character 		// Individual character type of the object, see CHARACTER_* constants above
 private alias object.priority		 : player.priority
 private alias object.xpos			 : player.xpos				// In total world-space position (0x10000 == 1.0)
 private alias object.ypos			 : player.ypos
@@ -1592,7 +1597,7 @@ end function
 // Handles animation speed when rolling
 public function Player_HandleRollAnimSpeed
 
-	if player.character == PLAYER_TAILS_ALONE
+	if player.character == CHARACTER_TAILS
 		// Tails gets a constant anim speed of 120
 		player.rollAnimationSpeed = 120
 	else
@@ -2707,7 +2712,7 @@ public function Player_HandleDropDash
 		if temp7 >= 0
 			if temp7 == 0
 				if player.jumpPress == true
-					CheckEqual(player.character, PLAYER_SONIC_ALONE)
+					CheckEqual(player.character, CHARACTER_SONIC)
 					temp0 = checkResult
 					// You can't use the Drop Dash with elemental shields
 					CheckNotEqual(player.shield, SHIELD_BUBBLE)
@@ -2844,8 +2849,8 @@ public function Player_State_Ground
 
 				// Update balancing animation
 				switch player.character
-				case PLAYER_SONIC_ALONE
-				case PLAYER_TAILS_ALONE
+				case CHARACTER_SONIC
+				case CHARACTER_TAILS
 					if player.floorSensorC == false
 						if player.floorSensorR == false
 							player.timer = 0
@@ -2860,7 +2865,7 @@ public function Player_State_Ground
 					end if
 					break
 
-				case PLAYER_KNUX_ALONE
+				case CHARACTER_KNUCKLES
 					if player.floorSensorC == false
 						if player.floorSensorR == false
 							player.timer = 0
@@ -4241,7 +4246,6 @@ public function Player_State_Climb_Mission
 			temp2 = player.xpos
 			temp3 = player.ypos
 			
-			// todo: what? player 2 input function?
 			if player[0].direction == FACING_LEFT
 				player[0].xvel = -0x100000
 				foreach (player[0].missionBlockID, arrayPos0, ACTIVE_ENTITIES)
@@ -4277,7 +4281,7 @@ public function Player_State_Climb_Mission
 			if arrayPos1 != -1
 				if player.yvel < 0
 					if player.ypos < object[arrayPos1].ypos
-						if object[arrayPos1].value0 != 0 // what
+						if object[arrayPos1].value0 != 0 // TODO: label this, it's some val set from editor
 							player.animation = ANI_LEDGEPULLUP
 							player.yvel = 0
 							player.timer = 0
@@ -4355,6 +4359,7 @@ public function Player_State_LedgePullUp
 			player.tileCollisions = true
 		end if
 		break
+		
 	end switch
 end function
 
@@ -4850,12 +4855,15 @@ public function Player_State_CorkscrewRun
 	if player.speed < 0x60000
 		if player.speed > -0x60000
 			player.animation = ANI_WALKING
+			
+			// even if this function is unused, they still updated it for origins lol
 #platform: USE_STANDALONE
 			player.state = Player_State_Air
 #endplatform
 #platform: USE_ORIGINS
 			player.state = Player_State_Air_NoDropDash
 #endplatform
+			
 			player.rotation = 0
 			if player.speed < 0
 				player.direction = FACING_LEFT
@@ -5006,7 +5014,7 @@ end function
 // Used for LZ's water slides
 public function Player_State_WaterSlide
 	if player.gravity == GRAVITY_AIR
-		// If the player is in the air, make them move to the HandleAir state
+		// If the player is in the air, make them move to the airborne state
 #platform: USE_STANDALONE
 		player.state = Player_State_Air
 #endplatform
@@ -5112,7 +5120,7 @@ event ObjectUpdate
 
 			CallFunction(player.state)
 			
-			// They didn't put the Drop Dash "animation" code seen later here...
+			// For Origins, they didn't put the Drop Dash "animation" here...
 			
 			ProcessAnimation()
 
@@ -5369,7 +5377,7 @@ event ObjectStartup
 			// Similarly, Sonic's not actually going Super here, this is just to initialise his fur colours
 			CallFunction(Player_HandleSuperPalette_Sonic)
 			
-			player[0].character = PLAYER_SONIC_ALONE
+			player[0].character = CHARACTER_SONIC
 			player[0].jumpOffset = -5 // Offset of 5 pixels when rolling
 			player[0].jumpAbility = Player_Action_DblJumpSonic
 			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
@@ -5378,7 +5386,7 @@ event ObjectStartup
 		case 1
 			// Instead of being a player object, the player is playing as a Tails object instead
 			player[0].type = TypeName[Tails Object]
-			player[0].character = PLAYER_TAILS_ALONE
+			player[0].character = CHARACTER_TAILS
 			
 			// Initialize fur colors
 			CallFunction(Player_HandleSuperPalette_Tails)
@@ -5404,7 +5412,7 @@ event ObjectStartup
 			// Initialize fur colors
 			CallFunction(Player_HandleSuperPalette_Knux)
 			
-			player[0].character = PLAYER_KNUX_ALONE
+			player[0].character = CHARACTER_KNUCKLES
 			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
 			player[0].jumpAbility = Player_Action_DblJumpKnux
 			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
