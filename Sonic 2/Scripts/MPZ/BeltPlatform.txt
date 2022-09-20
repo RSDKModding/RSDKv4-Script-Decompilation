@@ -9,8 +9,8 @@
 // Aliases
 // ========================
 
-private alias object.value0  : object.moveOffset.x
-private alias object.value1  : object.moveOffset.y
+private alias object.value0  : object.basePos.x
+private alias object.value1  : object.basePos.y
 private alias object.value2  : object.movePos.x
 private alias object.value3  : object.movePos.y
 private alias object.value4  : object.collisionOffset.x
@@ -30,6 +30,7 @@ private alias object.ypos : player.ypos
 // ========================
 
 reserve function BeltPlatform_UpdateMovement
+
 
 // ========================
 // Tables
@@ -59,14 +60,19 @@ private table BeltPlatform_movementTable2
 	0, 0, -22, 10, -32, 32, -32, 480, -22, 502, 0, 512, 22, 502, 32, 480, 32, 32, 22, 10
 end table
 
+
+// ========================
+// Funcion Definitions
+// ========================
+
 private function BeltPlatform_UpdateMovement
 	temp0 = object[arrayPos0].tablePos
 	GetTableValue(object[arrayPos0].movePos.x, temp0, object[arrayPos0].tablePtr)
-	object[arrayPos0].movePos.x += object[arrayPos0].moveOffset.x
+	object[arrayPos0].movePos.x += object[arrayPos0].basePos.x
 
 	temp0++
 	GetTableValue(object[arrayPos0].movePos.y, temp0, object[arrayPos0].tablePtr)
-	object[arrayPos0].movePos.y += object[arrayPos0].moveOffset.y
+	object[arrayPos0].movePos.y += object[arrayPos0].basePos.y
 
 	temp0 = object[arrayPos0].xpos
 	temp0 >>= 16
@@ -251,7 +257,12 @@ event RSDKEdit
 			checkResult = object.propertyValue
 			checkResult &= 0x0F
 			break
-		
+			
+		case 2 // direction
+			checkResult = object.direction
+			checkResult &= 1
+			break
+			
 		end switch
 	else
 		switch editor.variableID
@@ -273,7 +284,12 @@ event RSDKEdit
 			object.propertyValue &= 0xF0
 			object.propertyValue |= editor.variableValue
 			break
-		
+			
+		case 2 // direction
+			editor.variableValue &= 1
+			object.direction = editor.variableValue
+			break
+			
 		end switch
 	end if
 end event
@@ -324,4 +340,14 @@ event RSDKLoad
 
 	AddEditorVariable("startOffset")
 	SetActiveVariable("startOffset")
+	
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Clockwise", 0)
+	AddEnumVariable("Counter-clockwise", 1)
+	
+	// represent positions in the scene
+	// should be aligned with top most platform in the chain
+	SetVariableAlias(ALIAS_VAR_VAL0, "basePos.x")
+	SetVariableAlias(ALIAS_VAR_VAL1, "basePos.y")
 end event
