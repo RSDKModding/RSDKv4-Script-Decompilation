@@ -13,6 +13,9 @@ event ObjectUpdate
 	temp6 = PRIORITY_XBOUNDS
 	
 	if object.propertyValue == 0
+		// Check for collision, all the way from this platform to the next
+		// Notably this is Platform collision, not Solid collision like the normal type of Mission Block
+		
 		temp0 = object[+1].ixpos
 		temp0 -= object.ixpos
 		temp0 += 16
@@ -105,14 +108,44 @@ event ObjectStartup
 		end if
 	next
 	
+	// Normally loading sheets are the first thing done in a script, but this one's among the few exceptions
 	LoadSpriteSheet("Mission/Objects.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 18) // Mission Block Frame
+	
+	// Mission Block Frame
+	SpriteFrame(-16, -16, 32, 32, 1, 18)
 end event
 
 
 // ========================
 // Editor Events
 // ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // childType
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // childType
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
 
 event RSDKDraw
 	if object.propertyValue == 0
@@ -159,6 +192,9 @@ event RSDKLoad
 	LoadSpriteSheet("Mission/Objects.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 18)
 	
-	// todo: kete
-	SetVariableAlias(ALIAS_VAR_PROPVAL, "blockCheck")
+	// objs should be in order of 0->1 xpos-wise
+	AddEditorVariable("childType")
+	SetActiveVariable("childType")
+	AddEnumVariable("Next Slot", 0)
+	AddEnumVariable("Previous Slot", 1)
 end event

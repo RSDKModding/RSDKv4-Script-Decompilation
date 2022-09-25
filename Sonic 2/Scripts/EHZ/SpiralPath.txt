@@ -77,19 +77,19 @@ end table
 // ========================
 
 event ObjectUpdate
-	// Make this object always active, as it's larger than the screen is so we can't depend on the normal priority system
+	// Make this object always active, it's larger than the screen is normally so we can't depend on the normal priority system
 	object.priority = PRIORITY_ACTIVE
-
+	
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		temp0 = player[currentPlayer].xpos
 		temp0 -= object.xpos
-
+		
 		GetBit(temp3, object.activePlayers, temp2)
 		if temp3 == false
 			if player[currentPlayer].prevGravity == 0
 				BoxCollisionTest(C_TOUCH, object.entityPos, -192, 8, 192, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
-
+				
 				if checkResult == true
 					SetBit(object.activePlayers, temp2, true)
 					player[currentPlayer].yvel = 0
@@ -100,7 +100,7 @@ event ObjectUpdate
 			temp1 = player[currentPlayer].xvel
 			Abs(temp1)
 			CheckLower(temp1, 0x60000)
-
+			
 			temp3 = checkResult
 			CheckLower(player[currentPlayer].yvel, -0x40000)
 			temp3 |= checkResult
@@ -108,7 +108,7 @@ event ObjectUpdate
 			temp3 |= checkResult
 			CheckGreater(temp0, 0x19FFFFF)
 			temp3 |= checkResult
-
+			
 			if temp3 == true
 				SetBit(object.activePlayers, temp2, false)
 				if player[currentPlayer].prevGravity == 1
@@ -123,31 +123,32 @@ event ObjectUpdate
 				end if
 			else
 				player[currentPlayer].yvel = 0
-
+				
 				temp0 >>= 16
-
+				
 				GetTableValue(player[currentPlayer].ypos, temp0, SpiralPath_offsetTable)
-
+				
 				player[currentPlayer].ypos -= player[currentPlayer].collisionBottom
 				player[currentPlayer].ypos += 19
 				player[currentPlayer].ypos <<= 16
 				player[currentPlayer].ypos += object.ypos
-
+				
 				if player[currentPlayer].state == Player_State_Ground
 					if player[currentPlayer].gravity == 1
-
+						
+						// We're setting prevAnimation too because we don't want frame number to be reset
 						player[currentPlayer].prevAnimation = ANI_TWIRL
 						player[currentPlayer].animation = ANI_TWIRL
 						player[currentPlayer].animationSpeed = 0
 						player[currentPlayer].direction = FACING_RIGHT
-
+						
 						temp1 = object.xpos
 						temp1 -= 0xC40000
 						temp0 = player[currentPlayer].xpos
 						temp0 -= temp1
 						temp0 >>= 21
 						temp0 %= 12
-
+						
 						if player[currentPlayer].speed > 0
 							player[currentPlayer].frame = temp0
 							player[currentPlayer].rotation = 0
@@ -157,24 +158,24 @@ event ObjectUpdate
 						end if
 					end if
 				end if
-
+				
 				player[currentPlayer].gravity = GRAVITY_GROUND
 			end if
 		end if
-
+		
 		temp2++
 	next
-
+	
 	if object.outOfBounds == true
 		object.priority = PRIORITY_BOUNDS
-
+		
 		temp0 = false
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			// Check if any players are still on the Spiral Path
 			BoxCollisionTest(C_TOUCH, object.entityPos, -192, 8, 192, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 			temp0 |= checkResult
 		next
-
+		
 		if temp0 == false
 			// If there aren't any players on it, then reset
 			object.activePlayers = 0
@@ -189,6 +190,27 @@ end event
 
 event RSDKDraw
 	DrawSprite(0)
+	
+	// TODO: wanna show sprial path path, dunno if this is a good way to do it but it's dummied out for now
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		temp0 = 0
+		while temp0 < 384
+			temp1 = temp0
+			temp1 -= 192
+			temp1 <<= 16
+			temp1 += object.xpos
+			GetTableValue(temp2, temp0, SpiralPath_offsetTable)
+			temp2 <<= 16
+			temp2 += object.ypos
+			
+			DrawRectWorld(temp1, temp2, 4, 4, 255, 255, 255, 255)
+			temp0++
+		loop
+		
+		editor.drawingOverlay = false
+	end if
 end event
 
 

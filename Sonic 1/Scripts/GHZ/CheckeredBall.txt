@@ -39,7 +39,6 @@ private alias object.controlLock : player.controlLock
 private alias object.collisionLeft : player.collisionLeft
 private alias object.collisionRight : player.collisionRight
 
-
 private alias object.value20 : player.topSpeed
 private alias object.value21 : player.acceleration
 
@@ -167,6 +166,7 @@ private table CheckeredBall_heightArray
 end table
 
 // Seems to be unused, and as such, its purpose is unknown...
+// This table also exists (and is still unused) in the S2 OOZ Checkered Ball, and Mania's CheckerBall, both of which are based on this object 
 private table CheckeredBall_unusedTable
 	253, 251, 248, 245, 243, 240, 237, 235, 232, 229, 226, 224, 221, 219, 216, 213, 210, 208, 205, 203, 200, 197, 195, 192
 end table
@@ -195,10 +195,12 @@ private function CheckeredBall_HandlePlayerMove
 	object.activePlayers = 0
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// This object is never placed into a level, at least in the final game, so this attract mode check never returns true...
 		CheckEqual(options.attractMode, true)
 		temp1 = checkResult
 		CheckEqual(currentPlayer, 1)
 		temp1 &= checkResult
+		
 		temp0 = player[currentPlayer].acceleration
 		temp0 >>= 1
 		if player[currentPlayer].gravity == 0
@@ -206,7 +208,7 @@ private function CheckeredBall_HandlePlayerMove
 				BoxCollisionTest(C_TOUCH, object.entityPos, 0, -22, 23, 22, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 				if checkResult == true
 					if player[currentPlayer].left == true
-						if temp1 == 0
+						if temp1 == false
 							SetBit(object.activePlayers, temp2, true)
 							temp1 = player[currentPlayer].topSpeed
 							FlipSign(temp1)
@@ -236,7 +238,7 @@ private function CheckeredBall_HandlePlayerMove
 					BoxCollisionTest(C_TOUCH, object.entityPos, -23, -22, 0, 22, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 					if checkResult == true
 						if player[currentPlayer].right == true
-							if temp1 == 0
+							if temp1 == false
 								SetBit(object.activePlayers, temp2, true)
 								if object.speed < player[currentPlayer].topSpeed
 									object.speed += temp0
@@ -262,6 +264,7 @@ private function CheckeredBall_HandlePlayerMove
 				end if
 			end if
 		end if
+		
 		temp2++
 	next
 end function
@@ -271,13 +274,17 @@ private function CheckeredBall_PlayerInteraction
 	temp6 = object.xpos
 	temp6 &= 0xFFFF0000
 	temp6 -= object.roundedPos.x
+	
 	temp7 = object.ypos
 	temp7 &= 0xFFFF0000
 	temp7 -= object.roundedPos.y
+	
 	temp4 = object.xpos
 	temp5 = object.ypos
+	
 	object.xpos = object.roundedPos.x
 	object.ypos = object.roundedPos.y
+	
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		GetBit(temp0, object.activePlayers, temp2)
@@ -292,6 +299,7 @@ private function CheckeredBall_PlayerInteraction
 				temp1 += 22
 			end if
 			temp1 <<= 16
+			
 			player[currentPlayer].xpos = temp1
 			player[currentPlayer].xpos += temp4
 		else
@@ -312,6 +320,7 @@ private function CheckeredBall_PlayerInteraction
 					temp0 = 0
 				end if
 				object.speed += temp0
+				
 				if temp0 != 0
 					object.playerControlled = true
 				end if
@@ -336,7 +345,7 @@ private function CheckeredBall_PlayerInteraction
 			if checkResult == COL_BOTTOM
 				if object.yvel >= 0
 					if player[currentPlayer].gravity == 0
-						// Crush the player
+						// The Ball's falling downwards on top of the player, crush them
 						CallFunction(Player_Kill)
 					end if
 				end if
@@ -344,17 +353,16 @@ private function CheckeredBall_PlayerInteraction
 		end if
 		temp2++
 	next
-
+	
 	object.xpos = temp4
 	object.ypos = temp5
-
 end function
 
 
 private function CheckeredBall_BadnikBreak
 	temp0 = object.xvel
 	temp0 |= object.yvel
-
+	
 	if temp0 != 0
 		ResetObjectEntity(object[arrayPos0].entityPos, TypeName[Blank Object], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
 		Rand(checkResult, 32)
@@ -364,28 +372,28 @@ private function CheckeredBall_BadnikBreak
 			CreateTempObject(animalType2, 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
 		end if
 		object[tempObjectPos].priority = PRIORITY_ACTIVE_SMALL
-
+		
 		CreateTempObject(TypeName[Smoke Puff], 0, object[arrayPos0].xpos, object[arrayPos0].ypos)
 		object[tempObjectPos].drawOrder = 4
-
+		
 		CreateTempObject(TypeName[Object Score], object.scoreBonus, object[arrayPos0].xpos, object[arrayPos0].ypos)
 		object[tempObjectPos].drawOrder = 4
-
+		
 		PlaySfx(SfxName[Destroy], false)
 		
 		switch object.scoreBonus
 		case 0
 			player.score += 100
 			break
-
+			
 		case 1
 			player.score += 200
 			break
-
+			
 		case 2
 			player.score += 500
 			break
-
+			
 		case 3 // Fall through
 		case 4
 		case 5
@@ -400,10 +408,11 @@ private function CheckeredBall_BadnikBreak
 		case 14
 			player.score += 1000
 			break
-
+			
 		case 15
 			player.score += 10000
 			break
+			
 		end switch
 
 		if object.scoreBonus < 15
@@ -419,11 +428,11 @@ private function CheckeredBall_ReflectProjectile
 	temp0 -= object[arrayPos0].xpos
 	temp1 = object.ypos
 	temp1 -= object[arrayPos0].ypos
-
+	
 	ATan2(temp2, temp0, temp1)
 	Sin256(temp0, temp2)
 	Cos256(temp1, temp2)
-
+	
 	object[arrayPos0].xvel = temp1
 	object[arrayPos0].xvel *= -0x800
 	object[arrayPos0].yvel = temp0
@@ -434,6 +443,8 @@ end function
 private function CheckeredBall_SpringBounce
 	switch object[arrayPos0].propertyValue
 	case 0
+		// Upwards Spring
+		
 		temp0 = spring[arrayPos0].active
 		if object.gravity == 1
 			temp0 = true
@@ -455,6 +466,7 @@ private function CheckeredBall_SpringBounce
 				object.speed = object.xvel
 				object.yvel = temp7
 				FlipSign(object.yvel)
+				
 				object.yvel += spring[arrayPos0].extraVelocity
 				PlaySfx(SfxName[Spring], false)
 			end if
@@ -469,14 +481,17 @@ private function CheckeredBall_SpringBounce
 					object.speed = object.xvel
 					object.yvel = temp7
 					FlipSign(object.yvel)
+					
 					object.yvel += spring[arrayPos0].extraVelocity
 					PlaySfx(SfxName[Spring], false)
 				end if
 			end if
 		end if
 		break
-
+		
 	case 1
+		// Spring facing Right
+		
 		BoxCollisionTest(C_SOLID, object[arrayPos0].entityPos, -8, -14, 8, 14, object.entityPos, -22, -22, 22, 22)
 		if object.gravity == 0
 			BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, 6, -14, 10, 14, object.entityPos, -22, -22, 22, 22)
@@ -490,8 +505,10 @@ private function CheckeredBall_SpringBounce
 			end if
 		end if
 		break
-
+		
 	case 2
+		// Spring facing Left
+		
 		BoxCollisionTest(C_SOLID, object[arrayPos0].entityPos, -8, -14, 8, 14, object.entityPos, -22, -22, 22, 22)
 		if object.gravity == 0
 			BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, -10, -14, -6, 14, object.entityPos, -22, -22, 22, 22)
@@ -508,6 +525,8 @@ private function CheckeredBall_SpringBounce
 		break
 
 	case 3
+		// Downwards Spring
+		
 		BoxCollisionTest(C_SOLID, object[arrayPos0].entityPos, -14, -8, 14, 8, object.entityPos, -22, -22, 22, 22)
 		BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, -14, 6, 14, 10, object.entityPos, -22, -22, 22, 22)
 		if checkResult == true
@@ -538,20 +557,21 @@ private function CheckeredBall_CLedgeCollapse
 			if temp0 < 0
 				temp0 = 0
 			end if
+			
 			if temp0 > 47
 				temp0 = 47
 			end if
-
+			
 			if temp7 == false
-				// Normal facing version
+				// Ledge is facing Right
 				GetTableValue(temp1, temp0, CLedgeLeft_heightArray)
 			else
-				// Flipped ledge
+				// Ledge is facing Left, invert the value to fetch
 				temp2 = 47
 				temp2 -= temp0
 				GetTableValue(temp1, temp2, CLedgeLeft_heightArray)
 			end if
-
+			
 			temp1 -= 84
 			temp0 = temp1
 			temp0 += 32
@@ -592,15 +612,18 @@ private function CheckeredBall_HandlePhysics
 				end if
 			end if
 		end if
+		
 		Cos256(temp0, object.groundAngle)
 		temp0 *= object.speed
 		temp0 >>= 8
 		object.xvel = temp0
+		
 		Sin256(temp0, object.groundAngle)
 		temp0 *= object.speed
 		temp0 >>= 8
 		object.yvel = temp0
 	end if
+	
 	object.playerControlled = false
 end function
 
@@ -631,9 +654,9 @@ event ObjectUpdate
 	
 	object.groundAngle = object.angle
 	
-	// Originally, this whole interaction system would cycle though all objects in the stage and use a case-switch statement containing all possible interactions
-	// Later, however, Taxman updated this code to use separate foreach checks for every interaction instead of one giant foreach + case-switch
-	// This updated script was never implemented into the mobile version of Sonic 1, but it was in Origins
+	// Originally, this whole interaction system would cycle though *all* objects in the stage and use a giant case-switch statement for object type, containing all possible interactions
+	// Later, however, Taxman updated this code to use separate, individual foreach checks for every interaction instead of the old giant foreach + case-switch
+	// This updated script was never implemented into the mobile version of Sonic 1, but it was in Origins (and Mania's followed the same structure as well)
 	
 	foreach (TypeName[Motobug], arrayPos0, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -14, -14, 14, 14)
@@ -644,6 +667,7 @@ event ObjectUpdate
 	next
 	
 	foreach (TypeName[Buzz Bomber], arrayPos0, ACTIVE_ENTITIES)
+		// The Buzz Bomber's hitbox is normally -24, -12, 24, 12...
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -16, -7, 16, 7)
 		
 		if checkResult == true
@@ -672,6 +696,7 @@ event ObjectUpdate
 		// Something interesting - this interaction didn't even exist in the original S1 release,
 		// it was only added later in an update
 		// Why they decided to update an unused object to add an unused interaction for an unused enemy is beyond me, though...
+		
 		BoxCollisionTest(C_TOUCH, object.entityPos, -22, -22, 22, 22, arrayPos0, -10, -20, 6, 20)
 		if checkResult == true
 			CallFunction(CheckeredBall_BadnikBreak)
@@ -689,6 +714,7 @@ event ObjectUpdate
 				CallFunction(CheckeredBall_BadnikBreak)
 			end if
 			break
+			
 		end switch
 	next
 	
@@ -703,6 +729,7 @@ event ObjectUpdate
 				CallFunction(CheckeredBall_BadnikBreak)
 			end if
 			break
+			
 		end switch
 	next
 	
@@ -752,6 +779,7 @@ event ObjectUpdate
 	next
 	
 	foreach (TypeName[Rock], arrayPos0, ACTIVE_ENTITIES)
+		// Do note that here the order is switched, the Rock is in the first slot and then the Ball's in the second
 		BoxCollisionTest(C_SOLID, arrayPos0, -16, -16, 16, 16, object.entityPos, -22, -22, 22, 22)
 		switch checkResult
 		case COL_TOP
@@ -769,11 +797,12 @@ event ObjectUpdate
 				object.speed = 0
 			end if
 			break
+			
 		end switch
 	next
 	
 	foreach (TypeName[Spikes], arrayPos0, ACTIVE_ENTITIES)
-		// Have different tests for each of the spike types
+		// Have different tests for each of the Spike types
 		switch object[arrayPos0].propertyValue
 		case 0
 			// 3 Spikes (Up)
@@ -873,6 +902,7 @@ event ObjectUpdate
 				object.speed = 0
 			end if
 			break
+			
 		end switch
 	next
 	
@@ -1239,6 +1269,7 @@ event ObjectUpdate
 		CheckEqual(object.gravity, 0)
 		temp0 |= checkResult
 		if temp0 == true
+			// This is looking at a Sw H but using its values as a Sw V, this only works perchance
 			BoxCollisionTest(C_TOUCH, object[arrayPos0].entityPos, planeSwV[arrayPos0].extendLeft, -12, planeSwV[arrayPos0].extendRight, 12, object.entityPos, -22, -10, 22, 10)
 			if checkResult == true
 				if object.yvel > 0
@@ -1422,6 +1453,7 @@ event ObjectUpdate
 					object[arrayPos0].yvel = temp1
 				end if
 				break
+				
 			end switch
 			
 			BoxCollisionTest(C_TOUCH, arrayPos0, -22, temp6, 22, temp7, object.entityPos, -22, -22, 22, 22)
@@ -1460,7 +1492,8 @@ event ObjectUpdate
 		case 1
 			BoxCollisionTest(C_SOLID, arrayPos0, -32, -24, 32, 32, object.entityPos, -18, -22, 18, 22)
 			BoxCollisionTest(C_SOLID, arrayPos0, -11, -40, 11, -24, object.entityPos, -18, -22, 18, 22)
-			break		
+			break
+			
 		end switch
 	next
 	
@@ -1483,13 +1516,13 @@ event ObjectUpdate
 	end if
 	
 	if object.outOfBounds == true
-	
+		
 		// Store the ball's current position and move it to its origin pos
 		temp0 = object.xpos
 		temp1 = object.ypos
 		object.xpos = object.startPos.x
 		object.ypos = object.startPos.y
-	
+		
 		// Is it still out of bounds?
 		if object.outOfBounds == true
 			object.roundedPos.x = object.xpos
@@ -1517,12 +1550,10 @@ event ObjectUpdate
 	object.roundedPos.x &= 0xFFFF0000
 	object.roundedPos.y = object.ypos
 	object.roundedPos.y &= 0xFFFF0000
-	
 end event
 
 
 event ObjectDraw
-	
 	object.rotation = object.ballAngle
 	object.rotation >>= 14
 	
@@ -1538,12 +1569,10 @@ event ObjectDraw
 	object.inkEffect = INK_ADD
 	object.alpha = 160
 	DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
-	
 end event
 
 
 event ObjectStartup
-	
 	LoadSpriteSheet("GHZ/Objects2.gif")
 	
 	// Ball frames
@@ -1586,7 +1615,6 @@ event ObjectStartup
 	SetTableValue(CheckeredBall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(CheckeredBall_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
-	
 end event
 
 
