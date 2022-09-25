@@ -5,9 +5,15 @@
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// This script is mostly just a copy of the standard [SCZ Setup] object, just with a few changes for Mission Mode
+// Changes are marked throughout the script
+
+// Everything here is still labelled under `SCZSetup` since only the script path is different - the object name is still the same (beyond removing the space for some reason)
+
 // ========================
 // Aliases
 // ========================
+
 private alias object.value0 : object.timer
 private alias object.value1 : object.palRotateTimer
 private alias object.value2 : object.palRotateIndex
@@ -53,6 +59,7 @@ private alias 198253 : MUSIC_LOOP_SCZ
 // ========================
 // Static Values
 // ========================
+
 public value SCZSetup_scrollPos.x 		= 0
 public value SCZSetup_scrollPos.y 		= 0
 public value SCZSetup_scrollVelocity.x 	= 0
@@ -66,9 +73,14 @@ public value SCZSetup_vPropellerTimer 	= 0
 // Tables
 // ========================
 
-public table SCZSetup_palRotationTable
+private table SCZSetup_palRotationTable
 	0xE0E040, 0xE0A020, 0xE06000, 0xC02000, 0xE0E0E0, 0xE0E040, 0xE0A020, 0xE06000, 0xE0E040, 0xE0A020, 0xE06000, 0xC02000, 0xE0A020, 0xE06000, 0xC02000, 0x802000
 end table
+
+
+// ========================
+// Events
+// ========================
 
 event ObjectUpdate
 
@@ -116,6 +128,9 @@ event ObjectUpdate
 		stage.curXBoundary2 = temp0
 
 		if stage.curXBoundary1 >= 4480
+			// The first of the SCZMSetup changes, additions were made here to lock player control
+			// Normally, it's just `object.state++` inside here, but we skip WFZ in Missions
+			
 			player[0].controlMode = CONTROLMODE_NONE
 			player[0].jumpPress = false
 			player[0].jumpHold = false
@@ -124,11 +139,15 @@ event ObjectUpdate
 			player[0].up = false
 			player[0].down = false
 			hParallax[0].scrollSpeed = 0
+			
+			// Let's skip the Wing Fortress passby states, just end the level here
 			object.state = SCZSETUP_TOWINGFORTRESS
 		end if
 		break
 
-	case SCZSETUP_WINGFORTRESS // see wing fortress "fly past" (we actually just move down+left LOL)
+	case SCZSETUP_WINGFORTRESS
+		// This whole state is unused in this Mission script, it's skipped by the above
+		
 		SCZSetup_scrollVelocity.x = -0x10000
 		SCZSetup_scrollVelocity.y = 0x10000
 		SCZSetup_scrollPos.x += SCZSetup_scrollVelocity.x
@@ -156,7 +175,9 @@ event ObjectUpdate
 		end if
 		break
 
-	case SCZSETUP_GIVECHASE // we saw wing fortress, continue to chase that egghead down!
+	case SCZSETUP_GIVECHASE
+		// This whole state is unused here as well
+		
 		SCZSetup_scrollVelocity.x = 0x10000
 		SCZSetup_scrollVelocity.y = 0
 		SCZSetup_scrollPos.x += SCZSetup_scrollVelocity.x
@@ -179,6 +200,8 @@ event ObjectUpdate
 		break
 
 	case SCZSETUP_TOWINGFORTRESS // player holds right and goes off screen
+		
+		// Another SCZMSetup change, the following two lines are just here to make the player go off screen a bit faster
 		player[0].right = true
 		player[0].xpos += player[0].xvel
 		
@@ -192,15 +215,25 @@ event ObjectUpdate
 		break
 
 	case SCZSETUP_FADEOUT // fade to WFZ
+		
+		// One more SCZMSetup change, they added a line here to reset player xvel
+		// yvel reset is already part of the normal script, it's just this xvel part that's new
 		player[0].xvel = 0
+		
 		player[0].yvel = 0
 		object.timer += 4
 		music.volume -= 2
+		
+		// (Right here there would be a SetScreenFade to fade the screen to black, but SCZMSetup removed it)
+		
 		if object.timer == 320
 			fadeColor = 0x000000
 			object.timer = 0
 			starPostID = 0
 			object.direction = FACING_RIGHT
+			
+			// Almost at the end of the SCZMSetup changes, the whole standard level end routine here was replaced
+			//  with the following three lines, making the Origins mission complete HUD pop up instead
 			CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
 			object.state++
 			PlayMusic(1)
@@ -208,10 +241,13 @@ event ObjectUpdate
 		break
 
 	case SCZSETUP_RESULTS
+		// The final SCZMSetup change, this state is new in this script
+		// There's not much to it, just making sure the player doesn't go flying off or anything
 		player[0].gravity = GRAVITY_GROUND
 		player[0].xpos = 0
 		player[0].xvel = 0
 		break
+		
 	end switch
 
 	// R Boundary
@@ -233,6 +269,7 @@ event ObjectUpdate
 		next
 	end if
 
+	// The Missions never fly by WFZ, but this animation code is still here anyways cuz why not
 	SCZSetup_hPropellerFrame = SCZSetup_hPropellerTimer
 	SCZSetup_hPropellerFrame >>= 1
 	SCZSetup_hPropellerTimer++
@@ -266,6 +303,7 @@ event ObjectStartup
 	SCZSetup_scrollVelocity.x = 0x10000
 	SCZSetup_scrollVelocity.y = 0
 	
+	// These values are essentially unused, the WFZ flyby never happens in Missions
 	SCZSetup_hPropellerFrame = 0
 	SCZSetup_hPropellerTimer = 0
 	SCZSetup_vPropellerFrame = 0
@@ -277,6 +315,10 @@ event ObjectStartup
 
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)

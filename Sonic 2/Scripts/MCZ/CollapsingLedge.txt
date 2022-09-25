@@ -8,6 +8,7 @@
 // ========================
 // Aliases
 // ========================
+
 private alias object.value0 : object.timer
 private alias object.value1 : object.delay
 
@@ -21,12 +22,14 @@ private alias 5 : CLEDGE_TILEFALL
 // ========================
 // Function Declarations
 // ========================
+
 reserve function CLedge_DebugDraw
 reserve function CLedge_DebugSpawn
 
 // ========================
 // Tables
 // ========================
+
 private table CLedge_tileFrameTable
 	1, 2, 3, 4, 5, 6
 end table
@@ -35,6 +38,10 @@ private table CLedge_collapseTable
 	2, 6, 10, 14, 18, 22
 end table
 
+
+// ========================
+// Function Definitions
+// ========================
 
 private function CLedge_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
@@ -87,7 +94,6 @@ event ObjectUpdate
 
 	case CLEDGE_NONE
 		break
-	// Nothing for state 3 ("CLEDGE_NONE")
 
 	case CLEDGE_TILEDELAY
 		if object.timer < object.delay
@@ -149,6 +155,7 @@ event ObjectDraw
 		// Tile fragment, draw whatever sprite's assigned to this object
 		DrawSpriteFX(object.propertyValue, FX_FLIP, object.xpos, object.ypos)
 		break
+		
 	end switch
 end event
 
@@ -165,11 +172,24 @@ event ObjectStartup
 	SpriteFrame(-16, -24, 16, 16, 152, 66)
 	SpriteFrame(-32, -24, 16, 16, 136, 66)
 
+	// Huh? Blank Object?
+	// Prolly meant to be [C Ledge] instead, but it might be [C Ledge R] or [C Ledge L] in
+	// the original source and that doesn't work here
 	foreach (TypeName[Blank Object], arrayPos0, ALL_ENTITIES)
+		// This uses Property Value as direction, though that isn't the case for this object
+		// -> Interestingly, there are a few C Ledges that do have their prop val set to 1, the majority are
+		//    right-facing ones, though there is a single left-facing one with it too
+		// -> Once again though, this doesn't matter anyways - check out down below
+		
 		object[arrayPos0].direction = object[arrayPos0].propertyValue
 		object[arrayPos0].direction &= 1
 	next
-
+	
+	// The above is meant to set up the directions of all C Ledges in the scene, but thanks to an erroneous TypeName
+	// it doesn't function correctly
+	// However this still works by chance, because the direction attribute is already set from the scene
+	// There are many ledges that have something in their property value, but that value isn't used by the game
+	
 	SetTableValue(TypeName[C Ledge], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(CLedge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(CLedge_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -187,29 +207,30 @@ event RSDKEdit
 		case EDIT_VAR_PROPVAL // property value
 			checkResult = object.propertyValue
 			break
-		case 0 // collapseDir
-			checkResult = object.propertyValue
+			
+		case 0 // direction
+			checkResult = object.direction
 			checkResult &= 1
 			break
+			
 		end switch
 	else
 		switch editor.variableID
 		case EDIT_VAR_PROPVAL // property value
 			object.propertyValue = editor.variableValue
 			break
-		case 0 // collapseDir
-			object.propertyValue = editor.variableValue
-			object.propertyValue &= 1
+			
+		case 0 // direction
+			object.direction = editor.variableValue
+			object.direction &= 1
 			break
+			
 		end switch
 	end if
 end event
 
 
 event RSDKDraw
-	object.direction = object.propertyValue
-	object.direction &= 1
-
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
@@ -217,11 +238,13 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
 	SpriteFrame(-32, -24, 64, 48, 136, 66)
-
-	AddEditorVariable("collapseDir")
-	SetActiveVariable("collapseDir")
-	AddEnumVariable("Right", 0)
-	AddEnumVariable("Left", 1)
 	
-	// Although propertyValue is used by the object, it shouldn't be set from the editor
+	// Redundant to the actual direction attribute, but this helps to highlight this, over property value
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+	
+	// May as well chuck this here too, y'know?
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

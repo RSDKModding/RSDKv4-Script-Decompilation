@@ -1,6 +1,6 @@
 // ----------------------------------
 // RSDK Project: Sonic 1
-// Script Description: Player Object Object
+// Script Description: "Player Object" Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
@@ -8,6 +8,7 @@
 // ========================
 // Aliases
 // ========================
+
 public alias 0x100		: GROUP_PLAYERS
 public alias arrayPos6 	: currentPlayer
 public alias arrayPos7 	: playerCount
@@ -79,23 +80,27 @@ private alias 0 : SLOT_PLAYER1
 private alias 2 : MODE_TIMEATTACK
 private alias 8 : MISSIONNO_MERCY
 
-// Draw Order
+// Draw Order Aliases
 private alias -1 : DRAWORDER_PLAYER
 
-// Players
+// Player List Pos Aliases
 private alias 0 : PLAYER_SONIC_ALONE
 private alias 1 : PLAYER_TAILS_ALONE
 private alias 2 : PLAYER_KNUX_ALONE
 private alias 3 : PLAYER_SONIC_AND_TAILS
 
-// Shields
+// Individual Character (player.character) Aliases
+private alias 0 : CHARACTER_SONIC
+private alias 1 : CHARACTER_TAILS
+private alias 2 : CHARACTER_KNUCKLES
+
+// Shield Aliases
 private alias 0 : SHIELD_NONE
 private alias 1 : SHIELD_NORMAL
 private alias 2 : SHIELD_BUBBLE
 private alias 3 : SHIELD_FIRE
 private alias 4 : SHIELD_LIGHTNING
-// LZ goggles, debug mode only
-private alias 5 : SHIELD_GOGGLES
+private alias 5 : SHIELD_GOGGLES // LZ goggles, debug mode only
 
 private alias 0 : BUBBLESHIELD_IDLE_SETUP
 private alias 2 : BUBBLESHIELD_BOUNCE_SETUP
@@ -134,7 +139,7 @@ private alias object.groupID		 : player.groupID 			// Normally GROUP_PLAYERS, un
 private alias object.entityPos		 : player.entityPos 		// Where the player is on the object list - P1 should be 0, P2 should be 1
 private alias object.state			 : player.state
 private alias object.visible		 : player.visible
-private alias object.propertyValue	 : player.character 		// Individual character type of the object, see PLAYER_* constants above
+private alias object.propertyValue	 : player.character 		// Individual character type of the object, see CHARACTER_* constants above
 private alias object.priority		 : player.priority
 private alias object.xpos			 : player.xpos				// In total world-space position (0x10000 == 1.0)
 private alias object.ypos			 : player.ypos
@@ -280,7 +285,7 @@ reserve function Player_State_GotHit 	// got hit, applies damange
 reserve function Player_State_Hurt 		// damage recoil, ouch!!
 reserve function Player_State_Death
 reserve function Player_State_Drown
-reserve function Player_State_HangBar 		// Unused - Leftover from CD
+reserve function Player_State_HangBar 		// Unused - Leftover from Sonic CD
 reserve function Player_State_CorkscrewRun 	// Unused - Leftover from Sonic Nexus
 reserve function Player_State_CorkscrewRoll // Unused - Leftover from Sonic Nexus
 reserve function Player_State_TubeRoll
@@ -322,6 +327,7 @@ reserve function Player_HandleFlyCarry
 // ========================
 // Static Values
 // ========================
+
 public value Player_flyCarryLeaderXPos 	= 0
 public value Player_flyCarryLeaderYPos 	= 0
 public value Player_flyCarryBuddyXPos 	= 0
@@ -350,6 +356,7 @@ private value Player_unusedValue7 = 0
 // ========================
 // Tables
 // ========================
+
 public table Player_SonicSuperPal
 	0x202080, 0x4040A0, 0x6060C0, 0x8080E0
 	0x404060, 0x6060A0, 0x8080E0, 0xA0A0E0
@@ -732,6 +739,7 @@ public function Player_UpdatePhysicsState
 	case 2
 		temp0 = Player_KnuxPhysicsTable
 		break
+		
 	end switch
 
 	temp1 = 0
@@ -814,6 +822,7 @@ public function Player_HandleSuperForm
 		case 2
 			CallFunction(Player_HandleSuperPalette_Knux)
 			break
+			
 		end switch
 	end if
 
@@ -1593,7 +1602,7 @@ end function
 // Handles animation speed when rolling
 public function Player_HandleRollAnimSpeed
 
-	if player.character == PLAYER_TAILS_ALONE
+	if player.character == CHARACTER_TAILS
 		// Tails gets a constant anim speed of 120
 		player.rollAnimationSpeed = 120
 	else
@@ -1848,6 +1857,7 @@ public function Player_HandleGroundMovement
 			end if
 		end if
 		break
+		
 	end switch
 end function
 
@@ -2019,6 +2029,7 @@ public function Player_HandleRollDeceleration
 			end if
 		end if
 		break
+		
 	end switch
 end function
 
@@ -2708,7 +2719,7 @@ public function Player_HandleDropDash
 		if temp7 >= 0
 			if temp7 == 0
 				if player.jumpPress == true
-					CheckEqual(player.character, PLAYER_SONIC_ALONE)
+					CheckEqual(player.character, CHARACTER_SONIC)
 					temp0 = checkResult
 					// You can't use the Drop Dash with elemental shields
 					CheckNotEqual(player.shield, SHIELD_BUBBLE)
@@ -2732,6 +2743,7 @@ public function Player_HandleDropDash
 					if temp7 == 20
 						PlaySfx(SfxName[DropDash], false)
 					end if
+					
 					if temp7 >= 20
 						// Set Sonic to always use the full ball sprite
 						// This code, when placed here, doesn't work properly. Check ObjectUpdate for the same code in a more proper location
@@ -2747,6 +2759,7 @@ public function Player_HandleDropDash
 					end if
 				end if
 			end if
+			
 			CallFunction(Player_SetDropDashCharge)
 		end if
 	end if
@@ -2758,6 +2771,11 @@ end function
 
 public function Player_SetDropDashCharge
 #platform: USE_ORIGINS
+	// Preconditions:
+	// - temp7 is the value to set the current player's Drop Dash Charge to
+	
+	// Note - P2 should never even be able to Drop Dash in S1, but regardless the two players use separate global vars
+	
 	if player.entityPos == 0 // Player 1
 		player.dropdashCount0 = temp7
 	else
@@ -2769,6 +2787,9 @@ end function
 
 public function Player_GetDropDashCharge
 #platform: USE_ORIGINS
+	// Return value:
+	// - temp7 will be the value of the current player's Drop Dash Charge
+	
 	if player.entityPos == 0 // Player 1
 		temp7 = player.dropdashCount0
 	else
@@ -2780,6 +2801,8 @@ end function
 
 public function Player_CheckIfOnScreen
 #platform: USE_ORIGINS
+	// There's a whole CheckCameraProximity function that was introduced exclusively in Origins already, but I guess that wasn't good enough
+	
 	checkResult = false
 	
 	temp0 = screen.xoffset
@@ -2845,14 +2868,15 @@ public function Player_State_Ground
 
 				// Update balancing animation
 				switch player.character
-				case PLAYER_SONIC_ALONE
-				case PLAYER_TAILS_ALONE
+				case CHARACTER_SONIC
+				case CHARACTER_TAILS
 					if player.floorSensorC == false
 						if player.floorSensorR == false
 							player.timer = 0
 							player.animation = ANI_FLAILING1
 							player.direction = FACING_RIGHT
 						end if
+						
 						if player.floorSensorL == false
 							player.timer = 0
 							player.animation = ANI_FLAILING1
@@ -2861,7 +2885,7 @@ public function Player_State_Ground
 					end if
 					break
 
-				case PLAYER_KNUX_ALONE
+				case CHARACTER_KNUCKLES
 					if player.floorSensorC == false
 						if player.floorSensorR == false
 							player.timer = 0
@@ -2937,12 +2961,11 @@ public function Player_State_Ground
 			player.skidding--
 
 			if ringTimer == 0
-
 				// Create a dust puff object
+				
 				CreateTempObject(TypeName[Dust Puff], 0, player.xpos, player.ypos)
 				object[tempObjectPos].iypos += player.collisionBottom
 				object[tempObjectPos].drawOrder = player.sortedDrawOrder
-
 			end if
 
 			if player.speed > 0
@@ -4242,7 +4265,6 @@ public function Player_State_Climb_Mission
 			temp2 = player.xpos
 			temp3 = player.ypos
 			
-			// todo: what? player 2 input function?
 			if player[0].direction == FACING_LEFT
 				player[0].xvel = -0x100000
 				foreach (player[0].missionBlockID, arrayPos0, ACTIVE_ENTITIES)
@@ -4278,7 +4300,7 @@ public function Player_State_Climb_Mission
 			if arrayPos1 != -1
 				if player.yvel < 0
 					if player.ypos < object[arrayPos1].ypos
-						if object[arrayPos1].value0 != 0 // what
+						if object[arrayPos1].value0 != 0 // TODO: label this, it's some val set from editor
 							player.animation = ANI_LEDGEPULLUP
 							player.yvel = 0
 							player.timer = 0
@@ -4356,6 +4378,7 @@ public function Player_State_LedgePullUp
 			player.tileCollisions = true
 		end if
 		break
+		
 	end switch
 end function
 
@@ -4404,6 +4427,7 @@ public function Player_State_LPullUp_Mission
 			player.tileCollisions = true
 		end if
 		break
+		
 	end switch
 #endplatform
 end function
@@ -4595,6 +4619,7 @@ public function Player_State_GotHit
 
 		object[+playerCount].type = TypeName[Blank Object]
 		break
+		
 	end switch
 end function
 
@@ -4851,12 +4876,15 @@ public function Player_State_CorkscrewRun
 	if player.speed < 0x60000
 		if player.speed > -0x60000
 			player.animation = ANI_WALKING
+			
+			// even if this function is unused, they still updated it for origins lol
 #platform: USE_STANDALONE
 			player.state = Player_State_Air
 #endplatform
 #platform: USE_ORIGINS
 			player.state = Player_State_Air_NoDropDash
 #endplatform
+			
 			player.rotation = 0
 			if player.speed < 0
 				player.direction = FACING_LEFT
@@ -5007,7 +5035,7 @@ end function
 // Used for LZ's water slides
 public function Player_State_WaterSlide
 	if player.gravity == GRAVITY_AIR
-		// If the player is in the air, make them move to the HandleAir state
+		// If the player is in the air, make them move to the airborne state
 #platform: USE_STANDALONE
 		player.state = Player_State_Air
 #endplatform
@@ -5113,7 +5141,7 @@ event ObjectUpdate
 
 			CallFunction(player.state)
 			
-			// They didn't put the Drop Dash "animation" code seen later here...
+			// For Origins, they didn't put the Drop Dash "animation" here...
 			
 			ProcessAnimation()
 
@@ -5370,7 +5398,7 @@ event ObjectStartup
 			// Similarly, Sonic's not actually going Super here, this is just to initialise his fur colours
 			CallFunction(Player_HandleSuperPalette_Sonic)
 			
-			player[0].character = PLAYER_SONIC_ALONE
+			player[0].character = CHARACTER_SONIC
 			player[0].jumpOffset = -5 // Offset of 5 pixels when rolling
 			player[0].jumpAbility = Player_Action_DblJumpSonic
 			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
@@ -5379,7 +5407,7 @@ event ObjectStartup
 		case 1
 			// Instead of being a player object, the player is playing as a Tails object instead
 			player[0].type = TypeName[Tails Object]
-			player[0].character = PLAYER_TAILS_ALONE
+			player[0].character = CHARACTER_TAILS
 			
 			// Initialize fur colors
 			CallFunction(Player_HandleSuperPalette_Tails)
@@ -5395,7 +5423,8 @@ event ObjectStartup
 			// Tails can't have Miles following him, unfortunately
 			stage.player2Enabled = false
 			
-			// Tails doesn't disable the "peelout" animation and since it's actually his fastest run animation
+			// (Tails doesn't disable the "peelout" animation and since it's actually his fastest run animation)
+			
 			break
 
 		case 2
@@ -5404,7 +5433,7 @@ event ObjectStartup
 			// Initialize fur colors
 			CallFunction(Player_HandleSuperPalette_Knux)
 			
-			player[0].character = PLAYER_KNUX_ALONE
+			player[0].character = CHARACTER_KNUCKLES
 			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
 			player[0].jumpAbility = Player_Action_DblJumpKnux
 			ANI_PEELOUT = ANI_RUNNING // Disable the Peelout animation from showing up
@@ -5415,6 +5444,7 @@ event ObjectStartup
 				stage.player2Enabled = false
 			end if
 			break
+			
 		end switch
 
 		if stage.player2Enabled == true

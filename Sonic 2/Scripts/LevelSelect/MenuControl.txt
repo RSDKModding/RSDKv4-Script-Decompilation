@@ -8,6 +8,7 @@
 // ========================
 // Aliases
 // ========================
+
 private alias object.value0 : object.timer
 private alias object.value1 : object.scrollDelayUp
 private alias object.value2 : object.scrollDelayDown
@@ -24,6 +25,7 @@ private alias 3 : MENUCONTROL_LOADLEVEL
 private alias 4 : MENUCONTROL_LOADSPECIAL
 
 // The maximum number of selections available
+// (Inclusive limit)
 private alias 22 : MAX_SELECTION_COUNT
 
 // Music Loops
@@ -49,6 +51,7 @@ private alias 38679  : MUSIC_LOOP_INV
 // ========================
 // Function Declarations
 // ========================
+
 reserve function MenuControl_HandleSecrets
 reserve function MenuControl_SoundTestPlayer
 
@@ -56,6 +59,7 @@ reserve function MenuControl_SoundTestPlayer
 // ========================
 // Static Values
 // ========================
+
 public value MenuControl_optionsMenuOpen		= 0
 private value MenuControl_optionsMenuCounter 	= 0
 private value MenuControl_debugModeCounter 		= 0
@@ -128,7 +132,7 @@ private table MenuControl_EntryTable
 end table
 
 
-public function MenuControl_HandleSecrets
+private function MenuControl_HandleSecrets
 	// Set the special stage slot (SPECIAL_STAGE, entry 4)
 	if hexNo[+1].number < 8
 		SetTableValue(hexNo[+1].number, 129, MenuControl_EntryTable)
@@ -202,6 +206,7 @@ public function MenuControl_HandleSecrets
 	end if
 	
 #platform: USE_ORIGINS
+	// In place of unlocking PPZ, Origins added in some cool debug stuff instead
 	CallNativeFunction4(NotifyCallback, NOTIFY_DEBUGPRINT, stage.debugMode, MenuControl_PPZCodeCounter, hexNo[+1].number)
 #endplatform
 
@@ -214,6 +219,7 @@ public function MenuControl_HandleSecrets
 
 #platform: USE_STANDALONE
 				// Change the hidden palace slot to use proto palace instead
+				// (Origins removed this)
 				SetTableValue(BONUS_STAGE, 122, MenuControl_EntryTable)
 				SetTableValue(11, 123, MenuControl_EntryTable)
 #endplatform
@@ -230,7 +236,7 @@ public function MenuControl_HandleSecrets
 end function
 
 
-public function MenuControl_SoundTestPlayer
+private function MenuControl_SoundTestPlayer
 	// Don't play songs in quick succession
 	if object.soundTestCooldown == 0
 		object.soundTestCooldown = 30
@@ -395,6 +401,7 @@ public function MenuControl_SoundTestPlayer
 			SetMusicTrack("Drowning.ogg", 0, false)
 			PlayMusic(0)
 			break
+			
 		end switch
 	end if
 end function
@@ -610,6 +617,7 @@ event ObjectUpdate
 			SetScreenFade(0xD0, 0xFF, 0xE0, 0xFF)
 		end if
 		break
+		
 	end switch
 end event
 
@@ -627,7 +635,7 @@ end event
 
 event ObjectStartup
 	// Load the sprite sheet
-	// No need to setup sprite frames since the menu will handle them automatically
+	// No need to setup sprite frames since using the menu system will handle them automatically
 	LoadSpriteSheet("LevelSelect/Text.gif")
 
 	// All Menu Control objects should be active
@@ -698,12 +706,15 @@ event ObjectStartup
 
 	menu1.selection = 0
 	menu2.selection = -1
-
+	
+	// TODO: idk if this should be wrapped with this check or not, just tossed it in here for good measure
+#platform: USE_ORIGINS
 	// Not in the original, but origins compiler swaps the value of SPECIAL_STAGE to 2 (rather than 3 originally)
 	temp0 = 21
 	temp0 *= 6
 	temp0 += 2
 	SetTableValue(SPECIAL_STAGE, temp0, MenuControl_EntryTable)
+#endplatform
 end event
 
 
@@ -715,4 +726,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -10,11 +10,14 @@
 // ========================
 // Aliases
 // ========================
+
 private alias object.value1 : object.constBubbleTimer
 private alias object.value2 : object.randBubbleTimer
 private alias object.value3 : object.proccessActEffects
 private alias object.value8 : object.nextTrackID // stores the track that should play after the drowning one stops
 
+private alias 0 : CPZSETUP_WATERINITIAL
+private alias 1 : CPZSETUP_WATERMOVED
 
 // Player Aliases
 private alias object.type : player.type
@@ -70,6 +73,7 @@ private alias 6 : TRACK_DROWNING
 // ========================
 // Function Declarations
 // ========================
+
 reserve function Water_ProcessCPZAct1
 reserve function Water_ProcessCPZAct2
 reserve function Water_SpawnSmallAirBubble
@@ -80,33 +84,59 @@ reserve function Water_ResetDrownMusic
 // ========================
 // Static Values
 // ========================
+
 private value Water_waterSlotID  = 0
 private value Water_activateFlag = 0
+
 
 // ========================
 // Tables
 // ========================
+
 private table Water_processActTable
 	0, 0, 0
 end table
 
-public function Water_ProcessCPZAct1
-	// No code!
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Water_ProcessCPZAct1
+	// Called to update water position, when in Act 1
+	
+	// Preconditions:
+	// - temp0 is the player's x position, 1:1
+	// - temp1 is the player's y position, 1:1
+	
+	// With that all out of the way though, Water doesn't do anything in Act 1, so no code!
 end function
 
 
-public function Water_ProcessCPZAct2
-	if object.state == 0
+private function Water_ProcessCPZAct2
+	// Called to update water position, when in Act 2
+	
+	// Just like above...
+	// Preconditions:
+	// - temp0 is the player's x position, 1:1
+	// - temp1 is the player's y position, 1:1
+	
+	// Only check this all if we haven't touched the water yet
+	if object.state == CPZSETUP_WATERINITIAL
 		stage.newWaterLevel = 0x7100000
+		
+		// 7808 is around where the vertical block climbing section starts (you know what i'm talking about)
 		if temp0 >= 7808
 			stage.newWaterLevel = 0x5100000
+			
+			// Mark the flag, now that we've moved the Water
 			object.state++
 		end if
 	end if
 end function
 
 
-public function Water_SpawnSmallAirBubble
+private function Water_SpawnSmallAirBubble
 	if object[+currentPlayer].constBubbleTimer > 0
 		object[+currentPlayer].constBubbleTimer--
 
@@ -152,7 +182,7 @@ public function Water_SpawnSmallAirBubble
 end function
 
 
-public function Water_SpawnCountDownBubble
+private function Water_SpawnCountDownBubble
 	CreateTempObject(TypeName[Countdown Bubble], temp0, player[currentPlayer].xpos, player[currentPlayer].ypos)
 	object[tempObjectPos].drawOrder = 5
 	object[tempObjectPos].yvel = -0x8800
@@ -168,7 +198,7 @@ public function Water_SpawnCountDownBubble
 end function
 
 
-public function Water_ResetDrownMusic
+private function Water_ResetDrownMusic
 	if currentPlayer == 0
 		arrayPos0 = Water_waterSlotID
 		arrayPos0 += currentPlayer
@@ -562,6 +592,10 @@ event ObjectStartup
 		object[arrayPos0].drawOrder = 5
 		object[arrayPos0].inkEffect = INK_ALPHA
 		object[arrayPos0].alpha = 0xA0
+		
+		// Huh? In-game credits?
+		// This is just a leftover from the S1 LZ Water script, where Water would be specially set up for the credits demo
+		// In this game there's no such thing though, this never really hits
 		if credits.screen == 0
 			stage.newWaterLevel = object[arrayPos0].ypos
 		else

@@ -8,12 +8,12 @@
 // ========================
 // Aliases
 // ========================
+
 private alias object.value0 : object.targetPlayer
 private alias object.value1 : object.frameTable
 
 private alias 0 : GOGGLES_NOTABLE
 private alias 1 : GOGGLES_TABLELOADED // Purely here for reference, never directly used
-
 
 // Player aliases
 private alias object.type 		: player.type
@@ -30,6 +30,7 @@ private alias -1 : DRAWORDER_PLAYER
 // ========================
 // Tables
 // ========================
+
 private table Goggles_frameTableSonic
 	1 		// ANI_STOPPED
 	2 		// ANI_WAITING
@@ -43,7 +44,7 @@ private table Goggles_frameTableSonic
 	0 		// ANI_SPINDASH
 	26 		// ANI_JUMPING
 	31 		// ANI_BOUNCING
-	32 		// ANI_HURT
+	32 		// ANI_HURT, can't be seen if the Goggles were given Debug Mode but can be seen if the Goggles are in visual-only mode (see Startup)
 	0 		// ANI_DYING 
 	0 		// ANI_DROWNING
 	34 		// ANI_FANROTATE
@@ -86,11 +87,11 @@ private table Goggles_frameTableTails
 	56 		// ANI_WALKING
 	64 		// ANI_RUNNING
 	68 		// ANI_SKIDDING
-	64 		// ANI_PEELOUT - used but not for Tails's Peel Out, actually fastest run anim
+	64 		// ANI_PEELOUT - used it's not really Tails's "Peel Out", actually his fastest run anim
 	0 		// ANI_SPINDASH
 	0 		// ANI_JUMPING
 	70 		// ANI_BOUNCING
-	72 		// ANI_HURT
+	72 		// ANI_HURT, not seen if Goggles are from Debug Mode but can be seen if Goggles are only visual (see Startup)
 	0 		// ANI_DYING
 	0 		// ANI_DROWNING
 	74 		// ANI_FANROTATE
@@ -137,7 +138,8 @@ private table Goggles_frameTableKnuckles
 	0 		// ANI_SPINDASH
 	134 	// ANI_JUMPING
 	142 	// ANI_BOUNCING
-	143 	// ANI_HURT
+	143 	// ANI_HURT, as with the other characters this frame can't be seen if the Goggles were spawned via Debug Mode,
+			// but they can be seen if the Goggles were placed in the scene (once again, see Startup)
 	0 		// ANI_DYING
 	0 		// ANI_DROWNING
 	145 	// ANI_FANROTATE
@@ -176,51 +178,52 @@ end table
 // ========================
 
 event ObjectUpdate
-	// Object state is used like a flag, 0 if no table is loaded, 1 if a table is loaded
+	// This object can't setup in Startup due to how it works, so setup is done on the first frame of its Update instead
 	if object.state == GOGGLES_NOTABLE
 		switch stage.playerListPos
 		case 0
 		case 3
 			object.frameTable = Goggles_frameTableSonic
 			break
-
+			
 		case 1
 			object.frameTable = Goggles_frameTableTails
 			break
-
+			
 		case 2
 			object.frameTable = Goggles_frameTableKnuckles
 			break
+			
 		end switch
-
+		
 		object.state++
 	end if
 end event
 
 
 event ObjectDraw
-
+	
 	// Focus on the assigned player
 	currentPlayer = object.targetPlayer
-
+	
 	temp0 = player[currentPlayer].ypos
 	temp0 >>= 16
-
+	
 	// Only draw when the player is underwater
 	if temp0 >= stage.waterLevel
 		// Face the same way the player is facing
 		object.direction = player[currentPlayer].direction
-
+		
 		// Check if the player is in an animation that can rotate
 		CheckEqual(player[currentPlayer].animation, ANI_WALKING)
 		temp0 = checkResult
 		CheckEqual(player[currentPlayer].animation, ANI_RUNNING)
 		temp0 |= checkResult
-		CheckEqual(player[currentPlayer].animation, ANI_PEELOUT) // ???
+		CheckEqual(player[currentPlayer].animation, ANI_PEELOUT) // For Tails, the "Peelout" anim is his fastest run anim
 		temp0 |= checkResult
-
+		
 		if temp0 == true
-			// Player is in a rotatable animation, so make the goggles match the player's quarter rotation
+			// Player is in a rotatable animation, make the goggles match the player's quarter rotation
 			object.rotation = player[currentPlayer].rotation
 
 			if object.rotation >= 256
@@ -234,40 +237,48 @@ event ObjectDraw
 			// Player is an a normal, upright animation so keep the goggles unrotated
 			object.rotation = 0
 		end if
-
+		
 		// Get the starting frame the goggles should use
 		object.frame = player[currentPlayer].frame
 		GetTableValue(temp0, player[currentPlayer].animation, object.frameTable)
-
+		
 		if temp0 == 0
-			// Animation is one that shouldn't have goggles shown
+			// Blank, that means the animation is one that shouldn't have goggles shown
 			object.frame = 0
 		else
 			object.frame += temp0
-
-			// Special exceptions for stuff
-
+			
+			// Special exceptions for some of the special sticklers
+			
 			if object.frameTable == Goggles_frameTableTails
 				if player[currentPlayer].animation == ANI_WAITING
 					if player[currentPlayer].frame <= 20
+						// Looking ahead
 						object.frame = 50
 					else
 						if player[currentPlayer].frame <= 36
+							// Looking at the camera
 							object.frame = 51
 						else
 							if player[currentPlayer].frame == 37
+								// First frame of yawning
 								object.frame = 52
 							else
 								if player[currentPlayer].frame == 48
+									// Last frame of yawning
 									object.frame = 52
 								else
+									// Mid-yawn
 									object.frame = 53
 								end if
 							end if
 						end if
 					end if
 				else
+					// Tails should never be flying underwater - he's swimming instead - so this following stuff somewhat goes unused
 					if player[currentPlayer].animation == ANI_FLYINGTIRED
+						// The player's animation has 12 frames while there are only two frames of goggle data for it, crunch them up a little
+						
 						object.frame = player[currentPlayer].frame
 						object.frame /= 6
 						object.frame += 90
@@ -277,20 +288,26 @@ event ObjectDraw
 				if object.frameTable == Goggles_frameTableKnuckles
 					if player[currentPlayer].animation == ANI_WAITING
 						if player[currentPlayer].frame <= 53
+							// Tapping his foot
 							object.frame = 100
 						else
 							if player[currentPlayer].frame <= 58
+								// Looking at the camera
 								object.frame = 101
 							else
 								if player[currentPlayer].frame == 59
+									// First frame of the air boxing sequence
 									object.frame = 102
 								else
 									if player[currentPlayer].frame <= 91
+										// Boxing up, ready to go
+										// In this part of the animation, he's moving in groups of 3 repeated frames
 										object.frame = player[currentPlayer].frame
 										object.frame -= 60
 										object.frame &= 3
 										object.frame += 103
 									else
+										// Punching
 										object.frame = player[currentPlayer].frame
 										object.frame -= 92
 										object.frame += 107
@@ -303,21 +320,26 @@ event ObjectDraw
 						temp0 = checkResult
 						CheckEqual(player[currentPlayer].animation, ANI_FLAILING2)
 						temp0 |= checkResult
-						if temp0 == 1
+						if temp0 == true
 							if player[currentPlayer].frame < 12
+								// In this part of the animation, all his frames are in groups of 2
 								object.frame = player[currentPlayer].frame
 								object.frame >>= 1
 								object.frame += 160
 							else
 								if player[currentPlayer].frame < 27
+									// The same frame is repeated 14 times
 									object.frame = 166
 								else
 									if player[currentPlayer].frame < 30
+										// Similarly, the next three frames are all the same sprite too
 										object.frame = 167
 									else
 										if player[currentPlayer].frame < 33
+											// And one more, another group of 3 dupes
 											object.frame = 168
 										else
+											// From here, all sprites are in groups of two once again
 											object.frame = player[currentPlayer].frame
 											object.frame -= 33
 											object.frame >>= 1
@@ -332,7 +354,7 @@ event ObjectDraw
 				end if
 			end if
 		end if
-
+		
 		if player[currentPlayer].type != TypeName[Debug Mode]
 			DrawSpriteFX(object.frame, FX_ROTATE, player[currentPlayer].xpos, player[currentPlayer].ypos)
 		end if
@@ -341,15 +363,16 @@ end event
 
 
 event ObjectStartup
-
+	
 	LoadSpriteSheet("Global/Items.gif")
-
+	
 	// Goggle frames
 	// There are only a couple of actual goggle sprites, these are all pretty much the same thing but with different offsets
-	// All frames should be labelled with the character and animation they correspond with
-
-	SpriteFrame(0, 0, 1, 1, 1, 1) // Empty
-
+	// All frames are labelled with the character and animation they correspond to
+	
+	// #0 - Empty frame
+	SpriteFrame(0, 0, 1, 1, 1, 1)
+	
 	// #1 - Sonic's ANI_STOPPED
 	SpriteFrame(-4, -12, 12, 9, 118, 71)
 	
@@ -367,7 +390,7 @@ event ObjectStartup
 	SpriteFrame(-4, -12, 12, 9, 118, 71)
 	SpriteFrame(-5, -12, 12, 10, 127, 102)
 	SpriteFrame(-6, -13, 12, 10, 127, 102)
-
+	
 	// #11 - #13 - Sonic's ANI_LOOKINGDOWN
 	SpriteFrame(-4, -12, 12, 9, 118, 71)
 	SpriteFrame(-1, -4, 14, 11, 150, 118)
@@ -444,6 +467,8 @@ event ObjectStartup
 	SpriteFrame(-13, -10, 14, 13, 135, 113)
 	SpriteFrame(-12, -10, 14, 13, 135, 113)
 	
+	// Now, Tails's frames
+	
 	// #50 - Tails's ANI_STOPPED
 	SpriteFrame(-6, -10, 12, 9, 118, 71)
 	
@@ -491,6 +516,7 @@ event ObjectStartup
 	SpriteFrame(-5, -10, 12, 9, 118, 71)
 	
 	// #73 - Appears to be unused..?
+	// This is around the spot where ANI_DYING and ANI_DROWNING are, if that's any indicator of a likely guess
 	SpriteFrame(-5, -10, 12, 9, 118, 71)
 	
 	// #74 - #78 - Tails's ANI_FANROTATE
@@ -518,12 +544,14 @@ event ObjectStartup
 	SpriteFrame(-13, -9, 14, 13, 135, 113)
 	
 	// #88 - #89 - Tails's ANI_FLYING
+	// Unused, Tails doesn't fly underwater
 	SpriteFrame(-1, -4, 12, 9, 118, 71)
 	SpriteFrame(-1, -4, 12, 9, 118, 71)
 	
 	// #90 - #91 - Tails's ANI_FLYINGTIRED
 	// This animation has a special exceptions as well,
 	// go see ObjectDraw for more info
+	// In spite of that though, this one is unused too
 	SpriteFrame(-1, -4, 12, 9, 118, 71)
 	SpriteFrame(-1, -5, 12, 9, 118, 71)
 	
@@ -586,7 +614,8 @@ event ObjectStartup
 	SpriteFrame(-3, -12, 12, 9, 118, 71)
 	
 	// #132 - #133 - Knuckles's ANI_SKIDDING
-	// The last frames in it appear to be missing?
+	// This one's a weird case - in the initial release of S1, Knuckles's skidding anim was two frames
+	// However, it later got changed to hold four, but this object was never updated to account for that
 	SpriteFrame(-5, -13, 15, 9, 118, 81)
 	SpriteFrame(-10, -12, 15, 9, 118, 81)
 	
@@ -674,37 +703,41 @@ event ObjectStartup
 	// #187 - Knuckles's ANI_LEDGEPULLUP
 	// This one seems to be incomplete, with only one frame
 	SpriteFrame(-8, -23, 15, 9, 118, 81)
-
+	
 	// Look for goggle objects placed in the current scene
 	foreach (TypeName[Goggles], arrayPos0, ALL_ENTITIES)
 		//   Short explanation - placing goggles in a scene will allow Sonic to have goggles on start,
-		//   but they won't function like normal goggles.
+		//   but they won't function like normal goggles
 		//   Instead, they'll be purely cosmetic, which means that Sonic can still get hit and stuff
 		//   However, even if he does get hit, he'll still keep the goggles on
 		//   This feature is another unused part of this already unused object, to utilise it,
 		//   just place goggles anywhere in a scene
-
-		// Move to the shield object slot
+		
+		// Move to the P1 shield object slot
 		arrayPos1 = playerCount
-
+		
 		// Move currentPlayer to P1 slot (? - nothing gets done with this)
 		currentPlayer = 0
-
+		
 		// Place some goggles in the shield slot and init its values
 		ResetObjectEntity(arrayPos1, TypeName[Goggles], 0, 0, 0)
 		object[arrayPos1].priority = PRIORITY_ACTIVE
 		object[arrayPos1].targetPlayer = 0
 		object[arrayPos1].drawOrder = DRAWORDER_PLAYER
-
+		
 		// Remove the goggle object from the scene, as now it's been moved to the dedicated shield slot
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
-
+	
 	// Set goggle type to the goggles
 	// (Despite being in the global folder, this script is only in LZ's object list so it needs to be done here)
 	goggleType = TypeName[Goggles]
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)

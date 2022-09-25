@@ -8,6 +8,7 @@
 // ========================
 // Aliases
 // ========================
+
 private alias object.value0 : object.playerID
 private alias object.value1 : object.nodePos.x
 private alias object.value2 : object.nodePos.y
@@ -50,11 +51,13 @@ private alias object.value7  : player.invincibleTimer
 // ========================
 // Function Declarations
 // ========================
+
 reserve function Transporter_HandleNewNode
 
 // ========================
 // Tables
 // ========================
+
 private table Transporter_tableSizes
 	1, 1, 7, 1, 7, 1, 7, 1
 end table
@@ -115,7 +118,7 @@ private table Transporter_movementTable7
 end table
 
 
-public function Transporter_HandleNewNode
+private function Transporter_HandleNewNode
 	temp0 = object.nodePos.x
 	temp2 = 0x1000
 	temp0 -= player[currentPlayer].xpos
@@ -244,7 +247,7 @@ event ObjectUpdate
 	case TRANSPORTER_ACTIVATING
 		currentPlayer = object.playerID
 
-		/// Oscillate a bit
+		// Oscillate a bit
 		Sin256(player[currentPlayer].ypos, object.angle)
 		object.angle += 2
 		player[currentPlayer].ypos <<= 11
@@ -313,6 +316,7 @@ event ObjectUpdate
 			end if
 		end if
 		break
+		
 	end switch
 end event
 
@@ -332,24 +336,32 @@ event ObjectStartup
 end event
 
 
+// ========================
+// Editor Events
+// ========================
+
 event RSDKEdit
 	if editor.returnVariable == true
 		switch editor.variableID
 		case EDIT_VAR_PROPVAL // property value
 			checkResult = object.propertyValue
 			break
+			
 		case 0 // type
 			checkResult = object.propertyValue
 			break
+			
 		end switch
 	else
 		switch editor.variableID
 		case EDIT_VAR_PROPVAL // property value
 			object.propertyValue = editor.variableValue
 			break
+			
 		case 0 // type
 			object.propertyValue = editor.variableValue
 			break
+			
 		end switch
 	end if
 end event
@@ -357,14 +369,46 @@ end event
 
 event RSDKDraw
 	DrawSprite(0)
-
-	// TODO: try and draw the transporter paths here, that'd look pretty cool
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		temp7 = object.xpos
+		temp6 = object.ypos
+		
+		// TODO: attempt at drawing paths here, prolly broken though
+		
+		temp0 = object.propertyValue
+		temp0 &= 7
+		
+		GetTableValue(object.tablePtr, temp0, Transporter_tablePtrs)
+		GetTableValue(object.tableSize, temp0, Transporter_tableSizes)
+		object.tableSize *= 2;
+		
+		temp0 = 0
+		while temp0 < object.tableSize
+			GetTableValue(object.nodePos.x, temp0, object.tablePtr)
+			temp0++
+			GetTableValue(object.nodePos.y, temp0, object.tablePtr)
+			temp0++
+			
+			DrawArrow(object.xpos, object.ypos, object.nodePos.x, object.nodePos.y, 0xFF, 0xFF, 0x00)
+			
+			object.xpos = object.nodePos.x
+			object.ypos = object.nodePos.y
+		loop
+		
+		object.xpos = temp7
+		object.ypos = temp6
+		
+		editor.drawingOverlay = false
+	end if
 end event
 
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-8, -8, 16, 16, 239, 239) // "Trigger" - #0
+	SpriteFrame(-8, -8, 16, 16, 239, 239) // "T" (-ransporter)
 
 	AddEditorVariable("type")
 	SetActiveVariable("type")
@@ -376,4 +420,13 @@ event RSDKLoad
 	AddEnumVariable("Straight Up", TRANSPORTER_TYPE_U)
 	AddEnumVariable("Up, Left, Up", TRANSPORTER_TYPE_ULU)
 	AddEnumVariable("Straight up if more than 49 rings (Awards Achievement)", TRANSPORTER_TYPE_HIDDEN)
+	
+	SetTableValue(Transporter_movementTable0, TRANSPORTER_TYPE_D_LONG, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable1, TRANSPORTER_TYPE_D_MED, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable2, TRANSPORTER_TYPE_URU, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable3, TRANSPORTER_TYPE_D_SHORT, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable4, TRANSPORTER_TYPE_DLD, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable5, TRANSPORTER_TYPE_U, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable6, TRANSPORTER_TYPE_ULU, Transporter_tablePtrs)
+	SetTableValue(Transporter_movementTable7, TRANSPORTER_TYPE_HIDDEN, Transporter_tablePtrs)
 end event

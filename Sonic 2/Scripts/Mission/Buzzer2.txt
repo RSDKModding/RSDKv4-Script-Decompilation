@@ -8,8 +8,19 @@
 // ========================
 // Aliases
 // ========================
+
+// Value0, as used in-game
 private alias object.value0 : object.timer
+
+// Value0, as set from editor initially
+private alias object.value0 : object.initialCooldown
+
+// Value1, as used in-game
 private alias object.value1 : object.startPos.x
+
+// Value1, as set from the editor initially
+private alias object.value1 : object.initialXVel
+
 private alias object.value2 : object.hasShot
 private alias object.value3 : object.shootTimer
 private alias object.value4 : object.cooldownTime
@@ -33,11 +44,18 @@ private alias object.value38 : player.hitboxTop
 private alias object.value41 : player.hitboxRight
 private alias object.value39 : player.hitboxBottom
 
+
 // ========================
 // Function Declarations
 // ========================
+
 reserve function Buzzer2_DebugDraw
 reserve function Buzzer2_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
 
 private function Buzzer2_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
@@ -116,6 +134,7 @@ event ObjectUpdate
 	case BUZZER2_INVISIBLE
 		object.animation = BUZZER2_ANI_INVISBLE
 		break
+		
 	end switch
 
 	if object.outOfBounds == true
@@ -196,12 +215,12 @@ event ObjectDraw
 
 	case BUZZER2_ANI_INVISBLE
 		break
+		
 	end switch
 end event
 
 
 event ObjectStartup
-	// ... this object is used in "Mission_Zone01" though...
 	CheckCurrentStageFolder("Zone01")
 	if checkResult == true
 		LoadSpriteSheet("EHZ/Objects.gif")
@@ -218,21 +237,22 @@ event ObjectStartup
 		SpriteFrame(5, -8, 6, 5, 137, 331)
 		SpriteFrame(5, -8, 7, 5, 137, 337)
 	end if
-
+	
 	foreach (TypeName[Buzzer2], arrayPos0, ALL_ENTITIES)
-		if object[arrayPos0].timer <= 0
-			object[arrayPos0].timer = 256
+		if object[arrayPos0].initialCooldown <= 0
+			object[arrayPos0].initialCooldown = 256
 		end if
 		
-		object[arrayPos0].cooldownTime = object[arrayPos0].timer
+		object[arrayPos0].cooldownTime = object[arrayPos0].initialCooldown
 		object[arrayPos0].timer = 0
 		
-		if object[arrayPos0].startPos.x <= 0
-			object[arrayPos0].startPos.x = 100
+		if object[arrayPos0].initialXVel <= 0
+			object[arrayPos0].initialXVel = 100
 		end if
-		object[arrayPos0].startPos.x *= 0x10000
-		object[arrayPos0].startPos.x /= 100
-		object[arrayPos0].setXVel = object[arrayPos0].startPos.x
+		object[arrayPos0].initialXVel *= 0x10000
+		object[arrayPos0].initialXVel /= 100
+		object[arrayPos0].setXVel = object[arrayPos0].initialXVel
+		
 		object[arrayPos0].startPos.x = object[arrayPos0].xpos
 		object[arrayPos0].xvel = object[arrayPos0].setXVel
 
@@ -263,33 +283,31 @@ event RSDKEdit
 		case EDIT_VAR_PROPVAL // property value
 			checkResult = object.propertyValue
 			break
+			
 		case 0 // direction
 			checkResult = object.propertyValue
 			break
+			
 		end switch
 	else
 		switch editor.variableID
 		case EDIT_VAR_PROPVAL // property value
 			object.propertyValue = editor.variableValue
 			break
+			
 		case 0 // direction
 			object.propertyValue = editor.variableValue
 			break
+			
 		end switch
 	end if
 end event
 
 
 event RSDKDraw
-	GetBit(temp0, object.propertyValue, 0)
-	if temp0 == false
-		object.direction = FACING_RIGHT
-	else
-		object.direction = FACING_LEFT
-	end if
-
+	GetBit(object.direction, object.propertyValue, 0)
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
-	DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
 end event
 
 
@@ -298,21 +316,18 @@ event RSDKLoad
 	if checkResult == true
 		LoadSpriteSheet("EHZ/Objects.gif")
 		SpriteFrame(-24, -8, 48, 16, 1, 1)
-		SpriteFrame(-24, -8, 42, 31, 1, 18)
-		SpriteFrame(1, 6, 17, 17, 50, 1)
 		SpriteFrame(5, -8, 6, 5, 19, 50)
-		SpriteFrame(5, -8, 7, 5, 19, 56)
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-24, -8, 48, 16, 1, 256)
-		SpriteFrame(-24, -8, 42, 31, 1, 273)
-		SpriteFrame(1, 6, 17, 17, 268, 501)
 		SpriteFrame(5, -8, 6, 5, 137, 331)
-		SpriteFrame(5, -8, 7, 5, 137, 337)
 	end if
 
 	AddEditorVariable("direction")
 	SetActiveVariable("direction")
 	AddEnumVariable("Left", 0)
 	AddEnumVariable("Right", 1)
+	
+	SetVariableAlias(ALIAS_VAR_VAL0, "cooldownTime")
+	SetVariableAlias(ALIAS_VAR_VAL1, "setXVel")
 end event
