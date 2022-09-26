@@ -12,7 +12,7 @@ These scripts have been manually reverted back to what the original scripts coul
 * Origins code has been added into scripts via the use of `#platform:` markers
 
 To use these scripts in mods:
-* RSDKv4 Decompilation: Extract the scripts folder to the exe's root directory: eg `[rootdir]/Scripts/`.
+* RSDKv4/RSDKv5U Decompilation: Extract the scripts folder to the exe's root directory: eg `[rootdir]/Scripts/`.
 
 Mods are only required to include the scripts that have been changed.
 
