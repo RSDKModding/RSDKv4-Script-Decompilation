@@ -15,23 +15,23 @@ private alias object.value1  : object.headOffset.x
 private alias object.value2  : object.headOffset.y
 private alias object.value3  : object.movementCycle
 private alias object.value4  : object.subState
-private alias object.value5  : object.boundsM
+private alias object.value5  : object.midpoint
 private alias object.value6  : object.health
 private alias object.value7  : object.invincibilityTimer
 private alias object.value8  : object.exploding
 private alias object.value9  : object.bombs // Offset used when spawning bombs
 
-private alias object.value10 : object.flameSprite
-private alias object.value11 : object.flameTimer
-private alias object.value12 : object.flameAnimSpeed
-private alias object.value13 : object.flameState
+private alias object.value10 : object.flame.frame
+private alias object.value11 : object.flame.timer
+private alias object.value12 : object.flame.animSpeed
+private alias object.value13 : object.flame.state
 
 // Values used for the managing the following cutscene
 private alias object.value14 : object.screenShake
 private alias object.value15 : object.checkpoint // Offset to use for the One Way Doors checkpoints when making Sonic run away
 private alias object.value16 : object.fadeValue
 
-
+// States
 private alias -1 : DERMAIN_STATIC
 private alias  0 : DERMAIN_INIT
 private alias  1 : DERMAIN_AWAITEGGMAN
@@ -763,8 +763,8 @@ event ObjectUpdate
 		object[-3].type = TypeName[DER Leg]
 		object[-3].priority = PRIORITY_ACTIVE
 
-		object.boundsM = object.xpos
-		object.boundsM -= 0xC00000
+		object.midpoint = object.xpos
+		object.midpoint -= 0xC00000
 
 #platform: USE_STANDALONE
 		object.health = 12
@@ -780,7 +780,7 @@ event ObjectUpdate
 		temp0 = DeathEggRobot_bodyPartsOrigin
 		CallFunction(DeathEggRobot_restoreBodyParts)
 		object.frame = 1
-		object.flameSprite = 5
+		object.flame.frame = 5
 		SetMusicTrack("FinalBoss.ogg", 4, true)
 		object.state = DERMAIN_AWAITEGGMAN
 		break
@@ -814,9 +814,9 @@ event ObjectUpdate
 		if object.timer == 180
 			object.timer = 0
 			PlaySfx(SfxName[Large Wall], false)
-			object.flameSprite = 5
-			object.flameAnimSpeed = 4
-			object.flameState = 1
+			object.flame.frame = 5
+			object.flame.animSpeed = 4
+			object.flame.state = 1
 			object.state = DERMAIN_RAISE
 		end if
 		break
@@ -841,7 +841,7 @@ event ObjectUpdate
 			object[-2].state = BODYPART_ACTIVE
 			object[-3].state = BODYPART_ACTIVE
 
-			object.flameState = 2
+			object.flame.state = 2
 			object.state = DERMAIN_READYPAUSE
 		end if
 
@@ -862,9 +862,9 @@ event ObjectUpdate
 		object.subState = 0
 		GetTableValue(object.state, object.movementCycle, DeathEggRobot_phaseOrder)
 		if object.state == DERMAIN_ASCEND
-			object.flameSprite = 5
-			object.flameAnimSpeed = 16
-			object.flameState = 1
+			object.flame.frame = 5
+			object.flame.animSpeed = 16
+			object.flame.state = 1
 		end if
 		object.movementCycle++
 		object.movementCycle &= 3
@@ -956,7 +956,7 @@ event ObjectUpdate
 
 		case ASCEND_OFFSCREEN
 			if object.timer != 0
-				if object.xpos < object.boundsM
+				if object.xpos < object.midpoint
 					object.direction = FACING_LEFT
 				else
 					object.direction = FACING_RIGHT
@@ -984,7 +984,7 @@ event ObjectUpdate
 				object.timer = 64
 				PlaySfx(SfxName[Ledge Break], false)
 				object.screenShake = 64
-				object.flameState = 2
+				object.flame.state = 2
 				object.subState = ASCEND_LAND
 			else
 				object.ypos += 0x80000
@@ -1386,7 +1386,7 @@ event ObjectUpdate
 								object[-3].xvel = 0x10000
 								object[-3].yvel = -0x30000
 
-								object.flameState = 3
+								object.flame.state = 3
 							else
 								object.invincibilityTimer = 60
 								PlaySfx(SfxName[Boss Hit], false)
@@ -1458,45 +1458,45 @@ event ObjectUpdate
 		end if
 	end if
 
-	switch object.flameState
+	switch object.flame.state
 	case 0
-		object.flameSprite -= 4
-		object.flameSprite ^= 1
-		object.flameSprite += 4
+		object.flame.frame -= 4
+		object.flame.frame ^= 1
+		object.flame.frame += 4
 		break
 
 	case 1
-		object.flameTimer += 2
-		if object.flameTimer >= object.flameAnimSpeed
-			object.flameTimer = 0
-			object.flameSprite -= 5
-			object.flameSprite ^= 1
-			object.flameSprite += 5
-			if object.flameAnimSpeed > 4
-				object.flameAnimSpeed--
+		object.flame.timer += 2
+		if object.flame.timer >= object.flame.animSpeed
+			object.flame.timer = 0
+			object.flame.frame -= 5
+			object.flame.frame ^= 1
+			object.flame.frame += 5
+			if object.flame.animSpeed > 4
+				object.flame.animSpeed--
 			end if
 		end if
 		break
 
 	case 2
-		object.flameTimer += 2
-		if object.flameTimer >= object.flameAnimSpeed
-			object.flameTimer = 0
-			object.flameSprite -= 5
-			object.flameSprite ^= 1
-			object.flameSprite += 5
-			if object.flameAnimSpeed < 16
-				object.flameAnimSpeed++
-				if object.flameAnimSpeed == 16
-					object.flameSprite = 5
-					object.flameState = 0
+		object.flame.timer += 2
+		if object.flame.timer >= object.flame.animSpeed
+			object.flame.timer = 0
+			object.flame.frame -= 5
+			object.flame.frame ^= 1
+			object.flame.frame += 5
+			if object.flame.animSpeed < 16
+				object.flame.animSpeed++
+				if object.flame.animSpeed == 16
+					object.flame.frame = 5
+					object.flame.state = 0
 				end if
 			end if
 		end if
 		break
 
 	case 3
-		object.flameSprite = 4
+		object.flame.frame = 4
 		break
 
 	end switch
@@ -1515,7 +1515,7 @@ event ObjectDraw
 	DrawSpriteFX(2, FX_ROTATE, temp0, temp1)
 	
 	DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
-	DrawSpriteFX(object.flameSprite, FX_FLIP, object.xpos, object.ypos)
+	DrawSpriteFX(object.flame.frame, FX_FLIP, object.xpos, object.ypos)
 end event
 
 

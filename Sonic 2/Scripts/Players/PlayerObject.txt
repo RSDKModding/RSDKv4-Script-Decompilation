@@ -689,16 +689,16 @@ end function
 
 public function Player_UpdatePhysicsState
 	switch stage.playerListPos
-	case 0
-	case 3
+	case PLAYER_SONIC_ALONE
+	case PLAYER_SONIC_AND_TAILS
 		temp0 = Player_SonicPhysicsTable
 		break
 
-	case 1
+	case PLAYER_TAILS_ALONE
 		temp0 = Player_TailsPhysicsTable
 		break
 
-	case 2
+	case PLAYER_KNUX_ALONE
 		temp0 = Player_KnuxPhysicsTable
 		break
 		
@@ -756,16 +756,16 @@ end function
 public function Player_HandleSuperForm
 	if Player_superState != SUPERSTATE_NONE
 		switch stage.playerListPos
-		case 0
-		case 3
+		case PLAYER_SONIC_ALONE
+		case PLAYER_SONIC_AND_TAILS
 			CallFunction(Player_HandleSuperPalette_Sonic)
 			break
 
-		case 1
+		case PLAYER_TAILS_ALONE
 			CallFunction(Player_HandleSuperPalette_Tails)
 			break
 
-		case 2
+		case PLAYER_KNUX_ALONE
 			CallFunction(Player_HandleSuperPalette_Knux)
 			break
 			
@@ -787,7 +787,7 @@ public function Player_HandleSuperForm
 	end if
 
 	if Player_superState == SUPERSTATE_FADEOUT
-		if stage.playerListPos == 0
+		if stage.playerListPos == PLAYER_SONIC_ALONE
 			LoadAnimation("Sonic.ani") // Restore the normal Sonic sprites
 		end if
 
@@ -1018,8 +1018,8 @@ public function Player_BadnikBreak
 		temp1 = checkResult
 		CheckEqual(object[currentPlayer].state, Player_State_RollJump)
 		temp1 |= checkResult
-		if temp1 == 1
-			if player.character == 0
+		if temp1 == true
+			if player.character == PLAYER_SONIC_ALONE
 				temp0 = KILL_ENEMY_ATTR_SPINDASH
 				stageStat.spindashDestroyCount++
 			end if
@@ -1029,7 +1029,7 @@ public function Player_BadnikBreak
 		temp1 = checkResult
 		CheckEqual(object[currentPlayer].state, Player_State_GlideRight)
 		temp1 |= checkResult
-		if temp1 == 1
+		if temp1 == true
 			temp0 = KILL_ENEMY_ATTR_GLIDING
 		end if
 		
@@ -1547,7 +1547,7 @@ end function
 
 
 public function Player_HandleRollAnimSpeed
-	if player.character == 1
+	if player.character == PLAYER_TAILS_ALONE
 		// Tails gets a constant 120
 		player.rollAnimationSpeed = 120
 	else
@@ -2133,7 +2133,7 @@ public function Player_TryTransform
 		player[currentPlayer].visible = true
 
 		CallFunction(Player_UpdatePhysicsState)
-		if stage.playerListPos == 0
+		if stage.playerListPos == PLAYER_SONIC_ALONE
 			// If Sonic, load the Super Sprites
 			LoadAnimation("SuperSonic.ani")
 		end if
@@ -2595,7 +2595,7 @@ public function Player_State_Ground
 		if player.speed == 0
 			if player.collisionMode == 0
 				switch player.character
-				case 0
+				case PLAYER_SONIC_ALONE
 					if Player_superState == SUPERSTATE_SUPER
 						player.animation = ANI_STOPPED
 						player.timer = 0
@@ -2663,7 +2663,7 @@ public function Player_State_Ground
 					end if
 					break
 
-				case 1
+				case PLAYER_TAILS_ALONE
 					if player.timer < 240
 						player.animation = ANI_STOPPED
 						player.timer++
@@ -2685,7 +2685,7 @@ public function Player_State_Ground
 					end if
 					break
 
-				case 2
+				case PLAYER_KNUX_ALONE
 					if player.timer < 240
 						player.animation = ANI_STOPPED
 						player.timer++
@@ -2724,6 +2724,7 @@ public function Player_State_Ground
 						end if
 					end if
 					break
+
 				end switch
 			end if
 		else
@@ -5099,21 +5100,21 @@ event ObjectStartup
 		currentPlayer = 0
 		
 #platform: USE_STANDALONE
-		if stage.playerListPos >= 3 // If playing as Sonic & Tails
-			stage.playerListPos = 0
+		if stage.playerListPos >= PLAYER_SONIC_AND_TAILS // If playing as Sonic & Tails
+			stage.playerListPos = PLAYER_SONIC_ALONE
 			stage.player2Enabled = true
 		end if
 #endplatform
 
 #platform: USE_ORIGINS
-		if stage.playerListPos > 3 // If playing as Knuckles & Tails
-			stage.playerListPos = 2
-			stage.player2Enabled = 1
+		if stage.playerListPos > PLAYER_SONIC_AND_TAILS // If playing as Knuckles & Tails
+			stage.playerListPos = PLAYER_KNUX_ALONE
+			stage.player2Enabled = true
 		end if
 		
-		if stage.playerListPos > 2 // If playing as Sonic & Tails
-			stage.playerListPos = 0
-			stage.player2Enabled = 1
+		if stage.playerListPos > PLAYER_KNUX_ALONE // If playing as Sonic & Tails
+			stage.playerListPos = PLAYER_SONIC_ALONE
+			stage.player2Enabled = true
 		end if
 #endplatform
 
@@ -5140,8 +5141,8 @@ event ObjectStartup
 		Player_superBlendTimer 	= 0
 
 		switch stage.playerListPos
-		case 0
-			// Even though you never start an act as Super Sonic, loading the animation file on startup will prevent having to load it in the middle of gameplay
+		case PLAYER_SONIC_ALONE
+			// This isn't because you're starting the act as Super Sonic, this is here to load all the necessary sprite sheets
 			LoadAnimation("SuperSonic.ani")
 			LoadAnimation("Sonic.ani")
 			CallFunction(Player_HandleSuperPalette_Sonic)
@@ -5151,7 +5152,7 @@ event ObjectStartup
 			ANI_PEELOUT 			= ANI_RUNNING
 			break
 
-		case 1
+		case PLAYER_TAILS_ALONE
 			player[0].type 		= TypeName[Tails Object]
 			player[0].character = 1
 			CallFunction(Player_HandleSuperPalette_Tails)
@@ -5166,15 +5167,13 @@ event ObjectStartup
 			if options.tailsFlight == true
 				player[0].jumpAbility = Player_Action_DblJumpTails
 			else
-				// Not being used as a State here, simply more of a dummy function
-				
-				player[0].jumpAbility = Player_State_Static
+				player[0].jumpAbility = Player_State_Static // Not being used as a State here, simply more of a dummy function
 			end if
 
 			stage.player2Enabled = false
 			break
 
-		case 2
+		case PLAYER_KNUX_ALONE
 			LoadAnimation("Knuckles.ani")
 			CallFunction(Player_HandleSuperPalette_Knux)
 			player[0].character 	= 2

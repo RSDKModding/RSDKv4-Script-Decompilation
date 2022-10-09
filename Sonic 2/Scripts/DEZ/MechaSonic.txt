@@ -22,11 +22,12 @@ private alias object.value5  : object.health
 private alias object.value6  : object.invincibilityTimer
 private alias object.value7  : object.exploding
 
-// Constant values
+// Constant values, set upon init
 private alias object.value8  : object.gndStartSpeed // How fast Mecha Sonic should go when on the ground
 private alias object.value9  : object.gndAcceleration
-
 private alias object.value10 : object.airStartSpeed
+
+// The sprite the rockets should use, kept to 15 when no rockets are to be displayed
 private alias object.value11 : object.rocketsFrame
 
 private alias 26 : SLOT_MUSICEVENT_BOSS
@@ -66,7 +67,7 @@ private alias 4 : MECHASONICANI_CURL
 private alias 5 : MECHASONICANI_ROLLING
 private alias 6 : MECHASONICANI_UNCURL
 
-// Eggman Window Aliases
+// Eggman Window (object[-9]) Aliases
 private alias 0 : EGGMANWINDOWANI_WINDOWCLOSED
 private alias 1 : EGGMANWINDOWANI_OPENWINDOW
 private alias 2 : EGGMANWINDOWANI_IDLE
@@ -84,18 +85,18 @@ private alias object.xvel 			: player.xvel
 private alias object.speed 			: player.speed
 private alias object.animation 		: player.animation
 private alias object.collisionRight : player.collisionRight
-private alias object.value40 		: player.hitboxLeft
 private alias object.value38 		: player.hitboxTop
-private alias object.value41 		: player.hitboxRight
 private alias object.value39 		: player.hitboxBottom
+private alias object.value40 		: player.hitboxLeft
+private alias object.value41 		: player.hitboxRight
 
 // Reserved object slots
 private alias 0  : SLOT_PLAYER1
 
 // Music Events
-private alias  0 : MUSICEVENT_FADETOBOSS
-private alias  1 : MUSICEVENT_FADETOSTAGE
-private alias  2 : MUSICEVENT_TRANSITION
+private alias 0 : MUSICEVENT_FADETOBOSS
+private alias 1 : MUSICEVENT_FADETOSTAGE
+private alias 2 : MUSICEVENT_TRANSITION
 
 private alias 0 : MUSICEVENT_FLAG_NOCHANGE
 private alias 1 : MUSICEVENT_FLAG_SPEEDUP
@@ -115,7 +116,7 @@ reserve function MechaSonic_Reset
 // ========================
 
 // Values to apply to projectile spikes in order of:
-// - xoffset, yoffset, xvel, yvel
+// - xoffset,   yoffset,   xvel,     yvel
 private table MechaSonic_spikeSpawnData
 	 0x000000, -0x180000,  0x00000, -0x30000
 	-0x100000, -0x100000, -0x20000, -0x20000
@@ -235,7 +236,7 @@ event ObjectUpdate
 			temp2 <<= 16
 
 			object.xpos += temp2
-			
+
 #platform: USE_STANDALONE
 			object.health = 8
 #endplatform
@@ -250,8 +251,7 @@ event ObjectUpdate
 			object.ypos -= 0xC40000
 
 			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
-			// 26 = SLOT_MUSICEVENT_BOSS
-			object[26].priority = PRIORITY_ACTIVE
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
 			object.state = MECHASONIC_INITPAUSE
 		end if
 		break
@@ -275,6 +275,7 @@ event ObjectUpdate
 		if object.timer == 120
 			PlaySfx(SfxName[Thruster], false)
 		end if
+
 		object.rocketsFrame = oscillation
 		object.rocketsFrame &= 3
 		object.rocketsFrame >>= 1
@@ -285,7 +286,7 @@ event ObjectUpdate
 		ObjectTileCollision(0, 0, 28, 0)
 		if checkResult == true
 			object[-9].animation = EGGMANWINDOWANI_OPENWINDOW
-			object.rocketsFrame = 15
+			object.rocketsFrame = 15 // Blank frame, no rockets thrusting just yet
 			CallFunction(MechaSonic_Reset)
 		end if
 		break
@@ -293,6 +294,7 @@ event ObjectUpdate
 	case MECHASONIC_STANDING
 		object.timer--
 		if object.timer == 50
+			// You'd think there'd be a space in its name, but there isn't...
 			PlaySfx(SfxName[Saw2], false)
 		end if
 
@@ -415,8 +417,10 @@ event ObjectUpdate
 						temp0++
 						object[arrayPos0].frame = temp7
 						arrayPos0++
+
 						temp7++
 					loop
+
 					PlaySfx(SfxName[Spikes Move], false)
 					object.firedSpikes = true
 				end if
@@ -516,6 +520,7 @@ event ObjectUpdate
 
 	// Animate the object here
 	// Notably different front other boss objects, since those animate themselves in ObjectDraw instead
+	// However, since Mecha Sonic should pause upon death, animation is done here
 	switch object.animation
 	case MECHASONICANI_NONE
 		break
@@ -532,15 +537,20 @@ event ObjectUpdate
 		break
 
 	case MECHASONICANI_ROCKETBOOST
-		// Boosting across the stage with the rockets on its back
-		// Mecha Sonic's sprite frame is constant, but update the rockets frame
+		// This is the animation for boosting across the stage, with the rockets on Mecha Sonic's back
+
+		// Mecha Sonic's frame is constant...
 		object.frame = 3
+
+		// ...but still update the rockets' sprite
 		object.rocketsFrame = oscillation
 		object.rocketsFrame &= 3
 		object.rocketsFrame >>= 1
 		if object.state == MECHASONIC_ROCKETBOOST_MAIN
+			// Rockets
 			object.rocketsFrame += 9
 		else
+			// Sparks
 			object.rocketsFrame += 13
 		end if
 		break
@@ -563,7 +573,6 @@ event ObjectUpdate
 		break
 
 	case MECHASONICANI_CURL
-		// Curlling into a hedgehog-like ball
 		object.animationTimer--
 		if object.animationTimer <= 0
 			object.animationTimer = 4
@@ -591,7 +600,6 @@ event ObjectUpdate
 		break
 
 	case MECHASONICANI_UNCURL
-		// Getting out of the ball
 		object.animationTimer--
 		if object.animationTimer <= 0
 			object.animationTimer = 4
@@ -606,13 +614,15 @@ event ObjectUpdate
 
 	end switch
 
-	// Make sure the door for exiting the arena is closed
+	// Make sure the door for exiting the arena is closed, as long as Mecha Sonic is alive
 	object[+1].isOpen = false
 
 	if object.state > MECHASONIC_DESCENDING
 		if object.health != 0
 			if object.invincibilityTimer > 0
 				object.invincibilityTimer--
+
+				// Update the flashing black colour
 				GetBit(temp0, object.invincibilityTimer, 0)
 				if temp0 == true
 					SetPaletteEntry(0, 192, 0xE0E0E0)
@@ -621,6 +631,7 @@ event ObjectUpdate
 				end if
 			end if
 
+			// Frames 6-8 are the jumping frames, where Mecha Sonic is completely wrapped with spikes (and undamagable as a result)
 			CheckEqual(object.frame, 6)
 			temp0 = checkResult
 			CheckEqual(object.frame, 7)
@@ -668,6 +679,7 @@ event ObjectUpdate
 										CallNativeFunction2(NotifyCallback, NOTIFY_KILL_BOSS, 0)
 #endplatform
 
+										// None of the special global variable array stuff done here, since there's no multiplayer in DEZ
 										player.score += 1000
 
 										// Make Window Robotnik start running
@@ -687,7 +699,7 @@ event ObjectUpdate
 										object.rocketsFrame = 15
 									else
 										object.invincibilityTimer = 32
-										// Even through a window, Eggman will still recoil after his machines are hit
+										// Even through a window, Eggman will still recoil when his machines are hit
 										if object[-9].animation > EGGMANWINDOWANI_OPENWINDOW
 											object[-9].animationTimer = 0
 											object[-9].animation = EGGMANWINDOWANI_STUNNED
@@ -704,6 +716,8 @@ event ObjectUpdate
 	end if
 
 	if object.state != MECHASONIC_DISSAPPEAR
+		// Sonic should never be able to reach the right side of the screen anyways - there's already a wall there - but enforce right bounds regardless
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = player[currentPlayer].collisionRight
 			temp0 <<= 16
@@ -742,6 +756,8 @@ end event
 
 
 event ObjectDraw
+	// Unlike other boss objects, Mecha Sonic's animation is kept in ObjectUpdate rather than being done here
+
 	if object.state > MECHASONIC_AWAITPLAYER
 		DrawSpriteFX(object.rocketsFrame, FX_FLIP, object.xpos, object.ypos)
 		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
@@ -787,29 +803,37 @@ event ObjectStartup
 		SpriteFrame(0, 0, 1, 1, 1, 1)
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
+
+		// 0 - 2: Idle Frames
 		SpriteFrame(-20, -28, 40, 56, 513, 1)
 		SpriteFrame(-20, -28, 40, 56, 554, 1)
 		SpriteFrame(-20, -28, 40, 56, 595, 1)
 
+		// 3: Rocket Thrusting Frame
 		SpriteFrame(-20, -27, 40, 55, 636, 1)
 
+		// 4 - 5: Turning Frames
 		SpriteFrame(-22, -27, 42, 55, 677, 1)
 		SpriteFrame(-22, -27, 44, 55, 720, 1)
 
+		// 6 - 8: Jumping Frames
 		SpriteFrame(-24, -18, 48, 48, 767, 1)
 		SpriteFrame(-24, -18, 48, 48, 816, 1)
 		SpriteFrame(-24, -18, 48, 48, 865, 1)
 
+		// 9 - 10: Back Rocket Frames
 		SpriteFrame(14, 4, 24, 24, 914, 1)
 		SpriteFrame(14, 5, 24, 22, 939, 1)
 
+		// 11 - 12: Vertical Flame Sprites
 		SpriteFrame(-12, 28, 16, 8, 914, 26)
 		SpriteFrame(-12, 28, 16, 22, 931, 26)
 
+		// 13 - 14: Sparks Frames
 		SpriteFrame(19, 20, 19, 8, 964, 1)
 		SpriteFrame(20, 20, 18, 7, 964, 10)
 
-		// Interestingly, even the blank frame was updated for MBZ despite being, well, blank
+		// 15: Blank Frame (Interestingly, even for being blank this frame was still updated for MBZ despite being, well, blank)
 		SpriteFrame(0, 0, 1, 1, 513, 1)
 	end if
 
