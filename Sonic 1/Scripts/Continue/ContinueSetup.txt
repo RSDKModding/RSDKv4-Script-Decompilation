@@ -35,12 +35,12 @@ private alias object.controlMode	: player.controlMode
 // states
 private alias 1 : CONTINUE_COUNTDOWN
 
+
 // ========================
 // Events
 // ========================
 
 event ObjectUpdate
-
 	switch object.state
 	case CONTINUESETUP_SETUP
 		object.timer = 320
@@ -60,22 +60,28 @@ event ObjectUpdate
 			PlayMusic(0)
 			object.state++
 		end if
+		
 		SetScreenFade(0, 0, 0, object.timer)
 		break
 
 	case CONTINUESETUP_PLAYERFALL
 		temp0 = 0
+		
+		// Every character has a unique target position
 		switch stage.playerListPos
-		case 0
-		case 3
+		case PLAYER_SONIC_ALONE
+		case PLAYER_SONIC_AND_TAILS
+			// 172 pixels
 			temp1 = 0xAC0000
 			break
 
-		case 1
+		case PLAYER_TAILS_ALONE
+			// 177 pixels
 			temp1 = 0xB10000
 			break
 
-		case 2
+		case PLAYER_KNUX_ALONE
+			// 168 pixels
 			temp1 = 0xA80000
 			break
 
@@ -93,18 +99,22 @@ event ObjectUpdate
 		end if
 
 		if player[1].type == TypeName[Blank Object]
+			// If there's no P2, then just skip over them
 			temp0++
 		else
 			player[1].animationSpeed = 60
-
+			
+			// We're assuming Tails values for P2 here
 			if player[1].ypos >= 0xB90000
 				player[1].ypos = 0xB10000
 				player[1].yvel = 0
 				player[1].animation = ANI_CONTINUE
+				
 				temp0++
 			end if
 		end if
-
+		
+		// Are both players ready?
 		if temp0 == 2
 			object.state++
 			object[+2].state++ // state will be CONTINUE_COUNTDOWN
@@ -120,12 +130,13 @@ event ObjectUpdate
 		if keyPress[0].start == true
 			player[0].animation = ANI_CONTINUE_UP
 			player[0].speed = 0
-			if stage.playerListPos == 2
+			if stage.playerListPos == PLAYER_KNUX_ALONE
 				player[0].ypos -= 0x20000
 			else
 				player[0].ypos -= 0x60000
 			end if
 			PlaySfx(SfxName[Charge], false)
+			
 			object.state++
 			object[+2].state++ // state will be CONTINUE_COUNTDOWN
 		end if
@@ -255,16 +266,16 @@ event ObjectStartup
 
 	// Make minor position corrections based on the main character
 	switch stage.playerListPos
-	case 0
-	case 3
+	case PLAYER_SONIC_ALONE
+	case PLAYER_SONIC_AND_TAILS
 		// Sonic doesn't need any corrections
 		break
 		
-	case 1
+	case PLAYER_TAILS_ALONE
 		player[0].ypos += 0x50000
 		break
 		
-	case 2
+	case PLAYER_KNUX_ALONE
 		player[0].ypos -= 0x40000
 		break
 		
@@ -275,7 +286,8 @@ event ObjectStartup
 
 	SetMusicTrack("Continue.ogg", 0, false)
 
-	// Player Object doesn't check if pause is enabled, and start is the only button you can press, so it pauses when you want to continue
+	// This is meant to disable pausing, but the Player Object doesn't check if pause is enabled,
+	//  and start is the only button you can press, so it pauses when you want to continue
 	stage.pauseEnabled = false
 
 	if player.continues == 0
