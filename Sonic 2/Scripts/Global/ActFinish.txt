@@ -43,6 +43,11 @@ private alias 0 : MODE_NOSAVE
 private alias 1 : MODE_NORMAL
 private alias 2 : MODE_TIMEATTACK
 
+
+// ========================
+// Events
+// ========================
+
 event ObjectUpdate
 	options.touchControls = false
 	
@@ -124,12 +129,12 @@ event ObjectUpdate
 		case PLAYER_SONIC_AND_TAILS
 			temp0 = 0
 			foreach (TypeName[Ring], arrayPos0, ALL_ENTITIES)
-				if object[arrayPos0].propertyValue <= 1
+				if object[arrayPos0].propertyValue <= 1 // Is this supposed to be just a `<`?
 					temp0++
 				end if
 			next
 			break
-
+			
 		case PLAYER_TAILS_ALONE
 		case PLAYER_KNUX_ALONE
 			temp0 = 0
@@ -139,9 +144,9 @@ event ObjectUpdate
 				end if
 			next
 			break
-
+			
 		end switch
-
+		
 		// Perfect Bonus
 		if temp0 == 0
 			object.hasPerfectBonus = true
@@ -150,7 +155,7 @@ event ObjectUpdate
 				CallNativeFunction2(SetAchievement, 6, 100)
 			end if
 		end if
-
+		
 #platform: USE_ORIGINS
 		if game.playMode == BOOT_PLAYMODE_MISSION
 			object.state = ACTFINISH_NORESULTS
@@ -171,6 +176,7 @@ event ObjectUpdate
 		StageStatsUsabilityParam3 = 0
 		StageStatsUsabilityParam4 = 0
 		StageStatsUsabilityParam5 = 0
+		
 		StatsUsabilityParam1 = 0
 		StatsUsabilityParam2 = 0
 		StatsUsabilityParam3 = 0
@@ -186,30 +192,30 @@ event ObjectUpdate
 		if object.textPos < 0
 			object.textPos += 16
 		end if
-
+		
 		if object.gotThroughTextPos > 0
 			object.gotThroughTextPos -= 16
 		end if
-
+		
 		if object.timePos > 0
 			object.timePos -= 16
 		end if
-
+		
 		if object.ringPos > 0
 			object.ringPos -= 16
 		end if
-
+		
 		if object.perfectPos > 0
 			object.perfectPos -= 16
 		end if
-
+		
 		if object.totalPos > 0
 			object.totalPos -= 16
 		else
 			object.state++
 		end if
 		break
-
+		
 	case ACTFINISH_ACTFINISHJINGLE
 		object.timer++
 		if object.timer > 299
@@ -217,26 +223,26 @@ event ObjectUpdate
 			object.state++
 		end if
 		break
-
+		
 	case ACTFINISH_TALLYSCORE
 		if object.ringBonus > 0
 			object.ringBonus -= 100
 			object.totalScore += 100
 			player.score += 100
 		end if
-
+		
 		if object.timeBonus > 0
 			object.timeBonus -= 100
 			object.totalScore += 100
 			player.score += 100
 		end if
-
+		
 		if object.perfectBonus > 0
 			object.perfectBonus -= 100
 			object.totalScore += 100
 			player.score += 100
 		end if
-
+		
 		CheckGreater(object.ringBonus, 0)
 		temp0 = checkResult
 		CheckGreater(object.timeBonus, 0)
@@ -259,12 +265,12 @@ event ObjectUpdate
 			else
 				object.state++
 			end if
-
+			
 			object.timer = 0
 			PlaySfx(SfxName[Score Total], false)
 		end if
 		break
-
+		
 	case ACTFINISH_GOTCONTINUE
 		object.timer++
 		if object.timer == 60
@@ -316,7 +322,7 @@ event ObjectUpdate
 			StopSfx(SfxName[Flying])
 			StopSfx(SfxName[Tired])
 			stage.listPos++
-
+			
 			// Hidden Palace Checks
 			if stage.listPos > 20
 				stage.listPos = 12 // Oil Ocean Zone Act 1
@@ -378,8 +384,11 @@ event ObjectUpdate
 					if stage.activeList == REGULAR_STAGE
 						CallNativeFunction2(SetLeaderboard, stage.listPos, timeAttack.result)
 					else
-						CallNativeFunction2(SetLeaderboard, 21, timeAttack.result) // Boss Rush
+						// If we're on a non-regular stage, then we're in the Boss Rush so use its special ID
+						// (This was written in a pre-Origins world, before anything and everything was shoved into the BONUS_STATE list)
+						CallNativeFunction2(SetLeaderboard, 21, timeAttack.result)
 					end if
+					
 					engine.state = 8
 				else
 					temp0 = engine.trialMode
@@ -418,19 +427,18 @@ end event
 
 
 event ObjectDraw
-
 	SetActivePalette(0, 0, screen.ysize)
-
+	
 	temp7 = object.textPos
 	temp7 += screen.xcenter
-
+	
 	DrawSpriteScreenXY(0, temp7, 64)
 	DrawSpriteScreenXY(1, temp7, 64)
-
+	
 	temp7 = object.gotThroughTextPos
 	temp7 += screen.xcenter
 	DrawSpriteScreenXY(2, temp7, 82)
-
+	
 	// Determine whether to show `got through zone` or `got through act`
 	if TitleCard_showZoneText == false
 		DrawSpriteScreenXY(3, temp7, 82)
@@ -440,14 +448,14 @@ event ObjectDraw
 	else
 		DrawSpriteScreenXY(4, temp7, 82)
 	end if
-
+	
 	temp7 = object.timePos
 	temp7 += screen.xcenter
 	DrawSpriteScreenXY(8, temp7, 120)
 	DrawSpriteScreenXY(13, temp7, 120)
 	temp7 += 88
 	DrawNumbers(14, temp7, 121, object.timeBonus, 6, 8, 0)
-
+	
 	temp7 = object.ringPos
 	temp7 += screen.xcenter
 	DrawSpriteScreenXY(9, temp7, 136)
@@ -462,7 +470,7 @@ event ObjectDraw
 		temp7 += 88
 		DrawNumbers(14, temp7, 153, object.perfectBonus, 5, 8, 0)
 	end if
-
+	
 	temp7 = object.totalPos
 	temp7 += screen.xcenter
 	DrawSpriteScreenXY(12, temp7, 168)
@@ -502,7 +510,6 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Display.gif")
 
 	// Assign sprite frames based on current characters in play
@@ -525,7 +532,7 @@ event ObjectStartup
 		
 	case PLAYER_KNUX_ALONE
 		SpriteFrame(-94, 0, 128, 16, 34, 188)		// 0  - "KNUCKLES" large text
-		SpriteFrame(40, 0, 48, 16, 1, 205)			// 1  - "GOT" large text, note its different offset
+		SpriteFrame(40, 0, 48, 16, 1, 205)			// 1  - "GOT" large text, note its different offset from the other two
 		break
 		
 	end switch
