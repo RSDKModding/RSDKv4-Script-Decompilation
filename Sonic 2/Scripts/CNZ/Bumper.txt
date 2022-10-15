@@ -193,7 +193,7 @@ event ObjectStartup
 		SpriteFrame(-18, -18, 36, 36, 181, 100)
 	else
 #platform: USE_ORIGINS
-		if game.playMode == BOOT_PLAYMODE_MISSION
+		if game.playMode == BOOT_PLAYMODE_MISSION // Rather than just a "Zone09" check, check if it's Mission Mode as a whole instead
 			LoadSpriteSheet("MPZ/Objects2.gif")
 			SpriteFrame(-16, -16, 32, 32, 1, 1)
 			SpriteFrame(-18, -18, 36, 36, 34, 1)
@@ -210,14 +210,20 @@ event ObjectStartup
 		end if
 #endplatform
 	end if
-
-	// In Origins's MPZ "Bounce House" mission that uses this object, this foreach does not properly work (Bumpers are given the type name [OBJECT NAME] there)
-	// Not only do all Bumpers stay on Draw Order 3, but all Blank Objects get bumped up to 4 as well
+	
+	// Bug Details:
+	// -> In Origins's MPZ "Bounce House" mission that uses this object, this foreach does not properly work
+	//    This is because Bumpers are given the type name of [OBJECT NAME] instead, in that scene
+	// -> However, they did not update this foreach for that new name, which makes this TypeName invalid and resolve as 0 instead
+	//    This means that not only do all Bumpers stay on Draw Order 3, but all Blank Objects get bumped up to 4 as well
 	foreach (TypeName[Bumper], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 4
 	next
 	
-	// This part doesn't work in the Origins MPZ mission either, though it doesn't matter too much there
+	// Bug Details:
+	// -> This DebugMode_TypesTable entry doesn't work either in that same aforementioned scene,
+	//    same reason here where it instead spawns an object with type ID 0 (Blank Object)
+	// -> Not too major at all but hey, I'm sure someone somewhere cares
 	SetTableValue(TypeName[Bumper], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Bumper_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Bumper_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
@@ -240,7 +246,7 @@ event RSDKLoad
 		LoadSpriteSheet("CNZ/Objects.gif")
 		SpriteFrame(-16, -16, 32, 32, 148, 100)
 	else
-		CheckCurrentStageFolder("Zone09")
+		CheckCurrentStageFolder("Zone09") // Technically not accurate to how it functions in-game, but we can't really replicate that behaviour either, so...
 		if checkResult == true
 			LoadSpriteSheet("MPZ/Objects2.gif")
 			SpriteFrame(-16, -16, 32, 32, 1, 1)
