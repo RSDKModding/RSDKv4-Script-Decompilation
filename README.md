@@ -14,6 +14,7 @@ These scripts have been manually reverted back to what the original scripts coul
 To use these scripts in mods:
 * RSDKv4/RSDKv5U Decompilation: Extract the scripts folder to the exe's root directory: eg `[rootdir]/Scripts/`.
 
+Make sure you use the appropriate Scripts folder for the game you're trying to run.
 Mods are only required to include the scripts that have been changed.
 
 For anyone curious about how Sonic 1/2's scripting language works, check out the handbook (RetroScript Handbook v4.pdf) we made to help get people into using RetroScript v4. We recommend downloading the handbook as it makes it easier to navigate.
