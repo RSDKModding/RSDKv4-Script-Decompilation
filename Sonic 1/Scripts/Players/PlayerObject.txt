@@ -487,7 +487,6 @@ end table
 
 // Initialize the character object for replay playback
 public function Player_SetupAttractDemo
-
 	// Input entries start 2 indexes in
 	Player_attractTablePos = 2
 	Player_attractFrameCount = 1
@@ -510,13 +509,11 @@ public function Player_SetupAttractDemo
 
 	camera[0].xpos = player[0].ixpos
 	camera[0].ypos = player[0].iypos
-
 end function
 
 
 // Give the player back their shield after invincibility
 public function Player_ApplyShield
-
 	switch player[currentPlayer].shield
 	case SHIELD_NONE // No shield - set the shield slot to blank
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
@@ -550,7 +547,6 @@ public function Player_ApplyShield
 		goggles[arrayPos0].targetPlayer = currentPlayer
 		object[arrayPos0].drawOrder 	= DRAWORDER_PLAYER
 		break
-
 	end switch
 end function
 
@@ -723,21 +719,19 @@ end function
 
 
 public function Player_UpdatePhysicsState
-
 	switch stage.playerListPos
-	case 3 // This case check should never pass since playing as S&T will set your character to Sonic alone
-	case 0
+	case PLAYER_SONIC_AND_TAILS // This case check should never pass since playing as S&T will set your character to Sonic alone
+	case PLAYER_SONIC_ALONE
 		temp0 = Player_SonicPhysicsTable
 		break
 
-	case 1
+	case PLAYER_TAILS_ALONE
 		temp0 = Player_TailsPhysicsTable
 		break
 
-	case 2
+	case PLAYER_KNUX_ALONE
 		temp0 = Player_KnuxPhysicsTable
 		break
-		
 	end switch
 
 	temp1 = 0
@@ -776,51 +770,43 @@ public function Player_UpdatePhysicsState
 
 	// Set the physics values
 	GetTableValue(player[currentPlayer].topSpeed, temp1, temp0)
-	
 	temp1++
 	GetTableValue(player[currentPlayer].acceleration, temp1, temp0)
-
+	
 	player[currentPlayer].deceleration = player[currentPlayer].acceleration
 	player[currentPlayer].deceleration >>= temp2
 	
 	temp1++
 	GetTableValue(player[currentPlayer].airAcceleration, temp1, temp0)
-	
 	temp1++
 	GetTableValue(player[currentPlayer].airDeceleration, temp1, temp0)
-	
 	temp1++
 	GetTableValue(player[currentPlayer].skidSpeed, temp1, temp0)
-	
 	temp1++
 	GetTableValue(player[currentPlayer].rollingFriction, temp1, temp0)
-	
 	temp1++
 	GetTableValue(player[currentPlayer].jumpStrength, temp1, temp0)
-	
 	temp1++
 	GetTableValue(player[currentPlayer].jumpCap, temp1, temp0)
 end function
 
 
 public function Player_HandleSuperForm
-
 	// Do the fancy palette stuff if Super or while untransforming back to normal
 	if Player_superState != SUPERSTATE_NONE
 		switch stage.playerListPos
-		case 0
-		case 3 // This case check should never pass since playing as S&T will set your character to Sonic alone
+		case PLAYER_SONIC_ALONE
+		case PLAYER_SONIC_AND_TAILS // This case check should never pass since playing as S&T will set your character to Sonic alone
 			CallFunction(Player_HandleSuperPalette_Sonic)
 			break
 
-		case 1
+		case PLAYER_TAILS_ALONE
 			CallFunction(Player_HandleSuperPalette_Tails)
 			break
 
-		case 2
+		case PLAYER_KNUX_ALONE
 			CallFunction(Player_HandleSuperPalette_Knux)
 			break
-			
 		end switch
 	end if
 
@@ -917,7 +903,6 @@ public function Player_CheckHit
 		if player[currentPlayer].state != Player_State_Death
 			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
-
 					player[currentPlayer].state = Player_State_GotHit
 
 					if player[currentPlayer].xpos > object.xpos
@@ -925,7 +910,6 @@ public function Player_CheckHit
 					else
 						player[currentPlayer].speed = -0x20000
 					end if
-
 				end if
 			end if
 		end if
@@ -937,7 +921,6 @@ end function
 
 // Used by badniks to check if the badnik should be destroyed
 public function Player_BadnikBreak
-
 	CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
 	temp0 = checkResult
 	CheckEqual(player[currentPlayer].animation, ANI_SPINDASH)
@@ -1015,8 +998,7 @@ public function Player_BadnikBreak
 			player[currentPlayer].yvel += 0x10000
 		end if
 
-		// If not in competition mode, then give P1 the score
-		if options.competition == false
+		if options.competition == false // Will always pass because guess what doesn't exist in S1?
 			temp0 = currentPlayer
 			currentPlayer = 0
 		end if
@@ -1059,12 +1041,13 @@ public function Player_BadnikBreak
 			player[currentPlayer].scoreBonus++
 		end if
 
-		// Move back to whatever player this was originally intended for
-		if options.competition == false
+		if options.competition == false // Again, will always pass
 			currentPlayer = temp0
 		end if
 		
 #platform: USE_ORIGINS
+		// Handle achievement callback stuff
+		
 		temp0 = false
 		
 		CheckEqual(object[currentPlayer].state, Player_State_Roll)
@@ -1100,9 +1083,7 @@ public function Player_BadnikBreak
 		if player[currentPlayer].state != Player_State_Death
 			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
-
 					player[currentPlayer].state = Player_State_GotHit
-					
 #platform: USE_ORIGINS
 					if game.playMode == BOOT_PLAYMODE_MISSION
 						if game.missionFunctionNo == MISSIONNO_MERCY
@@ -1116,7 +1097,6 @@ public function Player_BadnikBreak
 					else
 						player[currentPlayer].speed = -0x20000
 					end if
-
 				end if
 			end if
 		end if
@@ -1126,14 +1106,12 @@ end function
 
 // Ouch!
 public function Player_Hit
-
 	if player[currentPlayer].state != Player_State_Death
 		arrayPos0 = player[currentPlayer].entityPos
 		arrayPos0 += playerCount
 
 		if player[currentPlayer].invincibleTimer == 0
 			if player[currentPlayer].blinkTimer == 0
-
 				player[currentPlayer].state = Player_State_GotHit
 				if player[currentPlayer].xpos > object.xpos
 					player[currentPlayer].speed = 0x20000
@@ -1148,16 +1126,13 @@ end function
 
 // Used by things like MZ lava and other fire-based obstacles
 public function Player_FireHit
-
 	// Do not hurt the player if they have a flame shield
 	if player[currentPlayer].shield != SHIELD_FIRE
 		if player[currentPlayer].state != Player_State_Death
-
 			arrayPos0 = player[currentPlayer].entityPos
 			arrayPos0 += playerCount
 
 			if player[currentPlayer].invincibleTimer == 0
-
 				if player[currentPlayer].blinkTimer == 0
 					player[currentPlayer].state = Player_State_GotHit
 					if player[currentPlayer].xpos > object.xpos
@@ -1174,19 +1149,15 @@ end function
 
 // Used by things like SBZ lightning and other lightning-based obstacles
 public function Player_LightningHit
-
 	// Do not hurt the player if they have a lightning shield
 	if player[currentPlayer].shield != SHIELD_LIGHTNING
 		if player[currentPlayer].state != Player_State_Death
-
 			// (Player shouldn't have a lighting shield underwater so no other check is needed here)
-
 			arrayPos0 = player[currentPlayer].entityPos
 			arrayPos0 += playerCount
 
 			if player[currentPlayer].invincibleTimer == 0
 				if player[currentPlayer].blinkTimer == 0
-
 					player[currentPlayer].state = Player_State_GotHit
 
 					if player[currentPlayer].xpos > object.xpos
@@ -1194,7 +1165,6 @@ public function Player_LightningHit
 					else
 						player[currentPlayer].speed = -0x20000
 					end if
-
 				end if
 			end if
 		end if
@@ -1204,7 +1174,6 @@ end function
 
 // Used by badnik projectiles when on player collision
 public function Player_ProjectileHit
-
 	if player[currentPlayer].shield > SHIELD_NORMAL // Reflect it if the player has an elemental shield
 		temp0 = player[currentPlayer].xpos
 		temp0 -= object.xpos
@@ -1241,7 +1210,6 @@ end function
 
 // Used by spikes upon player collision
 public function Player_SpikeHit
-
 	if player[currentPlayer].state != Player_State_Death
 		arrayPos0 = player[currentPlayer].entityPos
 		arrayPos0 += playerCount
@@ -1249,14 +1217,12 @@ public function Player_SpikeHit
 		if player[currentPlayer].invincibleTimer == 0
 			if player[currentPlayer].state != Player_State_GotHit
 				if player[currentPlayer].state != Player_State_Hurt
-
 					// Check for spike bug if player is invulnerable
 					temp0 = options.spikeBehavior
 					CheckEqual(player[currentPlayer].blinkTimer, 0)
 					temp0 |= checkResult
 
 					if temp0 == true
-
 						if player[currentPlayer].blinkTimer == 0
 							player[currentPlayer].blinkTimer = 2
 						end if
@@ -1267,7 +1233,6 @@ public function Player_SpikeHit
 						else
 							player[currentPlayer].speed = -0x20000
 						end if
-
 					end if
 				end if
 			end if
@@ -1334,7 +1299,6 @@ end function
 
 // Handles important stuff called regardless of state
 public function Player_ProcessUpdate
-
 	if options.attractMode == false
 		if player.controlMode == false
 #platform: USE_STANDALONE
@@ -1599,7 +1563,6 @@ end function
 
 // Handles animation speed when rolling
 public function Player_HandleRollAnimSpeed
-
 	if player.character == PLAYER_TAILS_ALONE
 		// Tails gets a constant anim speed of 120
 		player.rollAnimationSpeed = 120
@@ -1617,14 +1580,12 @@ public function Player_HandleRollAnimSpeed
 		player.rollAnimationSpeed /= 0x60000
 		player.rollAnimationSpeed += 48
 	end if
-
 end function
 
 
 // Handles walking animation speed
 // All characters share the same routine
 public function Player_HandleWalkAnimSpeed
-
 	player.animationSpeed = player.speed
 
 	// Get the absolute value
@@ -1642,7 +1603,6 @@ end function
 // Handles running animation speed
 // Also shared between characters
 public function Player_HandleRunAnimSpeed
-
 	player.animationSpeed = player.speed
 
 	// Absolute value
@@ -1855,7 +1815,6 @@ public function Player_HandleGroundMovement
 			end if
 		end if
 		break
-		
 	end switch
 end function
 
@@ -2027,7 +1986,6 @@ public function Player_HandleRollDeceleration
 			end if
 		end if
 		break
-		
 	end switch
 end function
 
@@ -2075,7 +2033,6 @@ end function
 
 // Set various player values
 public function Player_HandleOnGround
-
 	player.scrollTracking = false
 
 	Cos256(temp0, player.angle)
@@ -2091,7 +2048,6 @@ public function Player_HandleOnGround
 	temp0 >>= 8
 
 	player.yvel = temp0
-
 end function
 
 
@@ -2237,7 +2193,6 @@ end function
 
 // Temporary state for when the player is in their transform animation
 public function Player_State_Transform
-
 	player.collisionDisabled = true
 
 	// Delay is normally 24 frames, set in the transform script rather than here
@@ -2256,10 +2211,8 @@ end function
 
 // Function that transforms the player
 public function Player_TryTransform
-
 	// Only allow the player to transform during the actual level, not when results are showing or other blocking elements
 	if stage.timeEnabled == true
-
 		// Spawn the sparkly super trail object
 		arrayPos0 = currentPlayer
 		arrayPos0 += playerCount
@@ -2374,7 +2327,6 @@ public function Player_State_BubbleBounce
 			object[+playerCount].state = BUBBLESHIELD_RECOIL_SETUP
 		end if
 	end if
-
 end function
 
 
@@ -2412,7 +2364,6 @@ public function Player_Action_DblJumpSonic
 
 	// Only act if the jump button is pressed
 	if player.jumpPress == true
-	
 #platform: USE_STANDALONE
 		// Same code as earlier, so the comments won't be repeated
 		CheckEqual(specialStage.emeralds, 127)
@@ -2428,7 +2379,6 @@ public function Player_Action_DblJumpSonic
 			CallFunction(Player_TryTransform)
 		else
 #endplatform
-
 			// Check if the player should do arial abilities
 
 			// Can't do anything if invincible
@@ -2444,7 +2394,6 @@ public function Player_Action_DblJumpSonic
 				switch player.shield
 				case SHIELD_NONE
 					if options.shieldType > 1 // Are S3K shields on?
-
 						PlaySfx(SfxName[Insta Shield], false)
 
 						// Set the shield object slot to hold the insta shield
@@ -2467,7 +2416,6 @@ public function Player_Action_DblJumpSonic
 						if player.state == Player_State_RollJump
 							player.state = Player_State_Air
 						end if
-
 					end if
 					break
 
@@ -2487,7 +2435,6 @@ public function Player_Action_DblJumpSonic
 
 					// Set the bubble shield state to falling
 					object[+playerCount].state = BUBBLESHIELD_BOUNCE_SETUP
-
 					break
 
 				case SHIELD_FIRE
@@ -2549,14 +2496,12 @@ public function Player_Action_DblJumpSonic
 						player.state = Player_State_Air
 					end if
 					break
-
 				end switch
 			end if
 #platform: USE_STANDALONE
 		end if
 #endplatform
 	end if
-
 end function
 
 
@@ -2593,7 +2538,6 @@ public function Player_Action_DblJumpTails
 
 	// Only act if the jump button is pressed
 	if player.jumpPress == true
-
 #platform: USE_STANDALONE
 		// Same code as earlier, so the comments won't be repeated
 		CheckEqual(specialStage.emeralds, 127)
@@ -2609,7 +2553,6 @@ public function Player_Action_DblJumpTails
 			CallFunction(Player_TryTransform)
 		else
 #endplatform
-
 			// Make Tails start flying
 #platform: USE_ORIGINS
 			CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, 0, 1, 0)
@@ -2664,7 +2607,6 @@ public function Player_Action_DblJumpKnux
 
 	// Only act if the jump button is pressed
 	if player.jumpPress == true
-
 #platform: USE_STANDALONE
 		// Same code as earlier, so the comments won't be repeated
 		CheckEqual(specialStage.emeralds, 127)
@@ -2680,7 +2622,6 @@ public function Player_Action_DblJumpKnux
 			CallFunction(Player_TryTransform)
 		else
 #endplatform
-
 			// Start gliding
 #platform: USE_ORIGINS
 			CallNativeFunction4(NotifyCallback, NOTIFY_STATS_CHARA_ACTION, 0, 0, 1)
@@ -2767,13 +2708,11 @@ end function
 // Yes, this is actually how Sonic Team programmed this
 // Note about these next two functions, player.dropdashCount0 and player.dropdashCount1 are global variables, NOT object values
 
+// Preconditions:
+// - temp7 is the value to set the current player's Drop Dash Charge to
 public function Player_SetDropDashCharge
 #platform: USE_ORIGINS
-	// Preconditions:
-	// - temp7 is the value to set the current player's Drop Dash Charge to
-	
 	// Note - P2 should never even be able to Drop Dash in S1, but regardless the two players use separate global vars
-	
 	if player.entityPos == 0 // Player 1
 		player.dropdashCount0 = temp7
 	else
@@ -2783,11 +2722,10 @@ public function Player_SetDropDashCharge
 end function
 
 
+// Return value:
+// - temp7 will be the value of the current player's Drop Dash Charge
 public function Player_GetDropDashCharge
 #platform: USE_ORIGINS
-	// Return value:
-	// - temp7 will be the value of the current player's Drop Dash Charge
-	
 	if player.entityPos == 0 // Player 1
 		temp7 = player.dropdashCount0
 	else
@@ -2915,14 +2853,12 @@ public function Player_State_Ground
 				end switch
 			end if
 		else
-
 			player.timer = 0
 			if player.speed > 0
 				if player.speed < 0x5F5C2
 					player.animation = ANI_WALKING
 					CallFunction(Player_HandleWalkAnimSpeed)
 				else
-
 					if player.speed > 0x9FFFF
 						player.animation = ANI_PEELOUT
 					else
@@ -2932,12 +2868,10 @@ public function Player_State_Ground
 					CallFunction(Player_HandleRunAnimSpeed)
 				end if
 			else
-
 				if player.speed > -0x5F5C2
 					player.animation = ANI_WALKING
 					CallFunction(Player_HandleWalkAnimSpeed)
 				else
-
 					if player.speed < -0x9FFFF
 						player.animation = ANI_PEELOUT
 					else
@@ -2959,8 +2893,6 @@ public function Player_State_Ground
 			player.skidding--
 
 			if ringTimer == 0
-				// Create a dust puff object
-				
 				CreateTempObject(TypeName[Dust Puff], 0, player.xpos, player.ypos)
 				object[tempObjectPos].iypos += player.collisionBottom
 				object[tempObjectPos].drawOrder = player.sortedDrawOrder
@@ -2984,10 +2916,8 @@ public function Player_State_Ground
 		if player.jumpPress == true
 			CallFunction(Player_Action_Jump)
 		else
-
 			if player.up == true
 				if player.speed == 0
-
 					if player.animation != ANI_FLAILING1
 						if player.animation != ANI_FLAILING2
 							player.state = Player_State_LookUp
@@ -3000,7 +2930,6 @@ public function Player_State_Ground
 						player.up = false
 						player.down = false
 					end if
-
 				end if
 			end if
 
@@ -3024,7 +2953,6 @@ public function Player_State_Ground
 
 							if player.speed > 0
 								if player.speed > 0x8800
-
 									// Start rolling
 									player.state = Player_State_Roll
 									player.animation = ANI_JUMPING
@@ -3033,11 +2961,9 @@ public function Player_State_Ground
 									end if
 									player.abilityTimer = 0x400
 									PlaySfx(SfxName[Rolling], false)
-
 								end if
 							else
 								if player.speed < -0x8800
-
 									// Start rolling
 									player.state = Player_State_Roll
 									player.animation = ANI_JUMPING
@@ -3046,7 +2972,6 @@ public function Player_State_Ground
 									end if
 									player.abilityTimer = 0x400
 									PlaySfx(SfxName[Rolling], false)
-
 								end if
 							end if
 						end if
@@ -3173,7 +3098,6 @@ end function
 
 
 public function Player_State_Roll
-
 	CallFunction(Player_HandleRollDeceleration)
 
 	if player.gravity == GRAVITY_AIR
@@ -3328,7 +3252,6 @@ end function
 
 // While the player is charging the spindash
 public function Player_State_Spindash
-
 	if player.gravity == GRAVITY_AIR
 #platform: USE_STANDALONE
 		player.state = Player_State_Air
@@ -3427,15 +3350,12 @@ public function Player_State_Spindash
 		PlaySfx(SfxName[Release], false)
 
 		CallFunction(Player_HandleOnGround)
-
 	end if
-
 end function
 
 
 // P2 Tails starts flying for Tails Assist
 public function Player_HandleFlyCarry
-
 	if player.flyCarryTimer != 0
 		player.flyCarryTimer--
 	end if
@@ -3633,7 +3553,6 @@ end function
 
 // Used by both normal Tails and P2/AI Tails
 public function Player_State_Fly
-
 	CallFunction(Player_HandleAirFriction)
 
 	if player.gravity == GRAVITY_AIR
@@ -3746,7 +3665,6 @@ end function
 
 
 public function Player_State_GlideLeft
-
 	if player.gravity == GRAVITY_AIR
 		if player.jumpHold == true
 			if player.timer == 256
@@ -4379,7 +4297,6 @@ public function Player_State_LedgePullUp
 			player.tileCollisions = true
 		end if
 		break
-		
 	end switch
 end function
 
@@ -4431,7 +4348,6 @@ public function Player_State_LPullUp_Mission
 			player.tileCollisions = true
 		end if
 		break
-		
 	end switch
 #endplatform
 end function
@@ -4628,7 +4544,6 @@ public function Player_State_GotHit
 
 		object[+playerCount].type = TypeName[Blank Object]
 		break
-		
 	end switch
 end function
 
@@ -4654,7 +4569,6 @@ end function
 
 // Called by the player object itself to die - Gadzooks!
 public function Player_State_Death
-
 	if player.entityPos == 0 // Player 1?
 		if Player_superState == SUPERSTATE_SUPER
 			Player_superState = SUPERSTATE_UNTRANSFORM
@@ -4696,6 +4610,7 @@ public function Player_State_Death
 				end if
 			end if
 #endplatform
+
 			stage.timeEnabled = false
 			player.type = TypeName[Death Event]
 #platform: USE_STANDALONE
@@ -5077,7 +4992,6 @@ end function
 
 
 public function Player_State_ContinueRun
-
 	if player.speed > 0x10000
 		player.timer = 0
 
@@ -5275,6 +5189,7 @@ event ObjectUpdate
 	CallFunction(Player_HandleSuperForm)
 
 #platform: USE_ORIGINS
+	// Handle preventing the player from moving after defeating a boss in Boss Rush
 	if game.playMode == BOOT_PLAYMODE_BOSSRUSH
 		if game.missionCondition == MISSION_CONDITION_CLEAR
 			player.invincibleTimer = 80
@@ -5404,8 +5319,7 @@ event ObjectStartup
 			LoadAnimation("SuperSonic.ani")
 			LoadAnimation("Sonic.ani")
 			
-			// Similarly, Sonic's not actually going Super here, this is just to initialise his fur colours
-			CallFunction(Player_HandleSuperPalette_Sonic)
+			CallFunction(Player_HandleSuperPalette_Sonic) // Initialize fur colors
 			
 			player[0].character = PLAYER_SONIC_ALONE
 			player[0].jumpOffset = -5 // Offset of 5 pixels when rolling
@@ -5418,8 +5332,7 @@ event ObjectStartup
 			player[0].type = TypeName[Tails Object]
 			player[0].character = PLAYER_TAILS_ALONE
 			
-			// Initialize fur colors
-			CallFunction(Player_HandleSuperPalette_Tails)
+			CallFunction(Player_HandleSuperPalette_Tails) // Initialize fur colors
 			
 			LoadAnimation("Tails.ani")
 			
@@ -5433,14 +5346,12 @@ event ObjectStartup
 			stage.player2Enabled = false
 			
 			// (Tails doesn't disable the "peelout" animation and since it's actually his fastest run animation)
-			
 			break
 
 		case 2
 			LoadAnimation("Knuckles.ani")
 			
-			// Initialize fur colors
-			CallFunction(Player_HandleSuperPalette_Knux)
+			CallFunction(Player_HandleSuperPalette_Knux) // Initialize fur colors
 			
 			player[0].character = PLAYER_KNUX_ALONE
 			player[0].jumpOffset = -5 // Offset by 5 pixels when rolling
@@ -5453,7 +5364,6 @@ event ObjectStartup
 				stage.player2Enabled = false
 			end if
 			break
-			
 		end switch
 
 		if stage.player2Enabled == true
@@ -5464,8 +5374,7 @@ event ObjectStartup
 
 		currentPlayer = SLOT_PLAYER1
 
-		// Initialize physics
-		CallFunction(Player_UpdatePhysicsState)
+		CallFunction(Player_UpdatePhysicsState) // Initialize physics
 
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
