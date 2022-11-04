@@ -12,13 +12,10 @@
 private alias object.value0 : object.timer
 
 // Player Aliases
-private alias object.state : player.state
 private alias object.xpos : player.xpos
 private alias object.ypos : player.ypos
 private alias object.speed : player.speed
-private alias object.frame : player.frame
 private alias object.controlMode : player.controlMode
-private alias object.drawOrder : player.drawOrder
 private alias object.up : player.up
 private alias object.down: player.down
 private alias object.left : player.left
@@ -39,13 +36,13 @@ event ObjectUpdate
 		object.state++
 		// [Fallthrough]
 	case 1
-		object[0].controlMode = CONTROLMODE_NONE
-		object[0].up = false
-		object[0].down = false
-		object[0].left = true
-		object[0].right = false
-		object[0].jumpHold = false
-		object[0].jumpPress = false
+		player[0].controlMode = CONTROLMODE_NONE
+		player[0].up = false
+		player[0].down = false
+		player[0].left = true
+		player[0].right = false
+		player[0].jumpHold = false
+		player[0].jumpPress = false
 		
 		if options.superStates == false
 			// Six emeralds
@@ -56,9 +53,9 @@ event ObjectUpdate
 		end if
 
 		if specialStage.emeralds >= temp0
-			// object[+1] is a node on the right hill of the scene
-			object[0].xpos = object[+1].xpos
-			object[0].ypos = object[+1].ypos
+			// object[+1] is a node on the right hill of the scene, for where the player should start
+			player[0].xpos = object[+1].xpos
+			player[0].ypos = object[+1].ypos
 		end if
 
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -66,9 +63,9 @@ event ObjectUpdate
 				player[currentPlayer].speed = -0x60000
 			else
 				player[currentPlayer].speed = -0x60000
-				player[currentPlayer].xpos = object[0].xpos
+				player[currentPlayer].xpos = player[0].xpos
 				player[currentPlayer].xpos += 0x400000
-				player[currentPlayer].ypos = object[0].ypos
+				player[currentPlayer].ypos = player[0].ypos
 				StopSfx(SfxName[Skidding])
 			end if
 		next
@@ -84,7 +81,7 @@ event ObjectUpdate
 
 		SetScreenFade(0, 0, 0, object.timer)
 		break
-
+		
 	case 2
 		temp0 = object.xpos
 		temp0 -= 0x180000
@@ -107,8 +104,8 @@ event ObjectUpdate
 					else
 						if currentPlayer == 0
 							ResetObjectEntity(currentPlayer, TypeName[Ending Pose], 0, object.xpos, object.ypos)
-							player[currentPlayer].controlMode = CONTROLMODE_NONE
-							player[currentPlayer].drawOrder = 6
+							object[currentPlayer].controlMode = CONTROLMODE_NONE
+							object[currentPlayer].drawOrder = 6
 
 							if options.superStates == 0
 								// Six emeralds
@@ -122,15 +119,15 @@ event ObjectUpdate
 								switch stage.playerListPos
 								case PLAYER_SONIC_ALONE
 								case PLAYER_SONIC_AND_TAILS
-									player[currentPlayer].frame = 0
+									object[currentPlayer].frame = 0
 									break
 
 								case PLAYER_TAILS_ALONE
-									player[currentPlayer].frame = 13
+									object[currentPlayer].frame = 13
 									break
 
 								case PLAYER_KNUX_ALONE
-									player[currentPlayer].frame = 24
+									object[currentPlayer].frame = 24
 									break
 									
 								end switch
@@ -138,22 +135,23 @@ event ObjectUpdate
 								switch stage.playerListPos
 								case PLAYER_SONIC_ALONE
 								case PLAYER_SONIC_AND_TAILS
-									player[currentPlayer].frame = 4
+									object[currentPlayer].frame = 4
 									break
-
+									
 								case PLAYER_TAILS_ALONE
-									player[currentPlayer].frame = 16
+									object[currentPlayer].frame = 16
 									break
-
+									
 								case PLAYER_KNUX_ALONE
-									player[currentPlayer].frame = 27
+									object[currentPlayer].frame = 27
 									break
 									
 								end switch
-								player[currentPlayer].state = 5
+								
+								object[currentPlayer].state = 5
 							end if
 
-							player[currentPlayer].timer = 224
+							object[currentPlayer].timer = 224
 						end if
 					end if
 				end if
@@ -173,8 +171,21 @@ event ObjectStartup
 end event
 
 
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw a line from this object to the start position teleport node
+		DrawArrow(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 0xFF, 0xFF, 0x00)
+		
+		editor.drawingOverlay = false
+	end if
 end event
 
 

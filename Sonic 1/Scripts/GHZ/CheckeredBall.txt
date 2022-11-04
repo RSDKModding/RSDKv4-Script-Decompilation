@@ -141,6 +141,10 @@ private alias 2 : FLAME_EXPLODE
 private alias 1 : WRECKINGBALL_ACTIVE
 private alias 2 : WRECKINGBALL_EXPLODE
 
+// Animal Prison Aliases
+private alias 0 : ANIMALPRISON_AWAITOPEN
+private alias 1 : ANIMALPRISON_OPENED
+
 
 // ========================
 // Function Declarations
@@ -633,7 +637,7 @@ end function
 // ========================
 
 event ObjectUpdate
-	if object.priority != 4
+	if object.priority != PRIORITY_XBOUNDS_DESTROY
 		object.priority = PRIORITY_ACTIVE
 	end if
 	
@@ -766,7 +770,7 @@ event ObjectUpdate
 			object[tempObjectPos].drawOrder = 4
 			object[arrayPos0].type = TypeName[Broken Monitor]
 			
-			if object[arrayPos0].priority != 4
+			if object[arrayPos0].priority != PRIORITY_XBOUNDS_DESTROY
 				object[arrayPos0].priority = PRIORITY_ACTIVE
 			end if
 			
@@ -1333,8 +1337,10 @@ event ObjectUpdate
 			if checkResult == true
 				temp0 = object[arrayPos0].xpos
 				temp0 -= object.wreckingBallPos.x
+				
 				temp1 = object[arrayPos0].ypos
 				temp1 -= object.wreckingBallPos.y
+				
 				if object.xvel == 0
 					object.xvel = temp0
 					object.speed = object.xvel
@@ -1380,6 +1386,7 @@ event ObjectUpdate
 			end if
 		end if
 		
+		// Store the Wrecking Ball's position for next frame
 		object.wreckingBallPos.x = object[arrayPos0].xpos
 		object.wreckingBallPos.y = object[arrayPos0].ypos
 	next
@@ -1476,22 +1483,24 @@ event ObjectUpdate
 	
 	foreach (TypeName[Animal Prison], arrayPos0, ACTIVE_ENTITIES)
 		switch object[arrayPos0].state
-		case 0
+		case ANIMALPRISON_AWAITOPEN
 			BoxCollisionTest(C_SOLID, arrayPos0, -32, -24, 32, 32, object.entityPos, -18, -22, 18, 22)
 			BoxCollisionTest(C_SOLID, arrayPos0, -11, -48, 11, -24, object.entityPos, -18, -22, 18, 22)
 			if checkResult == COL_TOP
 				// Open the prison
-				object[arrayPos0].state = 1
+				object[arrayPos0].state = ANIMALPRISON_OPENED
 				stage.timeEnabled = false
 				if Player_superState == SUPERSTATE_SUPER
 					Player_superState = SUPERSTATE_UNTRANSFORM
 				end if
 				
 				object[0].controlMode = CONTROLMODE_NONE
+				
+				// Origins's NOTIFY_BOSS_END isn't called here, so if you ended a level in the Boss Rush with a Checkered Ball + Animal Prison for... some reason, then you could have a little fun
 			end if
 			break
 			
-		case 1
+		case ANIMALPRISON_OPENED
 			BoxCollisionTest(C_SOLID, arrayPos0, -32, -24, 32, 32, object.entityPos, -18, -22, 18, 22)
 			BoxCollisionTest(C_SOLID, arrayPos0, -11, -40, 11, -24, object.entityPos, -18, -22, 18, 22)
 			break
@@ -1525,7 +1534,7 @@ event ObjectUpdate
 		object.xpos = object.startPos.x
 		object.ypos = object.startPos.y
 		
-		// Is it still out of bounds?
+		// Is its starting position out of bounds too?
 		if object.outOfBounds == true
 			object.roundedPos.x = object.xpos
 			object.roundedPos.y = object.ypos
@@ -1538,7 +1547,7 @@ event ObjectUpdate
 			object.ballAngle = 0
 			object.angleVel = 0
 			object.playerControlled = 0
-			if object.priority != 4
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
 				object.priority = PRIORITY_BOUNDS
 			end if
 			object.state = 0
