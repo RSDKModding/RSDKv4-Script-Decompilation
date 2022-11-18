@@ -76,6 +76,11 @@ public alias 2 : COL_LEFT
 public alias 3 : COL_RIGHT
 public alias 4 : COL_BOTTOM
 
+// Reserved Object Slot Aliases
+private alias 0  : SLOT_PLAYER1
+private alias 11 : SLOT_TITLECARD
+private alias 30 : SLOT_ACTFINISH
+
 // Draw Order
 private alias -1 : DRAWORDER_PLAYER
 
@@ -101,6 +106,11 @@ private alias 3 : SUPERSTATE_END
 // Modes
 private alias 2 : MODE_TIMEATTACK
 private alias 8 : MISSIONNO_MERCY
+
+// Global Variable ID Aliases (yeah it's weird, the game uses global variables like an awway sometimes, so these aliases are the IDs of those variables)
+// (these numbers correspond to the variable's position in the GameConfig global variable list)
+private alias 22 : GLOBAL_PLAYERSCORE
+private alias 25 : GLOBAL_PLAYERLIVES
 
 // Tracks
 private alias 0 : TRACK_STAGE
@@ -475,7 +485,7 @@ public function Player_SetupAttractDemo
 	Player_attractTablePos = 2
 	Player_attractFrameCount = 1
 
-	currentPlayer = 0
+	currentPlayer = SLOT_PLAYER1
 	while currentPlayer < playerCount
 		GetTableValue(player[currentPlayer].xpos, 0, Player_attractTable)
 		GetTableValue(player[currentPlayer].ypos, 1, Player_attractTable)
@@ -490,8 +500,8 @@ public function Player_SetupAttractDemo
 		currentPlayer++
 	loop
 
-	camera[0].xpos = player[0].ixpos
-	camera[0].ypos = player[0].iypos
+	camera[0].xpos = player[SLOT_PLAYER1].ixpos
+	camera[0].ypos = player[SLOT_PLAYER1].iypos
 end function
 
 
@@ -962,13 +972,13 @@ public function Player_BadnikBreak
 		// global variable "array" (yes, this is actually how its done)
 		if options.vsMode == false
 			temp0 = currentPlayer
-			currentPlayer = 0
-			arrayPos0 = 22
+			currentPlayer = SLOT_PLAYER1
+			arrayPos0 = GLOBAL_PLAYERSCORE
 #platform: USE_DECOMP
 			arrayPos0 = VarName[player.score]
 #endplatform
 		else
-			arrayPos0 = 22
+			arrayPos0 = GLOBAL_PLAYERSCORE
 #platform: USE_DECOMP
 			arrayPos0 = VarName[player.score]
 #endplatform
@@ -1441,10 +1451,10 @@ public function Player_ProcessUpdate
 			if Player_attractDuration > 0
 				Player_attractDuration--
 				if Player_attractDuration < 1
-					ResetObjectEntity(11, TypeName[Title Card], 0, 0, 0)
-					object[11].state = 8
-					object[11].priority = PRIORITY_ACTIVE
-					object[11].drawOrder = 6
+					ResetObjectEntity(SLOT_TITLECARD, TypeName[Title Card], 0, 0, 0)
+					object[SLOT_TITLECARD].state = 8
+					object[SLOT_TITLECARD].priority = PRIORITY_ACTIVE
+					object[SLOT_TITLECARD].drawOrder = 6
 					player.invincibleTimer = 80
 					camera[0].enabled = false
 				end if
@@ -1530,20 +1540,11 @@ public function Player_ProcessUpdate
 		player.scrollDelay--
 
 		if player.scrollDelay == 0
-#platform: USE_STANDALONE
-			if player.entityPos == camera[0].target
-				// Restore the camera's state
-				camera[0].style = CAMERASTYLE_FOLLOW
-			end if
-#endplatform
-
-#platform: USE_ORIGINS
 			currentPlayer = player.entityPos
 			if player.entityPos == camera[currentPlayer].target
 				// Restore the camera's state
 				camera[currentPlayer].style = CAMERASTYLE_FOLLOW
 			end if
-#endplatform
 		end if
 	end if
 
@@ -2139,7 +2140,7 @@ public function Player_TryTransform
 		// Move to the shield object slot and spawn a Super Spark there
 		arrayPos0 = currentPlayer
 		arrayPos0 += playerCount
-		ResetObjectEntity(arrayPos0, TypeName[Super Spark], 0, player[0].xpos, player[0].ypos)
+		ResetObjectEntity(arrayPos0, TypeName[Super Spark], 0, player[SLOT_PLAYER1].xpos, player[SLOT_PLAYER1].ypos)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 
 		PlaySfx(SfxName[Transform], false)
@@ -2235,7 +2236,7 @@ public function Player_Action_DblJumpSonic
 		temp0 &= checkResult
 		CheckNotEqual(Player_superState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckNotEqual(object[SLOT_ACTFINISH].type, TypeName[Act Finish])
 		temp0 &= checkResult
 
 		if temp0 == true
@@ -2254,7 +2255,7 @@ public function Player_Action_DblJumpSonic
 		temp0 &= checkResult
 		CheckNotEqual(Player_superState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckNotEqual(object[SLOT_ACTFINISH].type, TypeName[Act Finish])
 		temp0 &= checkResult
 
 		if temp0 == true
@@ -2315,20 +2316,11 @@ public function Player_Action_DblJumpSonic
 					player.speed = player.xvel
 					player.yvel = 0
 					player.jumpAbilityState = 2
-#platform: USE_STANDALONE
-					if player.entityPos == camera[0].target
-						player.scrollDelay = 15
-						camera[0].style = CAMERASTYLE_HLOCKED
-					end if
-#endplatform
-
-#platform: USE_ORIGINS
 					currentPlayer = player.entityPos
 					if player.entityPos == camera[currentPlayer].target
 						player.scrollDelay = 15
 						camera[currentPlayer].style = CAMERASTYLE_HLOCKED
 					end if
-#endplatform
 
 					if player.state == Player_State_RollJump
 						player.state = Player_State_Air
@@ -2374,6 +2366,7 @@ end function
 
 public function Player_Action_DblJumpTails
 #platform: USE_ORIGINS
+	// Tails can't even transform in Origins normally and yet they updated this anyways... how nice of them!
 	if keyPress[1].buttonY != false
 		CheckEqual(specialStage.emeralds, 127)
 		temp0 = checkResult
@@ -2534,6 +2527,7 @@ public function Player_HandleDropDash
 					end if
 				end if
 			end if
+			
 			CallFunction(Player_SetDropDashCharge)
 		end if
 	end if
@@ -2545,7 +2539,7 @@ end function
 
 public function Player_SetDropDashCharge
 #platform: USE_ORIGINS
-	if player.entityPos == 0 // Player 1
+	if player.entityPos == SLOT_PLAYER1
 		player.dropdashCount0 = temp7
 	else
 		player.dropdashCount1 = temp7
@@ -2556,7 +2550,7 @@ end function
 
 public function Player_GetDropDashCharge
 #platform: USE_ORIGINS
-	if player.entityPos == 0 // Player 1
+	if player.entityPos == SLOT_PLAYER1
 		temp7 = player.dropdashCount0
 	else
 		temp7 = player.dropdashCount1
@@ -3309,30 +3303,30 @@ public function Player_HandleFlyCarry
 	temp0 = player.xpos
 	temp1 = player.ypos
 	temp1 += 0x1F0000
-	if player[0].animation == ANI_JUMPING
+	if player[SLOT_PLAYER1].animation == ANI_JUMPING
 		temp1 += 0x50000
 	end if
 
-	temp0 -= player[0].xpos
-	temp1 -= player[0].ypos
-	if player[0].state != Player_State_Carried
-		CheckEqual(player[0].gravity, 0)
+	temp0 -= player[SLOT_PLAYER1].xpos
+	temp1 -= player[SLOT_PLAYER1].ypos
+	if player[SLOT_PLAYER1].state != Player_State_Carried
+		CheckEqual(player[SLOT_PLAYER1].gravity, GRAVITY_GROUND)
 		temp2 = checkResult
 		CheckGreater(player.yvel, 0)
 		temp2 &= checkResult
 
 		if temp2 == false
-			CheckEqual(player[0].state, Player_State_Ground)
+			CheckEqual(player[SLOT_PLAYER1].state, Player_State_Ground)
 			temp2 = checkResult
-			CheckEqual(player[0].state, Player_State_Roll)
+			CheckEqual(player[SLOT_PLAYER1].state, Player_State_Roll)
 			temp2 |= checkResult
-			CheckEqual(player[0].state, Player_State_Air)
+			CheckEqual(player[SLOT_PLAYER1].state, Player_State_Air)
 			temp2 |= checkResult
-			CheckEqual(player[0].state, Player_State_RollJump)
+			CheckEqual(player[SLOT_PLAYER1].state, Player_State_RollJump)
 			temp2 |= checkResult
-			CheckEqual(player[0].state, Player_State_LookUp)
+			CheckEqual(player[SLOT_PLAYER1].state, Player_State_LookUp)
 			temp2 |= checkResult
-			CheckEqual(player[0].state, Player_State_Crouch)
+			CheckEqual(player[SLOT_PLAYER1].state, Player_State_Crouch)
 			temp2 |= checkResult
 
 			if temp2 != false
@@ -3343,11 +3337,11 @@ public function Player_HandleFlyCarry
 				if temp2 <= 0x80000
 					if temp3 <= 0x80000
 						if player.flyCarryTimer == 0
-							if player[0].down == false
-								player[0].animation = ANI_HANGING
-								player[0].state = Player_State_Carried
-								player[0].xpos += temp0
-								player[0].ypos += temp1
+							if player[SLOT_PLAYER1].down == false
+								player[SLOT_PLAYER1].animation = ANI_HANGING
+								player[SLOT_PLAYER1].state = Player_State_Carried
+								player[SLOT_PLAYER1].xpos += temp0
+								player[SLOT_PLAYER1].ypos += temp1
 								PlaySfx(SfxName[Catch], false)
 							end if
 						end if
@@ -3357,7 +3351,7 @@ public function Player_HandleFlyCarry
 		end if
 	end if
 
-	if player[0].state == Player_State_Carried
+	if player[SLOT_PLAYER1].state == Player_State_Carried
 		temp2 = player.xpos
 		temp3 = player.ypos
 		temp6 = player.xvel
@@ -3375,7 +3369,8 @@ public function Player_HandleFlyCarry
 		player.ypos = temp3
 		player.xvel = temp6
 		player.yvel = temp7
-		stage.entityPos = 0
+		
+		stage.entityPos = SLOT_PLAYER1
 		temp0 = player.xpos
 		temp0 &= 0xFFFF0000
 		temp1 = player.ypos
@@ -3386,25 +3381,25 @@ public function Player_HandleFlyCarry
 		player.yvel -= temp1
 		ProcessObjectMovement()
 
-		stage.entityPos = 1
-		player[0].collisionPlane = player.collisionPlane
-		player[0].speed = player.speed
-		player[0].direction = player.direction
-		Player_flyCarryLeaderXPos = player[0].xpos
-		Player_flyCarryLeaderYPos = player[0].ypos
-		temp2 = player[0].xpos
+		stage.entityPos = SLOT_PLAYER2
+		player[SLOT_PLAYER1].collisionPlane = player.collisionPlane
+		player[SLOT_PLAYER1].speed = player.speed
+		player[SLOT_PLAYER1].direction = player.direction
+		Player_flyCarryLeaderXPos = player[SLOT_PLAYER1].xpos
+		Player_flyCarryLeaderYPos = player[SLOT_PLAYER1].ypos
+		temp2 = player[SLOT_PLAYER1].xpos
 		temp2 &= 0xFFFF0000
-		temp3 = player[0].ypos
+		temp3 = player[SLOT_PLAYER1].ypos
 		temp3 &= 0xFFFF0000
 		CheckNotEqual(temp4, temp2)
 		temp6 = checkResult
 		CheckNotEqual(temp5, temp3)
 		temp6 |= checkResult
 		if temp6 == true
-			if player[0].gravity == 0
-				player[0].state = Player_State_Ground
+			if player[SLOT_PLAYER1].gravity == GRAVITY_GROUND
+				player[SLOT_PLAYER1].state = Player_State_Ground
 			else
-				player[0].state = Player_State_Air
+				player[SLOT_PLAYER1].state = Player_State_Air
 			end if
 
 			player.flyCarryTimer = 30
@@ -3508,7 +3503,7 @@ public function Player_State_Fly
 
 		if player.timer < 480
 			if player.gravityStrength == 0x3800
-				if player[0].state == Player_State_Carried
+				if player[SLOT_PLAYER1].state == Player_State_Carried
 					if player.yvel < 0
 						player.animation = ANI_FLY_LIFT_UP
 						player.animationSpeed = 240
@@ -3525,7 +3520,7 @@ public function Player_State_Fly
 					end if
 				end if
 			else
-				if player[0].state == Player_State_Carried
+				if player[SLOT_PLAYER1].state == Player_State_Carried
 					player.animation = ANI_SWIM_LIFT
 				else
 					player.animation = ANI_SWIMMING
@@ -3541,7 +3536,7 @@ public function Player_State_Fly
 			player.timer++
 			if player.timer == 480
 				if player.gravityStrength == 0x3800
-					if player[0].state == Player_State_Carried
+					if player[SLOT_PLAYER1].state == Player_State_Carried
 						player.animation = ANI_FLY_LIFT_TIRED
 					else
 						player.animation = ANI_FLYINGTIRED
@@ -3551,7 +3546,7 @@ public function Player_State_Fly
 					StopSfx(SfxName[Flying])
 					PlaySfx(SfxName[Tired], true)
 				else
-					if player[0].state == Player_State_Carried
+					if player[SLOT_PLAYER1].state == Player_State_Carried
 						player.animation = ANI_SWIM_LIFT
 					else
 						player.animation = ANI_SWIMMINGTIRED
@@ -3561,7 +3556,7 @@ public function Player_State_Fly
 				if player.jumpPress == true
 					CheckNotEqual(player.gravityStrength, 0x3800)
 					temp0 = checkResult
-					CheckEqual(player[0].state, Player_State_Carried)
+					CheckEqual(player[SLOT_PLAYER1].state, Player_State_Carried)
 					temp0 &= checkResult
 
 					if temp0 == false
@@ -3572,13 +3567,13 @@ public function Player_State_Fly
 			end if
 		else
 			if player.gravityStrength == 0x3800
-				if player[0].state == Player_State_Carried
+				if player[SLOT_PLAYER1].state == Player_State_Carried
 					player.animation = ANI_FLY_LIFT_TIRED
 				else
 					player.animation = ANI_FLYINGTIRED
 				end if
 			else
-				if player[0].state == Player_State_Carried
+				if player[SLOT_PLAYER1].state == Player_State_Carried
 					player.animation = ANI_SWIM_LIFT
 				else
 					player.animation = ANI_SWIMMINGTIRED
@@ -4353,7 +4348,7 @@ end function
 
 
 public function Player_State_Death
-	if player.entityPos == 0
+	if player.entityPos == SLOT_PLAYER1
 		// If Player 1, then stop all Super activity
 		if Player_superState == SUPERSTATE_SUPER
 			Player_superState = SUPERSTATE_FADEOUT
@@ -4392,7 +4387,7 @@ public function Player_State_Death
 #endplatform
 			
 			// global variable "array" (yes, this is actually how its done)
-			arrayPos0 = 25
+			arrayPos0 = GLOBAL_PLAYERLIVES
 #platform: USE_DECOMP
 			arrayPos0 = VarName[player.lives]
 #endplatform
@@ -4507,7 +4502,7 @@ public function Player_State_Death
 					player.priority 	= PRIORITY_ACTIVE
 					player.gravity 		= 1
 					player.animation 	= ANI_HURT
-					if player.entityPos == 0
+					if player.entityPos == SLOT_PLAYER1
 						player.xpos = vs.restartX1
 						player.ypos = vs.restartY1
 					else
@@ -4555,7 +4550,7 @@ end function
 
 
 public function Player_State_Drown
-	if player.entityPos == 0
+	if player.entityPos == SLOT_PLAYER1
 		if Player_superState == SUPERSTATE_SUPER
 			Player_superState = SUPERSTATE_FADEOUT
 		end if
@@ -4582,7 +4577,7 @@ public function Player_State_Drown
 #endplatform
 
 			// global variable "array" (yes, this is actually how its done)
-			arrayPos0 = 25
+			arrayPos0 = GLOBAL_PLAYERLIVES
 #platform: USE_DECOMP
 			arrayPos0 = VarName[player.lives]
 #endplatform
@@ -4658,7 +4653,7 @@ public function Player_State_Drown
 				player.priority 	= PRIORITY_ACTIVE
 				player.gravity 		= 1
 				player.animation 	= ANI_HURT
-				if player.entityPos == 0
+				if player.entityPos == SLOT_PLAYER1
 					player.xpos = vs.restartX1
 					player.ypos = vs.restartY1
 				else
@@ -4717,14 +4712,16 @@ public function Player_State_HangBar
 			player.animationSpeed = 0
 		end if
 	end if
-
 	temp1 = player.xpos
 	temp1 >>= 16
 	temp2 = player.ypos
 	temp2 >>= 16
 	temp2 += player.collisionTop
+	
 	Get16x16TileInfo(temp0, temp1, temp2, 8)
-	if temp0 != 3
+	
+	if temp0 != 3 // this is the bar tile flag value
+		// and even if this function isn't used in Origins they still updated it there lol
 #platform: USE_STANDALONE
 		player.state = Player_State_Air
 #endplatform
@@ -4743,6 +4740,7 @@ public function Player_State_HangBar
 		player.animationSpeed = 0
 		player.ypos += 0x40000
 	end if
+	
 	player.xvel = player.speed
 end function
 
@@ -4943,9 +4941,10 @@ event ObjectUpdate
 			
 			// They didn't put the Drop Dash "animation" code seen later here...
 			
+			currentPlayer = object.entityPos
+			
 			ProcessAnimation()
 
-#platform: USE_ORIGINS
 			if player.entityPos == camera[currentPlayer].target
 				if player.animation == ANI_JUMPING
 					camera[currentPlayer].adjustY = player.jumpOffset
@@ -4956,20 +4955,6 @@ event ObjectUpdate
 					end if
 				end if
 			end if
-#endplatform
-
-#platform: USE_STANDALONE
-			if player.entityPos == camera.target
-				if player.animation == ANI_JUMPING
-					camera.adjustY = player.jumpOffset
-				else
-					if camera.adjustY == player.jumpOffset
-						camera.adjustY = 0
-						player.iypos += player.jumpOffset
-					end if
-				end if
-			end if
-#endplatform
 
 			if player.collisionDisabled == false
 				temp0 = player.prevGravity
@@ -5014,9 +4999,9 @@ event ObjectUpdate
 
 		CallFunction(player.state)
 		
-#platform: USE_ORIGINS
 		currentPlayer = player.entityPos
 		
+#platform: USE_ORIGINS
 		// Set Sonic to always use the full ball sprite while drop dashing
 		CallFunction(Player_GetDropDashCharge)
 		if temp7 >= 20
@@ -5030,7 +5015,6 @@ event ObjectUpdate
 
 		ProcessAnimation()
 
-#platform: USE_ORIGINS
 		if player.entityPos == camera[currentPlayer].target
 			if player.animation == ANI_JUMPING
 				camera[currentPlayer].adjustY = player.jumpOffset
@@ -5041,20 +5025,6 @@ event ObjectUpdate
 				end if
 			end if
 		end if
-#endplatform
-
-#platform: USE_STANDALONE
-		if player.entityPos == camera.target
-			if player.animation == ANI_JUMPING
-				camera.adjustY = player.jumpOffset
-			else
-				if camera.adjustY == player.jumpOffset
-					camera.adjustY = 0
-					player.iypos += player.jumpOffset
-				end if
-			end if
-		end if
-#endplatform
 
 		if player.collisionDisabled == false
 			temp0 = player.prevGravity
@@ -5101,26 +5071,26 @@ event ObjectUpdate
 			// Death Egg Zone handles the following itself
 			CheckCurrentStageFolder("BR9Zone12")
 			if checkResult == false
-				CheckEqual(player[0].state, Player_State_Ground)
+				CheckEqual(player[SLOT_PLAYER1].state, Player_State_Ground)
 				temp0 = checkResult
-				CheckEqual(player[0].state, Player_State_Static)
+				CheckEqual(player[SLOT_PLAYER1].state, Player_State_Static)
 				temp0 |= checkResult
 				
 				if temp0 == true
 					// Prevent the player from moving anymore
-					player[0].state = Player_State_Static
-					player[0].controlMode = CONTROLMODE_NONE
-					player[0].interaction = false
-					player[0].up = false
-					player[0].down = false
-					player[0].left = false
-					player[0].right = false
-					player[0].jumpHold = false
-					player[0].jumpPress = false
-					player[0].xvel = 0
-					player[0].yvel = 0
-					player[0].speed = 0
-					player[0].animation = ANI_WAITING
+					player[SLOT_PLAYER1].state = Player_State_Static
+					player[SLOT_PLAYER1].controlMode = CONTROLMODE_NONE
+					player[SLOT_PLAYER1].interaction = false
+					player[SLOT_PLAYER1].up = false
+					player[SLOT_PLAYER1].down = false
+					player[SLOT_PLAYER1].left = false
+					player[SLOT_PLAYER1].right = false
+					player[SLOT_PLAYER1].jumpHold = false
+					player[SLOT_PLAYER1].jumpPress = false
+					player[SLOT_PLAYER1].xvel = 0
+					player[SLOT_PLAYER1].yvel = 0
+					player[SLOT_PLAYER1].speed = 0
+					player[SLOT_PLAYER1].animation = ANI_WAITING
 				end if
 			end if
 		end if
@@ -5151,9 +5121,9 @@ event ObjectStartup
 	foreach (TypeName[Player Object], arrayPos0, ALL_ENTITIES)
 		camera[0].enabled = true
 		camera[0].style = CAMERASTYLE_FOLLOW
-		camera[0].target = 0
+		camera[0].target = SLOT_PLAYER1
 
-		currentPlayer = 0
+		currentPlayer = SLOT_PLAYER1
 		
 #platform: USE_ORIGINS
 		// The way they did it was quite weird, this is an odd way to handle things...
@@ -5177,20 +5147,20 @@ event ObjectStartup
 #endplatform
 		
 		ResetObjectEntity(0, TypeName[Player Object], 0, player[arrayPos0].xpos, player[arrayPos0].ypos)
-		camera[0].xpos = player[0].ixpos
-		camera[0].ypos = player[0].iypos
+		camera[0].xpos = player[SLOT_PLAYER1].ixpos
+		camera[0].ypos = player[SLOT_PLAYER1].iypos
 
-		player[0].groupID 				= GROUP_PLAYERS
-		player[0].state 				= Player_State_Air
-		player[0].priority 				= 1
-		player[0].drawOrder 			= DRAWORDER_PLAYER
-		player[0].sortedDrawOrder 		= 4
-		player[0].rollingDeceleration 	= 0x2000
-		player[0].spindashFunction 		= Player_Action_Spindash
-		player[0].hitboxLeft 			= C_BOX
-		player[0].hitboxTop 			= C_BOX
-		player[0].hitboxRight 			= C_BOX
-		player[0].hitboxBottom 			= C_BOX
+		player[SLOT_PLAYER1].groupID 				= GROUP_PLAYERS
+		player[SLOT_PLAYER1].state 					= Player_State_Air
+		player[SLOT_PLAYER1].priority 				= 1
+		player[SLOT_PLAYER1].drawOrder 				= DRAWORDER_PLAYER
+		player[SLOT_PLAYER1].sortedDrawOrder 		= 4
+		player[SLOT_PLAYER1].rollingDeceleration 	= 0x2000
+		player[SLOT_PLAYER1].spindashFunction 		= Player_Action_Spindash
+		player[SLOT_PLAYER1].hitboxLeft 			= C_BOX
+		player[SLOT_PLAYER1].hitboxTop 				= C_BOX
+		player[SLOT_PLAYER1].hitboxRight 			= C_BOX
+		player[SLOT_PLAYER1].hitboxBottom 			= C_BOX
 
 		// Reset things for Super forms
 		Player_superState 		= SUPERSTATE_NONE
@@ -5203,18 +5173,18 @@ event ObjectStartup
 			LoadAnimation("SuperSonic.ani") // This isn't because you're starting the act as Super Sonic, this is here to load all the necessary sprite sheets
 			LoadAnimation("Sonic.ani")
 			CallFunction(Player_HandleSuperPalette_Sonic)
-			player[0].character 	= 0
-			player[0].jumpOffset 	= -5
-			player[0].jumpAbility 	= Player_Action_DblJumpSonic
+			player[SLOT_PLAYER1].character 		= 0
+			player[SLOT_PLAYER1].jumpOffset 	= -5
+			player[SLOT_PLAYER1].jumpAbility 	= Player_Action_DblJumpSonic
 			ANI_PEELOUT 			= ANI_RUNNING
 			break
 
 		case PLAYER_TAILS_ALONE
-			player[0].type 		= TypeName[Tails Object]
-			player[0].character = PLAYER_TAILS_ALONE
+			player[SLOT_PLAYER1].type 		= TypeName[Tails Object]
+			player[SLOT_PLAYER1].character  = PLAYER_TAILS_ALONE
 			CallFunction(Player_HandleSuperPalette_Tails)
 			LoadAnimation("Tails.ani")
-			player[0].jumpOffset = -1
+			player[SLOT_PLAYER1].jumpOffset = -1
 
 			if options.vsMode == true
 				// Tails can always fly in 2P VS, regardless of the setting
@@ -5222,9 +5192,9 @@ event ObjectStartup
 			end if
 
 			if options.tailsFlight == true
-				player[0].jumpAbility = Player_Action_DblJumpTails
+				player[SLOT_PLAYER1].jumpAbility = Player_Action_DblJumpTails
 			else
-				player[0].jumpAbility = Player_State_Static // Not being used as a State here, simply more of a dummy function
+				player[SLOT_PLAYER1].jumpAbility = Player_State_Static // Not being used as a State here, simply more of a dummy function
 			end if
 
 			stage.player2Enabled = false
@@ -5233,10 +5203,10 @@ event ObjectStartup
 		case PLAYER_KNUX_ALONE
 			LoadAnimation("Knuckles.ani")
 			CallFunction(Player_HandleSuperPalette_Knux)
-			player[0].character 	= 2
-			player[0].jumpOffset 	= -5
-			player[0].jumpAbility 	= Player_Action_DblJumpKnux
-			ANI_PEELOUT 			= ANI_RUNNING
+			player[SLOT_PLAYER1].character 		= 2
+			player[SLOT_PLAYER1].jumpOffset 	= -5
+			player[SLOT_PLAYER1].jumpAbility 	= Player_Action_DblJumpKnux
+			ANI_PEELOUT 						= ANI_RUNNING
 			
 			// Note this check is actually bugged, this only checks for the last three save slots, ignoring the first one
 			// Also yes this check is still in Origins LOL
@@ -5254,7 +5224,7 @@ event ObjectStartup
 			playerCount = 1
 		end if
 
-		currentPlayer = 0
+		currentPlayer = SLOT_PLAYER1
 		CallFunction(Player_UpdatePhysicsState)
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
