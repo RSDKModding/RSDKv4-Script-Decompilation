@@ -21,7 +21,7 @@ private alias object.value8  : object.ringBonus
 private alias object.value9  : object.perfectBonus
 private alias object.value10 : object.hasPerfectBonus
 private alias object.value11 : object.totalScore
-private alias object.value12 : object.hasContinue
+private alias object.value12 : object.hasContinue // (can be Coins in Origins too)
 
 // States
 private alias -1 : ACTFINISH_NORESULTS
@@ -315,17 +315,24 @@ event ObjectUpdate
 		object.timer += 4
 		SetScreenFade(0, 0, 0, object.timer)
 		if object.timer == 384
-			fadeColor = 0
+			fadeColor = 0x000000
 			object.timer = 0
 			starPostID = 0
+			
+			// Huh? This object's direction doesn't really mean much, what's this supposed to mean..?
 			object.direction = FACING_RIGHT
+			
+			// These following two lines were added in Origins 1.0.4
+			// -> In standalone RSDKv4, SFX are reset when transitioning scenes
+			// -> In Origins's cross implementation of Hedgehog Engine 2 and RSDKv5u, however, SFX can continue to play between scenes
 			StopSfx(SfxName[Flying])
 			StopSfx(SfxName[Tired])
+			
 			stage.listPos++
 			
 			// Hidden Palace Checks
 			if stage.listPos > 20
-				stage.listPos = 12 // Oil Ocean Zone Act 1
+				stage.listPos = 12 // Make the next stage Oil Ocean Zone Act 1
 				if options.stageSelectFlag == false
 					if stage.debugMode == false
 						if options.gameMode == MODE_NOSAVE
@@ -476,10 +483,12 @@ event ObjectDraw
 	DrawSpriteScreenXY(12, temp7, 168)
 	temp7 += 88
 	DrawNumbers(14, temp7, 169, object.totalScore, 6, 8, 0)
+	
 	if object.hasContinue == true
 #platform: USE_ORIGINS
 		if game.coinMode == false
 #endplatform
+			// Draw the Continue icon
 			GetBit(temp0, oscillation, 4)
 			if temp0 == true
 				GetBit(temp0, oscillation, 5)
@@ -492,12 +501,18 @@ event ObjectDraw
 			end if
 #platform: USE_ORIGINS
 		else
+			// Draw the Coin icon
+			
+			// First, the "Coin x 3" text
+			// They could've used a constant value of 26 in the function rather than doing it this roundabout way, but if they really wanna ig
 			temp0 = 26
 			temp1 = screen.xcenter
 			temp1 += 112
 			temp2 = screen.ycenter
 			temp2 += 52
 			DrawSpriteScreenXY(temp0, temp1, temp2)
+			
+			// Then, the Coins icon
 			temp0 = oscillation
 			temp0 &= 15
 			temp0 >>= 2

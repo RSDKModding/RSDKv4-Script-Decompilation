@@ -74,10 +74,13 @@ public alias 3 : COL_RIGHT
 public alias 4 : COL_BOTTOM
 
 // Reserved Object Slot Aliases
-private alias 0 : SLOT_PLAYER1
+private alias 0  : SLOT_PLAYER1
+private alias 11 : SLOT_TITLECARD
+private alias 30 : SLOT_ACTFINISH
 
 // Mode Aliases
 private alias 2 : MODE_TIMEATTACK
+
 private alias 8 : MISSIONNO_MERCY
 
 // Draw Order Aliases
@@ -140,7 +143,7 @@ private alias object.xpos			 : player.xpos				// In total world-space position (
 private alias object.ypos			 : player.ypos
 private alias object.ixpos			 : player.ixpos			// In screen space position (1 == 1)
 private alias object.iypos			 : player.iypos
-private alias object.lookPosX		 : player.lookPosX			// Camera offset based on the player's position
+private alias object.lookPosX		 : player.lookPosX			// Camera offset based on the player's position (X isn't used in this script, but kept here for refence)
 private alias object.lookPosY		 : player.lookPosY
 private alias object.xvel			 : player.xvel				// Based on world-space
 private alias object.yvel			 : player.yvel
@@ -157,8 +160,8 @@ private alias object.animationTimer	 : player.animationTimer
 private alias object.drawOrder		 : player.drawOrder
 private alias object.pushing		 : player.pushing
 private alias object.controlLock	 : player.controlLock		// Timer for how long control lock is active
-private alias object.controlMode	 : player.controlMode		// Normally 0 to allow for player control, -1 to take control away from the player
-private alias object.interaction	 : player.interaction		// Will the object interact with objects?
+private alias object.controlMode	 : player.controlMode		// See CONTROLMODE_* aliases
+private alias object.interaction	 : player.interaction		// Will the object interact with other objects?
 private alias object.scrollTracking	 : player.scrollTracking	// Determines if the camera will track the player's position or just follow it
 private alias object.collisionMode	 : player.collisionMode
 private alias object.collisionLeft	 : player.collisionLeft
@@ -487,7 +490,7 @@ end table
 
 // Initialize the character object for replay playback
 public function Player_SetupAttractDemo
-	// Input entries start 2 indexes in
+	// Input entries start 2 indexes in, since the first two values are starting position
 	Player_attractTablePos = 2
 	Player_attractFrameCount = 1
 
@@ -515,7 +518,7 @@ end function
 // Give the player back their shield after invincibility
 public function Player_ApplyShield
 	switch player[currentPlayer].shield
-	case SHIELD_NONE // No shield - set the shield slot to blank
+	case SHIELD_NONE // No shield - that means to just set the shield slot to blank
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 		break
 
@@ -526,17 +529,17 @@ public function Player_ApplyShield
 		object[arrayPos0].alpha = 160
 		break
 
-	case SHIELD_BUBBLE // Bubble shield, restore it and set it to active
+	case SHIELD_BUBBLE
 		ResetObjectEntity(arrayPos0, TypeName[Bubble Shield], 0, 0, 0)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		break
 
-	case SHIELD_FIRE // Flame shield, restore it and set it to active
+	case SHIELD_FIRE
 		ResetObjectEntity(arrayPos0, TypeName[Fire Shield], 0, 0, 0)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		break
 
-	case SHIELD_LIGHTNING // Lightning shield, restore it and set it to active
+	case SHIELD_LIGHTNING
 		ResetObjectEntity(arrayPos0, TypeName[LightningShield], 0, 0, 0)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 		break
@@ -842,12 +845,11 @@ public function Player_HandleSuperForm
 		// If the player isn't already dead, give them back their shield
 		if player.state != Player_State_Death
 			if player.state != Player_State_Drown
-
 				currentPlayer = player.entityPos
 				arrayPos0 = currentPlayer
 				arrayPos0 += playerCount
+				
 				CallFunction(Player_ApplyShield)
-
 			end if
 		end if
 
@@ -858,6 +860,7 @@ end function
 
 
 // Used by badniks to check for if the player should get hit
+// -> Not to be confused with Player_BadnikBreak, which is for breaking badniks as a whole
 public function Player_CheckHit
 	CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
 	temp0 = checkResult
@@ -920,6 +923,7 @@ end function
 
 
 // Used by badniks to check if the badnik should be destroyed
+// -> Not to be confused with Player_CheckHit
 public function Player_BadnikBreak
 	CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
 	temp0 = checkResult
@@ -953,6 +957,7 @@ public function Player_BadnikBreak
 		if stage.timeEnabled == false
 			temp0 = false
 		end if
+		
 		if game.missionFunctionNo == MISSIONNO_MERCY
 			temp0 = false
 		end if
@@ -1104,7 +1109,7 @@ public function Player_BadnikBreak
 end function
 
 
-// Ouch!
+// This function is called in order to hurt currentPlayer, not to be confused with the actual Player State functions
 public function Player_Hit
 	if player[currentPlayer].state != Player_State_Death
 		arrayPos0 = player[currentPlayer].entityPos
@@ -1126,7 +1131,6 @@ end function
 
 // Used by things like MZ lava and other fire-based obstacles
 public function Player_FireHit
-	// Do not hurt the player if they have a flame shield
 	if player[currentPlayer].shield != SHIELD_FIRE
 		if player[currentPlayer].state != Player_State_Death
 			arrayPos0 = player[currentPlayer].entityPos
@@ -1149,7 +1153,6 @@ end function
 
 // Used by things like SBZ lightning and other lightning-based obstacles
 public function Player_LightningHit
-	// Do not hurt the player if they have a lightning shield
 	if player[currentPlayer].shield != SHIELD_LIGHTNING
 		if player[currentPlayer].state != Player_State_Death
 			// (Player shouldn't have a lighting shield underwater so no other check is needed here)
@@ -1177,13 +1180,17 @@ public function Player_ProjectileHit
 	if player[currentPlayer].shield > SHIELD_NORMAL // Reflect it if the player has an elemental shield
 		temp0 = player[currentPlayer].xpos
 		temp0 -= object.xpos
+		
 		temp1 = player[currentPlayer].ypos
 		temp1 -= object.ypos
+		
 		ATan2(temp2, temp0, temp1)
 		Sin256(temp0, temp2)
 		Cos256(temp1, temp2)
+		
 		object.xvel = temp1
 		object.xvel *= -0x800
+		
 		object.yvel = temp0
 		object.yvel *= -0x800
 	else
@@ -1288,6 +1295,7 @@ public function Player_Kill
 	arrayPos0 += playerCount
 
 	if object[arrayPos0].type == invincibilityType
+		// Used for when exiting Debug Mode, in order to preserve invincibility
 		object[arrayPos0].propertyValue = 3
 	end if
 
@@ -1453,14 +1461,14 @@ public function Player_ProcessUpdate
 				if Player_attractDuration < 1 // Replay over?
 					// Start fading out
 					
-					ResetObjectEntity(11, TypeName[Title Card], 0, 0, 0)
-					object[11].state = TITLECARD_FADETOTITLE
-					object[11].priority = PRIORITY_ACTIVE
+					ResetObjectEntity(SLOT_TITLECARD, TypeName[Title Card], 0, 0, 0)
+					object[SLOT_TITLECARD].state = TITLECARD_FADETOTITLE
+					object[SLOT_TITLECARD].priority = PRIORITY_ACTIVE
 #platform: USE_STANDALONE
-					object[11].drawOrder = 6
+					object[SLOT_TITLECARD].drawOrder = 6
 #endplatform
 #platform: USE_ORIGINS
-					object[11].drawOrder = 7
+					object[SLOT_TITLECARD].drawOrder = 7
 #endplatform
 					
 					player.invincibleTimer = 80
@@ -2350,7 +2358,7 @@ public function Player_Action_DblJumpSonic
 		temp0 &= checkResult
 
 		// Don't let the player transform if the level is over, either
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckNotEqual(object[SLOT_ACTFINISH].type, TypeName[Act Finish])
 		temp0 &= checkResult
 		
 		if temp0 == true
@@ -2372,7 +2380,7 @@ public function Player_Action_DblJumpSonic
 		temp0 &= checkResult
 		CheckNotEqual(Player_superState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckNotEqual(object[SLOT_ACTFINISH].type, TypeName[Act Finish])
 		temp0 &= checkResult
 		if temp0 == true
 			currentPlayer = player.entityPos
@@ -2525,7 +2533,7 @@ public function Player_Action_DblJumpTails
 		temp0 &= checkResult
 
 		// Don't let the player transform if the level is over, either
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckNotEqual(object[SLOT_ACTFINISH].type, TypeName[Act Finish])
 		temp0 &= checkResult
 		
 		if temp0 == true
@@ -2546,7 +2554,7 @@ public function Player_Action_DblJumpTails
 		temp0 &= checkResult
 		CheckNotEqual(Player_superState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckNotEqual(object[SLOT_ACTFINISH].type, TypeName[Act Finish])
 		temp0 &= checkResult
 		if temp0 == true
 			currentPlayer = player.entityPos
@@ -2594,7 +2602,7 @@ public function Player_Action_DblJumpKnux
 		temp0 &= checkResult
 
 		// Don't let the player transform if the level is over, either
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckNotEqual(object[SLOT_ACTFINISH].type, TypeName[Act Finish])
 		temp0 &= checkResult
 		
 		if temp0 == true
@@ -2615,7 +2623,7 @@ public function Player_Action_DblJumpKnux
 		temp0 &= checkResult
 		CheckNotEqual(Player_superState, SUPERSTATE_SUPER)
 		temp0 &= checkResult
-		CheckNotEqual(object[30].type, TypeName[Act Finish])
+		CheckNotEqual(object[SLOT_ACTFINISH].type, TypeName[Act Finish])
 		temp0 &= checkResult
 		if temp0 == true
 			currentPlayer = player.entityPos
