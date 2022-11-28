@@ -57,6 +57,10 @@ private alias 1 : CHAINCRUSHER_TYPE_MED
 private alias 2 : CHAINCRUSHER_TYPE_SMALL
 private alias 3 : CHAINCRUSHER_TYPE_SMALL_ACTIVE
 
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
 // ========================
 // Function Declarations
 // ========================
@@ -185,9 +189,9 @@ private function PushBlock_HandleObjectCollisions
 	if object.xvel != 0
 		object.xpos += object.xvel
 		if object.xvel < 0
-			ObjectTileCollision(2, object.solidBoxL, 0, 0)
+			ObjectTileCollision(CSIDE_RWALL, object.solidBoxL, 0, PATH_A)
 		else
-			ObjectTileCollision(1, object.solidBoxR, 0, 0)
+			ObjectTileCollision(CSIDE_LWALL, object.solidBoxR, 0, PATH_A)
 		end if
 		CallFunction(PushBlock_HandlePushBounds)
 
@@ -239,35 +243,35 @@ private function PushBlock_HandleTileCollisions
 			object.ypos += object.yvel
 			temp0 = object.solidBoxL
 			temp0 += 2
-			ObjectTileCollision(0, temp0, 16, 0)
+			ObjectTileCollision(CSIDE_FLOOR, temp0, 16, PATH_A)
 			object.floorSensorL = checkResult
 			object.gravity = checkResult
 
-			ObjectTileCollision(0, 0, 16, 0)
+			ObjectTileCollision(CSIDE_FLOOR, 0, 16, PATH_A)
 			object.floorSensorC = checkResult
 			object.gravity |= checkResult
 
 			temp0 = object.solidBoxR
 			temp0 -= 2
-			ObjectTileCollision(0, temp0, 16, 0)
+			ObjectTileCollision(CSIDE_FLOOR, temp0, 16, PATH_A)
 			object.floorSensorR = checkResult
 			object.gravity |= checkResult
 		else
 			object.yvel = 0
 			temp0 = object.solidBoxL
 			temp0 += 2
-			ObjectTileGrip(0, temp0, 16, 0)
+			ObjectTileGrip(CSIDE_FLOOR, temp0, 16, PATH_A)
 
 			object.floorSensorL = checkResult
 			object.gravity = checkResult
-			ObjectTileGrip(0, 0, 16, 0)
+			ObjectTileGrip(CSIDE_FLOOR, 0, 16, PATH_A)
 
 			object.floorSensorC = checkResult
 			object.gravity |= checkResult
 
 			temp0 = object.solidBoxR
 			temp0 -= 2
-			ObjectTileGrip(0, temp0, 16, 0)
+			ObjectTileGrip(CSIDE_FLOOR, temp0, 16, PATH_A)
 			object.floorSensorR = checkResult
 			object.gravity |= checkResult
 		end if
@@ -283,7 +287,7 @@ private function PushBlock_HandleTileCollisions
 		case CHAINCRUSHER_TYPE_LARGE
 			BoxCollisionTest(C_PLATFORM, arrayPos0, -56, -12, 56, 12, object.entityPos, object.solidBoxL, -16, object.solidBoxR, 16)
 			object.beingPushed |= checkResult
-			ObjectTileCollision(3, 0, -17, 0)
+			ObjectTileCollision(CSIDE_ROOF, 0, -17, PATH_A)
 			if checkResult == true
 				object.ypos -= 0x10000
 				object[arrayPos0].ypos = object.ypos
@@ -295,7 +299,7 @@ private function PushBlock_HandleTileCollisions
 		case CHAINCRUSHER_TYPE_MED
 			BoxCollisionTest(C_PLATFORM, arrayPos0, -48, -12, 48, 12, object.entityPos, object.solidBoxL, -16, object.solidBoxR, 16)
 			object.beingPushed |= checkResult
-			ObjectTileCollision(3, 0, -17, 0)
+			ObjectTileCollision(CSIDE_ROOF, 0, -17, PATH_A)
 			if checkResult == true
 				object.ypos -= 0x10000
 				object[arrayPos0].ypos = object.ypos
@@ -307,7 +311,7 @@ private function PushBlock_HandleTileCollisions
 		case CHAINCRUSHER_TYPE_SMALL
 			BoxCollisionTest(C_PLATFORM, arrayPos0, -16, -12, 16, 12, object.entityPos, object.solidBoxL, -16, object.solidBoxR, 16)
 			object.beingPushed |= checkResult
-			ObjectTileCollision(3, 0, -17, 0)
+			ObjectTileCollision(CSIDE_ROOF, 0, -17, PATH_A)
 			if checkResult == true
 				object.ypos -= 0x10000
 				object[arrayPos0].ypos = object.ypos
@@ -381,7 +385,7 @@ event ObjectUpdate
 			temp1 &= 0xFFFF0000
 			object.yvel += 0x1800
 			object.ypos += object.yvel
-			ObjectTileCollision(0, 0, 16, 0)
+			ObjectTileCollision(0, 0, 16, PATH_A)
 			if checkResult == true
 				object.yvel = 0
 				object.gravity = GRAVITY_GROUND
@@ -401,14 +405,14 @@ event ObjectUpdate
 		end if
 
 		if object.xvel > 0
-			ObjectTileCollision(1, 16, 12, 0)
+			ObjectTileCollision(1, 16, 12, PATH_A)
 			if checkResult == true
 				object.xvel = 0
 				object.timer = 0
 				object.state = PUSHBLOCK_SINKING
 			end if
 		else
-			ObjectTileCollision(2, -16, 12, 0)
+			ObjectTileCollision(2, -16, 12, PATH_A)
 			if checkResult == true
 				object.xvel = 0
 				object.timer = 0
@@ -569,9 +573,7 @@ end event
 
 
 event RSDKDraw
-	object.frame = object.propertyValue
-	object.frame &= 1
-
+	GetBit(object.frame, object.propertyValue, 0)
 	DrawSprite(object.frame)
 end event
 
@@ -581,7 +583,6 @@ event RSDKLoad
 	SpriteFrame(-16, -16, 32, 32, 159, 322)
 	SpriteFrame(-64, -16, 128, 32, 159, 322)
 	
-
 	AddEditorVariable("frameID")
 	SetActiveVariable("frameID")
 	AddEnumVariable("Small", 0)

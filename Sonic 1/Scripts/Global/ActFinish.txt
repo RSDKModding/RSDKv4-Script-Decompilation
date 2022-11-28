@@ -22,8 +22,6 @@ private alias object.value5 : object.timeBonus
 private alias object.value6 : object.ringBonus
 private alias object.scale  : object.ringPos
 
-private alias object.value0 : player.rings
-
 // States
 private alias -1 : ACTFINISH_NORESULTS
 private alias  0 : ACTFINISH_INIT
@@ -51,10 +49,16 @@ private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_UNTRANSFORM
 
 // Player Aliases
+private alias object.value0 : player.rings
+
 private alias object.interaction : player.interaction
 private alias object.controlMode : player.controlMode
 private alias object.right       : player.right
 
+
+// ========================
+// Events
+// ========================
 
 event ObjectUpdate
 	switch object.state
@@ -144,9 +148,11 @@ event ObjectUpdate
 				object.state++
 			end if
 		end if
+		
 		CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
 		CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, player[0].rings)
 		CallNativeFunction2(NotifyCallback, NOTIFY_ACT_FINISH, 0)
+		
 		StageStatsUsabilityParam1 = 0
 		StageStatsUsabilityParam2 = 0
 		StageStatsUsabilityParam3 = 0
@@ -276,16 +282,17 @@ event ObjectUpdate
 				CheckEqual(stage.actNum, 2)
 				temp0 &= checkResult
 #platform: USE_ORIGINS
-					CheckEqual(game.oneStageFlag, false)
-					temp0 &= checkResult
+				CheckEqual(game.oneStageFlag, false)
+				temp0 &= checkResult
 #endplatform
 				if temp0 == true
+					// In SBZ Act 2, exit the HUD rather than fading out to the next level
 					object.state = ACTFINISH_EXITUISPRITES
 				else
 #platform: USE_ORIGINS
 					if game.oneStageFlag != false
 						game.callbackResult = -1
-						CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 1, stage.listPos, 0)
+						CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, true, stage.listPos, 0)
 						object.state = ACTFINISH_WAITFORCALLBACK
 					else
 						object.state++
@@ -302,7 +309,7 @@ event ObjectUpdate
 #platform: USE_ORIGINS
 				if game.oneStageFlag != false
 					game.callbackResult = -1
-					CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, 1, stage.listPos, 0)
+					CallNativeFunction4(NotifyCallback, NOTIFY_STAGE_RETRY, true, stage.listPos, 0)
 					object.state = ACTFINISH_WAITFORCALLBACK
 				else
 					object.state++
@@ -367,10 +374,12 @@ event ObjectUpdate
 				specialStage.nextZone = stage.listPos
 				stage.listPos = specialStage.listPos
 				stage.activeList = SPECIAL_STAGE
+				
 				temp0 = engine.trialMode
 				if stage.listPos >= stage.listSize
 					temp0 = true
 				end if
+
 				if temp0 == false
 					LoadStage()
 				else
@@ -524,6 +533,7 @@ event ObjectUpdate
 		else
 			LoadStage()
 		end if
+		
 		object.state++
 		if object[0].type == TypeName[Blank Object]
 			SetScreenFade(208, 255, 224, 255)
@@ -545,7 +555,6 @@ end event
 
 
 event ObjectDraw
-
 	SetActivePalette(0, 0, screen.ysize)
 
 	temp0 = screen.xcenter
@@ -570,9 +579,11 @@ event ObjectDraw
 	temp1 = stage.actNum
 	temp1 += 5
 	if temp1 < 6
+		// Minimum of Act 1 to be displayed
 		temp1 = 6
 	end if
 	if temp1 > 8
+		// Maximum of Act 3 to be displayed
 		temp1 = 8
 	end if
 	DrawSpriteScreenXY(temp1, temp0, 82)
@@ -602,7 +613,6 @@ event ObjectDraw
 
 	temp0 += 151
 	DrawNumbers(13, temp0, 149, object.ringBonus, 5, 8, 0)
-
 end event
 
 

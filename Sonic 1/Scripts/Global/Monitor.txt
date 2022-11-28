@@ -54,6 +54,10 @@ private alias 0 : MONITOR_STATE_RISE
 // Game Mode Aliases
 private alias 2 : MODE_TIMEATTACK
 
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
 // ========================
 // Function Declarations
 // ========================
@@ -61,11 +65,17 @@ private alias 2 : MODE_TIMEATTACK
 reserve function Monitor_DebugDraw
 reserve function Monitor_DebugSpawn
 
+
 // ========================
 // Static Values
 // ========================
 
 private value Monitor_startDebugID = 0
+
+
+// ========================
+// Function Definitions
+// ========================
 
 private function Monitor_DebugDraw
 	DrawSprite(0)
@@ -82,14 +92,14 @@ private function Monitor_DebugDraw
 
 
 	if temp0 >= MONITOR_SHIELD_GOGGLES
-		// only allow goggles in labyrinth, otherwise skip it
+		// Only allow Goggles in Labyrinth, otherwise skip it
 		CheckCurrentStageFolder("Zone04")
 		if checkResult == false
 			temp0++
 		end if
 	end if
+	
 	DrawSprite(temp0)
-
 end function
 
 
@@ -127,7 +137,7 @@ event ObjectUpdate
 		object.yvel += 0x3800
 		object.ypos += object.yvel
 		if object.yvel >= 0
-			ObjectTileCollision(0, 0, 16, 0)
+			ObjectTileCollision(CSIDE_FLOOR, 0, 16, PATH_A)
 			if checkResult == true
 				object.yvel = 0
 				object.state = MONITOR_STATE_IDLE
@@ -136,14 +146,12 @@ event ObjectUpdate
 	end if
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-
 		CheckGreater(player[currentPlayer].yvel, -1)
 		temp0 = checkResult
 		CheckEqual(player[currentPlayer].gravity, 0)
 		temp0 |= checkResult
 
 		if temp0 == true
-
 			CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
 			temp0 = checkResult
 			CheckEqual(player[currentPlayer].animation, ANI_GLIDING)
@@ -152,9 +160,7 @@ event ObjectUpdate
 			temp0 |= checkResult
 
 			if temp0 == true
-
-				// Is this Player 1?
-				if player[currentPlayer].isSidekick == false
+				if player[currentPlayer].isSidekick == false // Only P1 should be able to break monitors
 
 					// See if P1 has collided with the monitor
 					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
@@ -234,7 +240,6 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Items.gif")
 
 	// Monitor frames
@@ -273,7 +278,6 @@ event ObjectStartup
 	SpriteFrame(-8, -9, 16, 14, 51, 1)
 	SpriteFrame(-8, -9, 16, 14, 68, 1)
 	
-	
 	Monitor_startDebugID = DebugMode_ObjCount
 	Monitor_startDebugID--
 	
@@ -298,7 +302,6 @@ event ObjectStartup
 			if checkResult == false
 				temp2 = false
 			end if
-
 		end if
 
 		if temp2 == true
@@ -333,12 +336,13 @@ event ObjectStartup
 
 	if options.shieldType < 2
 		switch stage.listPos
-		case 12
-		case 13
-		case 17
+		case 12 // SLZ1
+		case 13 // SLZ2
+		case 17 // SBZ2
 			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
-				if object[arrayPos0].propertyValue >= 9
-					if object[arrayPos0].propertyValue <= 11
+				if object[arrayPos0].propertyValue >= MONITOR_SHIELD_BUBBLE
+					if object[arrayPos0].propertyValue <= MONITOR_SHIELD_LIGHTNING
+						// Completely erase all elemental shield monitors
 						object[arrayPos0].type = TypeName[Blank Object]
 					end if
 				end if
@@ -347,15 +351,16 @@ event ObjectStartup
 
 		default
 			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
-				if object[arrayPos0].propertyValue >= 9
-					if object[arrayPos0].propertyValue <= 11
-						object[arrayPos0].propertyValue = 2
+				if object[arrayPos0].propertyValue >= MONITOR_SHIELD_BUBBLE
+					if object[arrayPos0].propertyValue <= MONITOR_SHIELD_LIGHTNING
+						// Turn all elemental shield monitors into standard shields
+						object[arrayPos0].propertyValue = MONITOR_SHIELD_BLUE
 					end if
 				end if
 			next
-		break
+			break
+			
 		end switch
-
 	end if
 
 	if options.gameMode == MODE_TIMEATTACK
@@ -365,9 +370,7 @@ event ObjectStartup
 				object[arrayPos0].type = TypeName[Blank Object]
 			end if
 		next
-
 	end if
-
 end event
 
 

@@ -140,7 +140,7 @@ private alias object.lookPosY		 :	player.lookPosY
 private alias object.xvel			 :	player.xvel				// Based on world-space (see above)
 private alias object.yvel			 :	player.yvel
 private alias object.speed			 :	player.speed			// Based on world-space (see above)
-private alias object.rotation		 :	player.rotation			// Note: Because this is stored as a byte, it goes from 0-255, not 0-360!
+private alias object.rotation		 :	player.rotation			// 512-based, not 360 degrees
 private alias object.angle			 :	player.angle			// See above
 private alias object.direction		 :	player.direction
 private alias object.gravity		 :	player.gravity			// GRAVITY_GROUND or GRAVITY_AIR. Not to be confused with player.gravityStrength, see there for more info
@@ -149,7 +149,7 @@ private alias object.animation		 :	player.animation
 private alias object.prevAnimation	 :	player.prevAnimation
 private alias object.animationSpeed	 :	player.animationSpeed
 private alias object.animationTimer	 :	player.animationTimer
-private alias object.drawOrder		 :	player.drawOrder
+private alias object.drawOrder		 :	player.drawOrder		// Should always be DRAWORDER_PLAYER, to change draw order use player.sortedDrawOrder instead
 private alias object.pushing		 :	player.pushing
 private alias object.controlLock	 :	player.controlLock		// Timer for how long control lock is active. Not to be confused with roll jump lock, see the Player_Action_Jump function for that
 private alias object.controlMode	 :	player.controlMode		// See CONTROLMODE_* aliases
@@ -190,11 +190,11 @@ private alias object.value8  : player.blinkTimer
 private alias object.value9  : player.skidSpeed
 private alias object.value10 : player.animationReserve		// Used by springs to store what animation will play after the bounce animation
 private alias object.value11 : player.scrollDelay			// A timer of how long the camera will stay locked for
-private alias object.value12 : player.tailFrame				// One of Tails' tail values, not used by the player itself
-private alias object.value13 : player.tailAnim				// Also one of Tails' tail values
+private alias object.value12 : player.tailFrame				// One of Tails's tail values, not used by the player itself
+private alias object.value13 : player.tailAnim				// Also one of Tails's tail values
 private alias object.value14 : player.skidding
 // value15 is unused
-private alias object.value16 : player.isSidekick			// true if an AI character, false otherwise (P1, P2 in 2PVS, etc)
+private alias object.value16 : player.isSidekick			// true if an AI character (P2 in singleplayer), false otherwise (P1, P2 in 2PVS)
 private alias object.value17 : debugMode.currentSelection
 private alias object.value18 : player.sortedDrawOrder
 private alias object.value19 : player.badnikBonus			// How many enemies the player has bounced on in a row
@@ -903,6 +903,8 @@ public function Player_BadnikBreak
 	temp0 |= checkResult
 	CheckNotEqual(player[currentPlayer].invincibleTimer, 0)
 	temp0 |= checkResult
+	
+	// Tails can also break badniks that are hit his tails while flying, check for that
 	CheckEqual(player[currentPlayer].animation, ANI_FLYING)
 	temp1 = checkResult
 	CheckEqual(player[currentPlayer].animation, ANI_FLYINGTIRED)
@@ -1994,7 +1996,7 @@ end function
 
 
 public function Player_HandleOnGround
-	player.scrollTracking = 0
+	player.scrollTracking = false
 	Cos256(temp0, player.angle)
 	temp0 *= player.speed
 	temp0 >>= 8
@@ -2067,7 +2069,7 @@ public function Player_Action_Jump
 
 #platform: USE_ORIGINS
 		// This was introduced in 1.0.4 in order to make P2 Tails's jump SFX less obnoxious when he's off-screen
-		currentPlayer = object.entityPos
+		currentPlayer = player.entityPos
 		CallFunction(Player_CheckIfOnScreen)
 		if checkResult != false
 			PlaySfx(SfxName[Jump], false)
@@ -3107,7 +3109,7 @@ end function
 
 public function Player_State_LookUp
 #platform: USE_ORIGINS
-	currentPlayer = object.entityPos
+	currentPlayer = player.entityPos
 #endplatform
 
 	if player.up == false
@@ -3152,7 +3154,7 @@ end function
 
 public function Player_State_Crouch
 #platform: USE_ORIGINS
-	currentPlayer = object.entityPos
+	currentPlayer = player.entityPos
 #endplatform
 
 	if player.down == false
@@ -3856,7 +3858,7 @@ public function Player_State_GlideDrop
 			PlaySfx(SfxName[Landing], false)
 		end if
 
-		player.scrollTracking = 0
+		player.scrollTracking = false
 		player.speed = 0
 		player.xvel = 0
 		player.animation = ANI_LOOKINGDOWN
@@ -4166,8 +4168,8 @@ public function Player_State_GotHit
 
 #platform: USE_ORIGINS
 	if game.playMode == BOOT_PLAYMODE_MISSION
-		// For the mission "Bodyguard" (Player 2 isn't in any other mission)
-		if object.type == TypeName[Player 2 Object]
+		// For the mission "Bodyguard" (Player 2 isn't in any other missions)
+		if player.type == TypeName[Player 2 Object]
 			temp0 = 3
 			game.forceKillPlayer = true
 		end if
@@ -4184,16 +4186,16 @@ public function Player_State_GotHit
 
 	switch temp0
 	default
-	case 0
+	case 0 // No effect
 		break
 
-	case 1
+	case 1 // Recoil
 		player.state = Player_State_Hurt
 		player.animation = ANI_HURT
 		player.yvel = -0x40000
 		player.gravity = GRAVITY_AIR
-		player.scrollTracking = 1
-		player.tileCollisions = 1
+		player.scrollTracking = true
+		player.tileCollisions = true
 		player.blinkTimer = 120
 
 		if player.gravityStrength == 0x1000
@@ -4202,7 +4204,7 @@ public function Player_State_GotHit
 		end if
 		break
 
-	case 2
+	case 2 // Damage, losing rings
 		player.state = Player_State_Hurt
 		player.animation = ANI_HURT
 		player.yvel = -0x40000
@@ -4281,7 +4283,7 @@ public function Player_State_GotHit
 		ringExtraLife = 100
 		break
 
-	case 3
+	case 3 // Death!
 #platform: USE_STANDALONE
 		player.sortedDrawOrder = 6
 #endplatform
@@ -4371,7 +4373,7 @@ public function Player_State_Death
 		player.animation = ANI_DYING
 	end if
 
-	currentPlayer = object.entityPos
+	currentPlayer = player.entityPos
 	if player.entityPos == camera[currentPlayer].target
 		temp0 = camera[currentPlayer].ypos
 		temp0 += 272
@@ -4561,7 +4563,7 @@ public function Player_State_Drown
 	player.yvel 	   += player.gravityStrength
 	player.animation 	= ANI_DROWNING
 	
-	currentPlayer = object.entityPos
+	currentPlayer = player.entityPos
 	if player.entityPos == camera[currentPlayer].target
 		temp0   = camera[currentPlayer].ypos
 		temp0  += 272
@@ -4942,7 +4944,7 @@ event ObjectUpdate
 			
 			// They didn't put the Drop Dash "animation" code seen later here...
 			
-			currentPlayer = object.entityPos
+			currentPlayer = player.entityPos
 			
 			ProcessAnimation()
 
@@ -4961,13 +4963,13 @@ event ObjectUpdate
 				temp0 = player.prevGravity
 				player.prevGravity = player.gravity
 				ProcessObjectMovement()
-				player.prevGravity ^= 1
-				CheckEqual(player.gravity, 0)
+				player.prevGravity ^= GRAVITY_AIR
+				CheckEqual(player.gravity, GRAVITY_GROUND)
 				player.prevGravity |= checkResult
-				player.prevGravity ^= 1
+				player.prevGravity ^= GRAVITY_AIR
 
-				if temp0 == true
-					if player.prevGravity == 0
+				if temp0 == GRAVITY_AIR
+					if player.prevGravity == GRAVITY_GROUND
 						player.badnikBonus = 0
 						if player.animation == ANI_JUMPING
 							if player.down == false
@@ -5005,6 +5007,7 @@ event ObjectUpdate
 #platform: USE_ORIGINS
 		// Set Sonic to always use the full ball sprite while drop dashing
 		CallFunction(Player_GetDropDashCharge)
+		
 		if temp7 >= 20
 			if player.animation == ANI_JUMPING
 				player.frame = 1
@@ -5031,13 +5034,13 @@ event ObjectUpdate
 			temp0 = player.prevGravity
 			player.prevGravity = player.gravity
 			ProcessObjectMovement()
-			player.prevGravity ^= 1
-			CheckEqual(player.gravity, 0)
+			player.prevGravity ^= GRAVITY_AIR
+			CheckEqual(player.gravity, GRAVITY_GROUND)
 			player.prevGravity |= checkResult
-			player.prevGravity ^= 1
+			player.prevGravity ^= GRAVITY_AIR
 
-			if temp0 == true
-				if player.prevGravity == 0
+			if temp0 == GRAVITY_AIR
+				if player.prevGravity == GRAVITY_GROUND
 					player.badnikBonus = 0
 					if player.animation == ANI_JUMPING
 						if player.down == false
@@ -5127,7 +5130,7 @@ event ObjectStartup
 		currentPlayer = SLOT_PLAYER1
 		
 #platform: USE_ORIGINS
-		// The way they did it was quite weird, this is an odd way to handle things...
+		// The way they did it was quite strange, this is an odd way to handle things...
 		
 		if stage.playerListPos > PLAYER_SONIC_AND_TAILS // If playing as Knuckles & Tails
 			stage.playerListPos = PLAYER_KNUX_ALONE
