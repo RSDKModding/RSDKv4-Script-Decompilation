@@ -61,6 +61,9 @@ private alias 547578 : MUSIC_LOOP_CPZ_F
 private alias 38679  : MUSIC_LOOP_INV
 private alias 30897  : MUSIC_LOOP_INV_F
 
+// Achievement Aliases
+private alias 1 : ACHIEVEMENT_CHEMICALFREE
+
 
 // ========================
 // Function Declarations
@@ -848,7 +851,8 @@ event ObjectUpdate
 				if object[30].type == TypeName[Act Finish]
 					CPZSetup_hasAchievement = true
 					if CPZSetup_enteredWater == false
-						CallNativeFunction2(SetAchievement, 1, 100)
+						// Grant the "100% Chemical Free" Achievement
+						CallNativeFunction2(SetAchievement, ACHIEVEMENT_CHEMICALFREE, 100)
 					end if
 				end if
 			end if
@@ -864,11 +868,14 @@ end event
 
 event ObjectDraw
 #platform: USE_ORIGINS
-	// If this check doesn't pass, the water is drawn without its purple tint
+	// If this check doesn't pass, the water tint is skipped over, and the foreground Girders are skipped over as well
 	// Unfortunately, this check always passes because the value is always set to 0 as seen above LOL
+	// (Interesting note though - this value does at least reach 4 in 2PVS where 2 screens are active, does that mean anything?)
 	if CPZSetup_waterTintActive < 4
 #endplatform
 		if object.drawingIndex == 0
+			// Activating the Water tint
+			
 			temp0 = stage.waterLevel
 			temp0 -= screen.yoffset
 			if temp0 < 0
@@ -885,8 +892,11 @@ event ObjectDraw
 				SetActivePalette(1, temp0, screen.ysize)
 			end if
 
+			// Add the object to the draw list again, for the Girders
 			AddDrawListEntityRef(2, object.entityPos)
 		else
+			// Drawing the Girders
+			
 			temp0 = screen.xoffset
 			temp0 *= 6
 			temp0 >>= 3
@@ -916,7 +926,8 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("CPZ/Objects.gif")
 
-	SetPaletteEntry(0, 192, 0x000000) // Set color index 192 to be black
+	// Reset the boss flashing colour
+	SetPaletteEntry(0, 192, 0x000000)
 
 	// Set the Chemical Plant music, and set its speedup/slowndown functions too
 	SetMusicTrack("ChemicalPlant.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ)
