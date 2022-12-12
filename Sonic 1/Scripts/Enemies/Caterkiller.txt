@@ -106,12 +106,12 @@ end function
 private function Caterkiller_DebugDraw
 	temp0 = object.xpos
 	GetBit(temp1, object.direction, 0)
-	if temp1 == 0
+	if temp1 == FLIP_NONE
 		temp0 += 0x240000
 		temp1 = -0xC0000
 	else
 		temp0 -= 0x240000
-		temp1 = 0xC0000
+		temp1 =  0xC0000
 	end if
 
 	temp2 = 0
@@ -140,7 +140,7 @@ end function
 
 
 private function Caterkiller_CheckPlayerCollisions
-	temp7 = 0
+	temp7 = false
 	temp5 = object.xpos
 	temp6 = object.ypos
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
@@ -184,7 +184,7 @@ private function Caterkiller_CheckPlayerCollisions
 		object.ypos -= temp0
 
 		CreateTempObject(TypeName[Caterkiller], 0, object.xpos, object.ypos)
-		if object.direction == 0
+		if object.direction == FLIP_NONE
 			object[tempObjectPos].xvel = -0x20000
 		else
 			object[tempObjectPos].xvel = 0x20000
@@ -197,7 +197,7 @@ private function Caterkiller_CheckPlayerCollisions
 		object[tempObjectPos].priority = PRIORITY_ACTIVE_SMALL
 
 		CreateTempObject(TypeName[Caterkiller], 0, object.bodyPosition1.x, object.bodyPosition1.y)
-		if object.bodyDirection1 == 0
+		if object.bodyDirection1 == FLIP_NONE
 			object[tempObjectPos].xvel = -0x18000
 		else
 			object[tempObjectPos].xvel = 0x18000
@@ -213,7 +213,7 @@ private function Caterkiller_CheckPlayerCollisions
 		object.frame -= temp0
 
 		CreateTempObject(TypeName[Caterkiller], 0, object.bodyPosition2.x, object.bodyPosition2.y)
-		if object.bodyDirection2 == 0
+		if object.bodyDirection2 == FLIP_NONE
 			object[tempObjectPos].xvel = 0x18000
 		else
 			object[tempObjectPos].xvel = -0x18000
@@ -225,7 +225,7 @@ private function Caterkiller_CheckPlayerCollisions
 		object[tempObjectPos].priority 	= PRIORITY_ACTIVE_SMALL
 
 		CreateTempObject(TypeName[Caterkiller], 0, object.bodyPosition3.x, object.bodyPosition3.y)
-		if object.bodyDirection3 == 0
+		if object.bodyDirection3 == FLIP_NONE
 			object[tempObjectPos].xvel = 0x20000
 		else
 			object[tempObjectPos].xvel = -0x20000
@@ -257,7 +257,7 @@ private function Caterkiller_CheckTileAngle
 	Get16x16TileInfo(temp5, temp2, temp3, TILEINFO_ANGLEA)
 	Get16x16TileInfo(temp6, temp2, temp3, TILEINFO_DIRECTION)
 	switch temp6
-	case 0
+	case FLIP_NONE
 		temp5 &= 255
 		break
 
@@ -326,7 +326,7 @@ private function Caterkiller_CheckTileCollisions
 	object.xpos = object.bodyPosition1.x
 	object.ypos = object.bodyPosition1.y
 	ObjectTileGrip(CSIDE_FLOOR, 0, 8, PATH_A)
-	if checkResult == 0
+	if checkResult == false
 		object.bodyDirection1 = object.direction
 	end if
 	object.bodyPosition1.y = object.ypos
@@ -404,19 +404,19 @@ event ObjectUpdate
 		else
 			object.timer--
 
-			if object.bodyDirection1 == 0
+			if object.bodyDirection1 == FLIP_NONE
 				object.bodyPosition1.x -= 0x4000
 			else
 				object.bodyPosition1.x += 0x4000
 			end if
 
-			if object.bodyDirection2 == 0
+			if object.bodyDirection2 == FLIP_NONE
 				object.bodyPosition2.x -= 0x8000
 			else
 				object.bodyPosition2.x += 0x8000
 			end if
 
-			if object.bodyDirection3 == 0
+			if object.bodyDirection3 == FLIP_NONE
 				object.bodyPosition3.x -= 0xC000
 			else
 				object.bodyPosition3.x += 0xC000
@@ -447,21 +447,24 @@ event ObjectUpdate
 			object.state = CATERKILLER_CONTRACT
 		else
 			object.timer--
-			if object.direction == 0
+			if object.direction == FLIP_NONE
 				object.xpos -= 0xC000
 			else
 				object.xpos += 0xC000
 			end if
-			if object.bodyDirection1 == 0
+			
+			if object.bodyDirection1 == FLIP_NONE
 				object.bodyPosition1.x -= 0x8000
 			else
 				object.bodyPosition1.x += 0x8000
 			end if
-			if object.bodyDirection2 == 0
+			
+			if object.bodyDirection2 == FLIP_NONE
 				object.bodyPosition2.x -= 0x4000
 			else
 				object.bodyPosition2.x += 0x4000
 			end if
+			
 			object.frame--
 			object.bodyFrame2--
 			CallFunction(Caterkiller_CheckTileCollisions)
@@ -521,6 +524,7 @@ end event
 event ObjectDraw
 	if object.state < CATERKILLER_SPLITBODYPART
 		temp0 = object.direction
+		
 		object.direction = object.bodyDirection3
 		temp1 = object.bodyFrame3
 		temp1 >>= 1
@@ -540,6 +544,7 @@ event ObjectDraw
 		DrawSpriteFX(temp1, FX_FLIP, object.bodyPosition1.x, object.bodyPosition1.y)
 
 		object.direction = temp0
+		
 		temp0 = object.frame
 		temp0 >>= 1
 		CheckEqual(object.state, CATERKILLER_LIFTHEAD)
@@ -748,36 +753,11 @@ end event
 
 
 event RSDKLoad
-	CheckCurrentStageFolder("Zone02")
-	if checkResult == true
-		LoadSpriteSheet("MZ/Objects.gif")
-		SpriteFrame(-8, -14, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #0
-		SpriteFrame(-8, -15, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #1
-		SpriteFrame(-8, -16, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #2
-		SpriteFrame(-8, -17, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #3
-		SpriteFrame(-8, -18, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #4
-		SpriteFrame(-8, -19, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #5
-		SpriteFrame(-8, -20, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #6
-		SpriteFrame(-8, -21, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #7
-		SpriteFrame(-8, -14, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #8
-		SpriteFrame(-8, -15, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #9
-		SpriteFrame(-8, -16, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #10
-		SpriteFrame(-8, -17, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #11
-		SpriteFrame(-8, -18, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #12
-		SpriteFrame(-8, -19, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #13
-		SpriteFrame(-8, -20, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #14
-		SpriteFrame(-8, -21, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #15
-		SpriteFrame(-8, -8, 16, 16, 35, 81) 	// Body 				- #16
-		SpriteFrame(-8, -9, 16, 16, 35, 81) 	// Body 				- #17
-		SpriteFrame(-8, -10, 16, 16, 35, 81) 	// Body 				- #18
-		SpriteFrame(-8, -11, 16, 16, 35, 81) 	// Body 				- #19
-		SpriteFrame(-8, -12, 16, 16, 35, 81) 	// Body 				- #20
-		SpriteFrame(-8, -13, 16, 16, 35, 81) 	// Body 				- #21
-		SpriteFrame(-8, -14, 16, 16, 35, 81) 	// Body 				- #22
-		SpriteFrame(-8, -15, 16, 16, 35, 81) 	// Body 				- #23
-	end if
-
+	// Make sure we have a fall-back, in case the current folder isn't actually a valid one
+	temp0 = false
+	
 	CheckCurrentStageFolder("Zone03")
+	temp0 |= checkResult
 	if checkResult == true
 		LoadSpriteSheet("SYZ/Objects.gif")
 		SpriteFrame(-8, -14, 16, 22, 98, 98) 	// Head (Mouth Closed) 	- #0
@@ -807,6 +787,7 @@ event RSDKLoad
 	end if
 
 	CheckCurrentStageFolder("Zone06")
+	temp0 |= checkResult
 	if checkResult == true
 		LoadSpriteSheet("SBZ/Objects.gif")
 		SpriteFrame(-8, -14, 16, 22, 75, 26) 	// Head (Mouth Closed) 	- #0
@@ -836,6 +817,7 @@ event RSDKLoad
 	end if
 
 	CheckCurrentStageFolder("Zone07")
+	temp0 |= checkResult
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-8, -14, 16, 22, 1, 68) 	// Head (Mouth Closed) 	- #0
@@ -863,7 +845,36 @@ event RSDKLoad
 		SpriteFrame(-8, -14, 16, 16, 35, 68) 	// Body 				- #22
 		SpriteFrame(-8, -15, 16, 16, 35, 68) 	// Body 				- #23
 	end if
-
+	
+	if temp0 == false
+		// We use MZ's sprites as the fallback, "Zone02" (MZ's folder) will come here too
+		LoadSpriteSheet("MZ/Objects.gif")
+		SpriteFrame(-8, -14, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #0
+		SpriteFrame(-8, -15, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #1
+		SpriteFrame(-8, -16, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #2
+		SpriteFrame(-8, -17, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #3
+		SpriteFrame(-8, -18, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #4
+		SpriteFrame(-8, -19, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #5
+		SpriteFrame(-8, -20, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #6
+		SpriteFrame(-8, -21, 16, 22, 18, 81) 	// Head (Mouth Closed) 	- #7
+		SpriteFrame(-8, -14, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #8
+		SpriteFrame(-8, -15, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #9
+		SpriteFrame(-8, -16, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #10
+		SpriteFrame(-8, -17, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #11
+		SpriteFrame(-8, -18, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #12
+		SpriteFrame(-8, -19, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #13
+		SpriteFrame(-8, -20, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #14
+		SpriteFrame(-8, -21, 16, 24, 1, 81) 	// Head (Mouth Open) 	- #15
+		SpriteFrame(-8, -8, 16, 16, 35, 81) 	// Body 				- #16
+		SpriteFrame(-8, -9, 16, 16, 35, 81) 	// Body 				- #17
+		SpriteFrame(-8, -10, 16, 16, 35, 81) 	// Body 				- #18
+		SpriteFrame(-8, -11, 16, 16, 35, 81) 	// Body 				- #19
+		SpriteFrame(-8, -12, 16, 16, 35, 81) 	// Body 				- #20
+		SpriteFrame(-8, -13, 16, 16, 35, 81) 	// Body 				- #21
+		SpriteFrame(-8, -14, 16, 16, 35, 81) 	// Body 				- #22
+		SpriteFrame(-8, -15, 16, 16, 35, 81) 	// Body 				- #23
+	end if
+	
 	AddEditorVariable("direction")
 	SetActiveVariable("direction")
 	AddEnumVariable("Left", 0)

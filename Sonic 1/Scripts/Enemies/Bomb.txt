@@ -29,6 +29,11 @@ private alias 2 : BOMB_ANI_EXPLODING
 reserve function Bomb_DebugDraw
 reserve function Bomb_DebugSpawn
 
+
+// ========================
+// Function Definitions
+// ========================
+
 private function Bomb_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 	DrawSpriteFX(8, FX_FLIP, object.xpos, object.ypos)
@@ -36,21 +41,17 @@ end function
 
 
 private function Bomb_DebugSpawn
-
 	CreateTempObject(TypeName[Bomb], 0, object.xpos, object.ypos)
 	object[tempObjectPos].startPos.x = object[tempObjectPos].xpos
 	object[tempObjectPos].startPos.y = object[tempObjectPos].ypos
-
-	// Give the bomb some starting velocity
 	object[tempObjectPos].xvel = -0x1000
-
-	// Match the player's direction
+	
 	temp0 = object.direction
 	object[tempObjectPos].direction = temp0
 
-	// Get the first bit (X-wise direction) and turn the object around if needed
-	temp0 &= 1
-	if temp0 == 1
+	// Get the first bit (X-wise direction) and turn the object's velocity around too if needed
+	temp0 &= FLIP_X
+	if temp0 == FLIP_X
 		FlipSign(object[tempObjectPos].xvel)
 	end if
 
@@ -88,7 +89,7 @@ event ObjectUpdate
 			object.animationTimer = 0
 			object.frame = 0
 			FlipSign(object.xvel)
-			object.direction ^= 1
+			object.direction ^= FLIP_X
 			object.state = BOMB_WALK
 		end if
 		break
@@ -131,8 +132,8 @@ event ObjectUpdate
 			object.xvel = -0x1000
 			temp0 = object.propertyValue
 			object.direction = temp0
-			temp0 &= 1
-			if temp0 == true
+			temp0 &= FLIP_X
+			if temp0 == FLIP_X
 				FlipSign(object.xvel)
 			end if
 			object.timer = 0x600
@@ -194,12 +195,18 @@ event ObjectDraw
 		temp0 &= 1
 		temp0 += 8
 		temp1 = object.ypos
+		
+		// Get the Y-Flip bit
 		GetBit(temp2, object.direction, 1)
-		if temp2 == 0
+		
+		if temp2 == FLIP_NONE
+			// FLIP_NONE or FLIP_X (aka upright)
 			temp1 += object.fusePos
 		else
+			// FLIP_Y or FLIP_XY (aka on a roof)
 			temp1 -= object.fusePos
 		end if
+		
 		DrawSpriteFX(temp0, FX_FLIP, object.xpos, temp1)
 	end if
 	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
@@ -316,24 +323,11 @@ end event
 
 
 event RSDKLoad
-	// Load sprites depending on current scene folder
-
-	CheckCurrentStageFolder("Zone05")
-	if checkResult == true
-		LoadSpriteSheet("SLZ/Objects.gif")
-		SpriteFrame(-10, -21, 20, 37, 53, 131)
-		SpriteFrame(-10, -22, 20, 38, 28, 131)
-		SpriteFrame(-10, -21, 20, 37, 3, 131)
-		SpriteFrame(-10, -22, 20, 38, 53, 92)
-		SpriteFrame(-11, -21, 23, 37, 2, 92)
-		SpriteFrame(-11, -21, 23, 37, 27, 92)
-		SpriteFrame(-11, -9, 23, 25, 2, 170)
-		SpriteFrame(-11, -9, 23, 25, 27, 170)
-		SpriteFrame(-3, -23, 6, 14, 51, 170)
-		SpriteFrame(-4, -25, 8, 16, 58, 170)
-	end if
+	// Make sure we have a fall-back, in case the current folder isn't actually a valid one
+	temp0 = false
 
 	CheckCurrentStageFolder("Zone06")
+	temp0 |= checkResult
 	if checkResult == true
 		LoadSpriteSheet("SBZ/Objects.gif")
 		SpriteFrame(-10, -21, 20, 37, 52, 40)
@@ -348,8 +342,8 @@ event RSDKLoad
 		SpriteFrame(-4, -25, 8, 16, 57, 79)
 	end if
 
-	// Unused stuff from the "MBZ" Zone
 	CheckCurrentStageFolder("Zone07")
+	temp0 |= checkResult
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-10, -21, 20, 37, 53, 328)
@@ -362,6 +356,21 @@ event RSDKLoad
 		SpriteFrame(-11, -9, 23, 25, 27, 367)
 		SpriteFrame(-3, -23, 6, 14, 51, 367)
 		SpriteFrame(-4, -25, 8, 16, 58, 367)
+	end if
+
+	if temp0 == false
+		// We use SLZ's sprites as the fallback, "Zone05" (SLZ's folder) will come here too
+		LoadSpriteSheet("SLZ/Objects.gif")
+		SpriteFrame(-10, -21, 20, 37, 53, 131)
+		SpriteFrame(-10, -22, 20, 38, 28, 131)
+		SpriteFrame(-10, -21, 20, 37, 3, 131)
+		SpriteFrame(-10, -22, 20, 38, 53, 92)
+		SpriteFrame(-11, -21, 23, 37, 2, 92)
+		SpriteFrame(-11, -21, 23, 37, 27, 92)
+		SpriteFrame(-11, -9, 23, 25, 2, 170)
+		SpriteFrame(-11, -9, 23, 25, 27, 170)
+		SpriteFrame(-3, -23, 6, 14, 51, 170)
+		SpriteFrame(-4, -25, 8, 16, 58, 170)
 	end if
 
 	AddEditorVariable("direction")

@@ -108,7 +108,7 @@ event ObjectUpdate
 			CreateTempObject(TypeName[Ball Hog Bomb], 0, object.xpos, object.ypos)
 
 			// Make the bomb match the hog's direction
-			if object.direction == 0
+			if object.direction == FLIP_NONE
 				object[tempObjectPos].xpos -= 0x40000
 				object[tempObjectPos].xvel = -0x10000
 			else
@@ -151,10 +151,10 @@ event ObjectStartup
 
 	foreach (TypeName[Ball Hog], arrayPos0, ALL_ENTITIES)
 		temp0 = object[arrayPos0].propertyValue
-		temp0 &= 128
-		if temp0 != 0
-			object[arrayPos0].direction = FACING_LEFT
-			object[arrayPos0].propertyValue &= 127
+		temp0 &= 0x80
+		if temp0 != FLIP_NONE
+			object[arrayPos0].direction = FLIP_X
+			object[arrayPos0].propertyValue &= 0x7F
 		end if
 	next
 
@@ -182,9 +182,7 @@ event RSDKEdit
 			break
 			
 		case 1 // direction
-			checkResult = object.propertyValue
-			checkResult &= 0x80
-			CheckGreater(checkResult, 0x7F)
+			GetBit(checkResult, object.propertyValue, 0)
 			break
 			
 		end switch
@@ -196,15 +194,13 @@ event RSDKEdit
 			
 		case 0 // bombTime
 			object.propertyValue &= 0x80
+			editor.variableValue &= 0x7F
+			
 			object.propertyValue |= editor.variableValue
 			break
 			
 		case 1 // direction
-			object.propertyValue &= 0x7F
-
-			temp0 = editor.variableValue
-			temp0 <<= 7
-			object.propertyValue |= temp0
+			SetBit(object.propertyValue, editor.variableValue, checkResult)
 			break
 			
 		end switch
@@ -213,27 +209,12 @@ end event
 
 
 event RSDKDraw
-	temp0 = object.propertyValue
-	temp0 &= 0x80
-	object.direction = FACING_RIGHT
-	if temp0 != false
-		object.direction = FACING_LEFT
-	end if
-
+	GetBit(object.direction, object.propertyValue, 0)
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
 
 event RSDKLoad
-	CheckCurrentStageFolder("Zone06")
-	if checkResult == true
-		LoadSpriteSheet("SBZ/Objects.gif")
-		SpriteFrame(-11, -17, 22, 37, 1, 170)
-		SpriteFrame(-11, -17, 22, 37, 24, 170)
-		SpriteFrame(-12, -12, 24, 32, 47, 175)
-		SpriteFrame(-11, -20, 22, 40, 72, 167)
-	end if
-	
 	CheckCurrentStageFolder("Zone07")
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
@@ -241,6 +222,12 @@ event RSDKLoad
 		SpriteFrame(-11, -17, 22, 37, 99, 292)
 		SpriteFrame(-12, -12, 24, 32, 122, 297)
 		SpriteFrame(-11, -20, 22, 40, 147, 289)
+	else
+		LoadSpriteSheet("SBZ/Objects.gif")
+		SpriteFrame(-11, -17, 22, 37, 1, 170)
+		SpriteFrame(-11, -17, 22, 37, 24, 170)
+		SpriteFrame(-12, -12, 24, 32, 47, 175)
+		SpriteFrame(-11, -20, 22, 40, 72, 167)
 	end if
 
 	AddEditorVariable("bombTime")
