@@ -11,6 +11,11 @@
 
 private alias object.value0 : object.timer
 
+private alias 0 : ENDINGCONTROL_INIT
+private alias 1 : ENDINGCONTROL_FADEIN
+private alias 2 : ENDINGCONTROL_MAIN
+private alias 3 : ENDINGCONTROL_NONE
+
 // Player Aliases
 private alias object.xpos : player.xpos
 private alias object.ypos : player.ypos
@@ -24,6 +29,9 @@ private alias object.jumpPress : player.jumpPress
 private alias object.jumpHold : player.jumpHold
 private alias object.value1 : player.timer
 
+// Ending Pose Aliases
+private alias object.value1 : object.logoPos
+
 
 // ========================
 // Events
@@ -31,11 +39,12 @@ private alias object.value1 : player.timer
 
 event ObjectUpdate
 	switch object.state
-	case 0
+	case ENDINGCONTROL_INIT
 		PlayMusic(0)
+		
 		object.state++
 		// [Fallthrough]
-	case 1
+	case ENDINGCONTROL_FADEIN
 		player[0].controlMode = CONTROLMODE_NONE
 		player[0].up = false
 		player[0].down = false
@@ -46,14 +55,15 @@ event ObjectUpdate
 		
 		if options.superStates == false
 			// Six emeralds
-			temp0 = 63
+			temp0 = 0x3F
 		else
 			// Seven emeralds
-			temp0 = 127
+			temp0 = 0x7F
 		end if
-
+		
 		if specialStage.emeralds >= temp0
-			// object[+1] is a node on the right hill of the scene, for where the player should start
+			// If this is the good ending, then make the player start closer to the final ending position
+			// (object[+1] is a node on the closer hill in the scene, normally a Blank Object can it can be whatever if you really wanna)
 			player[0].xpos = object[+1].xpos
 			player[0].ypos = object[+1].ypos
 		end if
@@ -62,10 +72,12 @@ event ObjectUpdate
 			if currentPlayer == 0
 				player[currentPlayer].speed = -0x60000
 			else
+				// For all non-P1 players, start them to the right side of P1, hehind them
 				player[currentPlayer].speed = -0x60000
 				player[currentPlayer].xpos = player[0].xpos
 				player[currentPlayer].xpos += 0x400000
 				player[currentPlayer].ypos = player[0].ypos
+				
 				StopSfx(SfxName[Skidding])
 			end if
 		next
@@ -82,24 +94,31 @@ event ObjectUpdate
 		SetScreenFade(0, 0, 0, object.timer)
 		break
 		
-	case 2
+	case ENDINGCONTROL_MAIN
 		temp0 = object.xpos
 		temp0 -= 0x180000
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if player[currentPlayer].speed < -0x60000
+				// Enforce a minimum speed of 6 pixels per second, even if Sonic's on an uphill slope or all that stuff
 				player[currentPlayer].speed = -0x60000
 			end if
 
 			if player[currentPlayer].xpos < temp0
+				// Sonic accidentally ran past the ending position, make him skid and turn around for a little bit now
 				player[currentPlayer].left = false
 				player[currentPlayer].right = true
 			end if
 
 			if player[currentPlayer].xpos > object.xpos
 				if player[currentPlayer].right == true
+					// Sonic's turned around at reached the ending point, so now let's stop him and do all the fancy stuff
+					
 					player[currentPlayer].right = false
-					player[currentPlayer].speed = 0
+					player[currentPlayer].speed = 0x00000
+					
 					if currentPlayer == playerCount
+						// Huh? currentPlayer should never match playerCount, but if it is, then increase state to ENDINGCONTROL_NONE?
+						// Not quite sure why this exists, this is really strange...
 						object.state++
 					else
 						if currentPlayer == 0
@@ -107,31 +126,35 @@ event ObjectUpdate
 							object[currentPlayer].controlMode = CONTROLMODE_NONE
 							object[currentPlayer].drawOrder = 6
 
-							if options.superStates == 0
+							if options.superStates == false
 								// Six emeralds
-								temp0 = 63
+								temp0 = 0x3F
 							else
 								// Seven emeralds
-								temp0 = 127
+								temp0 = 0x7F
 							end if
 
 							if specialStage.emeralds < temp0
+								// Normal Ending Frames
+								
 								switch stage.playerListPos
 								case PLAYER_SONIC_ALONE
 								case PLAYER_SONIC_AND_TAILS
 									object[currentPlayer].frame = 0
 									break
-
+									
 								case PLAYER_TAILS_ALONE
 									object[currentPlayer].frame = 13
 									break
-
+									
 								case PLAYER_KNUX_ALONE
 									object[currentPlayer].frame = 24
 									break
 									
 								end switch
 							else
+								// Good Ending Frames
+								
 								switch stage.playerListPos
 								case PLAYER_SONIC_ALONE
 								case PLAYER_SONIC_AND_TAILS
@@ -148,10 +171,11 @@ event ObjectUpdate
 									
 								end switch
 								
+								// Put them in the Good Ending state too, looks like the Emeralds are starting to do something
 								object[currentPlayer].state = 5
 							end if
 
-							object[currentPlayer].timer = 224
+							object[currentPlayer].logoPos = 224
 						end if
 					end if
 				end if
@@ -159,6 +183,9 @@ event ObjectUpdate
 		next
 		break
 		
+	// State 3 (dubbed ENDINGCONTROL_NONE here) doesn't do anything
+	// The object shouldn't even get to that state, unless something's *really* wrong
+	
 	end switch
 end event
 
@@ -181,10 +208,12 @@ event RSDKDraw
 	if editor.showGizmos == true
 		editor.drawingOverlay = true
 		
-		object.type = TypeName[Player Object]
-		object.inkEffect = INK_BLEND
-		// object.direction = FACING_LEFT // You can't use ink effects and flip at the same time :(
-		DrawSpriteFX(1, FX_INK, object[+1].xpos, object[+1].ypos)
+		if TypeName[Player Object] > 0
+			object.type = TypeName[Player Object]
+			object.inkEffect = INK_BLEND
+			// object.direction = FACING_LEFT // You can't use ink effects and flip at the same time :(
+			DrawSpriteFX(0, FX_INK, object[+1].xpos, object[+1].ypos)
+		end if
 		
 		// Draw a line from this object to the start position teleport node
 		DrawArrow(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 0xFF, 0xFF, 0x00)
@@ -197,7 +226,6 @@ end event
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
-	SpriteFrame(-16, -19, 28, 39, 1, 1) // Sonic's idle frame, from "Players/Sonic1.gif"
 	
 	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -10,8 +10,37 @@
 // ========================
 
 private alias object.value0 : object.timer
-private alias object.value1 : object.xoffset
+private alias object.value1 : object.logoPos // Not set in this script, but set by the [Ending Control] that spawns this object
 private alias object.value2 : object.tailFrame
+
+// This object's states are pretty complex, a single object won't cycle through them all but instead each of the states appear under different scenarios
+// I tried to note how each state plays into others, sorry if the explanation isn't any good though...
+
+// These first two states are only encountered in the bad ending, when the player didn't get all emeralds
+private alias  0 : ENDINGPOSE_INIT
+private alias  1 : ENDINGPOSE_WAITING
+
+// These next three states are when P1 poses, each pose frame is its own state
+// These states are seen in both types of the ending
+private alias  2 : ENDINGPOSE_POSE_START
+private alias  3 : ENDINGPOSE_POSE_MID
+private alias  4 : ENDINGPOSE_POSE_END
+
+private alias  5 : ENDINGPOSE_HOLDEMERALDS
+private alias  6 : ENDINGPOSE_EMERALDSSHINE
+private alias  7 : ENDINGPOSE_LOOKUP
+private alias  8 : ENDINGPOSE_EMERALDSFLASH_A // Fade-out
+private alias  9 : ENDINGPOSE_EMERALDSFLASH_B // Fade-in
+private alias 10 : ENDINGPOSE_LOOKAROUND
+private alias 11 : ENDINGPOSE_LOOKLEFT
+// (And then after looking left, P1 goes over to ENDINGPOSE_POSE_START)
+
+// P2 Tails gets his own little states too, though they aren't as grand as P1's giant poses are
+private alias 12 : ENDINGPOSE_P2_LOOKAROUND
+private alias 13 : ENDINGPOSE_P2_LOOKLEFT
+private alias 14 : ENDINGPOSE_P2_POSE_1
+private alias 15 : ENDINGPOSE_P2_POSE_2
+
 
 // Player Aliases
 private alias object.state : player.state
@@ -24,21 +53,24 @@ private alias object.up : player.up
 private alias object.drawOrder : player.drawOrder
 private alias object.controlMode : player.controlMode
 
+// Reserved Object Slot Aliases
+private alias 1 : SLOT_PLAYER2
+
 
 // ========================
 // Function Declarations
 // ========================
 
-reserve function EndingPose_HandleXOffset
+reserve function EndingPose_UpdateLogo
 
 
 // ========================
 // Function Definitions
 // ========================
 
-private function EndingPose_HandleXOffset
-	if object.xoffset > 0
-		object.xoffset -= 16
+private function EndingPose_UpdateLogo
+	if object.logoPos > 0
+		object.logoPos -= 16
 	end if
 end function
 
@@ -49,16 +81,17 @@ end function
 
 event ObjectUpdate
 	switch object.state
-	case 0
+	case ENDINGPOSE_INIT
 		object.state++
 		if stage.playerListPos == PLAYER_TAILS_ALONE
 			// A little extra setup for Tails's tails
 			object.tailFrame = 36
 		end if
 		// [Fallthrough]
-	case 1
+	case ENDINGPOSE_WAITING
 		object.timer++
 		if stage.playerListPos == PLAYER_TAILS_ALONE
+			// Animate Tails's tails
 			object.tailFrame = object.timer
 			object.tailFrame >>= 3
 			object.tailFrame %= 5
@@ -66,13 +99,14 @@ event ObjectUpdate
 		end if
 
 		if object.timer == 240
-			currentPlayer = 1
+			currentPlayer = SLOT_PLAYER2
 			while currentPlayer < playerCount
 				ResetObjectEntity(currentPlayer, TypeName[Ending Pose], 0, player[currentPlayer].xpos, player[currentPlayer].ypos)
 				player[currentPlayer].drawOrder = 6
-				player[currentPlayer].state = 14
+				player[currentPlayer].state = ENDINGPOSE_P2_POSE_1
 				player[currentPlayer].frame = 43
 				player[currentPlayer].direction = FACING_LEFT
+				
 				currentPlayer++
 			loop
 			
@@ -92,21 +126,23 @@ event ObjectUpdate
 				break
 				
 			end switch
+			
 			object.state++
 			object.tailFrame = 0
 		else
-			currentPlayer = 1
+			currentPlayer = SLOT_PLAYER2
 			while currentPlayer < playerCount
 				if player[currentPlayer].speed == 0
 					player[currentPlayer].direction = FACING_LEFT
 				end if
+				
 				currentPlayer++
 			loop
 		end if
 		break
 
-	case 2
-		CallFunction(EndingPose_HandleXOffset)
+	case ENDINGPOSE_POSE_START
+		CallFunction(EndingPose_UpdateLogo)
 		object.timer++
 		if object.timer == 12
 			object.timer = 0
@@ -123,12 +159,13 @@ event ObjectUpdate
 				break
 				
 			end switch
+			
 			object.state++
 		end if
 		break
 
-	case 3
-		CallFunction(EndingPose_HandleXOffset)
+	case ENDINGPOSE_POSE_MID
+		CallFunction(EndingPose_UpdateLogo)
 		object.timer++
 		if object.timer == 4
 			object.timer = -1560
@@ -156,7 +193,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case 4
+	case ENDINGPOSE_POSE_END
 		if object.timer < 320
 			object.timer += 12
 		else
@@ -179,7 +216,8 @@ event ObjectUpdate
 		SetScreenFade(0, 0, 0, temp0)
 		break
 
-	case 5
+	// In the good ending, the character starts on this state, skipping all the ones before
+	case ENDINGPOSE_HOLDEMERALDS
 		object.timer++
 		if object.timer == 80
 			object.timer = 0
@@ -201,7 +239,7 @@ event ObjectUpdate
 				
 			end switch
 
-			currentPlayer = 1
+			currentPlayer = SLOT_PLAYER2
 			while currentPlayer < playerCount
 				if player[currentPlayer].speed == 0
 					player[currentPlayer].direction = FACING_LEFT
@@ -212,7 +250,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case 6
+	case ENDINGPOSE_EMERALDSSHINE
 		object.frame = object.timer
 		object.frame >>= 2
 		object.frame &= 1
@@ -252,10 +290,11 @@ event ObjectUpdate
 				
 			end switch
 
-			currentPlayer = 1
+			currentPlayer = SLOT_PLAYER2
 			while currentPlayer < playerCount
-				player[currentPlayer].up = 1
+				player[currentPlayer].up = true
 				player[currentPlayer].controlMode = CONTROLMODE_NONE
+				
 				currentPlayer++
 			loop
 			
@@ -264,20 +303,22 @@ event ObjectUpdate
 			
 			object.state++
 		else
-			currentPlayer = 1
+			currentPlayer = SLOT_PLAYER2
 			while currentPlayer < playerCount
 				if player[currentPlayer].speed == 0
 					player[currentPlayer].direction = FACING_LEFT
 				end if
+				
 				currentPlayer++
 			loop
 		end if
 		break
 
-	case 7
+	case ENDINGPOSE_LOOKUP
+		// In this state, we wait for the Emeralds to increase our state
 		break
 
-	case 8
+	case ENDINGPOSE_EMERALDSFLASH_A
 		if object.timer < 384
 			object.timer += 6
 		else
@@ -299,7 +340,7 @@ event ObjectUpdate
 		SetScreenFade(208, 255, 224, object.timer)
 		break
 
-	case 9
+	case ENDINGPOSE_EMERALDSFLASH_B
 		if object.timer > 0
 			object.timer -= 16
 			SetScreenFade(208, 255, 224, object.timer)
@@ -321,19 +362,20 @@ event ObjectUpdate
 			end switch
 
 			object.state++
-			currentPlayer = 1
+			currentPlayer = SLOT_PLAYER2
 			while currentPlayer < playerCount
 				ResetObjectEntity(currentPlayer, TypeName[Ending Pose], 0, player[currentPlayer].xpos, player[currentPlayer].ypos)
 				player[currentPlayer].drawOrder = 6
-				player[currentPlayer].state = 12
+				player[currentPlayer].state = ENDINGPOSE_P2_LOOKAROUND
 				player[currentPlayer].frame = 43
 				player[currentPlayer].direction = FACING_LEFT
+				
 				currentPlayer++
 			loop
 		end if
 		break
 
-	case 10
+	case ENDINGPOSE_LOOKAROUND
 		switch stage.playerListPos
 		case PLAYER_SONIC_ALONE
 		case PLAYER_SONIC_AND_TAILS
@@ -372,7 +414,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case 11
+	case ENDINGPOSE_LOOKLEFT
 		object.timer++
 		if object.timer == 60
 			object.timer = 0
@@ -392,11 +434,13 @@ event ObjectUpdate
 				
 			end switch
 
-			object.state = 2
+			object.state = ENDINGPOSE_POSE_START
 		end if
 		break
 
-	case 12
+	// These remaining three states are for P2 Tails, looking busy while P1 (as a separate Ending Pose Object) gets to do the proper big poses front and center
+	
+	case ENDINGPOSE_P2_LOOKAROUND
 		object.frame = object.timer
 		object.frame /= 10
 		object.frame &= 3
@@ -412,7 +456,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case 13
+	case ENDINGPOSE_P2_LOOKLEFT
 		object.timer++
 		if object.timer == 60
 			object.timer = 0
@@ -421,7 +465,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case 14
+	case ENDINGPOSE_P2_POSE_1
 		object.timer++
 		if object.timer == 8
 			object.frame++
@@ -429,6 +473,8 @@ event ObjectUpdate
 			object.state++
 		end if
 		break
+		
+	// ENDINGPOSE_P2_POSE_2 doesn't have a case since it doesn't do anything, its frame is set when exiting ENDINGPOSE_P2_POSE_1
 		
 	end switch
 end event
@@ -440,17 +486,21 @@ event ObjectDraw
 		DrawSprite(object.tailFrame)
 	end if
 	
+	// The main player sprite
 	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
 	
+	// P1 should draw the logo, as well
 	if object.entityPos == 0
 		if object.state > 0
 			temp0 = screen.xcenter
 			temp0 -= 96
-			temp0 -= object.xoffset
+			temp0 -= object.logoPos
 			if stage.player2Enabled == true
 				if options.region == true
+					// "Sonic the Hedgehog and Miles"
 					temp1 = 42
 				else
+					// "Sonic the Hedgehog and Tails"
 					temp1 = 41
 				end if
 			else
@@ -477,13 +527,15 @@ event ObjectStartup
 	SpriteFrame(-18, -27, 44, 71, 36, 184)
 	SpriteFrame(-56, -68, 174, 134, 81, 121)
 	
-	// 4-10 - Sonic's Good Ending Animation Frames
+	// 4-9 - Sonic's Good Ending Animation Frames
 	SpriteFrame(-10, -21, 24, 40, 3, 16)
 	SpriteFrame(-10, -21, 24, 40, 3, 16)
 	SpriteFrame(-14, -21, 28, 40, 3, 57)
 	SpriteFrame(-16, -20, 29, 39, 3, 98)
 	SpriteFrame(-16, -21, 32, 40, 3, 138)
 	SpriteFrame(-16, -21, 32, 40, 3, 179)
+	
+	// 10 - "Sonic the Hedgehog"
 	SpriteFrame(-48, 0, 96, 31, 256, 141)
 	
 	// 11 - "Miles 'Tails' Prower In Sonic the Hedgehog"
@@ -492,7 +544,7 @@ event ObjectStartup
 	// 12 - "Knuckles the Echidna in Sonic the Hedgehog"
 	SpriteFrame(-48, -17, 96, 48, 256, 124)
 	
-	// 13 - Tails's Final Pose Animation Frames
+	// 13-15 - Tails's Final Pose Animation Frames
 	SpriteFrame(-10, -13, 24, 31, 288, 16)
 	SpriteFrame(-19, -12, 33, 31, 254, 16)
 	SpriteFrame(-55, -48, 111, 96, 400, 1)
@@ -503,6 +555,7 @@ event ObjectStartup
 	SpriteFrame(-12, -16, 27, 34, 59, 16)
 	SpriteFrame(-15, -16, 30, 34, 87, 16)
 	SpriteFrame(-15, -14, 31, 32, 118, 16)
+	
 	SpriteFrame(-12, -16, 25, 34, 150, 16)
 	SpriteFrame(-12, -16, 25, 34, 176, 16)
 	SpriteFrame(-12, -16, 25, 34, 202, 16)
