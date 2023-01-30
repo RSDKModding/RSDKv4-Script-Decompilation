@@ -34,15 +34,24 @@ reserve function BumpingPlatform_DebugSpawn
 // ========================
 
 private table BumpingPlatform_stateTable
-	0, 1, 1, 0
+	0 // BUMPINGPLATFORM_USE1PLATFORM
+	1 // BUMPINGPLATFORM_USE2PLATFORM
+	1 // BUMPINGPLATFORM_USE2PLATFORM
+	0 // BUMPINGPLATFORM_USE1PLATFORM
 end table
 
 private table BumpingPlatform_boundsTable
-	0x680000, 0xA80000, 0xE80000, 0x680000
+	0x680000
+	0xA80000
+	0xE80000
+	0x680000
 end table
 
 private table BumpingPlatform_offsetTable
-	-0x680000, 0, -0xB00000, 0x400000, -0x780000, 0x800000, 0x670000, 0
+	-0x680000, 0x000000
+	-0xB00000, 0x400000
+	-0x780000, 0x800000
+	 0x670000, 0x000000
 end table
 
 
@@ -65,7 +74,7 @@ private function BumpingPlatform_DebugSpawn
 	object[tempObjectPos].platformPos1.x = object.xpos
 	object[tempObjectPos].platformPos1.x += -0x680000
 	object[tempObjectPos].platformPos2.x = object.xpos
-	object[tempObjectPos].platformPos2.x += 0
+	object[tempObjectPos].platformPos2.x += 0x000000
 end function
 
 
@@ -78,72 +87,72 @@ event ObjectUpdate
 	temp7 = object.platformPos2.x
 
 	GetBit(temp0, object.direction, 0)
-	if temp0 == false
+	if temp0 == FLIP_NONE
 		object.platformPos1.x += 0x10000
 		if object.platformPos1.x >= object.boundsR
-			SetBit(object.direction, 0, true)
+			SetBit(object.direction, 0, FLIP_X)
 		end if
 	else
 		object.platformPos1.x -= 0x10000
 		if object.platformPos1.x <= object.boundsL
-			SetBit(object.direction, 0, false)
+			SetBit(object.direction, 0, FLIP_NONE)
 		end if
 	end if
 
 	if object.state == BUMPINGPLATFORM_USE2PLATFORM
 		// Check Platform 1 Bumping
-		if object.direction == 2
+		if object.direction == FLIP_Y
 			temp0 = object.platformPos1.x
 			temp0 += 0x180000
 			temp1 = object.platformPos2.x
 			temp1 -= 0x180000
 			if temp0 == temp1
-				object.direction ^= 3
+				object.direction ^= FLIP_XY
 			end if
 		end if
 
-		if object.direction == 1
+		if object.direction == FLIP_X
 			temp0 = object.platformPos1.x
 			temp0 -= 0x180000
 			temp1 = object.platformPos2.x
 			temp1 += 0x180000
 			if temp0 == temp1
-				object.direction ^= 3
+				object.direction ^= FLIP_XY
 			end if
 		end if
 
 		// Move Platform 2
 		GetBit(temp0, object.direction, 1)
-		if temp0 == false
+		if temp0 == FLIP_NONE
 			object.platformPos2.x += 0x10000
 			if object.platformPos2.x >= object.boundsR
-				SetBit(object.direction, 1, true)
+				SetBit(object.direction, 1, FLIP_X)
 			end if
 		else
 			object.platformPos2.x -= 0x10000
 			if object.platformPos2.x <= object.boundsL
-				SetBit(object.direction, 1, false)
+				SetBit(object.direction, 1, FLIP_NONE)
 			end if
 		end if
 
 		// Check Platform 2 Bumping
-		if object.direction == 2
+		if object.direction == FLIP_Y
 			temp0 = object.platformPos1.x
 			temp0 += 0x180000
 			temp1 = object.platformPos2.x
 			temp1 -= 0x180000
 			if temp0 == temp1
-				object.direction ^= 3
+				object.direction ^= FLIP_XY
 			end if
 		end if
 
-		if object.direction == 1
+		if object.direction == FLIP_X
 			temp0 = object.platformPos1.x
 			temp0 -= 0x180000
 			temp1 = object.platformPos2.x
 			temp1 += 0x180000
 			if temp0 == temp1
-				object.direction ^= 3
+				object.direction ^= FLIP_XY
 			end if
 		end if
 	end if
@@ -206,7 +215,7 @@ event ObjectStartup
 		object[arrayPos0].platformPos2.x += temp1
 
 		if object[arrayPos0].propertyValue == 2
-			object[arrayPos0].direction = FACING_LEFT
+			object[arrayPos0].direction = FLIP_X
 		end if
 
 		object[arrayPos0].priority = PRIORITY_ACTIVE
@@ -263,14 +272,9 @@ event RSDKDraw
 	temp0++
 
 	GetTableValue(temp1, temp0, BumpingPlatform_offsetTable)
-	// and using temp3 as a object.platformPos1.y stand-in
+	// and using temp3 as a object.platformPos2.x stand-in
 	temp3 = object.xpos
 	temp3 += temp1
-
-	object.direction = FACING_RIGHT
-	if object.propertyValue == 2
-		object.direction = FACING_LEFT
-	end if
 
 	DrawSpriteXY(0, temp2, object.ypos)
 	if object.state == BUMPINGPLATFORM_USE2PLATFORM

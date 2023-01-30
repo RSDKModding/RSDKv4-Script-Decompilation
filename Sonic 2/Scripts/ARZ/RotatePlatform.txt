@@ -14,7 +14,7 @@ private alias object.value1  : object.drawPos.x
 private alias object.value2  : object.drawPos.y
 private alias object.value3  : object.collisionOffset.x
 private alias object.value4  : object.collisionOffset.y
-private alias object.value5  : object.length
+private alias object.value5  : object.length // Always 3
 private alias object.value6  : object.rotateSpeed
 
 // Player Aliases
@@ -73,10 +73,16 @@ end function
 
 
 private function RotatePlatform_DebugSpawn
+	// Bug Details:
+	// -> Only the last Rotate Platform spawned here is given the PRIORITY_XBOUNDS_DESTROY priority, while the first two aren't
+	// -> Because of this, if you go make these go off screen and then return to them later,
+	//     it'll only be a set of 2 platforms rather than the usual 3
+	// (yeah this really isn't too big of a bug but hey, it's worth noting anyways)
+	
 	CreateTempObject(TypeName[Rotate Platform], 0, object.xpos, object.ypos)
 	object[tempObjectPos].length = 3
 	object[tempObjectPos].rotateSpeed = 128
-	object[tempObjectPos].rotateAngle = 0
+	object[tempObjectPos].rotateAngle = 0x0000
 
 	CreateTempObject(TypeName[Rotate Platform], 0, object.xpos, object.ypos)
 	object[tempObjectPos].length = 3
@@ -125,7 +131,7 @@ event ObjectUpdate
 	object.collisionOffset.y -= object.ypos
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX) // 24 length on both sides? The sprite's width is 64, and other scripts' uses of this platform sprite use -32,32 hitboxes too...
 		if checkResult == true
 			player[currentPlayer].xpos += object.collisionOffset.x
 			player[currentPlayer].ypos += object.collisionOffset.y
@@ -232,7 +238,7 @@ event RSDKEdit
 			checkResult &= 3
 			break
 			
-		case 1 // angle
+		case 1 // offset
 			checkResult = object.propertyValue
 			checkResult >>= 2
 			checkResult &= 3
@@ -260,7 +266,7 @@ event RSDKEdit
 			object.propertyValue |= editor.variableValue
 			break
 			
-		case 1 // angle
+		case 1 // offset
 			editor.variableValue &= 3
 			editor.variableValue <<= 2
 
@@ -295,7 +301,6 @@ event RSDKDraw
 		object.rotateSpeed -= 0x80
 		FlipSign(object.rotateSpeed)
 	end if
-
 
 	object.rotateAngle = object.propertyValue
 	object.rotateAngle &= 3

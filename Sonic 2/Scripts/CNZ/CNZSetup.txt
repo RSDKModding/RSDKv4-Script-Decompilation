@@ -18,6 +18,16 @@ private alias object.value6 : object.sonicPlateFrameID
 private alias object.value7 : object.tailsPlateFrameID
 
 // Player Aliases
+private alias object.state : player.state
+private alias object.gravity : player.gravity
+private alias object.direction : player.direction
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.speed : player.speed
+private alias object.angle : player.angle
+private alias object.animation : player.animation
+private alias object.animationSpeed : player.animationSpeed
+
 private alias object.value1  : player.timer
 private alias object.value5  : player.rollAnimationSpeed
 private alias object.value14 : player.skidding
@@ -63,8 +73,10 @@ private alias 30897  : MUSIC_LOOP_INV_F
 // Function Declarations
 // ========================
 
-reserve function CNZSetup_TubeSwitch_Ground
-reserve function CNZSetup_TubeSwitch_Air
+// These first two functions are Player states, used by the D Plunger, Spinner H, and Spinner V
+reserve function CNZSetup_PlayerState_TubeRoll
+reserve function CNZSetup_PlayerState_TubeAirRoll
+
 reserve function CNZSetup_SpeedUpMusic1P
 reserve function CNZSetup_SlowDownMusic1P
 reserve function CNZSetup_SpeedUpMusic2P
@@ -557,89 +569,89 @@ end table
 // Function Definitions
 // ========================
 
-public function CNZSetup_TubeSwitch_Ground
-	if object.gravity == 1
-		object.state = CNZSetup_TubeSwitch_Air
+public function CNZSetup_PlayerState_TubeRoll
+	if player.gravity == 1
+		object.state = CNZSetup_PlayerState_TubeAirRoll
 		player.timer = 0
 		CallFunction(Player_HandleAirMovement)
 	else
-		temp1 = 0
-		GetBit(temp0, object.direction, 0)
+		temp1 = false
+		GetBit(temp0, player.direction, 0)
 		if temp0 == false
-			if object.left == true
-				if object.speed > 0
-					object.speed -= player.rollingDeceleration
+			if player.left == true
+				if player.speed > 0
+					player.speed -= player.rollingDeceleration
 				else
-					object.direction ^= 1
-					object.speed = -0x8000
+					player.direction ^= FACING_LEFT
+					player.speed = -0x8000
 				end if
 			else
-				if object.angle == 0
-					if object.speed <= 0
-						object.speed = 0x40000
+				if player.angle == 0
+					if player.speed <= 0
+						player.speed = 0x40000
 					end if
 				end if
 			end if
 		else
-			if object.right == true
-				if object.speed < 0
-					object.speed += player.rollingDeceleration
+			if player.right == true
+				if player.speed < 0
+					player.speed += player.rollingDeceleration
 				else
-					object.direction ^= 1
-					object.speed = 0x8000
+					player.direction ^= FACING_LEFT
+					player.speed = 0x8000
 				end if
 			else
-				if object.angle == 0
-					if object.speed >= 0
-						object.speed = -0x40000
+				if player.angle == 0
+					if player.speed >= 0
+						player.speed = -0x40000
 					end if
 				end if
 			end if
 		end if
 
-		if object.speed > 0
-			object.speed -= player.rollingFriction
-			Sin256(temp0, object.angle)
+		if player.speed > 0
+			player.speed -= player.rollingFriction
+			Sin256(temp0, player.angle)
 			if temp0 > 0
-				Sin256(temp0, object.angle)
+				Sin256(temp0, player.angle)
 				temp0 *= 0x5000
 			else
-				Sin256(temp0, object.angle)
+				Sin256(temp0, player.angle)
 				temp0 *= 0x1E00
 			end if
 			temp0 >>= 8
-			object.speed += temp0
+			player.speed += temp0
 		else
-			object.speed += player.rollingFriction
-			Sin256(temp0, object.angle)
+			player.speed += player.rollingFriction
+			Sin256(temp0, player.angle)
 			if temp0 < 0
-				Sin256(temp0, object.angle)
+				Sin256(temp0, player.angle)
 				temp0 *= 0x5000
 			else
-				Sin256(temp0, object.angle)
+				Sin256(temp0, player.angle)
 				temp0 *= 0x1E00
 			end if
 			temp0 >>= 8
-			object.speed += temp0
+			player.speed += temp0
 		end if
 
 		CallFunction(Player_HandleRollAnimSpeed)
-		object.animationSpeed = player.rollAnimationSpeed
+		player.animationSpeed = player.rollAnimationSpeed
 		CallFunction(Player_HandleOnGround)
 	end if
 end function
 
 
-public function CNZSetup_TubeSwitch_Air
+public function CNZSetup_PlayerState_TubeAirRoll
 	CallFunction(Player_HandleAirFriction)
-	if object.gravity == 1
+	if player.gravity == 1
 		CallFunction(Player_HandleAirMovement)
 	else
-		object.state = CNZSetup_TubeSwitch_Ground
+		player.state = CNZSetup_PlayerState_TubeRoll
 		CallFunction(Player_HandleOnGround)
 		player.skidding = 0
 	end if
-	object.animation = ANI_JUMPING
+	player.animation = ANI_JUMPING
 end function
 
 

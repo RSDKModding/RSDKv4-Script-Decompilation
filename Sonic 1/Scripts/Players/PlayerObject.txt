@@ -241,12 +241,17 @@ private alias object.value45 : player.autoJumpTimer
 private alias object.value46 : player.targetLeaderPos.x
 private alias object.value47 : player.targetLeaderPos.y
 
-// Death Event values
+// Death Event Aliases
 private alias object.state      : deathEvent.state
 private alias object.value1     : deathEvent.leftTextPos
 private alias object.value2     : deathEvent.rightTextPos
 private alias object.value3     : deathEvent.timer
 private alias object.drawOrder  : deathEvent.drawOrder
+
+private alias 0 : DEATHEVENT_GAMEOVER
+private alias 1 : DEATHEVENT_TIMEOVER
+private alias 2 : DEATHEVENT_DEATH
+private alias 3 : DEATHEVENT_DEATH_TA
 
 // Shield related values
 private alias object.value0 : goggles.targetPlayer
@@ -328,6 +333,7 @@ reserve function Player_State_BubbleBounce
 reserve function Player_Action_DblJumpSonic
 reserve function Player_HandleFlyCarry
 
+
 // ========================
 // Static Values
 // ========================
@@ -348,7 +354,7 @@ public value Player_attractTableSize 	= 0
 public value Player_attractFrameCount 	= 0
 public value Player_attractDuration 	= 0
 
-// All these below are unused
+// All these below are declared but unused
 private value Player_unusedValue1 = 0
 private value Player_unusedValue2 = 0
 private value Player_unusedValue3 = 0
@@ -356,6 +362,7 @@ private value Player_unusedValue4 = 0
 private value Player_unusedValue5 = 0
 private value Player_unusedValue6 = 0
 private value Player_unusedValue7 = 0
+
 
 // ========================
 // Tables
@@ -451,7 +458,7 @@ end table
 
 // Each line of these physics tables store the values in this order:
 // Top Speed, Ground Acceleration, Air Acceleration, Air Deleceration, Skid Speed, Rolling Friction, Jump Strength, Jump Cap
-// Note that Ground Deceleration is not defined here, rather it's set based on Ground Acceleration
+// Note that Ground Deceleration is not defined here, rather it's calculated based on Ground Acceleration
 
 private table Player_SonicPhysicsTable
 	0x60000, 0x0C00, 0x1800, 0x0600, 0x008000, 0x0600, 0x68000, -0x40000 // Normal
@@ -553,6 +560,7 @@ public function Player_ApplyShield
 		goggles[arrayPos0].targetPlayer = currentPlayer
 		object[arrayPos0].drawOrder 	= DRAWORDER_PLAYER
 		break
+		
 	end switch
 end function
 
@@ -738,6 +746,7 @@ public function Player_UpdatePhysicsState
 	case PLAYER_KNUX_ALONE
 		temp0 = Player_KnuxPhysicsTable
 		break
+		
 	end switch
 
 	temp1 = 0
@@ -813,6 +822,7 @@ public function Player_HandleSuperForm
 		case PLAYER_KNUX_ALONE
 			CallFunction(Player_HandleSuperPalette_Knux)
 			break
+			
 		end switch
 	end if
 
@@ -886,7 +896,6 @@ public function Player_CheckHit
 	temp1 |= checkResult
 	CheckEqual(player[currentPlayer].animation, ANI_FLY_LIFT_TIRED)
 	temp1 |= checkResult
-
 	if temp1 == true
 		CheckGreater(player[currentPlayer].ypos, object.ypos)
 		temp0 |= checkResult
@@ -949,7 +958,6 @@ public function Player_BadnikBreak
 	temp1 |= checkResult
 	CheckEqual(player[currentPlayer].animation, ANI_FLY_LIFT_TIRED)
 	temp1 |= checkResult
-
 	if temp1 == true
 		CheckGreater(player[currentPlayer].ypos, object.ypos)
 		temp0 |= checkResult
@@ -1346,11 +1354,11 @@ public function Player_ProcessUpdate
 				case 3
 					keyDown[1].up = true
 					break
+					
 				end switch
 			end if
 
 			CheckTouchRect(screen.xcenter, 96, screen.xsize, 240)
-
 			if checkResult > -1
 				keyDown[1].buttonA = true
 			end if
@@ -1363,7 +1371,6 @@ public function Player_ProcessUpdate
 
 			if stage.debugMode == true
 				CheckTouchRect(0, 0, 112, 56)
-
 				if checkResult > -1
 					keyDown[1].buttonB = true
 				end if
@@ -1641,7 +1648,7 @@ public function Player_HandleGroundMovement
 			FlipSign(temp0)
 			if player.speed > temp0
 				if player.speed > 0
-					if player.collisionMode == 0
+					if player.collisionMode == CMODE_FLOOR
 						if player.speed > 0x40000
 							player.skidding = 16
 						end if
@@ -1668,7 +1675,7 @@ public function Player_HandleGroundMovement
 		if player.right == true
 			if player.speed < player.topSpeed
 				if player.speed < 0
-					if player.collisionMode == 0
+					if player.collisionMode == CMODE_FLOOR
 						if player.speed < -0x40000
 							player.skidding = 16
 						end if
@@ -1790,7 +1797,7 @@ public function Player_HandleGroundMovement
 	end if
 
 	switch player.collisionMode
-	case 1
+	case CMODE_LWALL
 		if player.angle <= 192
 			if player.speed > -0x20000
 				if player.speed < 0x20000
@@ -1803,7 +1810,7 @@ public function Player_HandleGroundMovement
 		end if
 		break
 
-	case 2
+	case CMODE_ROOF
 		if player.speed > -0x20000
 			if player.speed < 0x20000
 				player.gravity = GRAVITY_AIR
@@ -1814,7 +1821,7 @@ public function Player_HandleGroundMovement
 		end if
 		break
 
-	case 3
+	case CMODE_RWALL
 		if player.angle >= 64
 			if player.speed > -0x20000
 				if player.speed < 0x20000
@@ -1826,14 +1833,14 @@ public function Player_HandleGroundMovement
 			end if
 		end if
 		break
+		
 	end switch
 end function
 
 
 // Handles player movement through the air
 public function Player_HandleAirFriction
-
-	// (For when the character is rising from a jump)
+	// This little bit of code manages jumping deceleration
 	if player.yvel > -0x40000
 		if player.yvel < 0
 			// Limit max velocity
@@ -1842,7 +1849,6 @@ public function Player_HandleAirFriction
 			player.speed -= temp0
 		end if
 	end if
-
 
 	// Update air control
 
@@ -1861,7 +1867,6 @@ public function Player_HandleAirFriction
 			player.direction = FACING_LEFT
 		end if
 	end if
-
 
 	// Same as above but for moving right
 	if player.speed < player.topSpeed
@@ -1955,8 +1960,8 @@ public function Player_HandleRollDeceleration
 	end if
 
 	switch player.collisionMode
-	case 0
-	case 2
+	case CMODE_FLOOR
+	case CMODE_ROOF
 		if temp1 > 0
 			if player.speed < 0
 
@@ -1974,7 +1979,7 @@ public function Player_HandleRollDeceleration
 		end if
 		break
 
-	case 1
+	case CMODE_LWALL
 		if player.angle < 193
 			if temp1 > 0
 				if player.speed < 0x20000
@@ -1986,7 +1991,7 @@ public function Player_HandleRollDeceleration
 		end if
 		break
 
-	case 3
+	case CMODE_RWALL
 		if player.angle > 63
 			if temp1 < 0
 				if player.speed > -0x20000
@@ -2066,7 +2071,7 @@ end function
 public function Player_Action_Jump
 	temp1 = false
 
-	if player.collisionMode == 0
+	if player.collisionMode == CMODE_FLOOR
 		// Check if there's a roof right above the player
 		temp6 = player.xpos
 		temp7 = player.ypos
@@ -2416,7 +2421,6 @@ public function Player_Action_DblJumpSonic
 							ResetObjectEntity(arrayPos0, TypeName[Insta Shield], 0, 0, 0)
 							object[arrayPos0].priority = PRIORITY_ACTIVE
 						end if
-
 
 						player.jumpAbilityState = 2
 
@@ -2797,7 +2801,7 @@ public function Player_State_Ground
 		CallFunction(Player_HandleOnGround)
 
 		if player.speed == 0
-			if player.collisionMode == 0
+			if player.collisionMode == CMODE_FLOOR
 				if player.timer < 240
 					player.animation = ANI_STOPPED
 					player.timer++
@@ -2918,7 +2922,7 @@ public function Player_State_Ground
 
 		end if
 
-		if player.collisionMode == 0
+		if player.collisionMode == CMODE_FLOOR
 			if player.pushing == 2
 				player.animation = ANI_PUSHING
 				player.animationSpeed = 0
@@ -3021,6 +3025,7 @@ public function Player_State_Air
 			if player.animation == ANI_FLAILING1
 				player.animation = ANI_WALKING
 			end if
+			
 			if player.animation == ANI_FLAILING2
 				player.animation = ANI_WALKING
 			end if
@@ -3781,7 +3786,7 @@ public function Player_State_GlideLeft
 			player.state = Player_State_GlideDrop
 		end if
 	else
-		if player.collisionMode == 0
+		if player.collisionMode == CMODE_FLOOR
 			player.timer = 0
 			player.state = Player_State_GlideSlide
 			player.animation = ANI_GLIDING_STOP
@@ -3796,7 +3801,6 @@ public function Player_State_GlideLeft
 	temp0 = stage.curYBoundary1
 	temp0 += 16
 	temp0 <<= 16
-
 	if player.ypos < temp0
 		player.xvel = 0
 		player.speed = player.xvel
@@ -3904,7 +3908,7 @@ public function Player_State_GlideRight
 			player.state = Player_State_GlideDrop
 		end if
 	else
-		if player.collisionMode == 0
+		if player.collisionMode == CMODE_FLOOR
 			player.timer = 0
 			player.state = Player_State_GlideSlide
 			player.animation = ANI_GLIDING_STOP
@@ -4637,11 +4641,11 @@ public function Player_State_Death
 
 			if options.gameMode == MODE_TIMEATTACK
 				deathEvent.timer = 0
-				deathEvent.state = 3
+				deathEvent.state = DEATHEVENT_DEATH_TA
 			else
 				if player.lives == 0
 					deathEvent.timer = -2880
-					deathEvent.state = 0
+					deathEvent.state = DEATHEVENT_GAMEOVER
 					PlayMusic(TRACK_GAMEOVER)
 					stage.pauseEnabled = false
 #platform: USE_ORIGINS
@@ -4653,7 +4657,7 @@ public function Player_State_Death
 #endplatform
 				else
 					deathEvent.timer = 0
-					deathEvent.state = 2
+					deathEvent.state = DEATHEVENT_DEATH
 
 #platform: USE_ORIGINS
 					if game.coinMode == false
@@ -4667,7 +4671,7 @@ public function Player_State_Death
 										if game.oneStageFlag == false
 #endplatform
 											deathEvent.timer = -2880
-											deathEvent.state = 1
+											deathEvent.state = DEATHEVENT_TIMEOVER
 											PlayMusic(TRACK_GAMEOVER)
 											stage.pauseEnabled = false
 #platform: USE_ORIGINS
@@ -4736,16 +4740,16 @@ public function Player_State_Drown
 
 			if options.gameMode == MODE_TIMEATTACK
 				deathEvent.timer = 0
-				deathEvent.state = 3
+				deathEvent.state = DEATHEVENT_DEATH_TA
 			else
 				if player.lives == 0
-					deathEvent.timer = -0xB40
-					deathEvent.state = 0
+					deathEvent.timer = -2880
+					deathEvent.state = DEATHEVENT_GAMEOVER
 					PlayMusic(TRACK_GAMEOVER)
 					stage.pauseEnabled = false
 				else
 					deathEvent.timer = 0
-					deathEvent.state = 2
+					deathEvent.state = DEATHEVENT_DEATH
 					
 					// We don't need the Time Over check here because the player cannot drown while already dead
 				end if
@@ -4778,8 +4782,7 @@ public function Player_State_HangBar
 	temp2 += player.collisionTop
 
 	Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
-
-	if temp0 != 3 // this is the bar tile flag value
+	if temp0 != 3 // this is/was the bar tile flag value
 		// and even if this function isn't used in Origins they still updated it there lol
 #platform: USE_STANDALONE
 		player.state = Player_State_Air
@@ -4833,6 +4836,7 @@ public function Player_State_CorkscrewRun
 			player.state = Player_State_CorkscrewRoll
 			player.animation = ANI_JUMPING
 		end if
+		
 		if player.speed < -0x199A
 			player.state = Player_State_CorkscrewRoll
 			player.animation = ANI_JUMPING
@@ -4886,13 +4890,13 @@ public function Player_State_TubeRoll
 		CallFunction(Player_HandleAirMovement)
 	else
 		if player.speed > 0
-			if player.collisionMode == 0
+			if player.collisionMode == CMODE_FLOOR
 				if player.speed < 0x10000
 					player.speed = 0x40000
 				end if
 			end if
 		else
-			if player.collisionMode == 0
+			if player.collisionMode == CMODE_FLOOR
 				if player.speed > -0x10000
 					player.speed = -0x40000
 				end if
@@ -5075,7 +5079,7 @@ event ObjectUpdate
 
 			CallFunction(player.state)
 			
-			// For Origins, they didn't put the Drop Dash "animation" here...
+			// For Origins, they didn't put the Drop Dash "animation" code here...
 			
 			ProcessAnimation()
 
@@ -5356,7 +5360,7 @@ event ObjectStartup
 			// Tails can't have Miles following him, unfortunately
 			stage.player2Enabled = false
 			
-			// (Tails doesn't disable the "peelout" animation and since it's actually his fastest run animation)
+			// (Tails doesn't disable the "peelout" animation since it's actually his fastest run animation)
 			
 			break
 

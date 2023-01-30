@@ -16,7 +16,7 @@ private alias object.propertyValue	: object.player
 
 private alias object.value0			: object.timer
 private alias object.value1			: object.selection
-private alias object.value2			: object.timer2
+private alias object.value2			: object.selectionTimer
 
 // States
 private alias 0 : 2PVSMENU4_SETUP
@@ -79,7 +79,7 @@ event ObjectUpdate
 			if object.entityPos == 1 // If this is the P1 box
 				if object.state == 2PVSMENU4_WAITFORINPUT
 					object.timer = 0
-					object.state = 7
+					object.state = 2PVSMENU4_TOVSMENU1
 				end if
 			end if
 		end if
@@ -115,7 +115,7 @@ event ObjectUpdate
 			checkResult = keyPress[arrayPos0].start
 			checkResult |= keyPress[arrayPos0].buttonA
 			if checkResult == true
-				object.timer2 = 0
+				object.selectionTimer = 0
 				PlaySfx(SfxName[Star Post], false)
 				object.state = 2PVSMENU4_SELECTEDPLAYER
 			end if
@@ -125,7 +125,7 @@ event ObjectUpdate
 			if arrayPos0 != object.entityPos
 				if object[arrayPos0].state > 2PVSMENU4_SELECTING
 					if object[arrayPos0].selection == object.selection
-						if temp0 == true
+						if temp0 == 1
 							object.selection--
 							if object.selection < 2PVSMENU4_SEL_SONIC
 								object.selection = 2PVSMENU4_SEL_KNUX
@@ -143,8 +143,8 @@ event ObjectUpdate
 		break
 		
 	case 2PVSMENU4_SELECTEDPLAYER
-		if object.timer2 < 32
-			object.timer2++
+		if object.selectionTimer < 32
+			object.selectionTimer++
 		else
 			object.timer = -256
 			
@@ -218,11 +218,14 @@ end event
 
 event ObjectDraw
 	if object.player == 1
+		// For the main object, draw the "Player Select" text at the top of the screen
 		DrawSpriteScreenXY(0, screen.xcenter, 17)
 		DrawSpriteScreenXY(1, screen.xcenter, 17)
 	end if
 	
-	temp0 = object.timer2
+	// Draw the Selection Box
+	// (This little bit of math is to make the selection box flash a little, after the character's been selected)
+	temp0 = object.selectionTimer
 	temp0 >>= 2
 	temp0 &= 1
 	temp0 += 2
@@ -230,10 +233,10 @@ event ObjectDraw
 	
 	switch object.selection
 	case 2PVSMENU4_SEL_NONE
-		DrawSpriteScreenXY(11, screen.xcenter, object.ypos)
+		DrawSpriteScreenXY(11, screen.xcenter, object.ypos) // "Wating for"
 		temp0 = 11
 		temp0 += object.player
-		DrawSpriteScreenXY(temp0, screen.xcenter, object.ypos)
+		DrawSpriteScreenXY(temp0, screen.xcenter, object.ypos) // Either "P1" or "P2"
 		break
 		
 	case 2PVSMENU4_SEL_SONIC
@@ -285,8 +288,8 @@ event ObjectStartup
 	SpriteFrame(-8, 8, 16, 7, 218, 124)			// 1P							- #12
 	SpriteFrame(-8, 8, 16, 7, 218, 132)			// 2P							- #13
 	
-	// Yes, it still checks for Menu 2...
-	// This object really only works perchance, if it was placed just a bit further from the camera in the scene then it wouldn't work at all
+	// it still checks for 2P VS Menu 2 lol
+	// (This object is never placed in a scene anyways, so this bit of code doesn't really matter)
 	foreach (TypeName[2P VS Menu 2], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 	next

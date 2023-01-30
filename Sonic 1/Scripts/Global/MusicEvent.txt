@@ -19,11 +19,16 @@ private alias 4 : TRACK_BOSS
 private alias 0 : MUSICEVENT_FADETOBOSS
 private alias 1 : MUSICEVENT_FADETOSTAGE
 private alias 2 : MUSICEVENT_TRANSITION
-private alias 3 : MUSICEVENT_FADEOUT
+private alias 3 : MUSICEVENT_FADEOUT // New to Origins
 
 private alias 0 : MUSICEVENT_FLAG_NOCHANGE
 private alias 1 : MUSICEVENT_FLAG_SPEEDUP
 private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+
+// ========================
+// Events
+// ========================
 
 event ObjectUpdate
 #platform: USE_ORIGINS
@@ -32,7 +37,7 @@ event ObjectUpdate
 
 	switch object.propertyValue
 #platform: USE_ORIGINS
-	case MUSICEVENT_FADEOUT
+	case MUSICEVENT_FADEOUT // yeah despite being numerically the final variant, the Origins devs just stuffed it up above at the top...
 		if object.timer < 50
 			object.timer++
 			music.volume -= 2
@@ -57,6 +62,8 @@ event ObjectUpdate
 	case MUSICEVENT_FADETOSTAGE
 #platform: USE_ORIGINS
 		if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+			// In Boss Rush we don't wanna resume normal music afterwards, become a simple fade-out variant instead
+			
 			object.propertyValue = MUSICEVENT_FADEOUT
 		else
 #endplatform
@@ -78,6 +85,7 @@ event ObjectUpdate
 				PauseMusic()
 				music.volume = 0
 			end if
+			
 			object.timer++
 		else
 			if music.volume == 0
@@ -87,19 +95,17 @@ event ObjectUpdate
 					break
 
 				case MUSICEVENT_FLAG_SPEEDUP
-#platform: USE_STANDALONE
 					CallFunction(SpeedUpMusic)
-#endplatform
 					stage.musicFlag = MUSICEVENT_FLAG_NOCHANGE
 					break
 
 				case MUSICEVENT_FLAG_SLOWDOWN
-#platform: USE_STANDALONE
 					CallFunction(SlowDownMusic)
-#endplatform
 					stage.musicFlag = MUSICEVENT_FLAG_NOCHANGE
 					break
+					
 				end switch
+				
 				music.volume = 5
 			else
 				if music.volume < 100
@@ -114,6 +120,10 @@ event ObjectUpdate
 	end switch
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)

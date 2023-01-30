@@ -84,30 +84,30 @@ event ObjectUpdate
 	temp4 = object.drawPos.x
 	temp5 = object.drawPos.y
 
-	// MoveX
+	// Fetch MoveX value
 	GetTableValue(temp0, 28, StageSetup_oscillationTable)
 	temp0 <<= 8
 	temp0 &= 0xFFFF0000
 	temp0 -= 0x400000
 
-	// MoveY
+	// Fetch MoveY value
 	GetTableValue(temp1, 30, StageSetup_oscillationTable)
 	temp1 <<= 8
 	temp1 &= 0xFFFF0000
 	temp1 -= 0x400000
 
-	GetBit(temp2, object.propertyValue, 5)
+	GetBit(temp2, object.propertyValue, 5) // flipMoveXY bit
 	if temp2 == true
 		FlipSign(temp0)
 		FlipSign(temp1)
 	end if
 
-	GetBit(temp2, object.propertyValue, 6)
+	GetBit(temp2, object.propertyValue, 6) // flipMoveX bit
 	if temp2 == true
 		FlipSign(temp0)
 	end if
 
-	GetBit(temp2, object.propertyValue, 4)
+	GetBit(temp2, object.propertyValue, 4) // flipMoveY bit
 	if temp2 == false
 		object.drawPos.x = temp0
 		object.drawPos.y = temp1
@@ -135,11 +135,12 @@ event ObjectUpdate
 			player[currentPlayer].ypos += temp7
 		end if
 
-		SetBit(object.stoodPlayers, temp2, 0)
+		SetBit(object.stoodPlayers, temp2, false)
 		BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitboxL, -16, object.hitboxR, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 		if checkResult == true
 			SetBit(object.stoodPlayers, temp2, true)
 		end if
+		
 		temp2++
 	next
 
@@ -196,8 +197,7 @@ event RSDKEdit
 			break
 			
 		case 0 // frameID
-			checkResult = object.propertyValue
-			checkResult &= 1
+			GetBit(checkResult, object.propertyValue, 0)
 			break
 			
 		case 1 // flipMoveX
@@ -220,8 +220,8 @@ event RSDKEdit
 			break
 			
 		case 0 // frameID
-			object.propertyValue = editor.variableValue
-			object.propertyValue &= 1
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 0, checkResult)
 			break
 			
 		case 1 // flipMoveX
@@ -246,11 +246,8 @@ end event
 
 event RSDKDraw
 	temp0 = object.propertyValue
-	// TODO: hold on, if there are only 2 sprite frames then wouldn't it be better to bit shift 2 to the right now?
-	// gonna leave this because rdc likely did this for a reason, but...
 	temp0 &= 15
-
-	DrawSprite(object.frame)
+	DrawSprite(temp0)
 end event
 
 

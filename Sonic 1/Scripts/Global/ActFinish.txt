@@ -49,11 +49,15 @@ private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_UNTRANSFORM
 
 // Player Aliases
-private alias object.value0 : player.rings
-
+private alias object.type        : player.type
 private alias object.interaction : player.interaction
 private alias object.controlMode : player.controlMode
 private alias object.right       : player.right
+
+private alias object.value0 : player.rings
+
+// Sign Post Aliases
+private alias 5 : SIGNPOST_BLANK
 
 
 // ========================
@@ -69,16 +73,21 @@ event ObjectUpdate
 		object.decorPos = screen.xcenter
 		object.decorPos += 128
 		object.actPos = screen.xcenter
+		
 		object.playerNamePos = screen.xcenter
 		FlipSign(object.playerNamePos)
 		object.playerNamePos -= 160
+		
 		object.passedPos = screen.xcenter
 		FlipSign(object.passedPos)
 		object.passedPos -= 160
+		
 		object.totalPos = screen.xcenter
 		object.totalPos += 128
+		
 		object.timePos = object.totalPos
 		object.timePos += 32
+		
 		object.ringPos = object.timePos
 		object.ringPos += 32
 
@@ -124,6 +133,8 @@ event ObjectUpdate
 			break
 
 		case 9
+			// If the player finished the stage at the last possible moment, then reward a whole lotta points!
+			// Fun note - this wasn't in the initial versions of S1, back then the time bonus stopped at 5 minutes and that was it
 			if stage.debugMode == false
 				if options.gameMode < MODE_TIMEATTACK
 					if stage.seconds == 59
@@ -301,7 +312,7 @@ event ObjectUpdate
 #platform: USE_STANDALONE
 					object.state++
 #endplatform
-					if object[0].type == TypeName[Blank Object]
+					if player[0].type == TypeName[Blank Object]
 						PlaySfx(SfxName[Warp], false)
 					end if
 				end if
@@ -318,7 +329,7 @@ event ObjectUpdate
 #platform: USE_STANDALONE
 				object.state++
 #endplatform
-				if object[0].type == TypeName[Blank Object]
+				if player[0].type == TypeName[Blank Object]
 					PlaySfx(SfxName[Warp], false)
 				end if
 			end if
@@ -326,7 +337,7 @@ event ObjectUpdate
 		break
 
 	case ACTFINISH_LOADNEXTSTAGE
-		if object[0].type == TypeName[Blank Object]
+		if player[0].type == TypeName[Blank Object]
 			// If the player object is blank, then they entered a Special Ring
 			// So, off to the Special Stage!
 			object.timer += 8
@@ -338,7 +349,7 @@ event ObjectUpdate
 				temp0 <<= 8
 				fadeColor += temp0
 				fadeColor += 224
-				object.direction = FACING_RIGHT
+				object.direction = FACING_RIGHT // huh? does this even matter?
 				object.timer = 0
 				lampPostID = 0
 				stage.listPos++
@@ -396,7 +407,7 @@ event ObjectUpdate
 				fadeColor = 0
 				object.timer = 0
 				lampPostID = 0
-				object.direction = FACING_RIGHT
+				object.direction = FACING_RIGHT // i don't think this does anything...
 				stage.listPos++
 
 				if options.gameMode == MODE_NORMAL
@@ -498,7 +509,7 @@ event ObjectUpdate
 			temp0 <<= 7
 			stage.newXBoundary2 = temp0
 			foreach (TypeName[Sign Post], arrayPos0, ACTIVE_ENTITIES)
-				object[arrayPos0].state = 5
+				object[arrayPos0].state = SIGNPOST_BLANK
 			next
 
 			currentPlayer = 0
@@ -535,7 +546,7 @@ event ObjectUpdate
 		end if
 		
 		object.state++
-		if object[0].type == TypeName[Blank Object]
+		if player[0].type == TypeName[Blank Object]
 			SetScreenFade(208, 255, 224, 255)
 		else
 			SetScreenFade(0, 0, 0, 255)
@@ -543,7 +554,7 @@ event ObjectUpdate
 		break
 		
 	case ACTFINISH_SETSCREENFADE
-		if object[0].type == TypeName[Blank Object]
+		if player[0].type == TypeName[Blank Object]
 			SetScreenFade(208, 255, 224, 255)
 		else
 			SetScreenFade(0, 0, 0, 255)
@@ -560,18 +571,18 @@ event ObjectDraw
 	temp0 = screen.xcenter
 	temp0 += 16
 	temp0 += object.decorPos
-	DrawSpriteScreenXY(3, temp0, 56)
+	DrawSpriteScreenXY(3, temp0, 56) // Blue Circle
 
 	temp0 = screen.xcenter
 	temp0 += 3
 	temp0 += object.playerNamePos
-	DrawSpriteScreenXY(stage.playerListPos, temp0, 60)
-	DrawSpriteScreenXY(4, temp0, 60)
+	DrawSpriteScreenXY(stage.playerListPos, temp0, 60) // Player name
+	DrawSpriteScreenXY(4, temp0, 60) // "Has"
 
 	temp0 = screen.xcenter
 	temp0 -= 48
 	temp0 += object.passedPos
-	DrawSpriteScreenXY(5, temp0, 80)
+	DrawSpriteScreenXY(5, temp0, 80) // "Passed"
 
 	temp0 = screen.xcenter
 	temp0 += 24
@@ -586,33 +597,33 @@ event ObjectDraw
 		// Maximum of Act 3 to be displayed
 		temp1 = 8
 	end if
-	DrawSpriteScreenXY(temp1, temp0, 82)
+	DrawSpriteScreenXY(temp1, temp0, 82) //  Act number
 
 	temp0 = screen.xcenter
 	temp0 -= 79
 	temp0 += object.totalPos
-	DrawSpriteScreenXY(9, temp0, 117)
+	DrawSpriteScreenXY(9, temp0, 117) // "Score" text
 
 	temp0 += 151
-	DrawNumbers(13, temp0, 117, player.score, 6, 8, 0)
+	DrawNumbers(13, temp0, 117, player.score, 6, 8, false)
 
 	temp0 = screen.xcenter
 	temp0 -= 79
 	temp0 += object.timePos
-	DrawSpriteScreenXY(10, temp0, 133)
-	DrawSpriteScreenXY(12, temp0, 133)
+	DrawSpriteScreenXY(10, temp0, 133) // "Time" text
+	DrawSpriteScreenXY(12, temp0, 133) // "Bonus" text
 
 	temp0 += 151
-	DrawNumbers(13, temp0, 133, object.timeBonus, 6, 8, 0)
+	DrawNumbers(13, temp0, 133, object.timeBonus, 6, 8, false)
 
 	temp0 = screen.xcenter
 	temp0 -= 79
 	temp0 += object.ringPos
-	DrawSpriteScreenXY(11, temp0, 149)
-	DrawSpriteScreenXY(12, temp0, 149)
+	DrawSpriteScreenXY(11, temp0, 149) // "Rings" text
+	DrawSpriteScreenXY(12, temp0, 149) // "Bonus" text
 
 	temp0 += 151
-	DrawNumbers(13, temp0, 149, object.ringBonus, 5, 8, 0)
+	DrawNumbers(13, temp0, 149, object.ringBonus, 5, 8, false)
 end event
 
 
