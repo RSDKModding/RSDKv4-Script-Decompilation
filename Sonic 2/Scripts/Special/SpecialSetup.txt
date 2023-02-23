@@ -85,13 +85,13 @@ private alias object.value3 : object.palID2
 
 // Start Message Aliases
 private alias object.value0 : startMessage.ringCount2P
-private alias object.value2 : startMessage.ringCountSonic
-private alias object.value1 : startMessage.ringCountKnux
+private alias object.value1 : startMessage.ringCountSonic
+private alias object.value2 : startMessage.ringCountKnux
 
 // Checkpoint Aliases
 private alias object.value0 : checkpoint.ringCount2P
-private alias object.value2 : checkpoint.ringCountSonic
-private alias object.value1 : checkpoint.ringCountKnux
+private alias object.value1 : checkpoint.ringCountSonic
+private alias object.value2 : checkpoint.ringCountKnux
 
 // Reserved object slots
 private alias 9  : SLOT_SPECIALSETUP
@@ -158,6 +158,7 @@ event ObjectUpdate
 		SetPaletteEntry(0, 143, temp0)
 	end if
 
+#platform: USE_STANDALONE
 	// There aren't any demos in Special Stages I believe... so why is this here..?
 	// Best guess is that it's just a leftover from the standard Stage Setup script, but I can't say for sure
 	if options.attractMode == false
@@ -169,14 +170,30 @@ event ObjectUpdate
 	else
 		options.touchControls = false
 	end if
+#endplatform
 end event
 
 
 event ObjectStartup
+#platform: USE_ORIGINS
+	if stage.playerListPos > PLAYER_SONIC_AND_TAILS // If playing as Knuckles & Tails
+		stage.playerListPos = PLAYER_KNUX_ALONE
+		stage.player2Enabled = true
+	end if
+	
+	// This same code still appears later in this event so this was likely a remnant of copy-pasting the K&T check from above
+	if stage.playerListPos > PLAYER_KNUX_ALONE // If playing as Sonic & Tails
+		stage.playerListPos = PLAYER_SONIC_ALONE
+		stage.player2Enabled = true
+	end if
+#endplatform
+
 	SetMusicTrack("SpecialStage.ogg", TRACK_STAGE, MUSIC_LOOP_SPECIAL)
 	SetMusicTrack("ActComplete.ogg", TRACK_ACTFINISH, false)
 	SpecialSetup_gotEmerald = false
+	
 #platform: USE_ORIGINS
+	// Sure, record the time for an autoscroller, you do you, Sonic Team
 	stage.timeEnabled = true
 #endplatform
 
@@ -189,8 +206,7 @@ event ObjectStartup
 	object[SLOT_SPECIALHUD].priority  	= PRIORITY_ACTIVE
 	object[SLOT_SPECIALHUD].drawOrder 	= 6
 	
-	// (This part is left alone in Origins)
-	if stage.playerListPos > PLAYER_KNUX_ALONE
+	if stage.playerListPos > PLAYER_KNUX_ALONE // If playing as Sonic & Tails
 		stage.playerListPos = PLAYER_SONIC_ALONE
 		stage.player2Enabled = true
 	end if
@@ -228,8 +244,7 @@ event ObjectStartup
 	SpecialSetup_StageColour2 |= 0xFF000000
 	
 	if options.attractMode == false
-		// (is there supposed to be code here?
-		//  this condition exists in the original code, and yet there's nothing in here...)
+		// Huh. Normally there'd be STANDARD platform specific code here, but even Origins has this condition empty...
 	end if
 	
 	temp0 = 1
