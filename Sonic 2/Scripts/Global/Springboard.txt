@@ -10,7 +10,7 @@
 // ========================
 
 private alias object.value0 : object.bounceDelay
-private alias object.value1 : object.force
+private alias object.value1 : object.force // unused (set but never actually used properly, which funnily enough is how it works in the original S2 too)
 private alias object.value2 : object.activePlayers
 
 // Player Aliases
@@ -53,24 +53,31 @@ private value Springboard_debugStartID = 0
 // Tables
 // ========================
 
+// tech
 private table Springboard_springForceTable
 	-0x40000, -0xA0000, -0x80000
 end table
 
 private table Springboard_springPowerTable
-	0, 0, 0, 0, 0, 0, 0, 0, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000
-	-0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000
+	 0x00000,  0x00000,  0x00000,  0x00000,  0x00000,  0x00000,  0x00000,  0x00000
+	-0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000
+	-0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000, -0x10000
+	-0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000, -0x20000
 	-0x30000, -0x30000, -0x30000, -0x30000, -0x30000, -0x30000, -0x40000, -0x40000
 end table
 
 private table Springboard_heightsReadyTable
-	8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 17, 18, 19, 20, 20, 21
-	21, 22, 23, 24, 24, 24, 24, 24, 24, 24, 24, 24
+	 8,  9, 10, 11, 12, 13, 14
+	15, 16, 16, 17, 18, 19, 20
+	20, 21, 21, 22, 23, 24, 24
+	24, 24, 24, 24, 24, 24, 24
 end table
 
 private table Springboard_heightsFlatTable
-	8, 9, 10, 11, 12, 12, 12, 12, 13, 13, 13, 13, 13, 13, 14, 14
-	15, 15, 16, 16, 16, 16, 15, 15, 14, 14, 13, 13
+	 8,  9, 10, 11, 12, 12, 12
+	12, 13, 13, 13, 13, 13, 13
+	14, 14, 15, 15, 16, 16, 16
+	16, 15, 15, 14, 14, 13, 13
 end table
 
 
@@ -87,7 +94,7 @@ private function Springboard_DebugSpawn
 	temp0 = debugMode[0].currentSelection
 	temp0 -= Springboard_debugStartID
 	CreateTempObject(TypeName[Springboard], 0, object.xpos, object.ypos)
-	GetTableValue(object[tempObjectPos].force, temp0, Springboard_springForceTable)
+	GetTableValue(object[tempObjectPos].force, temp0, Springboard_springForceTable) // doesn't really mean anything since object.force is unused
 	object[tempObjectPos].direction = object.direction
 end function
 
@@ -120,6 +127,7 @@ event ObjectUpdate
 						if player[currentPlayer].animation == ANI_RUNNING
 							player[currentPlayer].animationReserve = ANI_RUNNING
 						end if
+						
 						if player[currentPlayer].animation == ANI_PEELOUT
 							player[currentPlayer].animationReserve = ANI_PEELOUT
 						end if
@@ -136,7 +144,7 @@ event ObjectUpdate
 						end if
 
 						GetTableValue(player[currentPlayer].yvel, temp0, Springboard_springPowerTable)
-						player[currentPlayer].yvel -= 0x40000 // this should be object.force LOL
+						player[currentPlayer].yvel -= 0x40000 // constant in place of object.force (see ObjectStartup)
 						player[currentPlayer].yvel -= player[currentPlayer].gravityStrength
 						player[currentPlayer].animation = ANI_TWIRL
 						player[currentPlayer].prevAnimation = ANI_TWIRL
@@ -291,9 +299,18 @@ event ObjectStartup
 	LoadSpriteSheet("Global/Items.gif")
 
 	foreach (TypeName[Springboard], arrayPos0, ALL_ENTITIES)
-		// ???
-		// where is this temp0 coming from???
-		// it's likely not in place of propertyvalue either, since that can go up to 3 in some scenes (ie MCZ2) while the table only goes up to 2
+		// This part is... weird
+		// For one, where is this temp0 coming from?
+		// Here's some fun little notes
+		// - This object was definitely scripted using the original game's asm as reference, seeing that the two's code are pretty similar
+		// - In the original S2, the object would get a force value based on (subtype & 2)
+		//   - However, even with that, the force value would never get read and a force of 0x40000 (the first entry on the table) would be used all the time instead
+		// - For some reason, it looks like they decided to do the same thing in this remake?
+		//   - They still have the same force table, they still get the force value and store it, and they even still force a force of 0x40000 in the actual script too
+		//   - this whole situation is kinda really confusing, but at the very least we can guess that temp0 was like
+		//       GetBit(temp0, object.propertyValue, 1)
+		//   - Or something like that (in the original game bit 0 was useTwirlAnim and the second bit would be force)
+		
 		GetTableValue(object[arrayPos0].force, temp0, Springboard_springForceTable)
 	next
 	
@@ -326,6 +343,6 @@ event RSDKLoad
 	LoadSpriteSheet("Global/Items.gif")
 	SpriteFrame(-28, -24, 56, 16, 52, 160)
 	
-	// dir is attr to set from scene
+	// dir is attr to set from scene, prop val is unused even if it is set sometimes (in the original game it was force/useTwirlAnim)
 	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

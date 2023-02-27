@@ -79,10 +79,10 @@ private function RotatingSpike_DebugSpawn
 	CreateTempObject(TypeName[Rotating Spike], 0, object.xpos, object.ypos)
 
 	object[tempObjectPos].swingAngle = object.direction
-	object[tempObjectPos].swingAngle <<= 16
+	object[tempObjectPos].swingAngle <<= 16 // ObjectStartup shifts it by 15...
 
-	if object.direction == 0
-		object[tempObjectPos].spinSpeed = -0x100
+	if object.direction == FACING_RIGHT
+		object[tempObjectPos].spinSpeed = 0x100
 	else
 		object[tempObjectPos].spinSpeed = -0x100
 	end if
@@ -138,7 +138,7 @@ end event
 
 
 event ObjectDraw
-	// Draw the static wood post first
+	// Draw the post first
 	DrawSprite(0)
 
 	// Then draw the chains
@@ -172,7 +172,7 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("MCZ/Objects.gif")
 
-	SpriteFrame(-8, -8, 16, 16, 135, 148) // 0 - Wood block post
+	SpriteFrame(-8, -8, 16, 16, 135, 148) // 0 - Post (same frame as Chain)
 	SpriteFrame(-8, -8, 16, 16, 135, 148) // 1 - Chain
 	SpriteFrame(-16, -16, 32, 32, 103, 0) // 2 - Spike ball
 
@@ -232,7 +232,7 @@ event RSDKEdit
 			checkResult >>= 4
 			break
 			
-		case 2 // direction
+		case 2 // initialDir
 			checkResult = object.direction
 			break
 			
@@ -258,7 +258,7 @@ event RSDKEdit
 			object.propertyValue |= editor.variableValue
 			break
 			
-		case 2 // direction
+		case 2 // initialDir
 			object.direction = editor.variableValue
 			break
 			
@@ -276,15 +276,15 @@ event RSDKDraw
 	object.swingAngle = object.direction
 	object.swingAngle <<= 15
 	object.swingAngle &= 0x1FFFF
-	temp0 = object.swingAngle
-	temp0 >>= 8
+	temp4 = object.swingAngle
+	temp4 >>= 8
 
-	Cos(object.spikePos.x, temp0)
+	Cos(object.spikePos.x, temp4)
 	object.spikePos.x *= object.amplitude
 	object.spikePos.x <<= 7
 	object.spikePos.x += object.xpos
 
-	Sin(object.spikePos.y, temp0)
+	Sin(object.spikePos.y, temp4)
 	object.spikePos.y *= object.amplitude
 	object.spikePos.y <<= 7
 	object.spikePos.y += object.ypos
@@ -293,17 +293,17 @@ event RSDKDraw
 
 	temp0 = 0
 	temp1 = 16
-	temp4 = object.swingAngle
-	temp4 >>= 8
 	while temp0 < object.length
 		Cos(temp2, temp4)
 		temp2 *= temp1
 		temp2 <<= 7
 		temp2 += object.xpos
+		
 		Sin(temp3, temp4)
 		temp3 *= temp1
 		temp3 <<= 7
 		temp3 += object.ypos
+		
 		DrawSpriteXY(1, temp2, temp3)
 		temp0++
 		temp1 += 16
@@ -316,7 +316,7 @@ end event
 
 event RSDKLoad
 	LoadSpriteSheet("MCZ/Objects.gif")
-	SpriteFrame(-8, -8, 16, 16, 135, 148) // 0 - Wood block post
+	SpriteFrame(-8, -8, 16, 16, 135, 148) // 0 - Post (same frame as Chain)
 	SpriteFrame(-8, -8, 16, 16, 135, 148) // 1 - Chain
 	SpriteFrame(-16, -16, 32, 32, 103, 0) // 2 - Spike ball
 
@@ -326,8 +326,10 @@ event RSDKLoad
 	AddEditorVariable("spinSpeed")
 	SetActiveVariable("spinSpeed")
 	
-	AddEditorVariable("direction")
-	SetActiveVariable("direction")
-	AddEnumVariable("Counter-Clockwise", 0)
-	AddEnumVariable("Clockwise", 1)
+	AddEditorVariable("initialDir")
+	SetActiveVariable("initialDir")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Down", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Up", 3)
 end event

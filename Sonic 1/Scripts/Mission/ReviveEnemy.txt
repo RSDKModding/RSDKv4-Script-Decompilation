@@ -5,11 +5,9 @@
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
-
-// This Object is used in several missions, where Badniks are to respawn
+// This Object is used in several missions where Badniks are to respawn
 // It should be paired with one of the Revive[*] Badnik objects as well
-// Do note, however, that this Object name's itself varies between zones - sometimes it's Revive Enemy while other times it's ReviveEnemy, note the space (or lack thereof)
-
+// Do note, however, that this Object name's itself varies between zones - sometimes it's Revive Enemy while other times it's ReviveEnemy, note the space (or lack thereof) but it doesn't really matter
 
 // ========================
 // Aliases
@@ -26,15 +24,15 @@ private alias object.value44 : object.backupvalueA
 private alias object.value43 : object.backupvalueB
 
 // And then this value starts all the way at the beginning, unlike the others
-// An object's time doesn't really need to be preserved between respawns though, so I suppose overlapping here is fine
+// An object's timer doesn't really need to be preserved between respawns though, so I suppose overlapping here is fine
 private alias object.value0  : object.target
 
+// States
+private alias 0: REVIVE_CHECKENEMY
+private alias 1: REVIVE_STORETIME
+private alias 2: REVIVE_IDLE
+private alias 3: REVIVE_REVIVEENEMY
 
-// Aliases for the Revive cases
-private alias 0: REVIVE_STORE_ENEMY
-private alias 1: REVIVE_STORE_TIME
-private alias 2: REVIVE_CHECK_TIME
-private alias 3: REVIVE_STORED_ENEMY
 
 // ========================
 // Function Declarations
@@ -86,11 +84,11 @@ end function
 
 event ObjectUpdate
 	switch object.state
-	case REVIVE_STORE_ENEMY
-		// Focus on the Object that just got defeated
+	case REVIVE_CHECKENEMY
+		// Focus on the badnik that spawned this object
 		arrayPos0 = object.target
 		
-		if object[arrayPos0].type == TypeName[Blank Object]
+		if object[arrayPos0].type == TypeName[Blank Object] // See if the badnik's been destroyed
 			// If it is, then turn it into a Revive Enemy Object and copy loads of values
 			
 			object[arrayPos0].type = TypeName[Revive Enemy]
@@ -98,7 +96,7 @@ event ObjectUpdate
 			object[arrayPos0].ypos = object.ypos
 			object[arrayPos0].propertyValue = object.propertyValue
 			object[arrayPos0].priority = PRIORITY_ACTIVE
-			object[arrayPos0].state = REVIVE_STORE_TIME
+			object[arrayPos0].state = REVIVE_STORETIME
 			object[arrayPos0].backupType = object.backupType
 			object[arrayPos0].backupState = object.backupState
 			object[arrayPos0].backupvalueB = object.backupvalueB
@@ -108,7 +106,7 @@ event ObjectUpdate
 		object.type = TypeName[Blank Object]
 		break
 		
-	case REVIVE_STORE_TIME
+	case REVIVE_STORETIME
 		CallFunction(ReviveEnemy_CheckOutOfRange)
 		if checkResult == true
 			// Store the current time
@@ -116,24 +114,25 @@ event ObjectUpdate
 			object.timeCheckpoint = temp0
 			
 			// Onwards!
-			object.state = REVIVE_CHECK_TIME
+			object.state = REVIVE_IDLE
 			object.priority = PRIORITY_BOUNDS
 		end if
 		break
 		
-	case REVIVE_CHECK_TIME
+	case REVIVE_IDLE
 		// See if it's been 20 seconds since this Enemy was defeated
 		CallFunction(ReviveEnemy_GetTotalTime)
 		temp0 -= object.timeCheckpoint
 		if temp0 >= 20
 			// If it has, then try to restore
 			
-			object.state = REVIVE_STORED_ENEMY
+			object.state = REVIVE_REVIVEENEMY
 		end if
 		break
 		
-	case REVIVE_STORED_ENEMY
+	case REVIVE_REVIVEENEMY
 		// It is worth noting, the Object still has default priority when calling this function
+		
 		CallFunction(ReviveEnemy_CheckOutOfRange)
 		if checkResult == true
 			// Now, we can restore this Badnik to what it used to be

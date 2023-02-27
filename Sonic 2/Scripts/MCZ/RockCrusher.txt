@@ -16,6 +16,7 @@ private alias 0 : ROCKCRUSHER_RISE
 private alias 1 : ROCKCRUSHER_FALL
 
 // Player aliases
+private alias object.type    : player.type
 private alias object.ypos    : player.ypos
 private alias object.gravity : player.gravity
 
@@ -77,13 +78,15 @@ event ObjectUpdate
 			break
 
 		case COL_BOTTOM
-			if player[currentPlayer].gravity == 0
+			if player[currentPlayer].gravity == GRAVITY_GROUND
 				if object.yvel > 0
 					// If the rock's going down, then crush the player!
 					CallFunction(Player_Kill)
 #platform: USE_ORIGINS
+					// If we're in a mission and P2 was just killed, then force P1 to die too
+					// (Part of the Bodyguard mission)
 					if game.playMode == BOOT_PLAYMODE_MISSION
-						if object[1].type == TypeName[Player 2 Object]
+						if player[1].type == TypeName[Player 2 Object]
 							game.forceKillPlayer = true
 						end if
 					end if
@@ -94,7 +97,7 @@ event ObjectUpdate
 			
 		end switch
 	next
-
+	
 	object.ypos += object.yvel
 end event
 
@@ -109,7 +112,7 @@ event ObjectStartup
 	SpriteFrame(-15, -74, 30, 148, 201, 0)
 
 	foreach (TypeName[Rock Crusher], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].origin.y = object[arrayPos0].ypos
+		object[arrayPos0].origin.y = object[arrayPos0].ypos // even if this is stored, it's never referenced again
 		object[arrayPos0].yvel = -0x10000
 	next
 
@@ -128,7 +131,16 @@ end event
 event RSDKDraw
 	DrawSprite(0)
 	
-	// TODO: show retracted hitbox
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		object.inkEffect = INK_BLEND
+		temp0 = object.ypos
+		temp0 -= 0x5F0000
+		DrawSpriteFX(0, FX_INK, object.xpos, temp0)
+		
+		editor.drawingOverlay = false
+	end if
 end event
 
 

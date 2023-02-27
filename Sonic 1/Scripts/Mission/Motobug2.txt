@@ -50,12 +50,11 @@ end function
 private function Motobug_DebugSpawn
 	CreateTempObject(TypeName[Motobug], 0, object.xpos, object.ypos)
 	GetBit(temp0, object.direction, 0)
-
-	if temp0 == false
-		object[tempObjectPos].direction = FACING_RIGHT
+	if temp0 == FLIP_NONE
+		object[tempObjectPos].direction = FLIP_NONE
 		object[tempObjectPos].xvel = -0x10000
 	else
-		object[tempObjectPos].direction = FACING_LEFT
+		object[tempObjectPos].direction = FLIP_X
 		object[tempObjectPos].xvel = 0x10000
 	end if
 end function
@@ -80,16 +79,18 @@ event ObjectUpdate
 			object.animation = MOTOBUG_ANI_IDLE
 		end if
 		
-		// This won't be true most of the time, except when the Motobug just turned around due to the code from above
-		if object.state == MOTOBUG_PAUSED
+		// This bit of code is new to Motobug2
+		if object.state == MOTOBUG_PAUSED // This won't be true most of the time, except when the Motobug just turned around due to the code from above
 			foreach (TypeName[MissionBlock], arrayPos0, ACTIVE_ENTITIES)
 				temp1 = false
+				
 				temp2 = object[arrayPos0].ixpos
 				temp2 -= object.ixpos
 				CheckGreater(temp2, -18)
 				temp1 = checkResult
 				CheckLower(temp2, 18)
 				temp1 &= checkResult
+				
 				temp2 = object[arrayPos0].iypos
 				temp2 -= object.iypos
 				CheckGreater(temp2, 15)
@@ -109,18 +110,21 @@ event ObjectUpdate
 			
 			foreach (TypeName[MissionBlock], arrayPos0, ACTIVE_ENTITIES)
 				temp1 = false
+				
 				temp2 = object[arrayPos0].ixpos
 				temp2 -= object.ixpos
 				CheckGreater(temp2, -36)
 				temp1 = checkResult
 				CheckLower(temp2, 36)
 				temp1 &= checkResult
+				
 				temp2 = object[arrayPos0].iypos
 				temp2 -= object.iypos
 				CheckGreater(temp2, -30)
 				temp1 &= checkResult
 				CheckLower(temp2, 30)
 				temp1 &= checkResult
+				
 				temp0 |= temp1
 			next
 			
@@ -134,14 +138,13 @@ event ObjectUpdate
 		if object.exhaustTimer < 20
 			object.exhaustTimer++
 		else
-
 			object.exhaustTimer = 0
 
 			// Create the exhaust object
 			CreateTempObject(TypeName[Motobug Exhaust], 0, object.xpos, object.ypos)
 			
 			// Offset the exhaust based on the Motobug's direction
-			if object.direction == 0
+			if object.direction == FLIP_NONE
 				object[tempObjectPos].xpos += 0x160000
 			else
 				object[tempObjectPos].xpos -= 0x160000
@@ -149,7 +152,6 @@ event ObjectUpdate
 
 			// Set the object to match the Motobug's direction
 			object[tempObjectPos].direction = object.direction
-
 		end if
 		break
 
@@ -165,7 +167,7 @@ event ObjectUpdate
 			object.animation = MOTOBUG_ANI_MOVING
 
 			// Flip the Motobug
-			object.direction ^= 1
+			object.direction ^= FLIP_X
 			FlipSign(object.xvel)
 		end if
 		break
@@ -180,24 +182,21 @@ event ObjectUpdate
 		object.ypos = object.startPos.y
 
 		if object.outOfBounds == true
-
 			if object.propertyValue == 0
-				object.direction = FACING_RIGHT
+				object.direction = FLIP_NONE
 				object.xvel = -0x10000
 			else
-				object.direction = FACING_LEFT
+				object.direction = FLIP_X
 				object.xvel = 0x10000
 			end if
 
 			object.animation = MOTOBUG_ANI_MOVING
 			object.priority = PRIORITY_BOUNDS
 			object.state = MOTOBUG_MOVING
-
 		else
 			object.xpos = temp0
 			object.ypos = temp1
 		end if
-
 	end if
 
 	// Check collision with players
@@ -218,7 +217,7 @@ end event
 
 
 event ObjectDraw
-	if object.state != 2 // This state doesn't exist???
+	if object.state != 2 // This state doesn't exist??? (this check is new to Motobug2 too btw, normal Motobug doesn't have this)
 		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
 	end if
 end event
@@ -232,20 +231,20 @@ event ObjectStartup
 		SpriteFrame(-20, -13, 39, 28, 98, 156)
 		SpriteFrame(-20, -14, 39, 29, 139, 127)
 	end if
-
+	
+	// (They removed the MBZ sheet checks and such here, more power to 'em I suppose)
+	
 	// Setup all Motobugs
 	foreach (TypeName[Motobug], arrayPos0, ALL_ENTITIES)
-
-		// Set their base positions
 		object[arrayPos0].startPos.x = object[arrayPos0].xpos
 		object[arrayPos0].startPos.y = object[arrayPos0].ypos
 
 		// Set their direction based on their propertyValue
 		if object[arrayPos0].propertyValue == 0
-			object[arrayPos0].direction = FACING_RIGHT
+			object[arrayPos0].direction = FLIP_NONE
 			object[arrayPos0].xvel = -0x10000
 		else
-			object[arrayPos0].direction = FACING_LEFT
+			object[arrayPos0].direction = FLIP_X
 			object[arrayPos0].xvel = 0x10000
 		end if
 	next
@@ -255,7 +254,6 @@ event ObjectStartup
 	SetTableValue(Motobug_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Motobug_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
-
 end event
 
 
@@ -295,12 +293,7 @@ end event
 
 
 event RSDKDraw
-	if object.propertyValue == 0
-		object.direction = FACING_RIGHT
-	else
-		object.direction = FACING_LEFT
-	end if
-
+	GetBit(object.direction, object.propertyValue, 0)
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
