@@ -215,46 +215,6 @@ event ObjectUpdate
 			object[30].drawOrder = 6
 			object[30].priority = PRIORITY_ACTIVE
 		end if
-
-#platform: USE_DECOMP
-		// Another finish condition, new to the decomp
-		//  -> On wide displays, sometimes Sonic is unable to go offscreen
-		//     This means that, after he passes the signpost, the Act Results will never spawn and he'll be softlocked forever
-		//     With the decomp, let's go ahead and implement a fallback so that this doesn't happen
-
-		// Find player's truncated XPos and add 23 (the collision offset size) to it
-		temp0 = player[0].xpos
-		temp0 >>= 16
-		temp0 += 23
-		
-		// First check if the player's touching the right bounds
-		CheckEqual(temp0, stage.curXBoundary2)
-		temp1 = checkResult
-		
-		// Then check that the player has their base speed (as it gets reset upon hitting the right barrier)
-		CheckEqual(player[0].speed, player[0].acceleration)
-		temp1 &= checkResult
-		
-		// And finally, a small check to make sure the results haven't already been spawned earlier this frame from the normal code above
-		CheckNotEqual(object.state, SIGNPOST_FINISHED)
-		temp1 &= checkResult
-
-		// Another alt condition, for screens > 520
-		//  -> There's another invisible barrier 252 pixels away from the signpost, check to see if the player's against that
-		temp0 = object.xpos
-		temp0 >>= 16
-		temp0 += 252
-		CheckEqual(temp0, player[0].ixpos)
-		temp1 |= checkResult
-
-		if temp1 == true
-			PlayMusic(TRACK_ACTFINISH)
-			object.state = SIGNPOST_FINISHED
-			object[30].type = TypeName[Act Finish]
-			object[30].drawOrder = 6
-			object[30].priority = PRIORITY_ACTIVE
-		end if
-#endplatform
 		break
 
 	case SIGNPOST_IDLE_VS
@@ -406,9 +366,21 @@ event ObjectUpdate
 		break
 		
 	end switch
-
+	
+	// Invisible off-screen barrier
+	
+	// Bug Details:
+	// 212 in the line "temp0 += 212" is supposed to be the center of the screen when the screen width is set to 424 (the default screen width in RSDK)
+	// For some reason, it's set as a constant rather than using "screen.xcenter", meaning the barrier will always be 252 pixels away from the sign post regardless of screen width
+	// If your screen width is set to over 520, the barrier won't reach the edge of the screen, softlocking the game during exit stage right...
+	// We decided to provide a decomp-exclusive fix here, so you shouldn't have to worry about this
+	
 	temp0 = 40
 	temp0 += 212
+#platform: USE_DECOMP
+	temp0 = 40
+	temp0 += screen.xcenter
+#endplatform
 	temp0 <<= 16
 	temp0 += object.xpos
 	currentPlayer = 0
