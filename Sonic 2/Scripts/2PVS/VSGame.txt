@@ -26,12 +26,22 @@ private alias 2 : VSGAME_FADEOUT
 private alias 3 : VSGAME_FINISH_COUNTDOWN
 private alias 4 : VSGAME_GOTOVSRESULTS
 private alias 5 : VSGAME_BOSSATTACK_FADEIN
-private alias 6 : VSGAME_BOSSATTACK_START
+private alias 6 : VSGAME_BOSSATTACK_END
 private alias 7 : VSGAME_SCREENFADE
 
 // Player Aliases
 private alias object.type : player.type
 private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.ixpos : player.ixpos
+private alias object.iypos : player.iypos
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.visible : player.visible
+private alias object.collisionPlane : player.collisionPlane
 private alias object.propertyValue : player.character
 private alias object.value0  : player.rings
 private alias object.value6  : player.speedShoesTimer
@@ -59,14 +69,14 @@ event ObjectUpdate
 			end if
 		end if
 
-		if object[0].state != Player_State_Static
-			object.storedPosP1.x = object[0].xpos
-			object.storedPosP1.y = object[0].ypos
+		if player[0].state != Player_State_Static
+			object.storedPosP1.x = player[0].xpos
+			object.storedPosP1.y = player[0].ypos
 		end if
 
-		if object[1].state != Player_State_Static
-			object.storedPosP2.x = object[1].xpos
-			object.storedPosP2.y = object[1].ypos
+		if player[1].state != Player_State_Static
+			object.storedPosP2.x = player[1].xpos
+			object.storedPosP2.y = player[1].ypos
 		end if
 		break
 
@@ -74,30 +84,30 @@ event ObjectUpdate
 		if object.timer < 384
 			object.timer += 16
 
-			if object[0].state == Player_State_Static
+			if player[0].state == Player_State_Static
 				object.state = VSGAME_FADEOUT
 			end if
 
-			if object[1].state == Player_State_Static
+			if player[1].state == Player_State_Static
 				object.state = VSGAME_FADEOUT
 			end if
 		else
 			object.state = VSGAME_FADEOUT
-			if object[1].type != TypeName[Blank Object]
-				object[0].state = Player_State_Air
-				object[0].xpos = object[30].storedPosP2.x
-				object[0].ypos = object[30].storedPosP2.y
+			if player[1].type != TypeName[Blank Object]
+				player[0].state = Player_State_Air
+				player[0].xpos = object[30].storedPosP2.x
+				player[0].ypos = object[30].storedPosP2.y
 
-				object[1].state = Player_State_Air
-				object[1].xpos = object[30].storedPosP1.x
-				object[1].ypos = object[30].storedPosP2.y
+				player[1].state = Player_State_Air
+				player[1].xpos = object[30].storedPosP1.x
+				player[1].ypos = object[30].storedPosP2.y
 
-				camera[0].xpos = object[0].ixpos
-				camera[0].ypos = object[0].iypos
+				camera[0].xpos = player[0].ixpos
+				camera[0].ypos = player[0].iypos
 
-				temp0 = object[0].collisionPlane
-				object[0].collisionPlane = object[1].collisionPlane
-				object[1].collisionPlane = temp0
+				temp0 = player[0].collisionPlane
+				player[0].collisionPlane = player[1].collisionPlane
+				player[1].collisionPlane = temp0
 
 				temp0 = player[0].shield
 				player[0].shield = player[1].shield
@@ -106,6 +116,8 @@ event ObjectUpdate
 				arrayPos0 = 0
 				arrayPos0 += playerCount
 				temp0 = object[arrayPos0].type
+
+				// Normally players shouldn't be Super in 2PVS, but if they are then just make them have some invincibility
 				if Player_superState == SUPERSTATE_SUPER
 					temp0 = invincibilityType
 					player[0].invincibleTimer = 1260
@@ -130,7 +142,7 @@ event ObjectUpdate
 					if temp0 == invincibilityType
 						currentPlayer = 0
 						CallFunction(Player_ApplyShield)
-						ResetObjectEntity(arrayPos1, invincibilityType, 0, object[1].xpos, object[1].ypos)
+						ResetObjectEntity(arrayPos1, invincibilityType, 0, player[1].xpos, player[1].ypos)
 						object[arrayPos1].priority = PRIORITY_ACTIVE
 
 						temp0 = player[0].invincibleTimer
@@ -138,7 +150,7 @@ event ObjectUpdate
 						player[1].invincibleTimer = temp0
 					else
 						if temp1 == invincibilityType
-							ResetObjectEntity(arrayPos0, invincibilityType, 0, object[0].xpos, object[0].ypos)
+							ResetObjectEntity(arrayPos0, invincibilityType, 0, player[0].xpos, player[0].ypos)
 							object[arrayPos0].priority = PRIORITY_ACTIVE
 							currentPlayer = 1
 							arrayPos0 = arrayPos1
@@ -168,11 +180,11 @@ event ObjectUpdate
 				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 					switch player[currentPlayer].character
 					default
-					case 0
+					case PLAYER_SONIC_ALONE
 						break
 
-					case 1
-					case 2
+					case PLAYER_TAILS_ALONE
+					case PLAYER_KNUX_ALONE
 						if player[currentPlayer].shield > SHIELD_NORMAL
 							player[currentPlayer].shield = SHIELD_NORMAL
 							arrayPos0 = currentPlayer
@@ -271,10 +283,10 @@ event ObjectUpdate
 	case VSGAME_BOSSATTACK_FADEIN
 		if object.timer == 320
 			player[0].rings = vs.rings1P
-			object[0].speed = vs.speed
-			object[0].xvel = vs.speed
-			object[0].yvel = 0
-			object[0].gravity = GRAVITY_GROUND
+			player[0].speed = vs.speed
+			player[0].xvel = vs.speed
+			player[0].yvel = 0
+			player[0].gravity = GRAVITY_GROUND
 			player[0].shield = vs.items1P
 			temp0 = currentPlayer
 			temp1 = arrayPos0
@@ -294,16 +306,16 @@ event ObjectUpdate
 			temp0 = vs.time1P
 			temp0 %= 100
 			stage.milliSeconds = temp0
-			TitleCard_showZoneText = true
+			TitleCard_showZoneText = true // (The EHZ Boss Rush file already has this set btw)
 		end if
 
 		if object.timer < 256
 			stage.state = STAGE_RUNNING
 			stage.timeEnabled = true
-			object[0].visible = true
+			player[0].visible = true
 		else
-			if stage.listPos == 2
-				object[0].ypos = object.ypos
+			if stage.listPos == 2 // CPZ (Boss Rush)
+				player[0].ypos = object.ypos
 			end if
 		end if
 
@@ -316,7 +328,7 @@ event ObjectUpdate
 		SetScreenFade(0, 0, 0, object.timer)
 		break
 
-	case VSGAME_BOSSATTACK_START
+	case VSGAME_BOSSATTACK_END
 		if object.timer > -1
 			if object.timer < 320
 				object.timer += 16
@@ -329,14 +341,14 @@ event ObjectUpdate
 				vs.time1P += temp2
 				vs.time1P += stage.milliSeconds
 				vs.items1P = player[0].shield
-				vs.speed = object[0].speed
+				vs.speed = player[0].speed
 				stage.listPos++
 				LoadStage()
 			end if
 
 			SetScreenFade(0, 0, 0, object.timer)
 		else
-			if object[0].xpos > object.xpos
+			if player[0].xpos > object.xpos
 				object.timer = 0
 			end if
 		end if
@@ -363,14 +375,14 @@ event ObjectDraw
 #platform: USE_STANDALONE
 		temp0 = vs.playerID
 		temp0 ^= 1
-		DrawSpriteXY(temp0, object[1].xpos, object[1].ypos)
+		DrawSpriteXY(temp0, player[1].xpos, player[1].ypos)
 #endplatform
 
 #platform: USE_ORIGINS
 		currentPlayer = screen.currentID
 		currentPlayer ^= 1
 		if game.playMode == BOOT_PLAYMODE_MIRRORING
-			object.direction = FACING_LEFT
+			object.direction = FLIP_X
 			DrawSpriteFX(currentPlayer, FX_FLIP, object[currentPlayer].xpos, object[currentPlayer].ypos)
 		else
 			DrawSpriteXY(currentPlayer, object[currentPlayer].xpos, object[currentPlayer].ypos)
@@ -382,7 +394,7 @@ event ObjectDraw
 #platform: USE_STANDALONE
 		temp0 = vs.playerID
 		temp0 ^= 1
-		DrawSpriteXY(temp0, object[1].xpos, object[1].ypos)
+		DrawSpriteXY(temp0, player[1].xpos, player[1].ypos)
 
 		temp0 = object.countdownTimer
 		temp0 /= 10
@@ -402,7 +414,7 @@ event ObjectDraw
 		currentPlayer = screen.currentID
 		currentPlayer ^= 1
 		if game.playMode == BOOT_PLAYMODE_MIRRORING
-			object.direction = FACING_LEFT
+			object.direction = FLIP_X
 			DrawSpriteFX(currentPlayer, FX_FLIP, object[currentPlayer].xpos, object[currentPlayer].ypos)
 		else
 			DrawSpriteXY(currentPlayer, object[currentPlayer].xpos, object[currentPlayer].ypos)
@@ -420,7 +432,7 @@ event ObjectDraw
 			temp2 += 8
 			
 			if game.playMode == BOOT_PLAYMODE_MIRRORING
-				object.direction = FACING_LEFT
+				object.direction = FLIP_X
 				DrawSpriteScreenFX(temp1, FX_FLIP, temp2, 13)
 				temp2 += 8
 				DrawSpriteScreenFX(temp0, FX_FLIP, temp2, 13)
@@ -469,18 +481,18 @@ event ObjectStartup
 	temp0 = false
 	foreach (TypeName[VS Game], arrayPos0, ALL_ENTITIES)
 		switch object[arrayPos0].propertyValue
-		case 1
+		case 1 // Boss Attack (Start)
 			object[arrayPos0].state = VSGAME_BOSSATTACK_FADEIN
 			object[arrayPos0].timer = 320
 			object[arrayPos0].priority = PRIORITY_ALWAYS
 			object[arrayPos0].drawOrder = 6
-			object[0].visible = false
+			player[0].visible = false
 			stage.state = STAGE_PAUSED
 			temp0++
 			break
 
-		case 2
-			object[arrayPos0].state = VSGAME_BOSSATTACK_START
+		case 2 // Boss Attack (End)
+			object[arrayPos0].state = VSGAME_BOSSATTACK_END
 			object[arrayPos0].timer = -1
 			object[arrayPos0].priority = PRIORITY_XBOUNDS
 			temp0++

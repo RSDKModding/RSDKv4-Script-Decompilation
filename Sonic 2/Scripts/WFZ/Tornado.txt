@@ -35,9 +35,25 @@ private alias 9  : TORNADO_CHASESEQUENCE
 private alias 10 : TORNADO_FINISHACT
 
 // Player Aliases
+private alias object.type    : player.type
+private alias object.state   : player.state
 private alias object.xpos    : player.xpos
 private alias object.ypos    : player.ypos
+private alias object.xvel    : player.xvel
 private alias object.yvel    : player.yvel
+private alias object.speed   : player.speed
+private alias object.gravity : player.gravity
+private alias object.controlMode : player.controlMode
+private alias object.scrollTracking : player.scrollTracking
+
+private alias object.jumpPress	:	player.jumpPress
+private alias object.jumpHold	:	player.jumpHold
+private alias object.up			:	player.up
+private alias object.down		:	player.down
+private alias object.left		:	player.left
+private alias object.right		:	player.right
+
+private alias object.value0  : player.rings
 private alias object.value1  : player.timer
 private alias object.value9  : player.skidSpeed
 private alias object.value20 : player.topSpeed 			
@@ -156,14 +172,14 @@ event ObjectUpdate
 
 	switch object.state
 	case TORNADO_SETUPINTRO
-		temp0 = object[0].xpos
+		temp0 = player[0].xpos
 		temp0 -= 0x100000
 		if object.xpos < temp0
 			object.type = TypeName[Blank Object]
 		else
 			if stage.playerListPos == PLAYER_TAILS_ALONE
 				// Main player is Tails, shift him down a bit to account for his shorter height
-				object[0].ypos += 0x40000
+				player[0].ypos += 0x40000
 			end if
 			object.state++
 		end if
@@ -181,13 +197,13 @@ event ObjectUpdate
 		else
 			temp0 = object.xpos
 			temp0 -= 0x100000
-			if object[0].xpos < temp0
-				object[0].xpos = temp0
+			if player[0].xpos < temp0
+				player[0].xpos = temp0
 			end if
 
 			temp0 += 0x200000
-			if object[0].xpos > temp0
-				object[0].xpos = temp0
+			if player[0].xpos > temp0
+				player[0].xpos = temp0
 			end if
 		end if
 		break
@@ -228,14 +244,14 @@ event ObjectUpdate
 		// Start of end-of-level cutscene, start removing control from the player, 
 		BoxCollisionTest(C_TOUCH, object.entityPos, -640, -192, 0, 0, 0, C_BOX, C_BOX, C_BOX, C_BOX)
 		if checkResult == true
-			if object[0].gravity == 0
-				object[0].controlMode 	= CONTROLMODE_NONE
-				object[0].jumpPress 	= false
-				object[0].jumpHold 		= false
-				object[0].up 			= false
-				object[0].down 			= false
-				object[0].left 			= false
-				object[0].right 		= false
+			if player[0].gravity == GRAVITY_GROUND
+				player[0].controlMode 	= CONTROLMODE_NONE
+				player[0].jumpPress 	= false
+				player[0].jumpHold 		= false
+				player[0].up 			= false
+				player[0].down 			= false
+				player[0].left 			= false
+				player[0].right 		= false
 				Player_superState = SUPERSTATE_FADEOUT
 				object.state 			= TORNADO_WAITFORPLAYER
 			end if
@@ -243,7 +259,7 @@ event ObjectUpdate
 		break
 
 	case TORNADO_WAITFORPLAYER
-		if object[0].state == Player_State_Ground
+		if player[0].state == Player_State_Ground
 			player[0].timer = 0
 		end if
 
@@ -255,15 +271,15 @@ event ObjectUpdate
 		break
 
 	case TORNADO_MOVEPLAYERTOEDGE
-		object[0].right = true
+		player[0].right = true
 
 		temp0 = object.xpos
 		temp0 -= 0x100000
-		if object[0].xpos >= temp0
-			object[0].xpos 	= temp0
-			object[0].xvel 	= 0
-			object[0].speed = 0
-			object[0].right = 0
+		if player[0].xpos >= temp0
+			player[0].xpos 	= temp0
+			player[0].xvel 	= 0
+			player[0].speed = 0
+			player[0].right = 0
 			object.xvel 	= 0x10000
 			object.yvel 	= -0x10000
 			object.state 	= TORNADO_JUMPONTOTORNADO
@@ -276,9 +292,9 @@ event ObjectUpdate
 
 		object.timer++
 		if object.timer == 72
-			object[0].jumpPress 		= true
-			object[0].jumpHold 			= true
-			object[0].right 			= true
+			player[0].jumpPress 		= true
+			player[0].jumpHold 			= true
+			player[0].right 			= true
 			object.jumpAbilityFunc 		= player[0].jumpAbility
 
 			// Reset the physics values to match Sonic's, even Knux' jump height is ignored here so that the cutscene doesn't desync
@@ -305,11 +321,11 @@ event ObjectUpdate
 		object.timer++
 		BoxCollisionTest(C_PLATFORM, object.entityPos, -20, -8, 20, 8, 0, C_BOX, C_BOX, C_BOX, C_BOX)
 		if checkResult == true
-			object[0].jumpPress 	= false
-			object[0].jumpHold 		= false
-			object[0].xvel 			= 0
-			object[0].speed 		= 0
-			object[0].right 		= false
+			player[0].jumpPress 	= false
+			player[0].jumpHold 		= false
+			player[0].xvel 			= 0
+			player[0].speed 		= 0
+			player[0].right 		= false
 			player[0].jumpAbility 	= object.jumpAbilityFunc
 			GetTableValue(object.duration, object.velocityTablePos, Tornado_velocityDurationTable)
 			object.velocityTablePos++
@@ -358,7 +374,7 @@ event ObjectUpdate
 		end if
 		
 		// "Checkpoints" or "keyframes" of sorts are used here, to mark whenever a change should happen
-		// Any value unlisted here just does nothing
+		// Any value not listed here just does nothing
 		switch object.timer
 		case 296
 			object.boosterActive = true
@@ -369,12 +385,12 @@ event ObjectUpdate
 			break
 
 		case 1148
-			object[0].jumpPress = true
-			object[0].jumpHold  = true
+			player[0].jumpPress = true
+			player[0].jumpHold  = true
 			break
 
 		case 1149
-			object[0].jumpPress = false
+			player[0].jumpPress = false
 			break
 
 		case 1160
@@ -385,14 +401,14 @@ event ObjectUpdate
 			hParallax[1].scrollSpeed <<= 2
 			hParallax[2].scrollSpeed <<= 2
 			hParallax[3].scrollSpeed <<= 2
-			object[0].gravity 			= 0
-			object[0].scrollTracking 	= false
+			player[0].gravity 			= GRAVITY_GROUND
+			player[0].scrollTracking 	= false
 			tileLayer[1].scrollSpeed 	= -0x80000
 			tileLayer[3].scrollSpeed 	= -0x80000
 			break
 
 		case 2200
-			stage.activeLayer[0] 		= 3 // Show Sky & Space BG
+			stage.activeLayer[0] 		= 3 // Show the Sky & Space BG
 			tileLayer[3].scrollPos 		= 0x2490000
 			tileLayer[3].scrollSpeed 	= tileLayer[1].scrollSpeed
 			break
@@ -418,15 +434,19 @@ event ObjectUpdate
 			fadeColor 		= 0
 			object.timer 	= 0
 			starPostID 		= 0
-			object.direction = FACING_RIGHT
+			object.direction = FACING_RIGHT // this doesn't really matter much
 
 #platform: USE_ORIGINS
 			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
-				CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1)
+				CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, 1) // the [Eggman Laser] object already does this, so the Tornado never really gets a chance to do it
 				LoadStage()
 			else
 #endplatform
 				stage.listPos++
+
+				// Huh?
+				// If the stage we're going to is after HPZ, then go back to OOZ1?
+				// if you really wanna, ig...
 				if stage.listPos > 20
 					stage.listPos = 12
 				end if
@@ -480,7 +500,7 @@ event ObjectUpdate
 					if temp0 == false
 #platform: USE_ORIGINS
 						CallNativeFunction4(NotifyCallback, NOTIFY_STATS_ENEMY, StageStatsUsabilityParam1, StageStatsUsabilityParam2, StageStatsUsabilityParam3)
-						CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, object[0].value0)
+						CallNativeFunction2(NotifyCallback, NOTIFY_STATS_RING, player[0].rings)
 						temp0 = StageStatsUsabilityParam5
 						temp0 &= 1
 						temp1 = StageStatsUsabilityParam5
@@ -598,7 +618,7 @@ event ObjectStartup
 	SpriteFrame(-71, 32, 32, 16, 386, 124)		// Booster Flame - Frame 2 	- #14
 
 	if playerCount > 1 // Remove P2
-		object[1].type = TypeName[Blank Object]
+		player[1].type = TypeName[Blank Object]
 		playerCount = 1
 	end if
 
