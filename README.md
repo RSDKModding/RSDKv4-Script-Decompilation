@@ -1,6 +1,4 @@
-# Sonic 1/2 2013 Script Decompilation (WIP Cleanup Branch)
-
-## **Please don't use this branch for your mods, as we're still bug testing!**
+# Sonic 1/2 2013 Script Decompilation
 
 A full decompilation for the scripts in Sonic 1 & 2's 2013 mobile remakes.
 
