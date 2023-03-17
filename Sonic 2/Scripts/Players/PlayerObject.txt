@@ -93,6 +93,7 @@ public alias 0 : PLAYER_SONIC_ALONE
 public alias 1 : PLAYER_TAILS_ALONE
 public alias 2 : PLAYER_KNUX_ALONE
 public alias 3 : PLAYER_SONIC_AND_TAILS
+// Origins's PLAYER_KNUX_AND_TAILS would technically be value 4, but Origins always just checks it like `stage.playerListPos > PLAYER_SONIC_AND_TAILS` instead
 
 // Shields
 private alias 0 : SHIELD_NONE
@@ -100,6 +101,16 @@ private alias 1 : SHIELD_NORMAL
 private alias 2 : SHIELD_BUBBLE
 private alias 3 : SHIELD_FIRE
 private alias 4 : SHIELD_LIGHTNING
+
+// Shield Types Aliases
+private alias 0 : SHIELDTYPE_S2
+private alias 1 : SHIELDTYPE_S3
+
+// Bubble Shield Aliases
+private alias 2 : BUBBLESHIELD_BOUNCE_SETUP
+
+// Fire Shield Aliases
+private alias 2 : FIRESHIELD_DASH_SETUP
 
 // Super States
 private alias 0 : SUPERSTATE_NONE
@@ -705,7 +716,7 @@ end function
 
 public function Player_UpdatePhysicsState
 	// Bug Details:
-	// -> While this works fine in singleplayer, this doesn't work as intended in Origins's local 2PVS
+	// -> While this works fine in singleplayer and 2013's online multiplayer, this doesn't work as intended in Origins's local 2PVS
 	//    Namely, this function here is looking at stage.playerListPos, which is P1's character ID, meaning that P2 will always assume P1's physics
 	// -> This means that, for example, you can have P2 Sonic with Knuckles's jump height, lots of softlocks incoming...
 	
@@ -862,7 +873,7 @@ public function Player_CheckHit
 	end if
 	
 	if temp0 == true
-		if player[currentPlayer].gravity == 1
+		if player[currentPlayer].gravity == GRAVITY_AIR
 			FlipSign(player[currentPlayer].xvel)
 			player[currentPlayer].speed = player[currentPlayer].xvel
 			player[currentPlayer].yvel += player[currentPlayer].gravityStrength
@@ -2278,8 +2289,8 @@ public function Player_Action_DblJumpSonic
 				switch player.shield
 				case SHIELD_NONE
 					temp0 = options.shieldType
-					temp0 &= 1
-					if temp0 > 0
+					temp0 &= SHIELDTYPE_S3 // (see if it's S2 or S3 shields, ignore whether or not it's set to random)
+					if temp0 > SHIELDTYPE_S2
 						PlaySfx(SfxName[Insta Shield], false)
 						if object[+playerCount].type == TypeName[Blank Object]
 							currentPlayer = player.entityPos
@@ -2290,7 +2301,7 @@ public function Player_Action_DblJumpSonic
 						end if
 
 						player.jumpAbilityState = 2
-						object[+playerCount].state = 1
+						object[+playerCount].state = 1 // (this does nothing btw)
 						if player.state == Player_State_RollJump
 							player.state = Player_State_Air
 						end if
@@ -2307,13 +2318,13 @@ public function Player_Action_DblJumpSonic
 					player.speed = player.xvel
 					player.jumpAbilityState = 2
 					player.state = Player_State_BubbleBounce
-					object[+playerCount].state = 2
+					object[+playerCount].state = BUBBLESHIELD_BOUNCE_SETUP
 					break
 
 				case SHIELD_FIRE
 					PlaySfx(SfxName[Fire Dash], false)
 					GetBit(temp0, player.direction, 0)
-					if temp0 == false
+					if temp0 == FLIP_NONE
 						player.xvel = 0x80000
 					else
 						player.xvel = -0x80000
@@ -2332,7 +2343,7 @@ public function Player_Action_DblJumpSonic
 						player.state = Player_State_Air
 					end if
 
-					object[+playerCount].state = 2
+					object[+playerCount].state = FIRESHIELD_DASH_SETUP
 					object[+playerCount].direction = player.direction
 					break
 
@@ -5180,7 +5191,7 @@ event ObjectStartup
 			LoadAnimation("SuperSonic.ani") // This isn't because you're starting the act as Super Sonic, this is here to load all the necessary sprite sheets
 			LoadAnimation("Sonic.ani")
 			CallFunction(Player_HandleSuperPalette_Sonic)
-			player[SLOT_PLAYER1].character 		= 0
+			player[SLOT_PLAYER1].character 		= PLAYER_SONIC_ALONE
 			player[SLOT_PLAYER1].jumpOffset 	= -5
 			player[SLOT_PLAYER1].jumpAbility 	= Player_Action_DblJumpSonic
 			ANI_PEELOUT 			= ANI_RUNNING
@@ -5210,7 +5221,7 @@ event ObjectStartup
 		case PLAYER_KNUX_ALONE
 			LoadAnimation("Knuckles.ani")
 			CallFunction(Player_HandleSuperPalette_Knux)
-			player[SLOT_PLAYER1].character 		= 2
+			player[SLOT_PLAYER1].character 		= PLAYER_KNUX_ALONE
 			player[SLOT_PLAYER1].jumpOffset 	= -5
 			player[SLOT_PLAYER1].jumpAbility 	= Player_Action_DblJumpKnux
 			ANI_PEELOUT 						= ANI_RUNNING

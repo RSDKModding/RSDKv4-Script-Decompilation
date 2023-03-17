@@ -23,7 +23,7 @@ private alias 1 : SIGNPOST_SPUN
 private alias 2 : SIGNPOST_EXITPLAYER
 private alias 3 : SIGNPOST_IDLE_VS
 private alias 4 : SIGNPOST_SPUN_VS
-private alias 5 : SIGNPOST_UNUSED
+private alias 5 : SIGNPOST_UNUSED // used for SBZ2>3 transition in S1, not used in this game
 private alias 6 : SIGNPOST_FINISHED
 
 // Player Aliases
@@ -45,11 +45,6 @@ private alias object.right 			: player.right
 private alias object.value7 		: player.invincibleTimer
 private alias object.value21 		: player.acceleration
 
-
-private alias 0 : CHARACTER_SONIC
-private alias 1 : CHARACTER_TAILS
-private alias 2 : CHARACTER_KNUCKLES
-
 private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_FADEOUT
 
@@ -59,6 +54,7 @@ private alias object.value5 : vsGame.countdownPlayer
 
 // VSGame States
 private alias 0 : VSGAME_DISPLAYTAGS
+private alias 2 : VSGAME_FADEOUT
 private alias 3 : VSGAME_FINISH_COUNTDOWN
 private alias 4 : VSGAME_GOTOVSRESULTS
 
@@ -80,6 +76,11 @@ private alias 10 : ACHIEVEMENT_SCRAMBLEDEGG
 
 reserve function SignPost_DebugDraw
 reserve function SignPost_DebugSpawn
+
+
+// ========================
+// Function Definitions
+// ========================
 
 private function SignPost_DebugDraw
 	DrawSprite(0)
@@ -122,15 +123,15 @@ event ObjectUpdate
 				stage.newXBoundary1 -= screen.xcenter
 				
 				switch player[0].character
-				case CHARACTER_SONIC
+				case PLAYER_SONIC_ALONE
 					EditFrame(5, -24, -16, 48, 32, 34, 1)
 					break
 
-				case CHARACTER_TAILS
+				case PLAYER_TAILS_ALONE
 					EditFrame(5, -24, -16, 48, 32, 34, 34)
 					break
 
-				case CHARACTER_KNUCKLES
+				case PLAYER_KNUX_ALONE
 					EditFrame(5, -24, -16, 48, 32, 34, 67)
 					break
 					
@@ -183,15 +184,19 @@ event ObjectUpdate
 			object.frame++
 			if object.frame == 5
 				object.frame = 1
+				
 				Rand(temp0, 48)
 				temp0 <<= 16
 				temp0 += object.xpos
 				temp0 -= 0x180000
+				
 				Rand(temp1, 32)
 				temp1 <<= 16
 				temp1 += object.ypos
 				temp1 -= 0x140000
+				
 				CreateTempObject(TypeName[Ring Sparkle], 0, temp0, temp1)
+				
 				object.spinCount--
 				if object.spinCount == 0
 					SetBit(object.activePlayers, 0, true)
@@ -276,21 +281,24 @@ event ObjectUpdate
 						vsGame[30].countdownPlayer = currentPlayer
 						vsGame[30].countdownPlayer ^= 1
 						switch player[currentPlayer].character
-						case 0
+						case PLAYER_SONIC_ALONE
 							EditFrame(5, -24, -16, 48, 32, 34, 1)
 							break
-						case 1
+							
+						case PLAYER_TAILS_ALONE
 							EditFrame(5, -24, -16, 48, 32, 34, 34)
 							break
-						case 2
+							
+						case PLAYER_KNUX_ALONE
 							EditFrame(5, -24, -16, 48, 32, 34, 67)
 							break
+							
 						end switch
 					else
 						object[30].state = VSGAME_DISPLAYTAGS
 					end if
 
-					if object.activePlayers == 3
+					if object.activePlayers == 3 // both bits set? (3 is 0b11)
 						object.allPlayersFinished	= true
 						object[30].state 			= VSGAME_DISPLAYTAGS
 					end if
@@ -342,7 +350,7 @@ event ObjectUpdate
 							object[9].type = TypeName[Blank Object]
 							CreateTempObject(TypeName[VS Game], 0, object.xpos, object.ypos)
 							vsGame[tempObjectPos].timer = 384
-							object[tempObjectPos].state = 2
+							object[tempObjectPos].state = VSGAME_FADEOUT
 							camera[0].xpos = object[1].xpos
 							camera[0].xpos >>= 16
 							camera[0].ypos = object[1].ypos
@@ -406,6 +414,7 @@ event ObjectUpdate
 		if player[currentPlayer].type == TypeName[Debug Mode]
 			SetBit(object.activePlayers, currentPlayer, false)
 		end if
+		
 		currentPlayer++
 	loop
 	
@@ -421,6 +430,7 @@ end event
 
 event ObjectDraw
 	DrawSprite(0)
+	
 	if object.spinCount > 8
 		DrawSprite(object.frame)
 	else
