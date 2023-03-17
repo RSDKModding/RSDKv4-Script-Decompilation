@@ -1,48 +1,69 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Masher Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 53 : TYPE_MASHER
+// ========================
 
-// Function declarations
+private alias object.value1 : object.startPos.y
+
+// Player Aliases
+private alias object.value38 : player.hitboxLeft
+private alias object.value39 : player.hitboxRight
+private alias object.value40 : player.hitboxTop
+private alias object.value41 : player.hitboxBottom
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function Masher_DebugDraw
 reserve function Masher_DebugSpawn
 
-// Static Values
 
-// Tables
+// ========================
+// Function Definitions
+// ========================
 
-function Masher_DebugDraw
+private function Masher_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end function
 
 
-function Masher_DebugSpawn
+private function Masher_DebugSpawn
 	CreateTempObject(TypeName[Masher], 0, object.xpos, object.ypos)
 	GetBit(temp0, object.direction, 0)
 	object[tempObjectPos].direction = temp0
-	object[tempObjectPos].value1 = object.ypos
+	object[tempObjectPos].startPos.y = object.ypos
 	object[tempObjectPos].yvel = -0x50000
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	object.ypos += object.yvel
 	object.yvel += 0x1800
-	if object.ypos > object.value1
-		object.ypos = object.value1
+
+	if object.ypos > object.startPos.y
+		object.ypos = object.startPos.y
 		object.yvel = -0x50000
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -14, 12, 14, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
-			CallFunction(PlayerObject_BadnikBreak)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -14, 12, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
 		end if
 	next
+
 	if object.yvel < 0
 		object.frame = object.animationTimer
 		object.frame >>= 3
@@ -62,7 +83,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone01")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("EHZ/Objects.gif")
 		SpriteFrame(-10, -16, 20, 32, 105, 67)
 		SpriteFrame(-11, -16, 26, 30, 100, 100)
@@ -71,21 +92,37 @@ event ObjectStartup
 		SpriteFrame(-10, -16, 20, 32, 66, 313)
 		SpriteFrame(-11, -16, 26, 30, 66, 346)
 	end if
+
 	foreach (TypeName[Masher], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].ypos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
 		object[arrayPos0].yvel = -0x50000
 	next
+
 	SetTableValue(TypeName[Masher], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Masher_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(Masher_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
-	DrawSprite(0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-10, -16, 20, 32, 105, 67)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-10, -16, 20, 32, 66, 313)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

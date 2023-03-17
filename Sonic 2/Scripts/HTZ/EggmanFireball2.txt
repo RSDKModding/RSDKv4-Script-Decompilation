@@ -1,47 +1,61 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Eggman Fireball2 Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 62 : TYPE_EGGMANFIREBALL2
+// ========================
+
+// GroundFlame Aliases
+private alias object.value0 : groundFlame.timer
+
+// Path ID Aliases
+private alias 0 : PATH_A
 
 
-// Static Values
+// ========================
+// Events
+// ========================
 
-// Tables
-
-event ObjectMain
+event ObjectUpdate
 	object.xpos += object.xvel
 	object.ypos += object.yvel
 	object.yvel += 0x3800
-	ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
-	if checkResult == 1
-		PlaySfx(SfxName[Flame Thrower], 0)
+
+	// Check if the object's touched the ground
+	ObjectTileCollision(CSIDE_FLOOR, 0, 8, PATH_A)
+	if checkResult == true
+		// Create ground flames along the floor
+		PlaySfx(SfxName[Flame Thrower], false)
 		CreateTempObject(TypeName[Ground Flame], 0, object.xpos, object.ypos)
-		object[tempObjectPos].value0 = 3
+		groundFlame[tempObjectPos].timer = 3
 		if object.xvel < 0
-			object[tempObjectPos].direction = FLIP_NONE
+			object[tempObjectPos].direction = FACING_RIGHT
 			object[tempObjectPos].xpos -= 0x20000
 		else
-			object[tempObjectPos].direction = FLIP_X
+			object[tempObjectPos].direction = FACING_LEFT
 			object[tempObjectPos].xpos += 0x20000
 		end if
 		object.type = TypeName[Blank Object]
 	end if
+
+	// Animate the object
 	object.frame = object.animationTimer
 	object.frame >>= 2
 	object.animationTimer++
 	object.animationTimer &= 7
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		object.type = TypeName[Blank Object]
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			CallFunction(PlayerObject_FireHit)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_FireHit)
 		end if
 	next
 end event
@@ -54,7 +68,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone05")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("HTZ/Objects.gif")
 		SpriteFrame(-8, -8, 16, 16, 191, 94)
 		SpriteFrame(-8, -8, 16, 16, 191, 110)
@@ -65,11 +79,21 @@ event ObjectStartup
 	end if
 end event
 
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone05")
+	if checkResult == true
+		LoadSpriteSheet("HTZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 191, 94)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 1008, 1)
+	end if
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

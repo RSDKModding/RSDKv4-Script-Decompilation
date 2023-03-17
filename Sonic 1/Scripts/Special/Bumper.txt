@@ -1,88 +1,120 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Bumper Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 15 : TYPE_BUMPER
+// ========================
 
 private alias object.value0 : object.timer
 
-// Function declarations
+private alias 0 : BUMPER_IDLE
+private alias 1 : BUMPER_BUMPED
+
+// Player aliases
+private alias object.xpos	 : player.xpos
+private alias object.ypos	 : player.ypos
+private alias object.speed	 : player.speed
+private alias object.gravity : player.gravity
+private alias object.value1  : player.timer
+private alias object.value12 : player.worldVelocity.x
+private alias object.value13 : player.worldVelocity.y
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function Bumper_DebugDraw
 reserve function Bumper_DebugSpawn
 
 
-function Bumper_DebugDraw
+// ========================
+// Function Definitions
+// ========================
+
+private function Bumper_DebugDraw
 	DrawSprite(0)
 end function
 
 
-function Bumper_DebugSpawn
-	temp5 = 15
+private function Bumper_DebugSpawn
+	temp5 = TypeName[Bumper]
 	temp4 = 0
-	CallFunction(DebugMode_Function11)
+	CallFunction(DebugMode_PlaceBlock)
 	object[arrayPos0].drawOrder = 4
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
-	if object.state > 0
+event ObjectUpdate
+	// Animate the object if needed
+	if object.state > BUMPER_IDLE
 		object.frame = object.timer
 		object.frame /= 5
 		object.frame++
 		object.timer++
 		if object.timer > 22
 			object.timer = 0
-			object.state = 0
+			object.state = BUMPER_IDLE
 			object.frame = 0
 		end if
 	end if
-	if object.outOfBounds == 1
-		object.priority = PRIORITY_ACTIVE_BOUNDS
+
+	if object.outOfBounds == true
+		object.priority = PRIORITY_BOUNDS
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		CallFunction(SpecialSetup_Function10)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			if object.state == 0
-				PlaySfx(SfxName[Bumper], 0)
+		CallFunction(SpecialSetup_PlayerBlockCol)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			if object.state == BUMPER_IDLE
+				PlaySfx(SfxName[Bumper], false)
 			end if
+
 			if object.timer > 5
-				PlaySfx(SfxName[Bumper], 0)
+				PlaySfx(SfxName[Bumper], false)
 			end if
-			object.state = 1
+			
+			object.state = BUMPER_BUMPED
 			object.priority = PRIORITY_ACTIVE
-			temp0 = object[currentPlayer].xpos
+			
+			// Find where to send the player
+			temp0 = player[currentPlayer].xpos
 			temp0 -= object.xpos
-			temp1 = object[currentPlayer].ypos
+			temp1 = player[currentPlayer].ypos
 			temp1 -= object.ypos
 			ATan2(temp2, temp0, temp1)
 			Cos256(temp0, temp2)
 			Sin256(temp1, temp2)
 			temp0 *= 0x700
 			temp1 *= 0x700
-			object[currentPlayer].value1 = 0
-			object[currentPlayer].value12 = temp0
-			object[currentPlayer].value13 = temp1
-			object[currentPlayer].speed = object.xvel
-			object[currentPlayer].gravity = GRAVITY_AIR
+			
+			// Bounce the player back
+			player[currentPlayer].timer = 0
+			player[currentPlayer].worldVelocity.x = temp0
+			player[currentPlayer].worldVelocity.y = temp1
+			player[currentPlayer].speed = object.xvel
+			player[currentPlayer].gravity = GRAVITY_AIR
 		end if
 	next
 end event
 
 
 event ObjectDraw
-	CallFunction(SpecialSetup_Function9)
+	CallFunction(SpecialSetup_GetBlockPos)
 	DrawSpriteXY(object.frame, temp0, temp1)
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Special/Objects.gif")
 
 	// Bumper frames
@@ -100,11 +132,19 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Special/Objects.gif")
 	SpriteFrame(-14, -14, 28, 28, 1, 401)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

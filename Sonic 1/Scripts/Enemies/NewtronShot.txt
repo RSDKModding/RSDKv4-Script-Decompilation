@@ -1,31 +1,37 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Newtron Shot Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 64 : TYPE_NEWTRONSHOT
+// ========================
+
+private alias object.value0 : object.timer
 
 
-// Static Values
+// ========================
+// Events
+// ========================
 
-// Tables
-
-event ObjectMain
+event ObjectUpdate
 	object.xpos += object.xvel
-	object.frame = object.value0
+
+	object.frame = object.timer
 	object.frame >>= 1
-	object.value0++
-	object.value0 &= 3
-	if object.outOfBounds == 1
+	object.timer++
+	object.timer &= 3
+
+	if object.outOfBounds == true
 		object.type = TypeName[Blank Object]
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			CallFunction(PlayerObject_ProjectileHit)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_ProjectileHit)
 		end if
 	next
 end event
@@ -38,24 +44,42 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone01")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("GHZ/Objects.gif")
 		SpriteFrame(-6, -6, 12, 12, 160, 111)
 		SpriteFrame(-6, -6, 12, 12, 173, 111)
 	end if
+
 	CheckCurrentStageFolder("Zone07")
-	if checkResult == 1
+	if checkResult == true
+		// Check if in MBZ and then... load GHZ sprites?
+		// Likely an error, the given numbers match up with the MBZ sheet
 		LoadSpriteSheet("GHZ/Objects.gif")
 		SpriteFrame(-8, -8, 16, 16, 35, 51)
 		SpriteFrame(-8, -8, 16, 16, 52, 51)
 	end if
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		// Decomp note - using the proper sheet here instead of the GHZ one
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 35, 51)
+	else
+		LoadSpriteSheet("GHZ/Objects.gif")
+		SpriteFrame(-6, -6, 12, 12, 160, 111)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

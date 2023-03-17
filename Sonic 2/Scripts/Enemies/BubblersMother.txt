@@ -1,56 +1,76 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Bubblers Mother Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 66 : TYPE_BUBBLERSMOTHER
+// ========================
 
-// Function declarations
-reserve function BubblersMother_Function153
+private alias object.value0 : object.timer
+private alias object.value1 : object.spawnTimer
+private alias object.value2 : object.startPos.x
+private alias object.value3 : object.startPos.y
+
+// States
+private alias 0 : BUBBLERSMOTHER_PATROL
+private alias 1 : BUBBLERSMOTHER_FOUNDPLAYER
+private alias 2 : BUBBLERSMOTHER_ATTACKING
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BubblersMother_Setup
 reserve function BubblersMother_DebugDraw
 reserve function BubblersMother_DebugSpawn
 
-// Static Values
-
-// Tables
-
-function BubblersMother_Function153
+private function BubblersMother_Setup
 	object[arrayPos0].direction = object[arrayPos0].propertyValue
-	if object[arrayPos0].direction == FLIP_NONE
+	if object[arrayPos0].direction == 0
 		object[arrayPos0].xvel = -0x4000
 	else
 		object[arrayPos0].xvel = 0x4000
 	end if
 	object[arrayPos0].yvel = 0
-	object[arrayPos0].value0 = 512
-	object[arrayPos0].value1 = 0
+	object[arrayPos0].timer = 512
+	object[arrayPos0].spawnTimer = 0
 	object[arrayPos0].frame = 1
 	object[arrayPos0].animationTimer = 0
-	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
-	object[arrayPos0].state = 0
+	object[arrayPos0].priority = PRIORITY_BOUNDS
+	object[arrayPos0].state = BUBBLERSMOTHER_PATROL
 end function
 
 
-function BubblersMother_DebugDraw
+private function BubblersMother_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end function
 
 
-function BubblersMother_DebugSpawn
+private function BubblersMother_DebugSpawn
 	CreateTempObject(TypeName[Bubblers Mother], object.direction, object.xpos, object.ypos)
-	object[tempObjectPos].value2 = object.xpos
-	object[tempObjectPos].value3 = object.ypos
+	object[tempObjectPos].startPos.x = object.xpos
+	object[tempObjectPos].startPos.y = object.ypos
 	arrayPos0 = object[tempObjectPos].entityPos
-	CallFunction(BubblersMother_Function153)
+	CallFunction(BubblersMother_Setup)
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	switch object.state
-	case 0
+	case BUBBLERSMOTHER_PATROL
 		object.priority = PRIORITY_ACTIVE
 		object.xpos += object.xvel
 		object.animationTimer++
@@ -58,24 +78,27 @@ event ObjectMain
 		object.frame = object.animationTimer
 		object.frame >>= 1
 		object.frame++
-		object.value0--
-		if object.value0 == 0
-			object.direction ^= FLIP_X
+
+		object.timer--
+		if object.timer == 0
+			object.direction ^= 1
 			FlipSign(object.xvel)
-			object.value0 = 512
+			object.timer = 512
 		end if
+
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object.state == 0
-				if object.direction == FLIP_NONE
+			if object.state == BUBBLERSMOTHER_PATROL
+				if object.direction == 0
 					BoxCollisionTest(C_TOUCH, object.entityPos, -160, 12, 16, 96, currentPlayer, -1, -1, 1, 1)
 				else
 					BoxCollisionTest(C_TOUCH, object.entityPos, 16, 12, 160, 96, currentPlayer, -1, -1, 1, 1)
 				end if
-				if checkResult == 1
-					object.state = 1
+
+				if checkResult == true
+					object.state = BUBBLERSMOTHER_FOUNDPLAYER
 					object.frame = 2
-					object.value0 = 16
-					if object.direction == FLIP_NONE
+					object.timer = 16
+					if object.direction == 0
 						object.xvel = -0x28000
 					else
 						object.xvel = 0x28000
@@ -84,25 +107,29 @@ event ObjectMain
 			end if
 		next
 		break
-	case 1
-		object.value0--
-		if object.value0 < 0
-			object.state = 2
+
+	case BUBBLERSMOTHER_FOUNDPLAYER
+		object.timer--
+		if object.timer < 0
+			object.state = BUBBLERSMOTHER_ATTACKING
 		end if
+
 		object.animationTimer++
 		object.animationTimer &= 3
 		object.frame = object.animationTimer
 		object.frame >>= 1
 		object.frame++
 		break
-	case 2
+
+	case BUBBLERSMOTHER_ATTACKING
 		object.xpos += object.xvel
 		object.ypos += object.yvel
-		object.value1++
-		if object.value1 >= 20
-			object.value1 = 0
+
+		object.spawnTimer++
+		if object.spawnTimer >= 20
+			object.spawnTimer = 0
 			temp0 = object.xpos
-			if object.direction == FLIP_NONE
+			if object.direction == 0
 				temp0 += 0x60000
 			else
 				temp0 -= 0x60000
@@ -111,31 +138,36 @@ event ObjectMain
 			temp1 += 0xA0000
 			CreateTempObject(TypeName[Bubbler], 0, temp0, temp1)
 		end if
+
 		object.animationTimer++
 		if object.animationTimer >= 3
 			object.animationTimer = 0
 		end if
+
 		object.frame = object.animationTimer
 		object.frame++
 		break
+		
 	end switch
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.value2
-		object.ypos = object.value3
-		if object.outOfBounds == 1
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		if object.outOfBounds == true
 			arrayPos0 = object.entityPos
-			CallFunction(BubblersMother_Function153)
+			CallFunction(BubblersMother_Setup)
 		else
 			object.xpos = temp0
 			object.ypos = temp1
 		end if
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 12, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if checkResult == 1
-			CallFunction(PlayerObject_BadnikBreak)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 12, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
 		end if
 	next
 end event
@@ -149,7 +181,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone02")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("CPZ/Objects.gif")
 		SpriteFrame(-16, -12, 32, 28, 117, 102)
 		SpriteFrame(0, 0, 1, 1, 117, 102)
@@ -159,21 +191,69 @@ event ObjectStartup
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-16, -12, 32, 28, 117, 102)
 	end if
+
 	foreach (TypeName[Bubblers Mother], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value2 = object[arrayPos0].xpos
-		CallFunction(BubblersMother_Function153)
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		CallFunction(BubblersMother_Setup)
 	next
+
 	SetTableValue(TypeName[Bubblers Mother], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(BubblersMother_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(BubblersMother_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
-event RSDKDraw
-	DrawSprite(0)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			GetBit(checkResult, object.propertyValue, 0)
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			CheckNotEqual(editor.variableValue, 0)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+			
+		end switch
+	end if
 end event
 
+
+event RSDKDraw
+	GetBit(object.direction, object.propertyValue, 0)
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone02")
+	if checkResult == true
+		LoadSpriteSheet("CPZ/Objects.gif")
+		SpriteFrame(-16, -12, 32, 28, 117, 102)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-16, -12, 32, 28, 117, 102)
+	end if
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
 end event

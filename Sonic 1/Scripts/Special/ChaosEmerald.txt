@@ -1,83 +1,127 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Chaos Emerald Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 13 : TYPE_CHAOSEMERALD
+// ========================
 
-// Function declarations
+private alias object.value0 : object.timer
+
+private alias 0 : EMERALD_IDLE
+private alias 1 : EMERALD_GRABBED
+private alias 2 : EMERALD_EXITSS
+private alias 3 : EMERALD_FINISHED
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.interaction : player.interaction
+
+private alias object.value10 : debugMode.currentSelection
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function ChaosEmerald_DebugDraw
 reserve function ChaosEmerald_DebugSpawn
 
+
+// ========================
 // Static Values
-public value ChaosEmerald_value16 = 0;
+// ========================
 
-private alias ChaosEmerald_value16 : ChaosEmerald_debugStart
+private value ChaosEmerald_startDebugID = 0
 
-// Tables
 
-function ChaosEmerald_DebugDraw
-	temp4 = object[0].value10
-	temp4 -= ChaosEmerald_debugStart
+// ========================
+// Function Definitions
+// ========================
+
+private function ChaosEmerald_DebugDraw
+	temp4 = debugMode[0].currentSelection
+	temp4 -= ChaosEmerald_startDebugID
 	DrawSprite(temp4)
 end function
 
 
-function ChaosEmerald_DebugSpawn
-	temp4 = object[0].value10
-	temp4 -= ChaosEmerald_debugStart
-	temp5 = 13
-	CallFunction(DebugMode_Function11)
+private function ChaosEmerald_DebugSpawn
+	temp4 = debugMode[0].currentSelection
+	temp4 -= ChaosEmerald_startDebugID
+	temp5 = TypeName[Chaos Emerald]
+	CallFunction(DebugMode_PlaceBlock)
 	object[arrayPos0].drawOrder = 4
 	object[arrayPos0].groupID = GROUP_BLOCKS
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	switch object.state
-	case 1
-		object.value0++
-		if object.value0 == 32
-			object.value0 = 0
+	default
+	case EMERALD_IDLE
+		break
+
+	case EMERALD_GRABBED
+		object.timer++
+		if object.timer == 32
+			object.timer = 0
 			object.state++
 		end if
 		break
-	case 2
-		object.value0++
-		if object.value0 == 2
-			object[0].state = PlayerObject_Blank
-			object.value0 = 0
-			if object[0].xvel == 0
-				if object[0].yvel == 0
-					Sin(object[0].xvel, PlayerObject_value1)
-					object[0].xvel *= 4
-					Cos(object[0].yvel, PlayerObject_value1)
-					object[0].yvel *= -4
+
+	case EMERALD_EXITSS
+		object.timer++
+		if object.timer == 2
+			player[0].state = Player_State_Static
+			object.timer = 0
+			if player[0].xvel == 0
+				if player[0].yvel == 0
+					Sin(player[0].xvel, Player_stageRotation)
+					player[0].xvel *= 4
+
+					Cos(player[0].yvel, Player_stageRotation)
+					player[0].yvel *= -4
 				end if
 			end if
-			object[0].interaction = 0
+			player[0].interaction = false
+
 			ResetObjectEntity(20, TypeName[Special Finish], 0, 0, 0)
 			object[20].priority = PRIORITY_ACTIVE
-			PlaySfx(SfxName[Exit SS], 0)
+			PlaySfx(SfxName[Exit SS], false)
 			object.state++
 		end if
 		break
+
+	case EMERALD_FINISHED
+		break
+		
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		if object.state == 0
-			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object.state = 1
-				object.value0 = 0
+		if object.state == EMERALD_IDLE
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+#platform: USE_ORIGINS
+				CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_EMERALD, 0)
+#endplatform
+				object.state = EMERALD_GRABBED
+				object.timer = 0
 				object.drawOrder = 4
 				StopMusic()
-				PlaySfx(SfxName[Emerald], 0)
-				PlayerObject_value4 = 1
-				options.touchControls = 0
-				stage.timeEnabled = 0
+				PlaySfx(SfxName[Emerald], false)
+				Player_isWinner = true
+				options.touchControls = false
+				stage.timeEnabled = false
 			end if
 		end if
 	next
@@ -86,55 +130,60 @@ end event
 
 event ObjectDraw
 	switch object.state
-	case 0
-		CallFunction(SpecialSetup_Function9)
-		object.value0++
-		object.value0 &= 15
-		if object.value0 < 8
+	case EMERALD_IDLE
+		CallFunction(SpecialSetup_GetBlockPos)
+		object.timer++
+		object.timer &= 15
+		if object.timer < 8
 			DrawSpriteXY(object.propertyValue, temp0, temp1)
 		else
 			DrawSpriteXY(7, temp0, temp1)
 		end if
 		break
-	case 1
-		CallFunction(SpecialSetup_Function9)
-		object.frame = object.value0
+
+	case EMERALD_GRABBED
+		CallFunction(SpecialSetup_GetBlockPos)
+		object.frame = object.timer
 		object.frame >>= 3
 		object.frame += 8
 		DrawSpriteXY(object.frame, temp0, temp1)
 		break
+
+	case EMERALD_EXITSS
+		break
+		
 	end switch
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Special/Objects.gif")
 
 	// Chaos Emerald frames
-	SpriteFrame(-12, -12, 24, 24, 176, 276)
-	SpriteFrame(-12, -12, 24, 24, 201, 276)
+	SpriteFrame(-12, -12, 24, 24, 176, 276) // #0 - Emerald 1
+	SpriteFrame(-12, -12, 24, 24, 201, 276) // #1 - Emerald 2
 
 	// Third emerald color is determinend by Super Stages setting
-	if options.superStates == 0
-		SpriteFrame(-12, -12, 24, 24, 226, 276)
+	if options.superStates == false
+		SpriteFrame(-12, -12, 24, 24, 226, 276) // #2 - Emerald 3
 	else
-		SpriteFrame(-12, -12, 24, 24, 426, 276)
+		SpriteFrame(-12, -12, 24, 24, 426, 276) // #2 - Emerald 3
 	end if
 
-	SpriteFrame(-12, -12, 24, 24, 251, 276)
-	SpriteFrame(-12, -12, 24, 24, 276, 276)
-	SpriteFrame(-12, -12, 24, 24, 301, 276)
-	SpriteFrame(-12, -12, 24, 24, 401, 276)
-	SpriteFrame(-12, -12, 24, 24, 326, 276)
-	SpriteFrame(-12, -12, 24, 24, 401, 76)
-	SpriteFrame(-12, -12, 24, 24, 426, 76)
-	SpriteFrame(-12, -12, 24, 24, 451, 76)
-	SpriteFrame(-12, -12, 24, 24, 476, 76)
+	SpriteFrame(-12, -12, 24, 24, 251, 276) // #3 - Emerald 4
+	SpriteFrame(-12, -12, 24, 24, 276, 276) // #4 - Emerald 5
+	SpriteFrame(-12, -12, 24, 24, 301, 276) // #5 - Emerald 6
+	SpriteFrame(-12, -12, 24, 24, 401, 276) // #6 - Emerald 7
+	SpriteFrame(-12, -12, 24, 24, 326, 276) // #7 - Flashing emerald sprite
 
-	// Add the object to the debug object list seven times
+	SpriteFrame(-12, -12, 24, 24, 401, 76) // #8 - Grabbed anim frame 1
+	SpriteFrame(-12, -12, 24, 24, 426, 76) // #9 - Grabbed anim frame 2
+	SpriteFrame(-12, -12, 24, 24, 451, 76) // #10 - Grabbed anim frame 3
+	SpriteFrame(-12, -12, 24, 24, 476, 76) // #11 - Grabbed anim frame 4
+
+	// Add the object to the debug object list seven times, for the seven colours of emeralds
 	temp0 = 0
-	ChaosEmerald_debugStart = DebugMode_ObjCount
+	ChaosEmerald_startDebugID = DebugMode_ObjCount
 	while temp0 < 7
 		SetTableValue(TypeName[Chaos Emerald], DebugMode_ObjCount, DebugMode_TypeTable)
 		SetTableValue(ChaosEmerald_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -144,12 +193,45 @@ event ObjectStartup
 	loop
 end event
 
-event RSDKDraw
-	DrawSprite(0)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // emeraldID
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // emeraldID
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
 end event
 
+
+event RSDKDraw
+	DrawSprite(object.propertyValue)
+end event
+
+
 event RSDKLoad
-LoadSpriteSheet("Special/Objects.gif")
+	LoadSpriteSheet("Special/Objects.gif")
 	SpriteFrame(-12, -12, 24, 24, 176, 276)
 	SpriteFrame(-12, -12, 24, 24, 201, 276)
 	SpriteFrame(-12, -12, 24, 24, 226, 276)
@@ -158,8 +240,14 @@ LoadSpriteSheet("Special/Objects.gif")
 	SpriteFrame(-12, -12, 24, 24, 301, 276)
 	SpriteFrame(-12, -12, 24, 24, 401, 276)
 	SpriteFrame(-12, -12, 24, 24, 326, 276)
-	SpriteFrame(-12, -12, 24, 24, 401, 76)
-	SpriteFrame(-12, -12, 24, 24, 426, 76)
-	SpriteFrame(-12, -12, 24, 24, 451, 76)
-	SpriteFrame(-12, -12, 24, 24, 476, 76)
+	
+	AddEditorVariable("emeraldID")
+	SetActiveVariable("emeraldID")
+	AddEnumVariable("Emerald 1", 0)
+	AddEnumVariable("Emerald 2", 1)
+	AddEnumVariable("Emerald 3", 2)
+	AddEnumVariable("Emerald 4", 3)
+	AddEnumVariable("Emerald 5", 4)
+	AddEnumVariable("Emerald 6", 5)
+	AddEnumVariable("Emerald 7", 6)
 end event

@@ -1,13 +1,53 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Stage Setup Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 4 : TYPE_STAGESETUP
+// ========================
 
+// Not all these aliases are actually used in this script necessarily, a good amount of them are just for general reference as well
+
+// Game Modes
+private alias 0 : MODE_NOSAVE
+private alias 1 : MODE_SAVEGAME
+private alias 2 : MODE_TIMEATTACK
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
+private alias 2 : TRACK_INVINCIBLE
+private alias 3 : TRACK_CONTINUE
+private alias 4 : TRACK_BOSS
+private alias 5 : TRACK_GAMEOVER
+private alias 6 : TRACK_DROWNING
+
+// Reserved object slots
+private alias 0  : SLOT_PLAYER1
+private alias 1  : SLOT_PLAYER2
+private alias 2  : SLOT_PLAYER1_POWERUP // will be in slot[1] if player2 isn't enabled (aka it's slot[playerCount])
+private alias 3  : SLOT_PLAYER2_POWERUP
+private alias 8  : SLOT_STAGESETUP
+private alias 9  : SLOT_HUD
+private alias 10 : SLOT_ZONESETUP
+private alias 11 : SLOT_TITLECARD
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+private alias 26 : SLOT_MUSICEVENT_BOSS
+private alias 30 : SLOT_ACTFINISH
+
+// Music Events
+private alias 0 : MUSICEVENT_FADETOBOSS
+private alias 1 : MUSICEVENT_FADETOSTAGE
+private alias 2 : MUSICEVENT_TRANSITION
+
+private alias 0 : MUSICEVENT_FLAG_NOCHANGE
+private alias 1 : MUSICEVENT_FLAG_SPEEDUP
+private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+// Player aliases
 private alias object.type 			: player.type
 private alias object.controlMode 	: player.controlMode
 private alias object.visible 		: player.visible
@@ -21,38 +61,47 @@ private alias object.ypos 			: player.ypos
 private alias object.collisionLeft 	: player.collisionLeft
 private alias object.value18 		: player.sortedDrawOrder
 
-// Function declarations
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function StageSetup_HandleOscillationTable
 
+
+// ========================
 // Static Values
-public value StageSetup_value22 = 0;
-public value StageSetup_value21 = 0;
+// ========================
 
-// Used by monitors to determine whether to show static or not and what frame of it to show
-private alias StageSetup_value22 : StageSetup_monitorOverlayFrame
+public  value StageSetup_monitorOverlayFrame = 0 // Used by monitors to determine whether to show static or not and what frame of it to show
+private value StageSetup_oscillateFlipFlags  = 0
 
-private alias StageSetup_value21 : StageSetup_oscillateFlipFlags
 
+// ========================
 // Tables
-public table StageSetup_initOscillationTable
+// ========================
+
+private table StageSetup_initOscillationTable
 	128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0
 	128, 0, 0x50F0, 286, 0x2080, 180, 0x3080, 270, 0x5080, 450, 0x7080, 630, 128, 0, 128, 0
 end table
-
-public alias StageSetup_oscillationTable : StageSetup_table9
 
 public table StageSetup_oscillationTable
 	128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0, 128, 0
 	128, 0, 0x50F0, 286, 0x2080, 180, 0x3080, 270, 0x5080, 450, 0x7080, 630, 128, 0, 128, 0
 end table
 
-public table StageSetup_oscillateLimits
+private table StageSetup_oscillateLimits
 	2, 0x1000, 2, 0x1800, 2, 0x2000, 2, 0x3000, 4, 0x2000, 8, 0x800,  8, 0x4000, 4, 0x4000
 	2, 0x5000, 2, 0x5000, 2, 0x2000, 3, 0x3000, 5, 0x5000, 7, 0x7000, 2, 0x1000, 2, 0x1000
 end table
 
 
-function StageSetup_HandleOscillationTable
+// ========================
+// Function Definitions
+// ========================
+
+private function StageSetup_HandleOscillationTable
 	temp0 = 0
 	temp1 = 0
 	while temp0 < 16
@@ -90,13 +139,16 @@ function StageSetup_HandleOscillationTable
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
-	// Only do these actions if the stage is active, of course
+event ObjectUpdate
+	// Only do these actions if the stage is active
 	if stage.state == STAGE_RUNNING
 
 		// Do ring animation here
-		// -> Not done in the ring script because all rings should share the same frame
+		// -> Not done in the ring object itself because all rings should share the same frame
 		ringTimer++
 		if ringTimer == 4
 			ringTimer = 0
@@ -104,23 +156,34 @@ event ObjectMain
 			ringFrame &= 7
 		end if
 
-
 		// Update monitor static
 		StageSetup_monitorOverlayFrame++
 		if StageSetup_monitorOverlayFrame > 17
 			StageSetup_monitorOverlayFrame = 0
 		end if
 
-		// Not in time attack
-		if options.gameMode != 2
+		// Not for time attack
+		if options.gameMode != MODE_TIMEATTACK
 			if player.score >= player.scoreBonus
+#platform: USE_ORIGINS
+				// Player achieved a high enough score...
+				if game.coinMode == false
+					// ... give them an extra life
+					player.lives++
+				else
+					// ... give them a coin
+					CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+				end if
+#endplatform
+#platform: USE_STANDALONE
 				// Player achieved a high enough score, give them an extra life
 				player.lives++
-				player.scoreBonus += 0xC350
-				PlaySfx(SfxName[Life], 0)
+#endplatform
+				player.scoreBonus += 50000
+				PlaySfx(SfxName[Life], false)
 				PauseMusic()
-				ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
-				object[25].priority = PRIORITY_ACTIVE
+				ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+				object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
 			end if
 		end if
 
@@ -131,23 +194,45 @@ event ObjectMain
 
 
 		// Check for Time Over
+		// A bit messy with Standalone/Origins code combined, though hopefully not too bad
 		if stage.timeEnabled == true
-			if stage.minutes == 10 // At 10 minutes?
-				CheckEqual(stage.debugMode, true)
+#platform: USE_STANDALONE
+			if stage.minutes == 10
+#endplatform
+#platform: USE_ORIGINS
+			if game.coinMode == false
+				CheckEqual(game.timeOver, false)
 				temp0 = checkResult
-				CheckEqual(options.gameMode, 2)
-				temp0 |= checkResult
-				if temp0 == false
-					currentPlayer = 0
-					player[0].type = TypeName[Player Object]
-					CallFunction(PlayerObject_Kill)
-				end if
+				CheckEqual(stage.minutes, 10)
+				temp0 &= checkResult
+				if temp0 != false
+#endplatform
+					CheckEqual(stage.debugMode, true)
+					temp0 = checkResult
+					CheckEqual(options.gameMode, MODE_TIMEATTACK)
+					temp0 |= checkResult
+#platform: USE_ORIGINS
+					CheckEqual(game.playMode, BOOT_PLAYMODE_BOSSRUSH)
+					temp0 |= checkResult
+#endplatform
+					if temp0 == false
+						currentPlayer = SLOT_PLAYER1
+						player[0].type = TypeName[Player Object]
+						CallFunction(Player_Kill)
+					end if
 
-				// Reset time to 9:59:99 and disable time progression so that it stays that way
-				stage.minutes 		= 9
-				stage.seconds 		= 59
-				stage.milliSeconds 	= 99
-				stage.timeEnabled 	= false
+#platform: USE_ORIGINS
+					if game.playMode == BOOT_PLAYMODE_CLASSIC
+#endplatform
+						// Reset time to 9:59:99 and disable time progression so that it stays that way
+						stage.minutes 		= 9
+						stage.seconds 		= 59
+						stage.milliSeconds 	= 99
+						stage.timeEnabled 	= false
+#platform: USE_ORIGINS
+					end if
+				end if
+#endplatform
 			end if
 		end if
 
@@ -181,84 +266,80 @@ event ObjectMain
 
 			if temp1 < stage.deathBoundary
 				if player[currentPlayer].ypos > stage.deathBoundary
-					CallFunction(PlayerObject_Kill)
+					CallFunction(Player_Kill)
 				end if
 			else
 				if player[currentPlayer].ypos > temp1
-					CallFunction(PlayerObject_Kill)
+					CallFunction(Player_Kill)
 				end if
 			end if
 		next
 
-	end if // stage.state == STAGE_RUNNING
+	end if
 
-	// (Un)Lock player controls based on current situation
+#platform: USE_STANDALONE
+	// Show or hide touch controls UI based on what the player's situation is
+	// Do note, options.touchControls only controls whether or not the UI shows up,
+	// actual touch interaction is handled by the Player Object and its controlMode value
 	if options.attractMode == false
-		if player[0].controlMode > -1
+		if player[0].controlMode > CONTROLMODE_NONE
 			options.touchControls = true
 		else
 			options.touchControls = false
 		end if
 	else
-		options.touchControls = 0
+		options.touchControls = false
 	end if
+#endplatform
 
-	// Sort players, player 1 should always be on top of player 2
+	// Sort players, player 1 should always be on top of player 2 and likewise for their shields
 	currentPlayer = playerCount
 	currentPlayer--
 	while currentPlayer > -1
-
-		// Only do this stuff if the player is visible
 		if player[currentPlayer].visible == true
-
 			currentPlayer += playerCount
-
+			
 			if player[currentPlayer].sortedDrawOrder == 0
-
 				currentPlayer -= playerCount
 				arrayPos0 = player[currentPlayer].sortedDrawOrder
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
+				
 				currentPlayer += playerCount
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
 				currentPlayer -= playerCount
-
 			else
-
 				currentPlayer -= playerCount
 				arrayPos0 = player[currentPlayer].sortedDrawOrder
 				currentPlayer += playerCount
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
+				
 				currentPlayer -= playerCount
 				arrayPos0 = player[currentPlayer].sortedDrawOrder
 				AddDrawListEntityRef(arrayPos0, currentPlayer)
-
 			end if
-
 		end if
-
+		
 		currentPlayer--
-
 	loop
-
 end event
 
 
 event ObjectStartup
-
 	// Setup the common music tracks used in every level
-	SetMusicTrack("ActComplete.ogg", 1, false)
-	SetMusicTrack("Invincibility.ogg", 2, 39528)
-	SetMusicTrack("Continue.ogg", 3, false)
-	SetMusicTrack("Boss.ogg", 4, true)
-	SetMusicTrack("GameOver.ogg", 5, false)
-	SetMusicTrack("Drowning.ogg", 6, false)
+	SetMusicTrack("ActComplete.ogg", TRACK_ACTFINISH, false)
+	SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, 39528)
+	SetMusicTrack("Continue.ogg", TRACK_CONTINUE, false)
+	SetMusicTrack("Boss.ogg", TRACK_BOSS, true)
+	SetMusicTrack("GameOver.ogg", TRACK_GAMEOVER, false)
+	SetMusicTrack("Drowning.ogg", TRACK_DROWNING, false)
 
 	// Setup object range
 	if options.attractMode == false
-		// Blank space intentional, there's code here on the official PC version
-		// However! we don't have that, so we're just stuck with this
+#platform: USE_ORIGINS
+		stage.pauseEnabled = true
+#endplatform
 	else
-		// Set Object Range, changes internal bounds so that demos always looks the same and don't desync
+		// Set Object Range, changes internal bounds to a set value so that demos always looks the same and don't desync
 		SetObjectRange(424)
 	end if
 
@@ -266,9 +347,8 @@ event ObjectStartup
 	// They should later get their proper music functions assigned by object 39 (stage-specific setup) but this doesn't hurt
 	SpeedUpMusic    = 0
 	SlowDownMusic   = 0
-	stage.musicFlag = 0
+	stage.musicFlag = MUSICEVENT_FLAG_NOCHANGE
 
-	// Set stage death bounds
 	stage.deathBoundary = stage.curYBoundary2
 	stage.deathBoundary <<= 16
 
@@ -277,30 +357,28 @@ event ObjectStartup
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
 
-	// Set object slot 8 a Stage Setup object
-	object[8].type = TypeName[Stage Setup]
-	object[8].priority = PRIORITY_ACTIVE_PAUSED
+	object[SLOT_STAGESETUP].type = TypeName[Stage Setup]
+	object[SLOT_STAGESETUP].priority = PRIORITY_ALWAYS
 
 	foreach (TypeName[HUD], arrayPos0, ALL_ENTITIES)
 		// Remove all HUD objects in case one is placed in the scene
 		object[arrayPos0].type = TypeName[Blank Object]
 
 		if credits.screen == false
-			// Unless in the credits, place the HUD object in slot 9
-			object[9].type = TypeName[HUD]
-			object[9].priority = PRIORITY_ACTIVE
-			object[9].drawOrder = 6
-			object[9].propertyValue = object[arrayPos0].propertyValue
+			// Unless in the credits, place the HUD object in its dedicated slot
+			object[SLOT_HUD].type 		= TypeName[HUD]
+			object[SLOT_HUD].priority 	= PRIORITY_ACTIVE
+			object[SLOT_HUD].drawOrder = 6
+
+			// Store the current time period in the HUD object
+			// ...or at least it should - in reality this is just a leftover from CD so it doesn't really do much in this game
+			object[SLOT_HUD].propertyValue = object[arrayPos0].propertyValue
 		end if
 	next
-
-
-	// Reset more variables
+	
 	ringExtraLife 					= 100
 	oscillation 					= 0
-	StageSetup_oscillateFlipFlags 	= 0b0011111000000000
-
-
+	StageSetup_oscillateFlipFlags 	= 0x3E00
 	temp0 = 0
 	while temp0 < 32
 		GetTableValue(temp1, temp0, StageSetup_initOscillationTable)
@@ -309,34 +387,126 @@ event ObjectStartup
 	loop
 
 	// Bonus options can only be used in no save mode
+	// Note this is actually bugged as this only checks for the last three save slots, ignoring the first one
 	if options.saveSlot > 0
 		options.shieldType  = 0
-		options.superStates = 0
+		options.superStates = false
 	end if
 
-	// Set the effects based on shield prefrence
 	switch options.shieldType
 	case 0
 	case 2
-		blueShieldType = TypeName[Blue Shield]
+		blueShieldType    = TypeName[Blue Shield]
 		invincibilityType = TypeName[Invincibility]
 		break
 
 	case 1
 	case 3
-		blueShieldType = TypeName[Blue Shield 2]
+		blueShieldType    = TypeName[Blue Shield 2]
 		invincibilityType = TypeName[Invincibility 2]
 		break
-
+		
 	end switch
-
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event
+
+
+// ========================
+// Editor Helpers
+// ========================
+
+// All the following is only to be used from Editor subs, using these in the game itself won't give desired results
+// None of these exist in the original game, these are all custom to the decomp
+
+reserve function EditorHelpers_DrawHitbox
+reserve function EditorHelpers_DrawX
+
+
+public function EditorHelpers_DrawHitbox
+	
+#platform: EDITOR
+	
+	// This function is called in order to draw an object's hitbox, as a yellow rectangle
+	// editor.drawingOverlay isn't set here, that's to be determined by the object calling this function
+	
+	// Preconditions:
+	// - object.xpos and object.ypos are the position for the hitbox to be centered around
+	// - temp0 is the left hitbox size
+	// - temp1 is the top hitbox size
+	// - temp2 is the right hitbox size
+	// - temp3 is the bottom hitbox size
+	//  - Hitboxes aren't world-space, to be 1:1 values instead (ie just a basic "-15" instead of "-0xF0000")
+	
+	// Get the base 1:1 position of the object
+	temp4 = object.ixpos
+	temp5 = object.iypos
+	
+	// Move to its top left corner
+	temp4 -= temp0
+	temp5 -= temp1
+	
+	// Get the hitbox's total width and height
+	temp2 += temp0
+	temp3 += temp1
+	
+	temp4 <<= 16
+	temp5 <<= 16
+	
+	DrawRectOutline(temp4, temp5, temp2, temp3, 255, 255, 0, 255)
+	
+#endplatform
+	
+end function
+
+
+public function EditorHelpers_DrawX
+	
+#platform: EDITOR
+	
+	// This function is called to draw a red X, just for when you wanna show something's *really* wrong
+	// editor.drawingOverlay isn't set here, that's for the object calling this function to decide
+	
+	// Preconditions:
+	// - temp0 and temp1 are the position for the X to be centered around, in world-space
+	
+	// Left
+	temp2 = temp0
+	temp2 -= 0x100000
+	
+	// Right
+	temp3 = temp0
+	temp3 += 0x100000
+	
+	// Top
+	temp4 = temp1
+	temp4 -= 0x100000
+	
+	// Bottom
+	temp5 = temp1
+	temp5 += 0x100000
+	
+	// TL-BR
+	DrawLine(temp2, temp4, temp3, temp5, 255, 0, 0)
+	
+	// TR-BL
+	DrawLine(temp3, temp4, temp2, temp5, 255, 0, 0)
+	
+#endplatform
+	
+end function

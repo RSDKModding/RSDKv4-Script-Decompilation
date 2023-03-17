@@ -1,111 +1,148 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Large Piston Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 65 : TYPE_LARGEPISTON
+// ========================
 
-// Function declarations
-reserve function LargePiston_Function143
+private alias object.value0  : object.timer
+private alias object.value1  : object.startPos.y
+private alias object.value2  : object.stoodPlayers
+private alias object.value31 : object.wrapOffset.y
+
+// States
+private alias 0 : LARGEPISTON_IDLE_UP
+private alias 1 : LARGEPISTON_MOVEDOWN
+private alias 2 : LARGEPISTON_IDLE_DOWN
+private alias 3 : LARGEPISTON_MOVEUP
+
+// Player Aliases
+private alias object.ypos : player.ypos
+private alias object.gravity : player.gravity
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function LargePiston_Setup
 reserve function LargePiston_DebugDraw
 reserve function LargePiston_DebugSpawn
 
-// Static Values
 
-// Tables
+// ========================
+// Function Definitions
+// ========================
 
-function LargePiston_Function143
-	object[arrayPos0].ypos = object[arrayPos0].value1
-	object[arrayPos0].ypos += object[arrayPos0].value31
-	object[arrayPos0].ypos += 0x400000
-	object[arrayPos0].value0 = 90
-	object[arrayPos0].value2 = 0
-	object[arrayPos0].state = 2
-	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+private function LargePiston_Setup
+	object[arrayPos0].ypos 			= object[arrayPos0].startPos.y
+	object[arrayPos0].ypos 		   += object[arrayPos0].wrapOffset.y
+	object[arrayPos0].ypos 		   += 0x400000
+	object[arrayPos0].timer 		= 90
+	object[arrayPos0].stoodPlayers = 0
+	object[arrayPos0].state 		= LARGEPISTON_IDLE_DOWN
+	object[arrayPos0].priority 		= PRIORITY_BOUNDS
 end function
 
 
-function LargePiston_DebugDraw
+private function LargePiston_DebugDraw
 	temp0 = object.direction
-	object.direction <<= FLIP_X
+	object.direction <<= 1
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 	object.direction = temp0
 end function
 
 
-function LargePiston_DebugSpawn
+private function LargePiston_DebugSpawn
 	CreateTempObject(TypeName[Large Piston], 0, object.xpos, object.ypos)
 	arrayPos0 = object[tempObjectPos].entityPos
-	object[arrayPos0].value1 = object.ypos
+	object[arrayPos0].startPos.y = object.ypos
 	object[arrayPos0].direction = object.direction
-	object[arrayPos0].direction <<= FLIP_X
-	CallFunction(LargePiston_Function143)
+	object[arrayPos0].direction <<= 1
+	CallFunction(LargePiston_Setup)
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	temp0 = object.ypos
 	switch object.state
-	case 0
-		object.value0--
-		if object.value0 == 0
+	case LARGEPISTON_IDLE_UP
+		object.timer--
+		if object.timer == 0
 			object.priority = PRIORITY_ACTIVE
-			object.value0 = 8
-			object.state = 1
+			object.timer = 8
+			object.state = LARGEPISTON_MOVEDOWN
 		end if
 		break
-	case 1
+
+	case LARGEPISTON_MOVEDOWN
 		object.ypos += 0x80000
-		object.value0--
-		if object.value0 == 0
-			object.value0 = 90
-			object.state = 2
+
+		object.timer--
+		if object.timer == 0
+			object.timer = 90
+			object.state = LARGEPISTON_IDLE_DOWN
 		end if
 		break
-	case 2
-		object.value0--
-		if object.value0 == 0
-			object.value0 = 8
-			object.state = 3
+
+	case LARGEPISTON_IDLE_DOWN
+		object.timer--
+		if object.timer == 0
+			object.timer = 8
+			object.state = LARGEPISTON_MOVEUP
 		end if
 		break
-	case 3
+
+	case LARGEPISTON_MOVEUP
 		object.ypos -= 0x80000
-		object.value0--
-		if object.value0 == 0
-			object.value0 = 90
-			object.state = 0
+
+		object.timer--
+		if object.timer == 0
+			object.timer = 90
+			object.state = LARGEPISTON_IDLE_UP
 		end if
 		break
+		
 	end switch
+
 	temp1 = object.ypos
 	temp1 -= temp0
+
 	temp2 = 0
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		GetBit(temp0, object.value2, temp2)
-		if temp0 == 1
-			object[currentPlayer].ypos += temp1
+		GetBit(temp0, object.stoodPlayers, temp2)
+		if temp0 == true
+			player[currentPlayer].ypos += temp1
 		end if
-		SetBit(object.value2, temp2, 0)
-		BoxCollisionTest(C_BOX, object.entityPos, -64, -12, 64, 12, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+
+		SetBit(object.stoodPlayers, temp2, false)
+		BoxCollisionTest(C_SOLID, object.entityPos, -64, -12, 64, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 		switch checkResult
-		case 1
-			SetBit(object.value2, temp2, 1)
+		case COL_TOP
+			SetBit(object.stoodPlayers, temp2, true)
 			break
-		case 4
-			if object[currentPlayer].gravity == GRAVITY_GROUND
-				CallFunction(PlayerObject_Kill)
+
+		case COL_BOTTOM
+			if player[currentPlayer].gravity == 0
+				CallFunction(Player_Kill)
 			end if
 			break
+			
 		end switch
 		temp2++
 	next
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
 		arrayPos0 = object.entityPos
-		CallFunction(LargePiston_Function143)
+		CallFunction(LargePiston_Setup)
 	end if
 end event
 
@@ -118,21 +155,47 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("MPZ/Objects.gif")
 	SpriteFrame(-64, -12, 128, 120, 1, 135)
+
 	foreach (TypeName[Large Piston], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].ypos
-		CallFunction(LargePiston_Function143)
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
+		CallFunction(LargePiston_Setup)
 	next
+
 	SetTableValue(TypeName[Large Piston], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(LargePiston_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(LargePiston_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
-	DrawSprite(0)
+	// It probably would look better if retracted position was shown normally and then extended position was
+	// the gizmo, but that would be incorrecty showing how the object actually is placed
+	
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		temp1 = object.ypos
+		temp1 += 0x400000
+		
+		DrawSpriteFX(0, FX_FLIP, object.xpos, temp1)
+		
+		DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 0x00, 0xFF, 0x00)
+		
+		editor.drawingOverlay = false
+	end if
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MPZ/Objects.gif")
+	SpriteFrame(-64, -12, 128, 120, 1, 135)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

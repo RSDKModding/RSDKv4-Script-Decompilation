@@ -1,11 +1,14 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Sega Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
+// ========================
+
 private alias object.value0 : sega.timer
 // value1 isn't used
 private alias object.value2 : sega.peekPos
@@ -21,10 +24,44 @@ private alias 3 : SEGA_REVEALSEGA
 private alias 4 : SEGA_SEGASCREEN
 private alias 5 : SEGA_FADEOUT
 
-// Function declarations
+// Priority
+public alias 0 : PRIORITY_BOUNDS
+public alias 1 : PRIORITY_ACTIVE
+public alias 2 : PRIORITY_ALWAYS
+public alias 3 : PRIORITY_XBOUNDS
+public alias 4 : PRIORITY_XBOUNDS_DESTROY
+public alias 5 : PRIORITY_INACTIVE
+public alias 6 : PRIORITY_BOUNDS_SMALL
+public alias 7 : PRIORITY_ACTIVE_SMALL
+
+// Ink Effects
+public alias 0 : INK_NONE
+public alias 1 : INK_BLEND
+public alias 2 : INK_ALPHA
+public alias 3 : INK_ADD
+public alias 4 : INK_SUB
+
+// Flip Directions
+public alias 0 : FLIP_NONE
+public alias 1 : FLIP_X
+public alias 2 : FLIP_Y
+public alias 3 : FLIP_XY
+
+// Game Modes
+private alias 0 : MODE_NOSAVE
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function Sega_CheckTouchCheatCodes
 
-function Sega_CheckTouchCheatCodes
+// ========================
+// Function Definitions
+// ========================
+
+private function Sega_CheckTouchCheatCodes
 	CheckTouchRect(0, 0, screen.xsize, screen.ysize)
 	if checkResult == -1
 		sega.touchDown = false
@@ -113,90 +150,104 @@ function Sega_CheckTouchCheatCodes
 end function
 
 
-event ObjectMain
-	switch object.state
-	case SEGA_SETUP
-		object.alpha = 0x00
-		object.inkEffect = INK_ALPHA
-		sega.timer = 320
-		SetScreenFade(0, 0, 0, sega.timer)
-		object.state++
-		break
+// ========================
+// Events
+// ========================
 
-	case SEGA_FADEIN
-		if sega.timer > 0
-			sega.timer -= 8
-		else
-			sega.peekPos = screen.xcenter
-			sega.peekPos -= 104
-			object.alpha = 0x80
-			object.state++
-		end if
-
-		SetScreenFade(0, 0, 0, sega.timer)
-		break
-
-	case SEGA_PEEKSEGA
-		temp0 = screen.xcenter
-		temp0 += 112
-		if sega.peekPos < temp0
-			sega.peekPos += 4
-		else
-			object.alpha = 0
-			object.state++
-		end if
-		break
-
-	case SEGA_REVEALSEGA
-		if object.alpha < 0xD0
-			object.alpha += 8
-		else
-			object.alpha = 0xFF
-			object.state++
-		end if
-
-		CallFunction(Sega_CheckTouchCheatCodes)
-		break
-
-	case SEGA_SEGASCREEN
-		sega.timer++
-		if sega.timer == 160
-			sega.timer = 0
-			object.state = SEGA_FADEOUT
-		end if
-
-		if sega.timer == 2
-			PlaySfx(SfxName[Sega Chant], false)
-		end if
-
-		if options.gameMode == 0
-			CallFunction(Sega_CheckTouchCheatCodes)
-		end if
-		break
-
-	case SEGA_FADEOUT
-		if sega.timer < 256
-			sega.timer += 8
+event ObjectUpdate
+#platform: USE_ORIGINS
+	if game.titleMode != 0
+		game.titleMode = 0
+		ResetObjectEntity(object.entityPos, TypeName[Logo], 0, 0, 0)
+	else
+#endplatform
+		switch object.state
+		case SEGA_SETUP
+			object.alpha = 0x00
+			object.inkEffect = INK_ALPHA
+			sega.timer = 320
 			SetScreenFade(0, 0, 0, sega.timer)
-		else
-			ResetObjectEntity(object.entityPos, TypeName[Sonic Team], 0, object.xpos, object.ypos)
-			SetScreenFade(0, 0, 0, 0xFF)
-		end if
-		break
-	end switch
+			object.state++
+			break
+
+		case SEGA_FADEIN
+			if sega.timer > 0
+				sega.timer -= 8
+			else
+				sega.peekPos = screen.xcenter
+				sega.peekPos -= 104
+				object.alpha = 0x80
+				object.state++
+			end if
+
+			SetScreenFade(0, 0, 0, sega.timer)
+			break
+
+		case SEGA_PEEKSEGA
+			temp0 = screen.xcenter
+			temp0 += 112
+			if sega.peekPos < temp0
+				sega.peekPos += 4
+			else
+				object.alpha = 0
+				object.state++
+			end if
+			break
+
+		case SEGA_REVEALSEGA
+			if object.alpha < 0xD0
+				object.alpha += 8
+			else
+				object.alpha = 0xFF
+				object.state++
+			end if
+
+			CallFunction(Sega_CheckTouchCheatCodes)
+			break
+
+		case SEGA_SEGASCREEN
+			sega.timer++
+			if sega.timer == 160
+				sega.timer = 0
+				object.state = SEGA_FADEOUT
+			end if
+
+			if sega.timer == 2
+				PlaySfx(SfxName[Sega Chant], false)
+			end if
+
+			if options.gameMode == MODE_NOSAVE
+				CallFunction(Sega_CheckTouchCheatCodes)
+			end if
+			break
+
+		case SEGA_FADEOUT
+			if sega.timer < 256
+				sega.timer += 8
+				SetScreenFade(0, 0, 0, sega.timer)
+			else
+				ResetObjectEntity(object.entityPos, TypeName[Sonic Team], 0, object.xpos, object.ypos)
+				SetScreenFade(0, 0, 0, 0xFF)
+			end if
+			break
+			
+		end switch
+#platform: USE_ORIGINS
+	end if // game.titleMode == 0 check from way up above
+#endplatform
 end event
 
 
 event ObjectDraw
-	//Draw White BG
+	// Draw White BG
 	DrawRect(0, 0, screen.xsize, screen.ysize, 0xE0, 0xE0, 0xE0, 0xFF)
 
-	//Draw Sega Sprite
+	// Draw Sega Sprite
 	if object.alpha > 8
 		DrawSpriteScreenFX(0, FX_INK, screen.xcenter, screen.ycenter)
 	end if
 
-	//Draw the "reveal" rects
+	// Draw the "reveal" rects
 	if object.state == SEGA_PEEKSEGA
 		temp0 = sega.peekPos
 		temp0 -= 10
@@ -228,14 +279,24 @@ event ObjectStartup
 	LoadSpriteSheet("Title/Title.gif")
 	SpriteFrame(-93, -29, 188, 58, 323, 242)
 	SpriteFrame(-125, -29, 252, 58, 259, 301)
+	
+	// Hide touch controls
 	options.touchControls = false
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Title/Title.gif")
 	SpriteFrame(-93, -29, 188, 58, 323, 242)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

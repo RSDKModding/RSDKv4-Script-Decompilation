@@ -1,469 +1,724 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Moving Crates Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 45 : TYPE_MOVINGCRATES
+// ========================
 
-// Function declarations
+// Each box is pretty much its own mini-object
+// Note: positions are relative values to the base object's position
+
+private alias object.value15 : object.box1.state
+private alias object.value1  : object.box1.x
+private alias object.value2  : object.box1.y
+private alias object.value7  : object.box1.xvel
+private alias object.value8  : object.box1.yvel
+private alias object.value18 : object.box1.crushTimer
+
+private alias object.value16 : object.box2.state
+private alias object.value3  : object.box2.x
+private alias object.value4  : object.box2.y
+private alias object.value9  : object.box2.xvel
+private alias object.value10 : object.box2.yvel
+private alias object.value19 : object.box2.crushTimer
+
+private alias object.value17 : object.box3.state
+private alias object.value5  : object.box3.x
+private alias object.value6  : object.box3.y
+private alias object.value11 : object.box3.xvel
+private alias object.value12 : object.box3.yvel
+private alias object.value20 : object.box3.crushTimer
+
+// values 13 and 14 are unused
+
+// Object states
+// Clockwise and counter-clockwise versions have separate states
+private alias 0 : MOVINGCRATE_CW_RIGHT
+private alias 1 : MOVINGCRATE_CW_DOWN
+private alias 2 : MOVINGCRATE_CW_LEFT
+private alias 3 : MOVINGCRATE_CW_UP
+
+private alias 4 : MOVINGCRATE_CCW_LEFT
+private alias 5 : MOVINGCRATE_CCW_DOWN
+private alias 6 : MOVINGCRATE_CCW_RIGHT
+private alias 7 : MOVINGCRATE_CCW_UP
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.gravity   : player.gravity
+private alias object.animation : player.animation
+private alias object.value1    : player.timer
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function MovingCrates_DebugDraw
 reserve function MovingCrates_DebugSpawn
-reserve function MovingCrates_Function111
-reserve function MovingCrates_Function112
-reserve function MovingCrates_Function113
 
-// Static Values
+reserve function MovingCrates_UpdateCrate1
+reserve function MovingCrates_UpdateCrate2
+reserve function MovingCrates_UpdateCrate3
 
-// Tables
 
-function MovingCrates_DebugDraw
+// ========================
+// Function Definitions
+// ========================
+
+private function MovingCrates_DebugDraw
+	// Only draw the first box
 	DrawSprite(0)
 end function
 
 
-function MovingCrates_DebugSpawn
+private function MovingCrates_DebugSpawn
+	// Spawn a Moving Crates object and init its values for the three crates
 	CreateTempObject(TypeName[Moving Crates], 0, object.xpos, object.ypos)
 	if object.direction == FLIP_NONE
-		object[tempObjectPos].value1 = 0
-		object[tempObjectPos].value2 = 0
-		object[tempObjectPos].value7 = 0x10000
-		object[tempObjectPos].value8 = 0
-		object[tempObjectPos].value3 = 0x400000
-		object[tempObjectPos].value4 = 0x400000
-		object[tempObjectPos].value9 = -0x10000
-		object[tempObjectPos].value10 = 0
-		object[tempObjectPos].value5 = -0x400000
-		object[tempObjectPos].value6 = 0x400000
-		object[tempObjectPos].value11 = 0
-		object[tempObjectPos].value12 = -0x10000
-		object[tempObjectPos].value15 = 0
-		object[tempObjectPos].value16 = 2
-		object[tempObjectPos].value17 = 3
+		// Clockwise rotating version
+		object[tempObjectPos].box1.x    =  0x000000
+		object[tempObjectPos].box1.y    =  0x000000
+		object[tempObjectPos].box1.xvel =  0x10000
+		object[tempObjectPos].box1.yvel =  0x00000
+
+		object[tempObjectPos].box2.x    =  0x400000
+		object[tempObjectPos].box2.y    =  0x400000
+		object[tempObjectPos].box2.xvel = -0x10000
+		object[tempObjectPos].box2.yvel =  0x00000
+
+		object[tempObjectPos].box3.x    = -0x400000
+		object[tempObjectPos].box3.y    =  0x400000
+		object[tempObjectPos].box3.xvel =  0x00000
+		object[tempObjectPos].box3.yvel = -0x10000
+
+		object[tempObjectPos].box1.state = MOVINGCRATE_CW_RIGHT
+		object[tempObjectPos].box2.state = MOVINGCRATE_CW_LEFT
+		object[tempObjectPos].box3.state = MOVINGCRATE_CW_UP
 	else
-		object[tempObjectPos].value1 = 0
-		object[tempObjectPos].value2 = 0
-		object[tempObjectPos].value7 = -0x10000
-		object[tempObjectPos].value8 = 0
-		object[tempObjectPos].value3 = 0x400000
-		object[tempObjectPos].value4 = 0x400000
-		object[tempObjectPos].value9 = 0
-		object[tempObjectPos].value10 = -0x10000
-		object[tempObjectPos].value5 = -0x400000
-		object[tempObjectPos].value6 = 0x400000
-		object[tempObjectPos].value11 = 0x10000
-		object[tempObjectPos].value12 = 0
-		object[tempObjectPos].value15 = 4
-		object[tempObjectPos].value16 = 7
-		object[tempObjectPos].value17 = 6
+		// Counter-clockwise rotating version
+		object[tempObjectPos].box1.x    =  0x000000
+		object[tempObjectPos].box1.y    =  0x000000
+		object[tempObjectPos].box1.xvel = -0x10000
+		object[tempObjectPos].box1.yvel =  0x00000
+
+		object[tempObjectPos].box2.x    =  0x400000
+		object[tempObjectPos].box2.y    =  0x400000
+		object[tempObjectPos].box2.xvel =  0x00000
+		object[tempObjectPos].box2.yvel = -0x10000
+
+		object[tempObjectPos].box3.x    = -0x400000
+		object[tempObjectPos].box3.y    =  0x400000
+		object[tempObjectPos].box3.xvel =  0x10000
+		object[tempObjectPos].box3.yvel =  0x00000
+
+		object[tempObjectPos].box1.state = MOVINGCRATE_CCW_LEFT
+		object[tempObjectPos].box2.state = MOVINGCRATE_CCW_UP
+		object[tempObjectPos].box3.state = MOVINGCRATE_CCW_RIGHT
 	end if
 end function
 
 
-function MovingCrates_Function111
+private function MovingCrates_UpdateCrate1
 	temp0 = object.xpos
 	temp1 = object.ypos
-	object.xpos += object.value1
-	object.ypos += object.value2
+	object.xpos += object.box1.x
+	object.ypos += object.box1.y
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_BOX, object.entityPos, -32, -32, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		BoxCollisionTest(C_SOLID, object.entityPos, -32, -32, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 		switch checkResult
-		case 1
-			object[currentPlayer].xpos += object.value7
-			object[currentPlayer].ypos += object.value8
+		case COL_TOP
+			player[currentPlayer].xpos += object.box1.xvel
+			player[currentPlayer].ypos += object.box1.yvel
 			break
-		case 2
-		case 3
-			if object[currentPlayer].state == PlayerObject_KnuxWallClimb
-				object[currentPlayer].value1 = 0
-				object[currentPlayer].animation = ANI_GLIDING_DROP
-				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+
+		case COL_LEFT
+		case COL_RIGHT
+			// If the player attempts to climb on these, block them from doing so and make them drop off
+			if player[currentPlayer].state == Player_State_Climb
+				player[currentPlayer].timer = 0
+				player[currentPlayer].animation = ANI_GLIDING_DROP
+				player[currentPlayer].state = Player_State_GlideDrop
 			end if
 			break
-		case 4
-			if object[currentPlayer].gravity == GRAVITY_GROUND
-				if object.value8 > 0
-					object.value18++
-					if object.value18 > 9
-						CallFunction(PlayerObject_Kill)
+
+		case COL_BOTTOM
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				if object.box1.yvel > 0
+					object.box1.crushTimer++
+					if object.box1.crushTimer > 9
+						CallFunction(Player_Kill)
 					end if
 				end if
 			end if
 			break
+
 		end switch
 	next
+
 	object.xpos = temp0
 	object.ypos = temp1
-	object.value1 += object.value7
-	object.value2 += object.value8
-	switch object.value15
-	case 0
-		if object.value1 >= 0x400000
-			object.value15++
-			object.value1 = 0x400000
-			object.value7 = 0
-			object.value8 = 0x10000
+	object.box1.x += object.box1.xvel
+	object.box1.y += object.box1.yvel
+	switch object.box1.state
+	case MOVINGCRATE_CW_RIGHT
+		if object.box1.x >= 0x400000
+			object.box1.state++
+			object.box1.x = 0x400000
+			object.box1.xvel = 0
+			object.box1.yvel = 0x10000
 		end if
 		break
-	case 1
-		if object.value2 >= 0x400000
-			object.value15++
-			object.value2 = 0x400000
-			object.value7 = -0x10000
-			object.value8 = 0
+
+	case MOVINGCRATE_CW_DOWN
+		if object.box1.y >= 0x400000
+			object.box1.state++
+			object.box1.y = 0x400000
+			object.box1.xvel = -0x10000
+			object.box1.yvel = 0
 		end if
 		break
-	case 2
-		if object.value1 <= -0x400000
-			object.value15++
-			object.value1 = -0x400000
-			object.value7 = 0
-			object.value8 = -0x10000
+
+	case MOVINGCRATE_CW_LEFT
+		if object.box1.x <= -0x400000
+			object.box1.state++
+			object.box1.x = -0x400000
+			object.box1.xvel = 0
+			object.box1.yvel = -0x10000
 		end if
 		break
-	case 3
-		if object.value2 <= 0
-			object.value15 = 0
-			object.value2 = 0
-			object.value7 = 0x10000
-			object.value8 = 0
-			object.value18 = 0
+
+	case MOVINGCRATE_CW_UP
+		if object.box1.y <= 0
+			object.box1.state = MOVINGCRATE_CW_RIGHT
+			object.box1.y = 0
+			object.box1.xvel = 0x10000
+			object.box1.yvel = 0
+			object.box1.crushTimer = 0
 		end if
 		break
-	case 4
-		if object.value1 <= -0x400000
-			object.value15++
-			object.value1 = -0x400000
-			object.value7 = 0
-			object.value8 = 0x10000
+
+	// Counter-clockwise states
+
+	case MOVINGCRATE_CCW_LEFT
+		if object.box1.x <= -0x400000
+			object.box1.state++
+			object.box1.x = -0x400000
+			object.box1.xvel = 0
+			object.box1.yvel = 0x10000
 		end if
 		break
-	case 5
-		if object.value2 >= 0x400000
-			object.value15++
-			object.value2 = 0x400000
-			object.value7 = 0x10000
-			object.value8 = 0
+
+	case MOVINGCRATE_CCW_DOWN
+		if object.box1.y >= 0x400000
+			object.box1.state++
+			object.box1.y = 0x400000
+			object.box1.xvel = 0x10000
+			object.box1.yvel = 0
 		end if
 		break
-	case 6
-		if object.value1 >= 0x400000
-			object.value15++
-			object.value1 = 0x400000
-			object.value7 = 0
-			object.value8 = -0x10000
+
+	case MOVINGCRATE_CCW_RIGHT
+		if object.box1.x >= 0x400000
+			object.box1.state++
+			object.box1.x = 0x400000
+			object.box1.xvel = 0
+			object.box1.yvel = -0x10000
 		end if
 		break
-	case 7
-		if object.value2 <= 0
-			object.value15 = 4
-			object.value2 = 0
-			object.value7 = -0x10000
-			object.value8 = 0
-			object.value18 = 0
+
+	case MOVINGCRATE_CCW_UP
+		if object.box1.y <= 0
+			object.box1.state = MOVINGCRATE_CCW_LEFT
+			object.box1.y = 0
+			object.box1.xvel = -0x10000
+			object.box1.yvel = 0
+			object.box1.crushTimer = 0
 		end if
 		break
+
 	end switch
 end function
 
 
-function MovingCrates_Function112
+private function MovingCrates_UpdateCrate2
 	temp0 = object.xpos
 	temp1 = object.ypos
-	object.xpos += object.value3
-	object.ypos += object.value4
+	object.xpos += object.box2.x
+	object.ypos += object.box2.y
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_BOX, object.entityPos, -32, -32, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		BoxCollisionTest(C_SOLID, object.entityPos, -32, -32, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 		switch checkResult
-		case 1
-			object[currentPlayer].xpos += object.value9
-			object[currentPlayer].ypos += object.value10
+		case COL_TOP
+			player[currentPlayer].xpos += object.box2.xvel
+			player[currentPlayer].ypos += object.box2.yvel
 			break
-		case 2
-		case 3
-			if object[currentPlayer].state == PlayerObject_KnuxWallClimb
-				object[currentPlayer].value1 = 0
-				object[currentPlayer].animation = ANI_GLIDING_DROP
-				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+
+		case COL_LEFT
+		case COL_RIGHT
+			// If the player attempts to climb on these, block them from doing so and make them drop off
+			if player[currentPlayer].state == Player_State_Climb
+				player[currentPlayer].timer = 0
+				player[currentPlayer].animation = ANI_GLIDING_DROP
+				player[currentPlayer].state = Player_State_GlideDrop
 			end if
 			break
-		case 4
-			if object[currentPlayer].gravity == GRAVITY_GROUND
-				if object.value10 > 0
-					object.value19++
-					if object.value19 > 9
-						CallFunction(PlayerObject_Kill)
+
+		case COL_BOTTOM
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				if object.box2.yvel > 0
+					object.box2.crushTimer++
+					if object.box2.crushTimer > 9
+						CallFunction(Player_Kill)
 					end if
 				end if
 			end if
 			break
+
 		end switch
 	next
+
 	object.xpos = temp0
 	object.ypos = temp1
-	object.value3 += object.value9
-	object.value4 += object.value10
-	switch object.value16
-	case 0
-		if object.value3 >= 0x400000
-			object.value16++
-			object.value3 = 0x400000
-			object.value9 = 0
-			object.value10 = 0x10000
+	object.box2.x += object.box2.xvel
+	object.box2.y += object.box2.yvel
+	switch object.box2.state
+	case MOVINGCRATE_CW_RIGHT
+		if object.box2.x >= 0x400000
+			object.box2.state++
+			object.box2.x = 0x400000
+			object.box2.xvel = 0
+			object.box2.yvel = 0x10000
 		end if
 		break
-	case 1
-		if object.value4 >= 0x400000
-			object.value16++
-			object.value4 = 0x400000
-			object.value9 = -0x10000
-			object.value10 = 0
+
+	case MOVINGCRATE_CW_DOWN
+		if object.box2.y >= 0x400000
+			object.box2.state++
+			object.box2.y = 0x400000
+			object.box2.xvel = -0x10000
+			object.box2.yvel = 0
 		end if
 		break
-	case 2
-		if object.value3 <= -0x400000
-			object.value16++
-			object.value3 = -0x400000
-			object.value9 = 0
-			object.value10 = -0x10000
+
+	case MOVINGCRATE_CW_LEFT
+		if object.box2.x <= -0x400000
+			object.box2.state++
+			object.box2.x = -0x400000
+			object.box2.xvel = 0
+			object.box2.yvel = -0x10000
 		end if
 		break
-	case 3
-		if object.value4 <= 0
-			object.value16 = 0
-			object.value4 = 0
-			object.value9 = 0x10000
-			object.value10 = 0
-			object.value19 = 0
+
+	case MOVINGCRATE_CW_UP
+		if object.box2.y <= 0
+			object.box2.state = MOVINGCRATE_CW_RIGHT
+			object.box2.y = 0
+			object.box2.xvel = 0x10000
+			object.box2.yvel = 0
+			object.box2.crushTimer = 0
 		end if
 		break
-	case 4
-		if object.value3 <= -0x400000
-			object.value16++
-			object.value3 = -0x400000
-			object.value9 = 0
-			object.value10 = 0x10000
+
+	// Counter-clockwise states
+
+	case MOVINGCRATE_CCW_LEFT
+		if object.box2.x <= -0x400000
+			object.box2.state++
+			object.box2.x = -0x400000
+			object.box2.xvel = 0
+			object.box2.yvel = 0x10000
 		end if
 		break
-	case 5
-		if object.value4 >= 0x400000
-			object.value16++
-			object.value4 = 0x400000
-			object.value9 = 0x10000
-			object.value10 = 0
+
+	case MOVINGCRATE_CCW_DOWN
+		if object.box2.y >= 0x400000
+			object.box2.state++
+			object.box2.y = 0x400000
+			object.box2.xvel = 0x10000
+			object.box2.yvel = 0
 		end if
 		break
-	case 6
-		if object.value3 >= 0x400000
-			object.value16++
-			object.value3 = 0x400000
-			object.value9 = 0
-			object.value10 = -0x10000
+
+	case MOVINGCRATE_CCW_RIGHT
+		if object.box2.x >= 0x400000
+			object.box2.state++
+			object.box2.x = 0x400000
+			object.box2.xvel = 0
+			object.box2.yvel = -0x10000
 		end if
 		break
-	case 7
-		if object.value4 <= 0
-			object.value16 = 4
-			object.value4 = 0
-			object.value9 = -0x10000
-			object.value10 = 0
-			object.value19 = 0
+
+	case MOVINGCRATE_CCW_UP
+		if object.box2.y <= 0
+			object.box2.state = MOVINGCRATE_CCW_LEFT
+			object.box2.y = 0
+			object.box2.xvel = -0x10000
+			object.box2.yvel = 0
+			object.box2.crushTimer = 0
 		end if
 		break
+
 	end switch
 end function
 
 
-function MovingCrates_Function113
+private function MovingCrates_UpdateCrate3
 	temp0 = object.xpos
 	temp1 = object.ypos
-	object.xpos += object.value5
-	object.ypos += object.value6
+	object.xpos += object.box3.x
+	object.ypos += object.box3.y
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_BOX, object.entityPos, -32, -32, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		BoxCollisionTest(C_SOLID, object.entityPos, -32, -32, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 		switch checkResult
-		case 1
-			object[currentPlayer].xpos += object.value11
-			object[currentPlayer].ypos += object.value12
+		case COL_TOP
+			player[currentPlayer].xpos += object.box3.xvel
+			player[currentPlayer].ypos += object.box3.yvel
 			break
-		case 2
-		case 3
-			if object[currentPlayer].state == PlayerObject_KnuxWallClimb
-				object[currentPlayer].value1 = 0
-				object[currentPlayer].animation = ANI_GLIDING_DROP
-				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+
+		case COL_LEFT
+		case COL_RIGHT
+			// If the player attempts to climb on these, block them from doing so and make them drop off
+			if player[currentPlayer].state == Player_State_Climb
+				player[currentPlayer].timer = 0
+				player[currentPlayer].animation = ANI_GLIDING_DROP
+				player[currentPlayer].state = Player_State_GlideDrop
 			end if
 			break
-		case 4
-			if object[currentPlayer].gravity == GRAVITY_GROUND
-				if object.value12 > 0
-					object.value20++
-					if object.value20 > 9
-						CallFunction(PlayerObject_Kill)
+
+		case COL_BOTTOM
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				if object.box3.yvel > 0
+					object.box3.crushTimer++
+					if object.box3.crushTimer > 9
+						CallFunction(Player_Kill)
 					end if
 				end if
 			end if
 			break
+
 		end switch
 	next
+
 	object.xpos = temp0
 	object.ypos = temp1
-	object.value5 += object.value11
-	object.value6 += object.value12
-	switch object.value17
-	case 0
-		if object.value5 >= 0x400000
-			object.value17++
-			object.value5 = 0x400000
-			object.value11 = 0
-			object.value12 = 0x10000
+	object.box3.x += object.box3.xvel
+	object.box3.y += object.box3.yvel
+	switch object.box3.state
+	case MOVINGCRATE_CW_RIGHT
+		if object.box3.x >= 0x400000
+			object.box3.state++
+			object.box3.x = 0x400000
+			object.box3.xvel = 0
+			object.box3.yvel = 0x10000
 		end if
 		break
-	case 1
-		if object.value6 >= 0x400000
-			object.value17++
-			object.value6 = 0x400000
-			object.value11 = -0x10000
-			object.value12 = 0
+
+	case MOVINGCRATE_CW_DOWN
+		if object.box3.y >= 0x400000
+			object.box3.state++
+			object.box3.y = 0x400000
+			object.box3.xvel = -0x10000
+			object.box3.yvel = 0
 		end if
 		break
-	case 2
-		if object.value5 <= -0x400000
-			object.value17++
-			object.value5 = -0x400000
-			object.value11 = 0
-			object.value12 = -0x10000
+
+	case MOVINGCRATE_CW_LEFT
+		if object.box3.x <= -0x400000
+			object.box3.state++
+			object.box3.x = -0x400000
+			object.box3.xvel = 0
+			object.box3.yvel = -0x10000
 		end if
 		break
-	case 3
-		if object.value6 <= 0
-			object.value17 = 0
-			object.value6 = 0
-			object.value11 = 0x10000
-			object.value12 = 0
-			object.value20 = 0
+
+	case MOVINGCRATE_CW_UP
+		if object.box3.y <= 0
+			object.box3.state = MOVINGCRATE_CW_RIGHT
+			object.box3.y = 0
+			object.box3.xvel = 0x10000
+			object.box3.yvel = 0
+			object.box3.crushTimer = 0
 		end if
 		break
-	case 4
-		if object.value5 <= -0x400000
-			object.value17++
-			object.value5 = -0x400000
-			object.value11 = 0
-			object.value12 = 0x10000
+
+	// Counter-clockwise states
+
+	case MOVINGCRATE_CCW_LEFT
+		if object.box3.x <= -0x400000
+			object.box3.state++
+			object.box3.x = -0x400000
+			object.box3.xvel = 0
+			object.box3.yvel = 0x10000
 		end if
 		break
-	case 5
-		if object.value6 >= 0x400000
-			object.value17++
-			object.value6 = 0x400000
-			object.value11 = 0x10000
-			object.value12 = 0
+
+	case MOVINGCRATE_CCW_DOWN
+		if object.box3.y >= 0x400000
+			object.box3.state++
+			object.box3.y = 0x400000
+			object.box3.xvel = 0x10000
+			object.box3.yvel = 0
 		end if
 		break
-	case 6
-		if object.value5 >= 0x400000
-			object.value17++
-			object.value5 = 0x400000
-			object.value11 = 0
-			object.value12 = -0x10000
+
+	case MOVINGCRATE_CCW_RIGHT
+		if object.box3.x >= 0x400000
+			object.box3.state++
+			object.box3.x = 0x400000
+			object.box3.xvel = 0
+			object.box3.yvel = -0x10000
 		end if
 		break
-	case 7
-		if object.value6 <= 0
-			object.value17 = 4
-			object.value6 = 0
-			object.value11 = -0x10000
-			object.value12 = 0
-			object.value20 = 0
+
+	case MOVINGCRATE_CCW_UP
+		if object.box3.y <= 0
+			object.box3.state = MOVINGCRATE_CCW_LEFT
+			object.box3.y = 0
+			object.box3.xvel = -0x10000
+			object.box3.yvel = 0
+			object.box3.crushTimer = 0
 		end if
 		break
+
 	end switch
 end function
 
 
-event ObjectMain
-	CallFunction(MovingCrates_Function111)
-	CallFunction(MovingCrates_Function112)
-	CallFunction(MovingCrates_Function113)
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Update the three crates individually
+	// These are all the same function, just using different variables
+	// If it existed at the time Get/SetObjectValue could've been used in a cool way here, but alas Sonic 2 was created in a pre-GetObjectValue world
+	CallFunction(MovingCrates_UpdateCrate1)
+	CallFunction(MovingCrates_UpdateCrate2)
+	CallFunction(MovingCrates_UpdateCrate3)
 end event
 
 
 event ObjectDraw
+	// Draw box 1
 	temp0 = object.xpos
 	temp1 = object.ypos
-	temp0 += object.value1
-	temp1 += object.value2
+	temp0 += object.box1.x
+	temp1 += object.box1.y
 	DrawSpriteXY(0, temp0, temp1)
+
+	// Then box 2
 	temp0 = object.xpos
 	temp1 = object.ypos
-	temp0 += object.value3
-	temp1 += object.value4
+	temp0 += object.box2.x
+	temp1 += object.box2.y
 	DrawSpriteXY(0, temp0, temp1)
+
+	// And finally, box 3
 	temp0 = object.xpos
 	temp1 = object.ypos
-	temp0 += object.value5
-	temp1 += object.value6
+	temp0 += object.box3.x
+	temp1 += object.box3.y
 	DrawSpriteXY(0, temp0, temp1)
 end event
 
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone06")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("MCZ/Objects.gif")
 		SpriteFrame(-32, -32, 64, 64, 136, 1)
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-32, -32, 64, 64, 797, 697)
 	end if
+
+	// Initialise all Moving Crates
 	foreach (TypeName[Moving Crates], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue == 0
-			object[arrayPos0].value1 = 0
-			object[arrayPos0].value2 = 0
-			object[arrayPos0].value7 = 0x10000
-			object[arrayPos0].value8 = 0
-			object[arrayPos0].value3 = 0x400000
-			object[arrayPos0].value4 = 0x400000
-			object[arrayPos0].value9 = -0x10000
-			object[arrayPos0].value10 = 0
-			object[arrayPos0].value5 = -0x400000
-			object[arrayPos0].value6 = 0x400000
-			object[arrayPos0].value11 = 0
-			object[arrayPos0].value12 = -0x10000
-			object[arrayPos0].value15 = 0
-			object[arrayPos0].value16 = 2
-			object[arrayPos0].value17 = 3
+			// Clockwise rotating version
+			
+			object[arrayPos0].box1.x    =  0x000000
+			object[arrayPos0].box1.y    =  0x000000
+			object[arrayPos0].box1.xvel =  0x10000
+			object[arrayPos0].box1.yvel =  0x00000
+
+			object[arrayPos0].box2.x    =  0x400000
+			object[arrayPos0].box2.y    =  0x400000
+			object[arrayPos0].box2.xvel = -0x10000
+			object[arrayPos0].box2.yvel =  0x00000
+
+			object[arrayPos0].box3.x    = -0x400000
+			object[arrayPos0].box3.y    =  0x400000
+			object[arrayPos0].box3.xvel =  0x00000
+			object[arrayPos0].box3.yvel = -0x10000
+
+			object[arrayPos0].box1.state = MOVINGCRATE_CW_RIGHT
+			object[arrayPos0].box2.state = MOVINGCRATE_CW_LEFT
+			object[arrayPos0].box3.state = MOVINGCRATE_CW_UP
 		else
-			object[arrayPos0].value1 = 0
-			object[arrayPos0].value2 = 0
-			object[arrayPos0].value7 = -0x10000
-			object[arrayPos0].value8 = 0
-			object[arrayPos0].value3 = 0x400000
-			object[arrayPos0].value4 = 0x400000
-			object[arrayPos0].value9 = 0
-			object[arrayPos0].value10 = -0x10000
-			object[arrayPos0].value5 = -0x400000
-			object[arrayPos0].value6 = 0x400000
-			object[arrayPos0].value11 = 0x10000
-			object[arrayPos0].value12 = 0
-			object[arrayPos0].value15 = 4
-			object[arrayPos0].value16 = 7
-			object[arrayPos0].value17 = 6
+			// Counter-clockwise rotating version
+			
+			object[arrayPos0].box1.x    =  0x000000
+			object[arrayPos0].box1.y    =  0x000000
+			object[arrayPos0].box1.xvel = -0x10000
+			object[arrayPos0].box1.yvel =  0x00000
+
+			object[arrayPos0].box2.x    =  0x400000
+			object[arrayPos0].box2.y    =  0x400000
+			object[arrayPos0].box2.xvel =  0x00000
+			object[arrayPos0].box2.yvel = -0x10000
+
+			object[arrayPos0].box3.x    = -0x400000
+			object[arrayPos0].box3.y    =  0x400000
+			object[arrayPos0].box3.xvel =  0x10000
+			object[arrayPos0].box3.yvel =  0x00000
+
+			object[arrayPos0].box1.state = MOVINGCRATE_CCW_LEFT
+			object[arrayPos0].box2.state = MOVINGCRATE_CCW_UP
+			object[arrayPos0].box3.state = MOVINGCRATE_CCW_RIGHT
 		end if
 	next
+
 	SetTableValue(TypeName[Moving Crates], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(MovingCrates_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(MovingCrates_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
-event RSDKDraw
-	DrawSprite(0)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // rotateDir
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // rotateDir
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
 end event
 
+
+event RSDKDraw
+	// Draw box 1
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp0 += 0x000000 // object.box1.x
+	temp1 += 0x000000 // object.box1.y
+	DrawSpriteXY(0, temp0, temp1)
+
+	// Then box 2
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp0 += 0x400000 // object.box2.x
+	temp1 += 0x400000 // object.box2.y
+	DrawSpriteXY(0, temp0, temp1)
+
+	// And finally, box 3
+	temp0 = object.xpos
+	temp1 = object.ypos
+	temp0 -= 0x400000 // object.box3.x
+	temp1 += 0x400000 // object.box3.y
+	DrawSpriteXY(0, temp0, temp1)
+
+	if editor.showGizmos == true
+		// Draw arrows to show movement direction
+		if object.propertyValue == 0
+			// Clockwise
+			temp0 = object.xpos
+			temp1 = object.ypos
+			temp0 += 0x000000 // object.box1.x
+			temp1 += 0x000000 // object.box1.y
+			temp2 = temp0
+			temp2 += 0x400000 // To the right
+			DrawArrow(temp0, temp1, temp2, temp1, 0xFF, 0xFF, 0xFF)
+			
+			temp0 = object.xpos
+			temp1 = object.ypos
+			temp0 += 0x400000 // object.box2.x
+			temp1 += 0x400000 // object.box2.y
+			temp2 = temp0
+			temp2 -= 0x400000 // To the left
+			DrawArrow(temp0, temp1, temp2, temp1, 0xFF, 0xFF, 0xFF)
+
+			temp0 = object.xpos
+			temp1 = object.ypos
+			temp0 -= 0x400000 // object.box3.x
+			temp1 += 0x400000 // object.box3.y
+			temp2 = temp1
+			temp2 -= 0x400000 // Upwards
+			DrawArrow(temp0, temp1, temp0, temp2, 0xFF, 0xFF, 0xFF)
+			break
+		else
+			// CCW
+			temp0 = object.xpos
+			temp1 = object.ypos
+			temp0 += 0x000000 // object.box1.x
+			temp1 += 0x000000 // object.box1.y
+			temp2 = temp0
+			temp2 -= 0x400000 // To the left
+			DrawArrow(temp0, temp1, temp2, temp1, 0xFF, 0xFF, 0xFF)
+
+			temp0 = object.xpos
+			temp1 = object.ypos
+			temp0 += 0x400000 // object.box2.x
+			temp1 += 0x400000 // object.box2.y
+			temp2 = temp1
+			temp2 -= 0x400000 // Upwards
+			DrawArrow(temp0, temp1, temp0, temp2, 0xFF, 0xFF, 0xFF)
+
+			temp0 = object.xpos
+			temp1 = object.ypos
+			temp0 -= 0x400000 // object.box3.x
+			temp1 += 0x400000 // object.box3.y
+			temp2 = temp0
+			temp2 += 0x400000 // To the right
+			DrawArrow(temp0, temp1, temp2, temp1, 0xFF, 0xFF, 0xFF)
+		end if
+	end if
+end event
+
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == true
+		LoadSpriteSheet("MCZ/Objects.gif")
+		SpriteFrame(-32, -32, 64, 64, 136, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -32, 64, 64, 797, 697)
+	end if
+	
+	AddEditorVariable("rotateDir")
+	SetActiveVariable("rotateDir")
+	AddEnumVariable("Clockwise",          0)
+	AddEnumVariable("Counter-Clockwise",  1)
+	
+	// A few crates have their direction attribute set too, reflecting how it was in the original Sonic 2, 
+	// but that value doesn't matter in this remake
 end event

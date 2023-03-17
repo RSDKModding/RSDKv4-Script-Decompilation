@@ -1,81 +1,110 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Shellcracker Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 43 : TYPE_SHELLCRACKER
+// ========================
 
-// Function declarations
-reserve function Shellcracker_Function103
+private alias object.value0  : object.timer
+private alias object.value1  : object.startPos.x
+private alias object.value2  : object.startPos.y
+private alias object.value3  : object.armLength
+private alias object.value4  : object.canExtendArm
+private alias object.value31 : object.wrapOffset.y
+
+// States
+private alias 0 : SHELLCRACKER_MOVING
+private alias 1 : SHELLCRACKER_PREPAREARMEXTEND
+private alias 2 : SHELLCRACKER_EXTENDARM
+private alias 3 : SHELLCRACKER_ARMEXTENDED
+private alias 4 : SHELLCRACKER_RETRACTARM
+private alias 5 : SHELLCRACKER_ARMDEBRIS
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Shellcracker_Setup
 reserve function Shellcracker_DebugDraw
 reserve function Shellcracker_DebugSpawn
-reserve function Shellcracker_Function106
-reserve function Shellcracker_Function107
+reserve function Shellcracker_CheckPlayerInRange
+reserve function Shellcracker_CheckOffScreen
 
-// Static Values
-
-// Tables
-
-function Shellcracker_Function103
+private function Shellcracker_Setup
 	if object[arrayPos0].propertyValue == 0
-		object[arrayPos0].direction = FLIP_NONE
+		object[arrayPos0].direction = FACING_RIGHT
 		object[arrayPos0].xvel = 0x4000
 	else
-		object[arrayPos0].direction = FLIP_X
+		object[arrayPos0].direction = FACING_LEFT
 		object[arrayPos0].xvel = -0x4000
 	end if
-	object[arrayPos0].frame = 0
-	object[arrayPos0].value0 = 320
-	object[arrayPos0].value3 = 0x140000
-	object[arrayPos0].value4 = 0
-	object[arrayPos0].state = 0
-	object[arrayPos0].priority = PRIORITY_ACTIVE_BOUNDS
+
+	object[arrayPos0].frame 		= 0
+	object[arrayPos0].timer 		= 320
+	object[arrayPos0].armLength		= 0x140000
+	object[arrayPos0].canExtendArm 	= false
+	object[arrayPos0].state 		= SHELLCRACKER_MOVING
+	object[arrayPos0].priority 		= PRIORITY_BOUNDS
 end function
 
 
-function Shellcracker_DebugDraw
+private function Shellcracker_DebugDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
 end function
 
 
-function Shellcracker_DebugSpawn
+private function Shellcracker_DebugSpawn
 	CreateTempObject(TypeName[Shellcracker], object.direction, object.xpos, object.ypos)
+
 	arrayPos0 = object[tempObjectPos].entityPos
-	object[arrayPos0].value1 = object.xpos
-	object[arrayPos0].value2 = object.ypos
-	CallFunction(Shellcracker_Function103)
+	object[arrayPos0].startPos.x = object.xpos
+	object[arrayPos0].startPos.y = object.ypos
+	CallFunction(Shellcracker_Setup)
 end function
 
 
-function Shellcracker_Function106
+private function Shellcracker_CheckPlayerInRange
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		if object.direction == FLIP_NONE
+		if object.direction == 0
 			BoxCollisionTest(C_TOUCH, object.entityPos, 0, -256, 96, 256, currentPlayer, -1, -1, 1, 1)
 		else
 			BoxCollisionTest(C_TOUCH, object.entityPos, -96, -256, 0, 256, currentPlayer, -1, -1, 1, 1)
 		end if
-		if checkResult == 1
-			object.value0 = 0
+
+		if checkResult == true
+			object.timer = 0
 			object.frame = 3
-			object.state = 2
+			object.state = SHELLCRACKER_EXTENDARM
 		end if
 	next
 end function
 
 
-function Shellcracker_Function107
-	if object.outOfBounds == 1
+private function Shellcracker_CheckOffScreen
+	if object.outOfBounds == true
 		temp0 = object.xpos
 		temp1 = object.ypos
-		object.xpos = object.value1
-		object.ypos = object.value2
-		object.ypos += object.value31
-		if object.outOfBounds == 1
+
+		object.xpos = object.startPos.x
+		object.ypos = object.startPos.y
+		object.ypos += object.wrapOffset.y
+		if object.outOfBounds == true
 			arrayPos0 = object.entityPos
-			CallFunction(Shellcracker_Function103)
+			CallFunction(Shellcracker_Setup)
 		else
 			object.xpos = temp0
 			object.ypos = temp1
@@ -84,130 +113,156 @@ function Shellcracker_Function107
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	switch object.state
-	case 0
+	case SHELLCRACKER_MOVING
 		object.priority = PRIORITY_ACTIVE
 		object.xpos += object.xvel
-		object.value0--
-		if object.value0 == 0
-			object.frame = 0
-			object.animationTimer = 0
-			object.value0 = 40
-			object.state = 1
+
+		object.timer--
+		if object.timer == 0
+			object.frame 			= 0
+			object.animationTimer 	= 0
+			object.timer 			= 40
+			object.state 			= SHELLCRACKER_PREPAREARMEXTEND
 		end if
-		ObjectTileGrip(CSIDE_FLOOR, 0, 12, 0)
+
+		ObjectTileGrip(CSIDE_FLOOR, 0, 12, PATH_A)
 		if checkResult == 0
-			object.frame = 0
-			object.animationTimer = 0
+			object.frame 			= 0
+			object.animationTimer 	= 0
 			FlipSign(object.xvel)
-			object.value0 = 60
-			object.state = 1
+			object.timer = 60
+			object.state = SHELLCRACKER_PREPAREARMEXTEND
 		end if
+
 		object.frame = object.animationTimer
 		object.frame >>= 4
 		object.animationTimer++
 		if object.animationTimer >= 48
 			object.animationTimer = 0
 		end if
-		CallFunction(Shellcracker_Function106)
-		if object.state == 2
-			object.value0 = 10
-			object.value4 = 1
-			object.frame = 0
-			object.state = 1
+
+		CallFunction(Shellcracker_CheckPlayerInRange)
+		if object.state == SHELLCRACKER_EXTENDARM
+			object.timer 		= 10
+			object.canExtendArm	= true
+			object.frame 		= 0
+			object.state 		= SHELLCRACKER_PREPAREARMEXTEND
 		end if
-		CallFunction(Shellcracker_Function107)
+
+		CallFunction(Shellcracker_CheckOffScreen)
 		break
-	case 1
-		object.value0--
-		if object.value0 == 0
-			object.value0 = 320
-			object.state = 0
-			if object.value4 == 1
-				object.value4 = 0
-				object.value0 = 0
+
+	case SHELLCRACKER_PREPAREARMEXTEND
+		object.timer--
+		if object.timer == 0
+			object.timer = 320
+			object.state = SHELLCRACKER_MOVING
+			if object.canExtendArm == true
+				object.canExtendArm = false
+				object.timer = 0
 				object.frame = 3
-				object.state = 2
+				object.state = SHELLCRACKER_EXTENDARM
 			else
-				CallFunction(Shellcracker_Function106)
+				CallFunction(Shellcracker_CheckPlayerInRange)
 			end if
 		end if
-		CallFunction(Shellcracker_Function107)
+
+		CallFunction(Shellcracker_CheckOffScreen)
 		break
-	case 2
-		if object.value3 < 0x480000
-			object.value3 += 0x40000
+
+	case SHELLCRACKER_EXTENDARM
+		if object.armLength < 0x480000
+			object.armLength += 0x40000
 		else
-			object.value0 = 8
-			object.state = 3
+			object.timer = 8
+			object.state = SHELLCRACKER_ARMEXTENDED
 		end if
-		CallFunction(Shellcracker_Function107)
+		
+		CallFunction(Shellcracker_CheckOffScreen)
 		break
-	case 3
-		object.value0--
-		if object.value0 == 0
-			object.state = 4
+
+	case SHELLCRACKER_ARMEXTENDED
+		object.timer--
+		if object.timer == 0
+			object.state = SHELLCRACKER_RETRACTARM
 		end if
-		CallFunction(Shellcracker_Function107)
+
+		CallFunction(Shellcracker_CheckOffScreen)
 		break
-	case 4
-		if object.value3 > 0x140000
-			object.value3 -= 0x40000
+
+	case SHELLCRACKER_RETRACTARM
+		if object.armLength > 0x140000
+			object.armLength -= 0x40000
 		else
 			object.frame = 0
-			object.value0 = 40
-			object.state = 1
+			object.timer = 40
+			object.state = SHELLCRACKER_PREPAREARMEXTEND
 		end if
-		CallFunction(Shellcracker_Function107)
+
+		CallFunction(Shellcracker_CheckOffScreen)
 		break
-	case 5
-		arrayPos0 = object.value0
+
+	case SHELLCRACKER_ARMDEBRIS
+		arrayPos0 = object.timer
 		if object[arrayPos0].type == TypeName[Shellcracker]
 			object.type = TypeName[Blank Object]
 		end if
+
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x3800
+
 		temp1 = object.ypos
 		temp1 >>= 16
-		temp1 -= screen.cameraY
+		temp1 -= camera[0].ypos
 		Abs(temp1)
 		temp1 -= 32
 		if temp1 >= screen.ycenter
 			object.type = TypeName[Blank Object]
 		end if
 		break
+		
 	end switch
+
 	temp6 = object.xpos
 	temp7 = object.ypos
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		if object.state < 5
-			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -8, 16, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-			if checkResult == 1
+		if object.state < SHELLCRACKER_ARMDEBRIS
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -8, 16, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+			if checkResult == true
 				CreateTempObject(TypeName[Shellcracker], 0, object.xpos, object.ypos)
-				object[tempObjectPos].value3 = object.value3
+				object[tempObjectPos].armLength	= object.armLength
 				object[tempObjectPos].direction = object.direction
-				object[tempObjectPos].state = 5
-				object[tempObjectPos].value0 = object.entityPos
-				if object.direction == FLIP_NONE
+				object[tempObjectPos].state 	= SHELLCRACKER_ARMDEBRIS
+				object[tempObjectPos].timer 	= object.entityPos
+				if object.direction == 0
 					object[tempObjectPos].xvel = 0x40000
 				else
 					object[tempObjectPos].xvel = -0x40000
 				end if
-				CallFunction(PlayerObject_BadnikBreak)
+
+				CallFunction(Player_BadnikBreak)
 			end if
+
 			if object.type == TypeName[Shellcracker]
-				if object.direction == FLIP_NONE
-					object.xpos += object.value3
+				if object.direction == 0
+					object.xpos += object.armLength
 				else
-					object.xpos -= object.value3
+					object.xpos -= object.armLength
 				end if
 				object.ypos -= 0x80000
-				BoxCollisionTest(C_TOUCH, object.entityPos, -10, -7, 10, 7, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					CallFunction(PlayerObject_Hit)
+
+				BoxCollisionTest(C_TOUCH, object.entityPos, -10, -7, 10, 7, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					CallFunction(Player_Hit)
 				end if
+
 				object.xpos = temp6
 				object.ypos = temp7
 			end if
@@ -217,25 +272,31 @@ end event
 
 
 event ObjectDraw
-	if object.state < 5
+	// Draw The Dude:tm:
+	if object.state < SHELLCRACKER_ARMDEBRIS
 		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
 	end if
-	if object.state >= 2
+
+	if object.state >= SHELLCRACKER_EXTENDARM
 		temp1 = object.ypos
 		temp1 -= 0x20000
-		temp2 = object.value3
+		temp2 = object.armLength
+
+		// Draw Arm
 		temp7 = 0
 		while temp7 < 7
 			temp0 = object.xpos
-			if object.direction == FLIP_NONE
+			if object.direction == 0
 				temp0 -= 0xA0000
 			else
 				temp0 += 0xA0000
 			end if
+
 			if temp2 < 0x180000
 				temp2 = 0x180000
 			end if
-			if object.direction == FLIP_NONE
+
+			if object.direction == 0
 				temp0 += temp2
 			else
 				temp0 -= temp2
@@ -244,11 +305,13 @@ event ObjectDraw
 			temp2 -= 0x80000
 			temp7++
 		loop
+
+		// Draw Shell
 		temp0 = object.xpos
-		if object.direction == FLIP_NONE
-			temp0 += object.value3
+		if object.direction == 0
+			temp0 += object.armLength
 		else
-			temp0 -= object.value3
+			temp0 -= object.armLength
 		end if
 		temp1 = object.ypos
 		temp1 -= 0x80000
@@ -259,28 +322,31 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone09")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("MPZ/Objects.gif")
-		SpriteFrame(-24, -19, 56, 31, 199, 30)
-		SpriteFrame(-24, -19, 56, 31, 199, 62)
-		SpriteFrame(-24, -19, 56, 31, 199, 94)
-		SpriteFrame(-24, -12, 47, 24, 208, 126)
-		SpriteFrame(-4, -4, 8, 8, 190, 53)
-		SpriteFrame(-12, -11, 24, 22, 174, 30)
+		SpriteFrame(-24, -19, 56, 31, 199, 30)	// ShellCracker (Moving) - Frame 1	- #0
+		SpriteFrame(-24, -19, 56, 31, 199, 62)	// ShellCracker (Moving) - Frame 2	- #1
+		SpriteFrame(-24, -19, 56, 31, 199, 94)	// ShellCracker (Moving) - Frame 3	- #2
+		SpriteFrame(-24, -12, 47, 24, 208, 126)	// ShellCracker (Extending Arm)		- #3
+		SpriteFrame(-4, -4, 8, 8, 190, 53)		// Arm Node							- #4
+		SpriteFrame(-12, -11, 24, 22, 174, 30)	// Shell							- #5
 	else
 		LoadSpriteSheet("MBZ/Objects.gif")
-		SpriteFrame(-24, -19, 56, 31, 199, 30)
-		SpriteFrame(-24, -19, 56, 31, 199, 62)
-		SpriteFrame(-24, -19, 56, 31, 199, 94)
-		SpriteFrame(-24, -12, 47, 24, 208, 126)
-		SpriteFrame(-4, -4, 8, 8, 190, 53)
-		SpriteFrame(-12, -11, 24, 22, 174, 30)
+		
+		// These frame positions are just copied from MPZ's, they don't look quite right with MBZ
+		SpriteFrame(-24, -19, 56, 31, 199, 30)	// ShellCracker (Moving) - Frame 1	- #0
+		SpriteFrame(-24, -19, 56, 31, 199, 62)	// ShellCracker (Moving) - Frame 2	- #1
+		SpriteFrame(-24, -19, 56, 31, 199, 94)	// ShellCracker (Moving) - Frame 3	- #2
+		SpriteFrame(-24, -12, 47, 24, 208, 126)	// ShellCracker (Extending Arm)		- #3
+		SpriteFrame(-4, -4, 8, 8, 190, 53)		// Arm Node							- #4
+		SpriteFrame(-12, -11, 24, 22, 174, 30)	// Shell							- #5
 	end if
+
 	foreach (TypeName[Shellcracker], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].xpos
-		object[arrayPos0].value2 = object[arrayPos0].ypos
+		object[arrayPos0].startPos.x = object[arrayPos0].xpos
+		object[arrayPos0].startPos.y = object[arrayPos0].ypos
 		object[arrayPos0].propertyValue ^= 1
-		CallFunction(Shellcracker_Function103)
+		CallFunction(Shellcracker_Setup)
 	next
 	SetTableValue(TypeName[Shellcracker], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(Shellcracker_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -288,11 +354,58 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
-event RSDKDraw
-	DrawSprite(0)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // direction
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // direction
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
 end event
 
+
+event RSDKDraw
+	object.direction = object.propertyValue
+	object.direction ^= 1
+
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone09")
+	if checkResult == true
+		LoadSpriteSheet("MPZ/Objects.gif")
+		SpriteFrame(-24, -19, 56, 31, 199, 30)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-24, -19, 56, 31, 132, 377) // Decomp note - using fixed frame here
+	end if
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
 end event

@@ -1,28 +1,28 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: MechaSonicSpike Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
-// Aliases
-private alias 44 : TYPE_MECHASONICSPIKE
+// ========================
+// Events
+// ========================
 
-
-// Static Values
-
-// Tables
-
-event ObjectMain
+event ObjectUpdate
 	object.xpos += object.xvel
 	object.ypos += object.yvel
-	if object.outOfBounds == 1
+
+	if object.outOfBounds == true
+		// Unload if out of bounds
 		object.type = TypeName[Blank Object]
 	end if
+
+	// Check collision with players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			CallFunction(PlayerObject_Hit)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_Hit)
 		end if
 	next
 end event
@@ -34,22 +34,40 @@ end event
 
 
 event ObjectStartup
+	// Interestingly, even though the correct sprites are present on the sheet, this object forgoes using the MBZ sprites even when in MBZ
 	LoadSpriteSheet("DEZ/Objects.gif")
-	SpriteFrame(-4, -8, 7, 16, 296, 50)
-	SpriteFrame(-5, -5, 13, 13, 304, 50)
-	SpriteFrame(-8, -3, 16, 7, 318, 50)
-	SpriteFrame(-5, -8, 13, 13, 335, 50)
-	SpriteFrame(-4, -8, 7, 16, 349, 50)
-	SpriteFrame(-8, -8, 13, 13, 357, 50)
-	SpriteFrame(-8, -3, 16, 7, 371, 50)
-	SpriteFrame(-8, -5, 13, 13, 388, 50)
+
+	SpriteFrame(-4, -8, 7, 16, 296, 50)  // Pointing up
+	SpriteFrame(-5, -5, 13, 13, 304, 50) // Upwards-left
+	SpriteFrame(-8, -3, 16, 7, 318, 50)  // Left
+	SpriteFrame(-5, -8, 13, 13, 335, 50) // Down-left
+	SpriteFrame(-4, -8, 7, 16, 349, 50)  // Down
+	SpriteFrame(-8, -8, 13, 13, 357, 50) // Down-right
+	SpriteFrame(-8, -3, 16, 7, 371, 50)  // Right
+	SpriteFrame(-8, -5, 13, 13, 388, 50) // Up-right
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone12")
+	if checkResult == true
+		LoadSpriteSheet("DEZ/Objects.gif")
+		SpriteFrame(-4, -8, 7, 16, 296, 50)
+	else
+		// Decomp note - may as well, y'know?
+		// Who knows, it might even help initial editor load times a tad bit
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-4, -8, 7, 16, 808, 50)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

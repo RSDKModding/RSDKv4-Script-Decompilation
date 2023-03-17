@@ -1,32 +1,39 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: DER Foot Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 51 : TYPE_DERFOOT
+// ========================
+
+private alias 1 : BODYPART_DESTROYED
+private alias 2 : BODYPART_ACTIVE
 
 
-// Static Values
+// ========================
+// Events
+// ========================
 
-// Tables
-
-event ObjectMain
-	if object.state == 1
+event ObjectUpdate
+	if object.state == BODYPART_DESTROYED
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x3800
-		if object.outOfBounds == 1
+
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
 	end if
-	if object.state == 2
+	
+	if object.state == BODYPART_ACTIVE
+		// Check for collision against players
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				CallFunction(PlayerObject_Hit)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_Hit)
 			end if
 		next
 	end if
@@ -40,7 +47,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone12")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("DEZ/Objects.gif")
 		SpriteFrame(-32, -28, 64, 60, 291, 88)
 	else
@@ -49,11 +56,25 @@ event ObjectStartup
 	end if
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone12")
+	if checkResult == true
+		LoadSpriteSheet("DEZ/Objects.gif")
+		SpriteFrame(-32, -28, 64, 60, 291, 88)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-32, -28, 64, 60, 803, 88)
+	end if
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

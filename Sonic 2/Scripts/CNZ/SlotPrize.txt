@@ -1,82 +1,128 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Slot Prize Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 63 : TYPE_SLOTPRIZE
+// ========================
 
+private alias object.value0 : object.originPos.x
+private alias object.value1 : object.originPos.y
+private alias object.value2 : object.timer
 
+// States
+private alias 0 : SLOTPRIZE_WINNER
+private alias 1 : SLOTPRIZE_LOSER
+
+// Player Aliases
+private alias object.value0  : player.rings
+private alias object.value16 : player.isSidekick
+
+// Game Modes
+private alias 2 : MODE_TIMEATTACK
+
+// Music Events
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+private alias  2 : MUSICEVENT_TRANSITION
+
+// ========================
 // Static Values
-public value SlotPrize_value41 = 0;
+// ========================
 
-// Tables
+private value SlotPrize_SpikeSfxTimer = 0
 
-event ObjectMain
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	temp0 = object.xpos
-	temp0 -= object.value0
+	temp0 -= object.originPos.x
 	temp0 >>= 4
 	object.xpos -= temp0
+
 	temp0 = object.ypos
-	temp0 -= object.value1
+	temp0 -= object.originPos.y
 	temp0 >>= 4
 	object.ypos -= temp0
-	if object.alpha < 256
-		object.alpha += 32
+
+	if object.alpha < 0x100
+		object.alpha += 0x20
 	end if
-	if object.state == 0
+
+	if object.state == SLOTPRIZE_WINNER
 		object.frame++
 		object.frame &= 7
 	end if
-	object.value2--
-	if object.value2 == 0
+
+	object.timer--
+	if object.timer == 0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if object[currentPlayer].value16 == 1
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if player[currentPlayer].isSidekick == true
 				if object.type != TypeName[Slot Prize]
-					checkResult = 0
+					checkResult = false
 				end if
 			end if
-			if checkResult == 1
-				if object.state == 0
-					object[currentPlayer].value0++
-					if object[currentPlayer].value0 > 999
-						object[currentPlayer].value0 = 999
+
+			if checkResult == true
+				if object.state == SLOTPRIZE_WINNER
+					player[currentPlayer].rings++
+					if player[currentPlayer].rings > 999
+						player[currentPlayer].rings = 999
 					end if
-					if object[0].value0 >= ringExtraLife
-						if options.gameMode != 2
+
+					if player[0].rings >= ringExtraLife
+						if options.gameMode != MODE_TIMEATTACK
+#platform: USE_STANDALONE
 							player.lives++
-							PlaySfx(SfxName[Life], 0)
+#endplatform
+#platform: USE_ORIGINS
+							if game.coinMode == false
+								player.lives++
+							else
+								CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+							end if
+#endplatform
+							PlaySfx(SfxName[Life], false)
 							PauseMusic()
-							ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
+							ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
 							object[25].priority = PRIORITY_ACTIVE
 						end if
+
 						ringExtraLife += 100
 						if ringExtraLife > 300
 							ringExtraLife = 1000
 						end if
 					end if
+
 					if ringPan == 0
-						PlaySfx(SfxName[Ring L], 0)
+						PlaySfx(SfxName[Ring L], false)
 						SetSfxAttributes(SfxName[Ring L], -1, -100)
 						ringPan = 1
 					else
-						PlaySfx(SfxName[Ring R], 0)
+						PlaySfx(SfxName[Ring R], false)
 						SetSfxAttributes(SfxName[Ring R], -1, 100)
 						ringPan = 0
 					end if
+					
 					ResetObjectEntity(object.entityPos, TypeName[Ring Sparkle], 0, object.xpos, object.ypos)
 				else
-					if object[currentPlayer].value0 > 0
-						object[currentPlayer].value0--
+					if player[currentPlayer].rings > 0
+						player[currentPlayer].rings--
 					end if
-					if SlotPrize_value41 == 0
-						PlaySfx(SfxName[Spike], 0)
+
+					if SlotPrize_SpikeSfxTimer == 0
+						PlaySfx(SfxName[Spike], false)
 					end if
-					SlotPrize_value41++
-					SlotPrize_value41 %= 3
+
+					SlotPrize_SpikeSfxTimer++
+					SlotPrize_SpikeSfxTimer %= 3
 					object.type = TypeName[Blank Object]
 				end if
 			else
@@ -105,14 +151,23 @@ event ObjectStartup
 	SpriteFrame(-8, -8, 16, 16, 110, 358)
 	SpriteFrame(-8, -8, 16, 16, 110, 375)
 	SpriteFrame(-8, -8, 15, 15, 226, 34)
-	SlotPrize_value41 = 0
+
+	SlotPrize_SpikeSfxTimer = 0
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("CNZ/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 110, 256)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

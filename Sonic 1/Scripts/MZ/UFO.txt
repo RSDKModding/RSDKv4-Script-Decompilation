@@ -1,63 +1,84 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: UFO Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 71 : TYPE_UFO
+// ========================
 
-// Function declarations
+// Reserved Object Slot Aliases
+// (The UFO occupies the slot the Title Card is initially in)
+private alias 11 : SLOT_TITLECARD
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function UFO_DebugDraw
 reserve function UFO_DebugSpawn
 
-function UFO_DebugDraw
+
+// ========================
+// Function Definitions
+// ========================
+
+private function UFO_DebugDraw
 	DrawSprite(0)
 end function
 
 
-function UFO_DebugSpawn
+private function UFO_DebugSpawn
+	// Place one... and then clear it?
+	// The actual UFO placing is done below
+	// A fake one is placed because Debug Mode does an operation with tempObjectPos after spawning the object
 	CreateTempObject(TypeName[UFO], 0, object.xpos, object.ypos)
 	object[tempObjectPos].type = TypeName[Blank Object]
 
-	// If the UFO's already exist, clear them
-	if object[11].type == TypeName[UFO]
-		ResetObjectEntity(11, TypeName[Blank Object], 0, 0, 0)
+	// UFOs use reserved object slot 11 (yeah the same slot as the title card) so they can't be placed like a normal object
+	if object[SLOT_TITLECARD].type == TypeName[UFO]
+		// If the UFOs already exist, clear them
+		ResetObjectEntity(SLOT_TITLECARD, TypeName[Blank Object], 0, 0, 0)
 	else
-
 		// If they don't exist, then spawn them
-		ResetObjectEntity(11, TypeName[UFO], 0, 0, 0)
-		object[11].priority = PRIORITY_ACTIVE
-		object[11].drawOrder = 1
-		object[11].inkEffect = INK_ALPHA
-
+		ResetObjectEntity(SLOT_TITLECARD, TypeName[UFO], 0, 0, 0)
+		object[SLOT_TITLECARD].priority = PRIORITY_ACTIVE
+		object[SLOT_TITLECARD].drawOrder = 1 // Place it among the lowest draw order, it's supposed to be drawn as part of the BG
+		object[SLOT_TITLECARD].inkEffect = INK_ALPHA
 	end if
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
+event ObjectUpdate
 	// Animate the UFOs
 	object.frame = object.animationTimer
 	object.frame >>= 3
 
 	object.animationTimer++
 	object.animationTimer &= 63
-
 end event
 
 
 event ObjectDraw
-
 	if screen.yoffset < 640
 		temp0 = screen.xoffset
 		temp0 >>= 3
 		temp0 &= 127
 		FlipSign(temp0)
+		
+		// temp1 is the base pos for the UFOs to draw at
 		temp1 = tileLayer[1].scrollPos
 		temp1 /= -0x10000
 		temp1 += 32
+
+		// First draw the "closer" set of UFOs
 		temp2 = screen.xsize
 		temp2 += 32
 		temp5 = oscillation
@@ -74,6 +95,8 @@ event ObjectDraw
 			DrawSpriteScreenFX(object.frame, FX_INK, temp0, temp4)
 			temp0 += 64
 		loop
+
+		// And then draw the "further" set of UFOs
 		temp0 = screen.xoffset
 		temp0 >>= 4
 		temp0 &= 127
@@ -98,7 +121,6 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("MZ/Objects.gif")
 
 	// UFO frames
@@ -111,18 +133,26 @@ event ObjectStartup
 	SpriteFrame(-16, -12, 32, 25, 156, 247)
 	SpriteFrame(-16, -8, 32, 16, 123, 230)
 
-	// Add the UFO to the syahe's debug object list
+	// Add UFOs to the stage's debug object list
 	SetTableValue(TypeName[UFO], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(UFO_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(UFO_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MZ/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 123, 303)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

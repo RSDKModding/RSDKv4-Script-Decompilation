@@ -1,124 +1,196 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: SLZ Setup Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 39 : TYPE_SLZSETUP
+// ========================
 
-// Function declarations
-reserve function SLZSetup_Function93
-reserve function SLZSetup_Function94
+private alias object.value0 : object.paletteTimer
+private alias object.value1 : object.paletteIndex
+private alias object.value2 : object.scrollPos
 
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 2 : TRACK_INVINCIBLE
+private alias 2 : TRACK_BOSS
+
+// Reserved object slots
+private alias 10 : SLOT_ZONESETUP
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+// Music Events
+private alias 0 : MUSICEVENT_FADETOBOSS
+private alias 1 : MUSICEVENT_FADETOSTAGE
+private alias 2 : MUSICEVENT_TRANSITION
+
+private alias 0 : MUSICEVENT_FLAG_NOCHANGE
+private alias 1 : MUSICEVENT_FLAG_SPEEDUP
+private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+// Music Loops
+private alias 84364 : MUSIC_LOOP_SLZ
+private alias 67640 : MUSIC_LOOP_SLZ_F
+
+private alias 39528 : MUSIC_LOOP_INV
+private alias 30436 : MUSIC_LOOP_INV_F
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SLZSetup_SpeedUpMusic
+reserve function SLZSetup_SlowDownMusic
+
+
+// ========================
 // Static Values
-public value SLZSetup_value29 = 0;
+// ========================
 
+public value SLZSetup_rotateTimer = 0
+
+
+// ========================
 // Tables
-public table SLZSetup_table25
+// ========================
+
+private table SLZSetup_palTable1
 	0x00E0E0, 0x00A0A0, 0x006060, 0x002020, 0x006060, 0x00A0A0
 end table
 
-public table SLZSetup_table26
+
+private table SLZSetup_palTable2
 	0x600000, 0xA00000, 0xE00000, 0xA00000, 0x600000, 0x200000
 end table
 
-public table SLZSetup_table27
+
+private table SLZSetup_palTable3
 	0x606000, 0x202000, 0x606000, 0xA0A000, 0xE0E000, 0xA0A000
 end table
 
-public table SLZSetup_table3
-	0xBB00000, 0x4C0000, 0, 37, 8, 36, 0, 6, 8, 204, 2, 39, 0, 159, 4, 37, 52, 1, 36, 7, 4, 47, 52, 1, 36, 33
+
+private table SLZSetup_replay_credits_STK
+	0xBB00000, 0x4C0000
+	0x00, 37
+	0x08, 36
+	0x00, 6
+	0x08, 204
+	0x02, 39
+	0x00, 159
+	0x04, 37
+	0x34, 1
+	0x24, 7
+	0x04, 47
+	0x34, 1
+	0x24, 33
 end table
 
-function SLZSetup_Function93
-	CheckEqual(object[25].type, TypeName[Music Event])
+
+// ========================
+// Function Definitions
+// ========================
+
+private function SLZSetup_SpeedUpMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
 	if temp0 == 0
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
-			SwapMusicTrack("Starlight_F.ogg", 0, 0x10838, 0x1F40)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
+			SwapMusicTrack("Starlight_F.ogg", TRACK_STAGE, MUSIC_LOOP_SLZ_F, 8000)
 			break
-		case 2
-			SetMusicTrack("Starlight_F.ogg", 0, 0x10838)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 0x76E4, 0x1F40)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("Starlight_F.ogg", TRACK_STAGE, MUSIC_LOOP_SLZ_F)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F, 8000)
 			break
-		case 4
-			SetMusicTrack("Starlight_F.ogg", 0, 0x10838)
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
+
+		case TRACK_BOSS
+			SetMusicTrack("Starlight_F.ogg", TRACK_STAGE, MUSIC_LOOP_SLZ_F)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
 			break
+			
 		end switch
 	else
-		stage.musicFlag = 1
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
 	end if
 end function
 
 
-function SLZSetup_Function94
-	CheckEqual(object[25].type, TypeName[Music Event])
+private function SLZSetup_SlowDownMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
-			SwapMusicTrack("Starlight.ogg", 0, 0x1498C, 0x30D4)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
+			SwapMusicTrack("Starlight.ogg", TRACK_STAGE, MUSIC_LOOP_SLZ, 12500)
 			break
-		case 2
-			SetMusicTrack("Starlight.ogg", 0, 0x1498C)
-			SwapMusicTrack("Invincibility.ogg", 2, 0x9A68, 0x30D4)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("Starlight.ogg", TRACK_STAGE, MUSIC_LOOP_SLZ)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV, 12500)
 			break
-		case 4
-			SetMusicTrack("Starlight.ogg", 0, 0x1498C)
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
+
+		case TRACK_BOSS
+			SetMusicTrack("Starlight.ogg", TRACK_STAGE, MUSIC_LOOP_SLZ)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
 			break
+			
 		end switch
 	else
-		stage.musicFlag = 2
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
 	end if
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
+event ObjectUpdate
 	GetTableValue(temp0, 21, StageSetup_oscillationTable)
-
 	if temp0 == 0
-		SLZSetup_value29++
-		SLZSetup_value29 &= 3
+		SLZSetup_rotateTimer++
+		SLZSetup_rotateTimer &= 3
 	end if
 
-	object.value0++
-	if object.value0 == 8
-		object.value0 = 0
-		object.value1++
-		object.value1 %= 6
-		GetTableValue(temp0, object.value1, SLZSetup_table25)
+	object.paletteTimer++
+	if object.paletteTimer == 8
+		object.paletteTimer = 0
+		object.paletteIndex++
+		object.paletteIndex %= 6
+
+		GetTableValue(temp0, object.paletteIndex, SLZSetup_palTable1)
 		SetPaletteEntry(0, 171, temp0)
-		GetTableValue(temp0, object.value1, SLZSetup_table26)
+		GetTableValue(temp0, object.paletteIndex, SLZSetup_palTable2)
 		SetPaletteEntry(0, 173, temp0)
-		GetTableValue(temp0, object.value1, SLZSetup_table27)
+		GetTableValue(temp0, object.paletteIndex, SLZSetup_palTable3)
 		SetPaletteEntry(0, 174, temp0)
 	end if
-
 end event
 
 
 event ObjectDraw
+	// Draw FG Construction Sprites
 	temp0 = screen.xoffset
 	temp0 <<= 1
 	temp0 &= 511
 	FlipSign(temp0)
-	temp0 += object.value2
+
+	temp0 += object.scrollPos
 	temp1 = screen.yoffset
 	temp1 <<= 1
 	temp1 &= 255
@@ -129,14 +201,13 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("SLZ/Objects.gif")
-
-	SetMusicTrack("Starlight.ogg", 0, 84364)
-	SpeedUpMusic = SLZSetup_Function93
-	SlowDownMusic = SLZSetup_Function94
-
-	// Sprite frames
+	
+	SetMusicTrack("Starlight.ogg", TRACK_STAGE, MUSIC_LOOP_SLZ)
+	SpeedUpMusic = SLZSetup_SpeedUpMusic
+	SlowDownMusic = SLZSetup_SlowDownMusic
+	
+	// Sprite Frames
 	// (Foreground pole)
 	SpriteFrame(-16, 0, 32, 256, 224, 0)
 	SpriteFrame(-16, 256, 32, 256, 224, 0)
@@ -145,29 +216,37 @@ event ObjectStartup
 	animalType1 = TypeName[Flicky]
 	animalType2 = TypeName[Picky]
 
-	object[10].type = TypeName[SLZ Setup]
-	object[10].priority = PRIORITY_ACTIVE
-	object[10].drawOrder = 5
-
-	object[10].value2 = 496
+	object[SLOT_ZONESETUP].type = TypeName[SLZ Setup]
+	object[SLOT_ZONESETUP].priority = PRIORITY_ACTIVE
+	object[SLOT_ZONESETUP].drawOrder = 5
+	object[SLOT_ZONESETUP].scrollPos = 496
+	
 	temp0 = screen.xcenter
 	temp0 >>= 2
-	object[10].value2 -= temp0
+	object[SLOT_ZONESETUP].scrollPos -= temp0
+	SLZSetup_rotateTimer = 0
 
-	SLZSetup_value29 = 0
 	if options.attractMode == true
-		PlayerObject_ReplayTable = SLZSetup_table3
-		PlayerObject_ReplaySize = 26
-		PlayerObject_ReplayLength = 540
-		CallFunction(PlayerObject_InitReplay)
+		Player_attractTable = SLZSetup_replay_credits_STK
+		Player_attractTableSize = 26
+		Player_attractDuration = 540
+		CallFunction(Player_SetupAttractDemo)
 	end if
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -1,112 +1,159 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Breakable Wall Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 51 : TYPE_BREAKABLEWALL
+// ========================
 
-// Function declarations
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.speed : player.speed
+private alias object.direction : player.direction
+private alias object.animation : player.animation
+
+private alias object.value17 : debugMode.currentSelection
+
+private alias 1 : SUPERSTATE_SUPER
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function EditorHelpers_DrawHitboxOutline
 reserve function BreakableWall_DebugDraw
 reserve function BreakableWall_DebugSpawn
 
+
+// ========================
 // Static Values
-public value BreakableWall_value34 = 0;
+// ========================
 
-private alias BreakableWall_value34 : BreakableWall_debugStart
+private value BreakableWall_startDebugID = 0
 
-// Tables
 
-function BreakableWall_DebugDraw
-	temp0 = object[0].value17
-	temp0 -= BreakableWall_debugStart
+// ========================
+// Function Definitions
+// ========================
+
+private function BreakableWall_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= BreakableWall_startDebugID
 	DrawSprite(temp0)
 end function
 
 
-function BreakableWall_DebugSpawn
-	temp0 = object[0].value17
-	temp0 -= BreakableWall_debugStart
+private function BreakableWall_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= BreakableWall_startDebugID
 	CreateTempObject(TypeName[Breakable Wall], temp0, object.xpos, object.ypos)
 	object[tempObjectPos].drawOrder = 4
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	if object.propertyValue > 2
+		// Wall fragment, just fly through the air and unload when possible
+
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x7000
-		if object.outOfBounds == 1
+
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
 	else
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			checkResult = 0
-			if object[currentPlayer].state == PlayerObject_HandleRoll
-				if object[currentPlayer].speed > 0x47FFF
-					checkResult = 1
+			checkResult = false
+
+			if player[currentPlayer].state == Player_State_Roll
+				if player[currentPlayer].speed >= 0x48000
+					checkResult = true
 				end if
-				if object[currentPlayer].speed < -0x47FFF
-					checkResult = 1
+
+				if player[currentPlayer].speed <= -0x48000
+					checkResult = true
 				end if
 			end if
-			if stage.playerListPos == 2
-				checkResult = 1
+
+			if stage.playerListPos == PLAYER_KNUX_ALONE
+				// Knuckles can break all walls, regardless if he's rolling or not
+				// (Though, this implementation results in P2 Tails also being able to break all walls if Knux is P1...)
+				checkResult = true
 			end if
-			if PlayerObject_SuperState == 1
-				checkResult = 1
+
+			if Player_superState == SUPERSTATE_SUPER
+				// Similarly, this also means P2 Tails can break any walls he pleases too...
+				checkResult = true
 			end if
-			if checkResult == 1
-				BoxCollisionTest(C_TOUCH, object.entityPos, -17, -32, 17, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
+
+			if checkResult == true
+				BoxCollisionTest(C_TOUCH, object.entityPos, -17, -32, 17, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
 					object.type = TypeName[Blank Object]
-					PlaySfx(SfxName[Block Break], 0)
+					PlaySfx(SfxName[Block Break], false)
+
 					temp0 = object.propertyValue
 					temp0 <<= 1
 					temp0 += 3
 					temp1 = temp0
 					temp1++
+
 					temp2 = object.xpos
 					temp2 -= 0x80000
 					temp3 = object.xpos
 					temp3 += 0x80000
 					temp4 = object.ypos
 					temp4 -= 0x180000
-					if object[currentPlayer].xpos < object.xpos
+
+					if player[currentPlayer].xpos < object.xpos
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = -0x60000
 						object[tempObjectPos].yvel = -0x60000
 						object[tempObjectPos].drawOrder = 4
+
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = -0x40000
 						object[tempObjectPos].yvel = -0x50000
 						object[tempObjectPos].drawOrder = 4
 						temp4 += 0x100000
+
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = -0x80000
 						object[tempObjectPos].yvel = -0x20000
 						object[tempObjectPos].drawOrder = 4
+
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = -0x60000
 						object[tempObjectPos].yvel = -0x10000
 						object[tempObjectPos].drawOrder = 4
 						temp4 += 0x100000
+
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = -0x80000
 						object[tempObjectPos].yvel = 0x20000
 						object[tempObjectPos].drawOrder = 4
+
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = -0x60000
 						object[tempObjectPos].yvel = 0x10000
 						object[tempObjectPos].drawOrder = 4
 						temp4 += 0x100000
+
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = -0x60000
 						object[tempObjectPos].yvel = 0x60000
 						object[tempObjectPos].drawOrder = 4
+
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = -0x40000
 						object[tempObjectPos].yvel = 0x50000
@@ -116,48 +163,57 @@ event ObjectMain
 						object[tempObjectPos].xvel = 0x40000
 						object[tempObjectPos].yvel = -0x50000
 						object[tempObjectPos].drawOrder = 4
+
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = 0x60000
 						object[tempObjectPos].yvel = -0x60000
 						object[tempObjectPos].drawOrder = 4
 						temp4 += 0x100000
+
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = 0x60000
 						object[tempObjectPos].yvel = -0x10000
 						object[tempObjectPos].drawOrder = 4
+
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = 0x80000
 						object[tempObjectPos].yvel = -0x20000
 						object[tempObjectPos].drawOrder = 4
 						temp4 += 0x100000
+
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = 0x60000
 						object[tempObjectPos].yvel = 0x10000
 						object[tempObjectPos].drawOrder = 4
+						
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = 0x80000
 						object[tempObjectPos].yvel = 0x20000
 						object[tempObjectPos].drawOrder = 4
 						temp4 += 0x100000
+
 						CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp4)
 						object[tempObjectPos].xvel = 0x40000
 						object[tempObjectPos].yvel = 0x50000
 						object[tempObjectPos].drawOrder = 4
+
 						CreateTempObject(TypeName[Breakable Wall], temp1, temp3, temp4)
 						object[tempObjectPos].xvel = 0x60000
 						object[tempObjectPos].yvel = 0x60000
 						object[tempObjectPos].drawOrder = 4
 					end if
-					if object[currentPlayer].animation == ANI_GLIDING
-						object[currentPlayer].animation = ANI_GLIDING_DROP
-						object[currentPlayer].state = PlayerObject_KnuxGlideDrop
-						if object[currentPlayer].direction == FLIP_X
-							FlipSign(object[currentPlayer].speed)
+
+					if player[currentPlayer].animation == ANI_GLIDING
+						// Make Knuckles drop, since he's collided into an unclimbable wall
+						player[currentPlayer].animation = ANI_GLIDING_DROP
+						player[currentPlayer].state = Player_State_GlideDrop
+						if player[currentPlayer].direction == FACING_LEFT
+							FlipSign(player[currentPlayer].speed)
 						end if
 					end if
 				end if
 			else
-				BoxCollisionTest(C_BOX, object.entityPos, -16, -32, 16, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 			end if
 		next
 	end if
@@ -171,20 +227,31 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("GHZ/Objects.gif")
+
 	foreach (TypeName[Breakable Wall], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].drawOrder = 4
 	next
+	
+	// 0 - Left Wall Frame
 	SpriteFrame(-16, -32, 32, 64, 191, 146)
+	
+	// 1 - Middle Wall Frame
 	SpriteFrame(-16, -32, 32, 64, 207, 146)
+	
+	// 2 - Right Wall Frame
 	SpriteFrame(-16, -32, 32, 64, 223, 146)
+	
+	// 3-8 - Wall Fragment Frames
 	SpriteFrame(-8, -8, 16, 16, 191, 146)
 	SpriteFrame(-8, -8, 16, 16, 207, 146)
 	SpriteFrame(-8, -8, 16, 16, 207, 146)
 	SpriteFrame(-8, -8, 16, 16, 223, 146)
 	SpriteFrame(-8, -8, 16, 16, 223, 146)
 	SpriteFrame(-8, -8, 16, 16, 239, 146)
+	
+	// Add the object to the Debug Object List thrice, for every type
 	temp0 = 0
-	BreakableWall_debugStart = DebugMode_ObjCount
+	BreakableWall_startDebugID = DebugMode_ObjCount
 	while temp0 < 3
 		SetTableValue(TypeName[Breakable Wall], DebugMode_ObjCount, DebugMode_TypesTable)
 		SetTableValue(BreakableWall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -194,11 +261,63 @@ event ObjectStartup
 	loop
 end event
 
-event RSDKDraw
-	DrawSprite(0)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
 end event
 
+
+event RSDKDraw
+	DrawSprite(object.propertyValue)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// These objects are made to blend in with the terrain, give them a little outline to make them more distinct
+		
+		temp0 = 16; temp1 = 32; temp2 = 16; temp3 = 32;
+		CallFunction(EditorHelpers_DrawHitbox)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("GHZ/Objects.gif")
+	SpriteFrame(-16, -32, 32, 64, 191, 146)
+	SpriteFrame(-16, -32, 32, 64, 207, 146)
+	SpriteFrame(-16, -32, 32, 64, 223, 146)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Middle", 1)
+	AddEnumVariable("Right", 2)
 end event

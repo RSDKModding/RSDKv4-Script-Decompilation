@@ -1,85 +1,127 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Break Block Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 50 : TYPE_BREAKBLOCK
+// ========================
 
-// Function declarations
+private alias 0 : BREAKBLOCK_SOLID
+private alias 1 : BREAKBLOCK_DEBRIS1
+private alias 2 : BREAKBLOCK_DEBRIS2
+private alias 3 : BREAKBLOCK_DEBRIS3
+private alias 4 : BREAKBLOCK_DEBRIS4
+
+// Player Aliases
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.value16 : player.isSidekick
+private alias object.value19 : player.badnikBonus
+
+// Global Variable ID Aliases
+private alias 22 : GLOBAL_PLAYERSCORE
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function BreakBlock_DebugDraw
 reserve function BreakBlock_DebugSpawn
 
-// Static Values
 
-// Tables
+// ========================
+// Function Definitions
+// ========================
 
-function BreakBlock_DebugDraw
+private function BreakBlock_DebugDraw
 	DrawSprite(0)
 end function
 
 
-function BreakBlock_DebugSpawn
+private function BreakBlock_DebugSpawn
 	CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	switch object.state
-	case 0
+	case BREAKBLOCK_SOLID
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].animation == ANI_JUMPING
-				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					object[currentPlayer].yvel = -0x30000
-					object[currentPlayer].gravity = GRAVITY_AIR
-					CreateTempObject(TypeName[Object Score], object[currentPlayer].value19, object.xpos, object.ypos)
+			if player[currentPlayer].animation == ANI_JUMPING
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == COL_TOP
+					player[currentPlayer].yvel = -0x30000
+					player[currentPlayer].gravity = GRAVITY_AIR
+
+					CreateTempObject(TypeName[Object Score], player[currentPlayer].badnikBonus, object.xpos, object.ypos)
 					object[tempObjectPos].drawOrder = 4
+
+					// Create block fragments
 					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos -= 8
 					object[tempObjectPos].iypos -= 8
 					object[tempObjectPos].xvel = -0x20000
 					object[tempObjectPos].yvel = -0x20000
-					object[tempObjectPos].state = 1
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS1
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos += 8
 					object[tempObjectPos].iypos -= 8
 					object[tempObjectPos].xvel = 0x20000
 					object[tempObjectPos].yvel = -0x20000
-					object[tempObjectPos].state = 2
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS2
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos -= 8
 					object[tempObjectPos].iypos += 8
 					object[tempObjectPos].xvel = -0x10000
 					object[tempObjectPos].yvel = -0x10000
-					object[tempObjectPos].state = 3
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS3
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Block], 0, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos += 8
 					object[tempObjectPos].iypos += 8
 					object[tempObjectPos].xvel = 0x10000
 					object[tempObjectPos].yvel = -0x10000
-					object[tempObjectPos].state = 4
+					object[tempObjectPos].state = BREAKBLOCK_DEBRIS4
 					object[tempObjectPos].drawOrder = 5
+
 					object.type = TypeName[Blank Object]
-					arrayPos0 = 22
-					if object[currentPlayer].value16 == 0
+					
+					// Award some score to the player, uses the global variable "array" (yes, this is actually how its done)
+					arrayPos0 = GLOBAL_PLAYERSCORE
+#platform: USE_DECOMP
+					arrayPos0 = VarName[player.score]
+#endplatform
+					if player[currentPlayer].isSidekick == false
 						arrayPos0 += currentPlayer
 					end if
-					switch object[currentPlayer].value19
+
+					switch player[currentPlayer].badnikBonus
 					case 0
-						player.score += 100
+						global[arrayPos0] += 100
 						break
+
 					case 1
-						player.score += 200
+						global[arrayPos0] += 200
 						break
+
 					case 2
-						player.score += 500
+						global[arrayPos0] += 500
 						break
+
 					case 3
 					case 4
 					case 5
@@ -92,35 +134,41 @@ event ObjectMain
 					case 12
 					case 13
 					case 14
-						player.score += 1000
+						global[arrayPos0] += 1000
 						break
+
 					case 15
-						player.score += 10000
+						global[arrayPos0] += 10000
 						break
 					end switch
-					if object[currentPlayer].gravity == GRAVITY_AIR
-						if object[currentPlayer].value19 < 15
-							object[currentPlayer].value19++
+
+					if player[currentPlayer].gravity == 1
+						if player[currentPlayer].badnikBonus < 15
+							player[currentPlayer].badnikBonus++
 						end if
 					end if
-					PlaySfx(SfxName[Block Break], 0)
+
+					PlaySfx(SfxName[Block Break], false)
 				end if
 			else
-				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 			end if
 		next
 		break
-	case 1
-	case 2
-	case 3
-	case 4
+		
+	case BREAKBLOCK_DEBRIS1
+	case BREAKBLOCK_DEBRIS2
+	case BREAKBLOCK_DEBRIS3
+	case BREAKBLOCK_DEBRIS4
+		// Block fragment - just update movement and unload when no longer needed
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x3800
-		if object.outOfBounds == 1
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
 		break
+
 	end switch
 end event
 
@@ -132,22 +180,41 @@ end event
 
 event ObjectStartup
 	LoadSpriteSheet("CPZ/Objects.gif")
+	
+	// Main Block Frame
 	SpriteFrame(-16, -16, 32, 32, 165, 223)
+	
+	// Top-Left Frame
 	SpriteFrame(-8, -8, 16, 16, 165, 223)
+	
+	// Top-Right Frame
 	SpriteFrame(-8, -8, 16, 16, 181, 223)
+	
+	// Bottom-Left Frame
 	SpriteFrame(-8, -8, 16, 16, 165, 239)
+	
+	// Bottom-Right Frame
 	SpriteFrame(-8, -8, 16, 16, 181, 239)
+
 	SetTableValue(TypeName[Break Block], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(BreakBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(BreakBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("CPZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 165, 223)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

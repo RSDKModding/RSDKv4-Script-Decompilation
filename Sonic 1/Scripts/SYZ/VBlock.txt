@@ -1,28 +1,46 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: V Block Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 53 : TYPE_VBLOCK
+// ========================
 
-// Function declarations
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.ypos : player.ypos
+private alias object.gravity : player.gravity
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function VBlock_DebugDraw
 reserve function VBlock_DebugSpawn
 
+
+// ========================
 // Static Values
-private value value0xF33E = 0;
+// ========================
 
-// Tables
+private value VBlock_unusedValue = 0 // Prolly VBlock_startDebugID if I had to guess
 
-function VBlock_DebugDraw
+
+// ========================
+// Function Definitions
+// ========================
+
+private function VBlock_DebugDraw
 	DrawSprite(0)
 end function
 
 
-function VBlock_DebugSpawn
+private function VBlock_DebugSpawn
 	CreateTempObject(TypeName[V Block], object.direction, object.xpos, object.ypos)
 	if object[tempObjectPos].propertyValue == 1
 		object[tempObjectPos].ypos -= 0x200000
@@ -32,54 +50,67 @@ function VBlock_DebugSpawn
 end function
 
 
-event ObjectMain
-	object.angle = SYZSetup_value29
-	object.angle *= 512
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle = SYZSetup_oscillation
+	object.angle *= 0x200
 	object.angle /= 356
 	if object.propertyValue == 1
-		object.angle += 256
+		object.angle += 0x100
 	end if
-	object.angle &= 511
-	Sin(object.value2, object.angle)
-	object.value2 <<= 12
-	object.value2 += object.ypos
-	object.value2 &= -0x10000
-	object.value2 -= object.value1
+	object.angle &= 0x1FF
+
+	Sin(object.collisionOffset.y, object.angle)
+	object.collisionOffset.y <<= 12
+	object.collisionOffset.y += object.ypos
+	object.collisionOffset.y &= 0xFFFF0000
+	object.collisionOffset.y -= object.drawPos.y
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		temp0 = object.ypos
-		object.ypos = object.value1
-		BoxCollisionTest(C_BOX, object.entityPos, -32, -32, 32, 32, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		object.ypos = object.drawPos.y
+
+		BoxCollisionTest(C_SOLID, object.entityPos, -32, -32, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 		switch checkResult
-		case 1
-			object[currentPlayer].ypos += object.value2
+		case COL_TOP
+			player[currentPlayer].ypos += object.collisionOffset.y
 			break
-		case 4
-			if object[currentPlayer].gravity == GRAVITY_GROUND
+
+		case COL_BOTTOM
+			if player[currentPlayer].gravity == GRAVITY_GROUND
 				if object.angle > 384
-					CallFunction(PlayerObject_Kill)
+					CallFunction(Player_Kill)
 				end if
+
 				if object.angle < 128
-					CallFunction(PlayerObject_Kill)
+					CallFunction(Player_Kill)
 				end if
 			end if
+			break
+			
 		end switch
+
 		object.ypos = temp0
 	next
 end event
 
 
 event ObjectDraw
-	Sin(object.value1, object.angle)
-	object.value1 <<= 12
-	object.value1 += object.ypos
-	object.value1 &= -0x10000
-	DrawSpriteXY(0, object.xpos, object.value1)
+	Sin(object.drawPos.y, object.angle)
+	object.drawPos.y <<= 12
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= 0xFFFF0000
+	DrawSpriteXY(0, object.xpos, object.drawPos.y)
 end event
 
 
 event ObjectStartup
 	LoadSpriteSheet("SYZ/Objects.gif")
 	SpriteFrame(-32, -32, 64, 64, 119, 34)
+
 	foreach (TypeName[V Block], arrayPos0, ALL_ENTITIES)
 		if object[arrayPos0].propertyValue == 1
 			object[arrayPos0].ypos -= 0x200000
@@ -87,17 +118,71 @@ event ObjectStartup
 			object[arrayPos0].ypos -= 0x1F0000
 		end if
 	next
+
 	SetTableValue(TypeName[V Block], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(VBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(VBlock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
-event RSDKDraw
-	DrawSprite(0)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		case 0 // startDir
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		end switch
+	end if
 end event
 
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw this object's range of movement
+		temp0 = -0x200000
+		temp0 += object.ypos
+		DrawLine(object.xpos, object.ypos, object.xpos, temp0, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("SYZ/Objects.gif")
+	SpriteFrame(-32, -32, 64, 64, 119, 34)
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
 end event

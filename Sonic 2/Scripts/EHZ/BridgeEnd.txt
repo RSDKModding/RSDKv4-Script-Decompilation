@@ -1,35 +1,49 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Bridge End Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
-// Aliases
-private alias 46 : TYPE_BRIDGEEND
+// ========================
+// Function Declarations
+// ========================
 
-// Function declarations
 reserve function BridgeEnd_DebugDraw
 reserve function BridgeEnd_DebugSpawn
 
-// Static Values
 
-// Tables
+// ========================
+// Function Definitions
+// ========================
 
-function BridgeEnd_DebugDraw
+private function BridgeEnd_DebugDraw
+	// Bug Details:
+	// -> For some reason this object is set up to draw different sprites for each direction, but
+	//    because this object only has 1 Sprite Frame at all, this means that no sprite is rendered if
+	//    the player entered Debug Mode while facing left
+	// -> This feature is likely a carryover from this object being a modified copy of S1's GHZ Bridge End,
+	//    where there were indeed separate (and correctly functioning) sprites for each direction
 	temp0 = object.direction
-	temp0 &= 1
+	temp0 &= FLIP_X
 	DrawSprite(temp0)
 end function
 
 
-function BridgeEnd_DebugSpawn
+private function BridgeEnd_DebugSpawn
 	CreateTempObject(TypeName[Bridge End], 0, object.xpos, object.ypos)
 	object[tempObjectPos].drawOrder = 4
+	
+	// this object's propertyValue isn't even used...
+	// (this is leftover from S1'S GHZ Bridge End, it doesn't have any effect in this game though)
 	object[tempObjectPos].propertyValue = object.direction
-	object[tempObjectPos].propertyValue &= 1
+	object[tempObjectPos].propertyValue &= FLIP_X
 end function
 
+
+// ========================
+// Events
+// ========================
 
 event ObjectDraw
 	DrawSprite(0)
@@ -45,24 +59,46 @@ event ObjectStartup
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-8, -8, 16, 16, 111, 333)
 	end if
+	
+	// An old v3-styled loop rather than a v4 foreach loop, once again this is leftover from this object
+	//  being a copy of S1's Bridge End
+	// (S1's GHZ was developed while v4 spec was still being made, foreaches presumably didn't exist at the time)
 	arrayPos0 = 32
 	while arrayPos0 < 0x420
 		if object[arrayPos0].type == TypeName[Bridge End]
 			object[arrayPos0].drawOrder = 4
 		end if
+		
 		arrayPos0++
 	loop
+	
 	SetTableValue(TypeName[Bridge End], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(BridgeEnd_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(BridgeEnd_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 82, 61)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 111, 333)
+	end if
+	
+	// it *is* set, but its not used
+	// debugMode sets it to either 0/1 based on direction and in the original game it was used as a sort of "type", but in this game it isn't really used
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

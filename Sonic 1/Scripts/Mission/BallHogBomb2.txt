@@ -1,0 +1,126 @@
+// ----------------------------------
+// RSDK Project: Sonic 1
+// Script Description: Ball Hog Bomb Object
+// Script Author: Christian Whitehead/Simon Thomley
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+private alias object.value0 : object.time
+private alias object.value1 : object.bouncePos
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Update Bomb movement
+	object.xpos += object.xvel
+	object.ypos += object.yvel
+	object.yvel += 0x3800
+	
+	// If the Bomb is falling, then check for bouncing
+	if object.yvel > 0
+		
+		// First, see if the Bomb is below its depth threshold
+		// -> No idea why temp0 is used as a buffer here rather than directly checking position, it seems unnecessary...
+		temp0 = object.ypos
+		if temp0 >= object.bouncePos
+			
+			// Bounce the Bomb back up at a rate of 3 pixels per frame
+			object.yvel = -0x30000
+			
+		end if
+		
+		if object.xvel > 0
+			ObjectTileGrip(CSIDE_LWALL, 8, 0, PATH_A)
+			
+			// If we hit a wall, then turn around
+			if checkResult != false
+				FlipSign(object.xvel)
+			end if
+		end if
+	end if
+	
+	// Check interaction with Players
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		
+		if checkResult == true
+			CallFunction(Player_Hit)
+		end if
+	next
+	
+	object.animationTimer++
+	if object.animationTimer >= 6
+		object.frame ^= 1
+		
+		object.animationTimer = 0
+	end if
+	
+	// Note - object.time is set by the Ball Hog Object that spawns this Ball Hog Bomb
+	if object.time > 0
+		object.time--
+	else
+		// Once the Object's time is up, make it explode
+		ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, object.xpos, object.ypos)
+		CreateTempObject(TypeName[Explosion], 0, object.xpos, object.ypos)
+		object[tempObjectPos].drawOrder = 4
+		PlaySfx(SfxName[Explosion], false)
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == true
+		LoadSpriteSheet("SBZ/Objects.gif")
+		SpriteFrame(-7, -7, 14, 14, 82, 126)
+		SpriteFrame(-7, -7, 14, 14, 82, 143)
+	end if
+	
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-7, -7, 14, 14, 165, 248)
+		SpriteFrame(-7, -7, 14, 14, 182, 248)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	CheckCurrentStageFolder("Zone06")
+	if checkResult == true
+		LoadSpriteSheet("SBZ/Objects.gif")
+		SpriteFrame(-7, -7, 14, 14, 82, 126)
+	end if
+	
+	CheckCurrentStageFolder("Zone07")
+	if checkResult == true
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-7, -7, 14, 14, 165, 248)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

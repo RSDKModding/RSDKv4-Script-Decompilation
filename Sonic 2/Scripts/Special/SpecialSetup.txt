@@ -1,98 +1,228 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Special Setup Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 1 : TYPE_SPECIALSETUP
-public alias 256 : GROUP_PLAYERS
-public alias 65536 : HITBOX_AUTO
-public alias arrayPos6 : currentPlayer
-public alias arrayPos7 : playerCount
+// ========================
+
+public alias 256 		: GROUP_PLAYERS
+public alias arrayPos6 	: currentPlayer
+public alias arrayPos7 	: playerCount
+
+// Gravity
+public alias 0 : GRAVITY_GROUND
+public alias 1 : GRAVITY_AIR
+
+// Priority
+public alias 0 : PRIORITY_BOUNDS
+public alias 1 : PRIORITY_ACTIVE
+public alias 2 : PRIORITY_ALWAYS
+public alias 3 : PRIORITY_XBOUNDS
+public alias 4 : PRIORITY_XBOUNDS_DESTROY
+public alias 5 : PRIORITY_INACTIVE
+public alias 6 : PRIORITY_BOUNDS_SMALL
+public alias 7 : PRIORITY_ACTIVE_SMALL
+
+// Control Modes
+public alias -1 : CONTROLMODE_NONE
+public alias  0 : CONTROLMODE_P1
+public alias  1 : CONTROLMODE_P2
+public alias  2 : CONTROLMODE_P3
+public alias  3 : CONTROLMODE_P4
+
+// Camera Styles
+public alias 0 : CAMERASTYLE_FOLLOW
+public alias 1 : CAMERASTYLE_EXTENDED
+public alias 2 : CAMERASTYLE_EXTENDED_OFFSET_L
+public alias 3 : CAMERASTYLE_EXTENDED_OFFSET_R
+public alias 4 : CAMERASTYLE_HLOCKED
+
+// Ink Effects
+public alias 0 : INK_NONE
+public alias 1 : INK_BLEND
+public alias 2 : INK_ALPHA
+public alias 3 : INK_ADD
+public alias 4 : INK_SUB
+
+// Flip Directions
+public alias 0 : FLIP_NONE
+public alias 1 : FLIP_X
+public alias 2 : FLIP_Y
+public alias 3 : FLIP_XY
+
+// Collision Sides
+public alias 0 : CSIDE_FLOOR
+public alias 1 : CSIDE_LWALL
+public alias 2 : CSIDE_RWALL
+public alias 3 : CSIDE_ROOF
+
+// Collision Modes
+public alias 0 : CMODE_FLOOR
+public alias 1 : CMODE_LWALL
+public alias 2 : CMODE_ROOF
+public alias 3 : CMODE_RWALL
+
+// Collision Directions
+public alias 0 : COL_NONE
+public alias 1 : COL_TOP
+public alias 2 : COL_LEFT
+public alias 3 : COL_RIGHT
+public alias 4 : COL_BOTTOM
+
+// Players List Pos Aliases
+public alias 0 : PLAYER_SONIC_ALONE
+public alias 1 : PLAYER_TAILS_ALONE
+public alias 2 : PLAYER_KNUX_ALONE
+public alias 3 : PLAYER_SONIC_AND_TAILS
+
+private alias object.value1 : object.palTimer
+private alias object.value2 : object.palID1
+private alias object.value3 : object.palID2
+
+// Start Message Aliases
+private alias object.value0 : startMessage.ringCount2P
+private alias object.value1 : startMessage.ringCountSonic
+private alias object.value2 : startMessage.ringCountKnux
+
+// Checkpoint Aliases
+private alias object.value0 : checkpoint.ringCount2P
+private alias object.value1 : checkpoint.ringCountSonic
+private alias object.value2 : checkpoint.ringCountKnux
+
+// Reserved object slots
+private alias 9  : SLOT_SPECIALSETUP
+private alias 10 : SLOT_SPECIALHUD
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
+
+// Music Loops
+private alias 496644 : MUSIC_LOOP_SPECIAL
 
 
+// ========================
 // Static Values
-public value SpecialSetup_value0 = 0;
-public value SpecialSetup_value1 = 0;
-public value SpecialSetup_value2 = 0;
-public value SpecialSetup_value3 = 0;
-public value SpecialSetup_value4 = 0;
+// ========================
 
+public value SpecialSetup_gotEmerald 	 = 0
+public value SpecialSetup_StageColour1 	 = 0
+public value SpecialSetup_StageColour2 	 = 0
+public value SpecialSetup_checkpointID 	 = 0
+public value SpecialSetup_ringCountTable = 0
+
+
+// ========================
 // Tables
-public table SpecialSetup_table0
-	0, 0, 0
-end table
+// ========================
 
-public table SpecialSetup_table1
-	0, 0, 0
-end table
+public table SpecialSetup_ringCount2P[3]
 
-public table SpecialSetup_table2
-	0, 0, 0
-end table
+public table SpecialSetup_ringCountSonic[3]
 
-public table SpecialSetup_table3
+public table SpecialSetup_ringCountKnux[3]
+
+private table SpecialSetup_starPalCycle
 	0xE0E0E0, 0xD0D0D0, 0xC0C0C0, 0xB0B0B0, 0xA0A0A0, 0x909090, 0x808080, 0x707070, 0x606060, 0x707070, 0x808080, 0x909090, 0xA0A0A0, 0xB0B0B0, 0xC0C0C0, 0xD0D0D0
 end table
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	ringTimer++
 	if ringTimer == 4
 		ringTimer = 0
 		ringFrame++
 		ringFrame &= 7
 	end if
-	object.value1++
-	if object.value1 == 4
-		object.value1 = 0
-		object.value2++
-		object.value2 &= 15
-		GetTableValue(temp0, object.value2, SpecialSetup_table3)
+
+	object.palTimer++
+	if object.palTimer == 4
+		object.palTimer = 0
+
+		object.palID1++
+		object.palID1 &= 15
+		GetTableValue(temp0, object.palID1, SpecialSetup_starPalCycle)
 		SetPaletteEntry(0, 142, temp0)
-		object.value3++
-		object.value3 &= 15
-		GetTableValue(temp0, object.value3, SpecialSetup_table3)
+
+		object.palID2++
+		object.palID2 &= 15
+		GetTableValue(temp0, object.palID2, SpecialSetup_starPalCycle)
 		SetPaletteEntry(0, 143, temp0)
 	end if
-	if options.attractMode == 0
-		if object[2].controlMode > -1
-			options.touchControls = 1
+
+#platform: USE_STANDALONE
+	// There aren't any demos in Special Stages I believe... so why is this here..?
+	// Best guess is that it's just a leftover from the standard Stage Setup script, but I can't say for sure
+	if options.attractMode == false
+		if object[2].controlMode > CONTROLMODE_NONE
+			options.touchControls = true
 		else
-			options.touchControls = 0
+			options.touchControls = false
 		end if
 	else
-		options.touchControls = 0
+		options.touchControls = false
 	end if
+#endplatform
 end event
 
 
 event ObjectStartup
-	SetMusicTrack("SpecialStage.ogg", 0, 0x79404)
-	SetMusicTrack("ActComplete.ogg", 1, 0)
-	SpecialSetup_value0 = 0
-	object[9].type = TypeName[Special Setup]
-	object[9].priority = PRIORITY_ACTIVE
-	object[9].drawOrder = 1
-	object[9].value3 = 8
-	object[10].type = TypeName[HUD]
-	object[10].priority = PRIORITY_ACTIVE
-	object[10].drawOrder = 6
-	if stage.playerListPos > 2
-		stage.playerListPos = 0
-		stage.player2Enabled = 1
+#platform: USE_ORIGINS
+	if stage.playerListPos > PLAYER_SONIC_AND_TAILS // If playing as Knuckles & Tails
+		stage.playerListPos = PLAYER_KNUX_ALONE
+		stage.player2Enabled = true
 	end if
-	if options.vsMode == 0
+	
+	// This same code still appears later in this event so this was likely a remnant of copy-pasting the K&T check from above
+	if stage.playerListPos > PLAYER_KNUX_ALONE // If playing as Sonic & Tails
+		stage.playerListPos = PLAYER_SONIC_ALONE
+		stage.player2Enabled = true
+	end if
+#endplatform
+
+	SetMusicTrack("SpecialStage.ogg", TRACK_STAGE, MUSIC_LOOP_SPECIAL)
+	SetMusicTrack("ActComplete.ogg", TRACK_ACTFINISH, false)
+	SpecialSetup_gotEmerald = false
+	
+#platform: USE_ORIGINS
+	// Sure, record the time for an autoscroller, you do you, Sonic Team
+	stage.timeEnabled = true
+#endplatform
+
+	object[SLOT_SPECIALSETUP].type 		= TypeName[Special Setup]
+	object[SLOT_SPECIALSETUP].priority 	= PRIORITY_ACTIVE
+	object[SLOT_SPECIALSETUP].drawOrder = 1
+	object[SLOT_SPECIALSETUP].palID2 	= 8
+
+	object[SLOT_SPECIALHUD].type 	 	= TypeName[HUD]
+	object[SLOT_SPECIALHUD].priority  	= PRIORITY_ACTIVE
+	object[SLOT_SPECIALHUD].drawOrder 	= 6
+	
+	if stage.playerListPos > PLAYER_KNUX_ALONE // If playing as Sonic & Tails
+		stage.playerListPos = PLAYER_SONIC_ALONE
+		stage.player2Enabled = true
+	end if
+
+	if options.vsMode == false
+		// In normal Special Stages, use a palette corresponding to the current act number
 		temp1 = stage.actNum
 	else
-		if vs.activeList == 3
+		if vs.activeList == SPECIAL_STAGE
+			// Use a palette corresponding to the current act number, but offset a little
 			temp1 = stage.actNum
 			temp1 += 3
 		else
-			vs.randomValue *= 0x41C64E6D
-			vs.randomValue += 0x3039
+			// Go all in, use a completely randomised number
+			vs.randomValue *= 1103515245
+			vs.randomValue += 12345
 			vs.randomValue &= 0x7FFFFFFF
 			temp1 = vs.randomValue
 			temp1 >>= 16
@@ -100,71 +230,87 @@ event ObjectStartup
 			temp1++
 		end if
 	end if
+
 	temp1 <<= 3
 	temp0 = temp1
 	temp0 -= 8
 	LoadPalette("SpecialStage.act", 0, 192, temp0, temp1)
-	GetPaletteEntry(0, 197, SpecialSetup_value1)
-	SpecialSetup_value1 |= -0x1000000
-	GetPaletteEntry(0, 192, SpecialSetup_value2)
-	SpecialSetup_value2 |= -0x1000000
-	if options.attractMode == 0
+	
+	// Grab the primary colours, for the Halfpipe vertex colours
+	GetPaletteEntry(0, 197, SpecialSetup_StageColour1)
+	SpecialSetup_StageColour1 |= 0xFF000000
+	
+	GetPaletteEntry(0, 192, SpecialSetup_StageColour2)
+	SpecialSetup_StageColour2 |= 0xFF000000
+	
+	if options.attractMode == false
+		// Huh. Normally there'd be STANDARD platform specific code here, but even Origins has this condition empty...
 	end if
+	
 	temp0 = 1
 	foreach (TypeName[Start Message], arrayPos0, ALL_ENTITIES)
 		object[11].type = TypeName[Start Message]
-		object[11].priority = PRIORITY_ACTIVE_PAUSED
+		object[11].priority = PRIORITY_ALWAYS
 		object[11].drawOrder = 5
-		SetTableValue(object[arrayPos0].value0, 0, SpecialSetup_table0)
-		SetTableValue(object[arrayPos0].value1, 0, SpecialSetup_table1)
-		SetTableValue(object[arrayPos0].value2, 0, SpecialSetup_table2)
+		SetTableValue(startMessage[arrayPos0].ringCount2P, 0, SpecialSetup_ringCount2P)
+		SetTableValue(startMessage[arrayPos0].ringCountSonic, 0, SpecialSetup_ringCountSonic)
+		SetTableValue(startMessage[arrayPos0].ringCountKnux, 0, SpecialSetup_ringCountKnux)
 		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
 	next
+	
 	temp0 = 1
 	foreach (TypeName[Checkpoint], arrayPos0, ALL_ENTITIES)
 		if temp0 < 3
-			SetTableValue(object[arrayPos0].value0, temp0, SpecialSetup_table0)
-			SetTableValue(object[arrayPos0].value1, temp0, SpecialSetup_table1)
-			SetTableValue(object[arrayPos0].value2, temp0, SpecialSetup_table2)
+			SetTableValue(checkpoint[arrayPos0].ringCount2P, temp0, SpecialSetup_ringCount2P)
+			SetTableValue(checkpoint[arrayPos0].ringCountSonic, temp0, SpecialSetup_ringCountSonic)
+			SetTableValue(checkpoint[arrayPos0].ringCountKnux, temp0, SpecialSetup_ringCountKnux)
 			temp0++
 		end if
-		object[arrayPos0].value0 = 0
-		object[arrayPos0].value1 = 0
-		object[arrayPos0].value2 = 0
+		
+		checkpoint[arrayPos0].ringCount2P 	 = 0
+		checkpoint[arrayPos0].ringCountSonic = 0
+		checkpoint[arrayPos0].ringCountKnux  = 0
 	next
-	SpecialSetup_value3 = 0
+	
+	SpecialSetup_checkpointID = 0
 	if stage.player2Enabled == true
-		SpecialSetup_value4 = 5
+		SpecialSetup_ringCountTable = SpecialSetup_ringCount2P
 	else
-		if stage.playerListPos == 2
-			SpecialSetup_value4 = 13
+		if stage.playerListPos == PLAYER_KNUX_ALONE
+			SpecialSetup_ringCountTable = SpecialSetup_ringCountKnux
 		else
-			SpecialSetup_value4 = 9
+			SpecialSetup_ringCountTable = SpecialSetup_ringCountSonic
 		end if
 	end if
-	arrayPos0 = 32
+	
+	arrayPos0 = 0x20
 	while arrayPos0 < 0x420
 		if object[arrayPos0].type == TypeName[Blank Object]
 			object[arrayPos0].ypos = 0x7FFF0000
 		else
 			object[arrayPos0].priority = PRIORITY_INACTIVE
 		end if
+		
 		arrayPos0++
 	loop
-	arrayPos0 = 32
-	while arrayPos0 < 768
-		arrayPos1 = 767
-		arrayPos2 = 766
+	
+	// Sort all objects based on ypos
+	arrayPos0 = 0x20
+	while arrayPos0 < 0x300
+		arrayPos1 = 0x2FF
+		arrayPos2 = 0x2FE
 		while arrayPos1 > arrayPos0
 			if object[arrayPos1].ypos < object[arrayPos2].ypos
 				temp0 = object[arrayPos1].type
 				temp1 = object[arrayPos1].propertyValue
 				temp2 = object[arrayPos1].xpos
 				temp3 = object[arrayPos1].ypos
+				
 				object[arrayPos1].type = object[arrayPos2].type
 				object[arrayPos1].propertyValue = object[arrayPos2].propertyValue
 				object[arrayPos1].xpos = object[arrayPos2].xpos
 				object[arrayPos1].ypos = object[arrayPos2].ypos
+				
 				object[arrayPos2].type = temp0
 				object[arrayPos2].propertyValue = temp1
 				object[arrayPos2].xpos = temp2
@@ -173,15 +319,24 @@ event ObjectStartup
 			arrayPos1--
 			arrayPos2--
 		loop
+		
 		arrayPos0++
 	loop
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -1,18 +1,43 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Title Card Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
+// ========================
+
 private alias object.value0 : object.timer
+private alias object.value1 : object.actNamePos
+private alias object.value2 : object.zonePos
+private alias object.value3 : object.blueRectPos
+private alias object.value4 : object.yellowRectPos
+private alias object.value5 : object.redRectPos
 private alias object.value6 : object.displayedActNo
 private alias object.value7 : object.vsReady
 private alias object.value8 : object.sentReadyFlag
 
-// Static Values
-public value TitleCard_value23 = 0;
+// States
+private alias 0 : TITLECARD_SETUP
+private alias 1 : TITLECARD_DELAY
+private alias 2 : TITLECARD_ENTERTITLECARD
+private alias 3 : TITLECARD_SHOWTITLECARD
+private alias 4 : TITLECARD_EXITREDYELLOWRECT
+private alias 5 : TITLECARD_EXITBLUERECT
+private alias 6 : TITLECARD_STARTSTAGE
+private alias 7 : TITLECARD_CREDITSFADEIN
+private alias 8 : TITLECARD_FADETOTITLE
+private alias 9 : TITLECARD_EXITTITLECARD
+
+// Types
+private alias 0 : TITLECARD_TYPE_ACTNUM
+private alias 1 : TITLECARD_TYPE_ACT1
+private alias 2 : TITLECARD_TYPE_ACT2
+private alias 3 : TITLECARD_TYPE_ACT3
+private alias 4 : TITLECARD_TYPE_ZONE
+private alias 5 : TITLECARD_TYPE_ZONE_MBZ
 
 // Player Aliases
 private alias object.controlMode : player.controlMode
@@ -24,45 +49,63 @@ private alias object.left 		 : player.left
 private alias object.right 		 : player.right
 private alias object.value1 	 : player.timer
 
+// Tracks
+private alias 0 : TRACK_STAGE
+
+// ========================
+// Static Values
+// ========================
+
 // Determines whether the act results will say got through zone or got through act [num]
-private alias TitleCard_value23 : TitleCard_showZoneText
+public value TitleCard_showZoneText = 0
 
-event ObjectMain
 
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	options.touchControls = false
 
 	switch object.state
-	case 0
+	case TITLECARD_SETUP
 		object.alpha  = 0xFF
-		object.value1 = 720
-		object.value2 -= 720
-		object.value4 = 432
-		object.value5 = -320
+		object.actNamePos = 720
+		object.zonePos -= 720
+		
+		// 510 is the sega forever value (though you should use 512 instead, as it works properly and doesn't cause a bug)
+		// 432 is the original/origins one (the forever one works better on wider screens, the value is basically screen.xsize + 10)
+		object.yellowRectPos = 432
+
+		object.redRectPos = -320
+		
 		switch object.propertyValue
-		case 0
-			object.displayedActNo = stage.actNum
+		case TITLECARD_TYPE_ACTNUM
+			object.displayedActNo  = stage.actNum
 			TitleCard_showZoneText = false
 			break
 
-		case 1
+		case TITLECARD_TYPE_ACT1
 			object.displayedActNo 	= 1
 			TitleCard_showZoneText 	= false
 			break
 
-		case 2
+		case TITLECARD_TYPE_ACT2
 			object.displayedActNo 	= 2
 			TitleCard_showZoneText 	= false
 			break
 
-		case 3
+		case TITLECARD_TYPE_ACT3
 			object.displayedActNo 	= 3
 			TitleCard_showZoneText 	= false
 			break
 
 		default
+		case TITLECARD_TYPE_ZONE
+		case TITLECARD_TYPE_ZONE_MBZ
 			TitleCard_showZoneText = true
 			break
-
+			
 		end switch
 
 		if options.vsMode == true
@@ -73,26 +116,56 @@ event ObjectMain
 			object.sentReadyFlag = false
 		end if
 
-		if credits.screen > 0
-			object.state = 7
-			object.timer = 272
+#platform: USE_ORIGINS
+		game.missionCondition = false
+		game.missionEnd = false
+		
+		if game.playMode == BOOT_PLAYMODE_MISSION
+			PlayMusic(TRACK_STAGE)
+			game.missionCondition = false
+			game.missionEnd = false
+			object.state = TITLECARD_CREDITSFADEIN
+			object.timer = 0
+			stage.timeEnabled = true
 			stage.state = STAGE_RUNNING
-			SetScreenFade(0, 0, 0, 255)
+			SetScreenFade(0, 0, 0, 0)
 		else
-			object.state++
+			if game.playMode == BOOT_PLAYMODE_BOSSRUSH
+				PlayMusic(TRACK_STAGE)
+				game.missionCondition = false
+				game.missionEnd = false
+				object.state = TITLECARD_CREDITSFADEIN
+				object.timer = 0
+				stage.timeEnabled = true
+				stage.state = STAGE_RUNNING
+				SetScreenFade(0, 0, 0, 0)
+			else
+#endplatform
+				if credits.screen > 0
+					object.state = TITLECARD_CREDITSFADEIN
+					object.timer = 272
+					stage.state = STAGE_RUNNING
+					SetScreenFade(0, 0, 0, 255)
+				else
+					object.state++
+				end if
+#platform: USE_ORIGINS
+			end if
 		end if
+#endplatform
 		break
 
-	case 1
+	case TITLECARD_DELAY
 		if object.timer < 30
 			object.timer++
 		else
+			//if we're in VS mode, only continue if we're ready
 			if options.vsMode == true
-				CallNativeFunction2(SendEntity, object.entityPos, 0)
-				if ReceiveValue == -1
+				CallNativeFunction2(SendEntity, object.entityPos, false)
+				if ReceiveValue == -1 // if we don't have the recieve func, we cant do VS mode, continue.
 					object.vsReady = true
 				else
-					CallNativeFunction2(ReceiveEntity, 0x400, 1)
+					CallNativeFunction2(ReceiveEntity, 0x400, true)
 					// we're ready to start if we got the other entity's 'sendReadyFlag'
 					object.vsReady = object[0x400].sentReadyFlag
 					ResetObjectEntity(0x400, TypeName[Blank Object], 0, 0, 0)
@@ -101,39 +174,39 @@ event ObjectMain
 
 			if object.vsReady == true
 				object.timer = 0
-				PlayMusic(0)
+				PlayMusic(TRACK_STAGE)
 				object.state++
 			end if
 		end if
 		break
 
-	case 2
+	case TITLECARD_ENTERTITLECARD
 		if options.vsMode == true
-			CallNativeFunction2(SendEntity, object.entityPos, 0)
+			CallNativeFunction2(SendEntity, object.entityPos, false)
 		end if
 
-		if object.value3 < 240
-			object.value3 += 16
+		if object.blueRectPos < 240
+			object.blueRectPos += 16
 		end if
 
-		if object.value4 > 0
-			object.value4 -= 16
-			object.value5 += 16
+		if object.yellowRectPos > 0
+			object.yellowRectPos -= 16
+			object.redRectPos += 16
 		end if
 
-		if object.value1 > 0
-			object.value1 -= 16
-			object.value2 += 16
+		if object.actNamePos > 0
+			object.actNamePos -= 16
+			object.zonePos += 16
 		else
 			object.state++
 		end if
 		break
 
-	case 3
+	case TITLECARD_SHOWTITLECARD
 		if object.timer < 60
 			if options.vsMode == true
-				CallNativeFunction2(SendEntity, object.entityPos, 0)
-				CallNativeFunction2(ReceiveEntity, 0x400, 1)
+				CallNativeFunction2(SendEntity, object.entityPos, false)
+				CallNativeFunction2(ReceiveEntity, 0x400, true)
 				ResetObjectEntity(0x400, TypeName[Blank Object], 0, 0, 0)
 			end if
 			object.timer++
@@ -143,25 +216,26 @@ event ObjectMain
 		end if
 		break
 
-	case 4
-		if object.value5 > -48
-			object.value5 -= 32
+	case TITLECARD_EXITREDYELLOWRECT
+		if object.redRectPos > -48
+			object.redRectPos -= 32
 		else
-			if object.value4 < 424
-				object.value4 += 32
+			if object.yellowRectPos < 424 // 500 is the sega forever value, 424 is the original one (the forever one works better on wider screens, the value is basically just screen.xsize)
+				object.yellowRectPos += 32
 				if options.vsMode == true
-					CallNativeFunction2(ReceiveEntity, 0x400, 1)
+					CallNativeFunction2(ReceiveEntity, 0x400, true)
 					ResetObjectEntity(0x400, TypeName[Blank Object], 0, 0, 0)
 				end if
 			else
 				if options.vsMode == true
-					stage.state = 4
+					stage.state = STAGE_2P_MODE
 				else
 					stage.state = STAGE_RUNNING
 				end if
+				
 				currentPlayer = 0
 				while currentPlayer < playerCount
-					player[currentPlayer].controlMode = -1
+					player[currentPlayer].controlMode = CONTROLMODE_NONE
 					player[currentPlayer].up 		= false
 					player[currentPlayer].down 		= false
 					player[currentPlayer].left 		= false
@@ -171,49 +245,63 @@ event ObjectMain
 					player[currentPlayer].timer 	= 0
 					currentPlayer++
 				loop
+				
 				object.state++
 			end if
 		end if
 		break
 
-	case 5
-		if object.value3 > 0
-			object.value3 -= 32
+	case TITLECARD_EXITBLUERECT
+		if object.blueRectPos > 0
+			object.blueRectPos -= 32
 		else
 			currentPlayer = 0
 			while currentPlayer < playerCount
-				player[currentPlayer].controlMode = 0
+#platform: USE_STANDALONE
+				player[currentPlayer].controlMode = CONTROLMODE_P1
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].controlMode = currentPlayer
+#endplatform
 				currentPlayer++
 			loop
 			object.state++
 		end if
 		break
 
-	case 6
+	case TITLECARD_STARTSTAGE
 		if object.timer < 48
 			object.timer++
 		else
 			object.timer = 0
 			stage.timeEnabled = true
-			object.state = 9
+			object.state = TITLECARD_EXITTITLECARD
 		end if
 		break
 
-	case 7
+	case TITLECARD_CREDITSFADEIN
 		if object.timer > 0
 			object.timer -= 16
 			SetScreenFade(0, 0, 0, object.timer)
 		else
 			currentPlayer = 0
 			while currentPlayer < playerCount
-				player[currentPlayer].controlMode = 0
+#platform: USE_STANDALONE
+				player[currentPlayer].controlMode = CONTROLMODE_P1
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].controlMode = currentPlayer
+#endplatform
 				currentPlayer++
 			loop
 			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
 		end if
 		break
 
-	case 8
+	case TITLECARD_FADETOTITLE
+		// This state is set from the Player Object, when a replay is finished
+		// All the credits.screen checks here are just leftovers that don't do much, since S2 doesn't use in-game credits like S1 did
+		
 		if object.timer < 300
 			object.timer += 5
 			if credits.screen == 0
@@ -229,12 +317,13 @@ event ObjectMain
 			end if
 			LoadStage()
 		end if
+		
 		SetScreenFade(0, 0, 0, object.timer)
 		break
 
-	case 9
-		object.value1 += 32
-		object.value2 -= 32
+	case TITLECARD_EXITTITLECARD
+		object.actNamePos += 32
+		object.zonePos -= 32
 		if object.timer < 20
 			object.timer++
 		else
@@ -242,49 +331,64 @@ event ObjectMain
 			object.type = TypeName[Blank Object]
 		end if
 		break
-
+		
 	end switch
 end event
 
 
 event ObjectDraw
-
 	temp2 = screen.xcenter
 	temp2 -= 160
 	temp2 >>= 1
 
 	switch object.state
-	case 0
-	case 1
-	case 2
-	case 3
+	case TITLECARD_SETUP
+	case TITLECARD_DELAY
+	case TITLECARD_ENTERTITLECARD
+	case TITLECARD_SHOWTITLECARD
 		SetActivePalette(0, 0, screen.ysize)
-		DrawRect(0, 0, screen.xsize, object.value3, 32, 64, 192, 255)
-		DrawRect(0, object.value3, screen.xsize, screen.ysize, 0, 0, 0, 255)
+
+		// Blue BG Rect
+		DrawRect(0, 0, screen.xsize, object.blueRectPos, 0x20, 0x40, 0xC0, 0xFF)
+
+		DrawRect(0, object.blueRectPos, screen.xsize, screen.ysize, 0x00, 0x00, 0x00, 0xFF)
+
+#platform: USE_STANDALONE
 		if options.vsMode == true
-			if object.state == 1
+			if object.state == TITLECARD_DELAY
+				// Waiting for other player...
 				DrawSpriteScreenXY(32, screen.xsize, screen.ysize)
 			end if
 		end if
-		DrawRect(object.value4, 168, screen.xsize, 72, 224, 224, 0, 255)
-		temp0 = object.value4
+#endplatform
+
+		// Yellow Rect
+		DrawRect(object.yellowRectPos, 168, screen.xsize, 72, 0xE0, 0xE0, 0x00, 0xFF)
+ 
+ 		// "Sonic The Hedgehog" Text
+		temp0 = object.yellowRectPos
 		temp0 += screen.xcenter
 		DrawSpriteScreenXY(31, temp0, 176)
-		DrawRect(0, 0, object.value5, screen.ysize, 224, 0, 0, 255)
-		DrawSpriteScreenXY(26, object.value5, 0)
+
+		// Red Rect (& Red Sidebar)
+		DrawRect(0, 0, object.redRectPos, screen.ysize, 0xE0, 0x00, 0x00, 0xFF) // Red Rect
+		DrawSpriteScreenXY(26, object.redRectPos, 0) // Red Sidebar
+
 		temp0 = screen.xcenter
 		temp0 += temp2
 		temp0 += 128
-		temp0 += object.value1
+		temp0 += object.actNamePos
 		DrawActName(0, temp0, 64, 0, 0, 16, 0)
+
 		temp0 = screen.xcenter
 		temp0 += temp2
 		temp0 += 41
-		temp0 += object.value2
+		temp0 += object.zonePos
 		DrawSpriteScreenXY(27, temp0, 88)
-		if object.value6 > 0
+
+		if object.displayedActNo > 0
 			temp1 = 27
-			temp1 += object.value6
+			temp1 += object.displayedActNo
 			if temp1 > 30
 				temp1 = 30
 			end if
@@ -292,29 +396,35 @@ event ObjectDraw
 		end if
 		break
 
-	case 4
-	case 5
+	case TITLECARD_EXITREDYELLOWRECT
+	case TITLECARD_EXITBLUERECT
 		SetActivePalette(0, 0, screen.ysize)
-		DrawRect(0, 0, screen.xsize, object.value3, 32, 64, 192, 255)
-		DrawRect(object.value4, 168, screen.xsize, 72, 224, 224, 0, 255)
-		temp0 = object.value4
+
+		DrawRect(0, 0, screen.xsize, object.blueRectPos, 0x20, 0x40, 0xC0, 0xFF)
+
+		DrawRect(object.yellowRectPos, 168, screen.xsize, 72, 0xE0, 0xE0, 0x00, 0xFF)
+
+		temp0 = object.yellowRectPos
 		temp0 += screen.xcenter
 		DrawSpriteScreenXY(31, temp0, 176)
-		DrawRect(0, 0, object.value5, screen.ysize, 224, 0, 0, 255)
-		DrawSpriteScreenXY(26, object.value5, 0)
+		DrawRect(0, 0, object.redRectPos, screen.ysize, 0xE0, 0x00, 0x00, 0xFF)
+		DrawSpriteScreenXY(26, object.redRectPos, 0)
+
 		temp0 = screen.xcenter
 		temp0 += temp2
 		temp0 += 128
-		temp0 += object.value1
+		temp0 += object.actNamePos
 		DrawActName(0, temp0, 64, 0, 0, 16, 0)
+
 		temp0 = screen.xcenter
 		temp0 += temp2
 		temp0 += 41
-		temp0 += object.value2
+		temp0 += object.zonePos
 		DrawSpriteScreenXY(27, temp0, 88)
-		if object.value6 > 0
+
+		if object.displayedActNo > 0
 			temp1 = 27
-			temp1 += object.value6
+			temp1 += object.displayedActNo
 			if temp1 > 30
 				temp1 = 30
 			end if
@@ -322,37 +432,42 @@ event ObjectDraw
 		end if
 		break
 
-	case 6
-	case 9
+	case TITLECARD_STARTSTAGE
+	case TITLECARD_EXITTITLECARD
 		SetActivePalette(0, 0, screen.ysize)
+
 		temp0 = screen.xcenter
 		temp0 += temp2
 		temp0 += 128
-		temp0 += object.value1
+		temp0 += object.actNamePos
 		DrawActName(0, temp0, 64, 0, 0, 16, 0)
+
 		temp0 = screen.xcenter
 		temp0 += temp2
 		temp0 += 41
-		temp0 += object.value2
+		temp0 += object.zonePos
 		DrawSpriteScreenXY(27, temp0, 88)
-		if object.value6 > 0
+
+		if object.displayedActNo > 0
 			temp1 = 27
-			temp1 += object.value6
+			temp1 += object.displayedActNo
 			if temp1 > 30
 				temp1 = 30
 			end if
 			DrawSpriteScreenXY(temp1, temp0, 88)
 		end if
 		break
+		
 	end switch
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Display.gif")
 
 	// Title card frames
+
+	// Titlecard Letters (0-25)
 	SpriteFrame(0, 0, 15, 16, 37, 79)
 	SpriteFrame(0, 0, 16, 16, 53, 79)
 	SpriteFrame(0, 0, 16, 16, 70, 79)
@@ -379,43 +494,46 @@ event ObjectStartup
 	SpriteFrame(0, 0, 15, 16, 43, 113)
 	SpriteFrame(0, 0, 16, 16, 59, 113)
 	SpriteFrame(0, 0, 16, 16, 76, 113)
-	SpriteFrame(0, 0, 8, 256, 248, 0)
-	SpriteFrame(0, 0, 62, 16, 83, 1)
-	SpriteFrame(63, 0, 16, 29, 42, 1)
-	SpriteFrame(63, 0, 23, 29, 59, 1)
-	SpriteFrame(63, 0, 23, 32, 42, 31)
-	SpriteFrame(0, 0, 140, 5, 37, 73)
+
+	SpriteFrame(0, 0, 8, 256, 248, 0)	// Red Sidebar - #26
+	SpriteFrame(0, 0, 62, 16, 83, 1) 	// Zone - #27
+	SpriteFrame(63, 0, 16, 29, 42, 1) 	// Act 1 - #28
+	SpriteFrame(63, 0, 23, 29, 59, 1) 	// Act 2 - #29
+	SpriteFrame(63, 0, 23, 32, 42, 31) 	// Act 3 - #30
+	SpriteFrame(0, 0, 140, 5, 37, 73) 	// "Sonic The Hedgehog" - #31
 
 	if vs.playerID == 0
-		SpriteFrame(-160, -16, 136, 7, 110, 172)
+		SpriteFrame(-160, -16, 136, 7, 110, 172)	// "Waiting for 2P" - #32
 	else
-		SpriteFrame(-160, -16, 136, 7, 110, 164)
+		SpriteFrame(-160, -16, 136, 7, 110, 164) 	// "Waiting for 1P" - #32
 	end if
 
 	if options.vsMode == true
-		CallNativeFunction2(ReceiveEntity, 0x400, 1)
+		CallNativeFunction2(ReceiveEntity, 0x400, true)
 		ResetObjectEntity(0x400, TypeName[Blank Object], 0, 0, 0)
+#platform: USE_ORIGINS
+		SetScreenCount(2)
+#endplatform
 	end if
 
 	// Cycle through all Title Card objects
+	// (Dunno why a regular foreach isn't used here, but sure...)
 	arrayPos0 = 32
 	while arrayPos0 < 0x420
 		if object[arrayPos0].type == TypeName[Title Card]
-			object[arrayPos0].priority 	= PRIORITY_ACTIVE_PAUSED
+			object[arrayPos0].priority 	= PRIORITY_ALWAYS
 			object[arrayPos0].alpha 	= 0xFF
 			object[arrayPos0].drawOrder = 6
 			stage.state = STAGE_PAUSED
 
-			if object[arrayPos0].propertyValue == 5
+			if object[arrayPos0].propertyValue == TITLECARD_TYPE_ZONE_MBZ
 				CheckCurrentStageFolder("ZoneM")
 				if checkResult == false
-
-					// If the object has a property value of 5 & we're in Egg Gauntet, then go back to the title screen
-					// (Purpose unknown, IDK why this exists)
+					// If the object has a property value of 5 & we're NOT in the Egg Gauntlet folder (somehow), then go back to the title screen
+					// (Purpose unknown, idk why this exists or what it's even supposed to mean)
 					stage.activeList = PRESENTATION_STAGE
 					stage.listPos = 0
 					LoadStage()
-
 				end if
 			end if
 		end if
@@ -424,11 +542,53 @@ event ObjectStartup
 	loop
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // actType
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // actType
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	SpriteFrame(-8, -8, 16, 16, 168, 18)
+
+	AddEditorVariable("actType")
+	SetActiveVariable("actType")
+	AddEnumVariable("Use Act Num", TITLECARD_TYPE_ACTNUM)
+	AddEnumVariable("Show Act 1", TITLECARD_TYPE_ACT1)
+	AddEnumVariable("Show Act 2", TITLECARD_TYPE_ACT2)
+	AddEnumVariable("Show Act 3", TITLECARD_TYPE_ACT3)
+	AddEnumVariable("Show Zone Text", TITLECARD_TYPE_ZONE)
+	AddEnumVariable("Show Zone Text (MBZ)", TITLECARD_TYPE_ZONE_MBZ)
 end event

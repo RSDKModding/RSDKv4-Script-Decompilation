@@ -1,76 +1,103 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Grab Bar Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 74 : TYPE_GRABBAR
+// ========================
 
-// Function declarations
+private alias object.value0 : object.grabDuration
+
+// Player Aliases
+private alias object.type      : player.type
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.state     : player.state
+private alias object.jumpPress : player.jumpPress
+private alias object.direction : player.direction
+private alias object.animation : player.animation
+private alias object.gravity   : player.gravity
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function GrabBar_DebugDraw
 reserve function GrabBar_DebugSpawn
 
-// Static Values
 
-// Tables
+// ========================
+// Function Definitions
+// ========================
 
-function GrabBar_DebugDraw
+private function GrabBar_DebugDraw
 	DrawSprite(0)
 end function
 
 
-function GrabBar_DebugSpawn
+private function GrabBar_DebugSpawn
 	CreateTempObject(TypeName[Grab Bar], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value0 = 60
+	object[tempObjectPos].grabDuration = 60
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		temp2 = 0
-		if object[currentPlayer].type == TypeName[Tails Object]
+		temp2 = false
+		
+		if player[currentPlayer].type == TypeName[Tails Object]
+			// Tails can't reach as far as Sonic & Knuckles
 			temp3 = 0xF0000
 		else
 			temp3 = 0x140000
 		end if
+
 		temp0 = object.xpos
 		temp0 += temp3
-		temp0 -= object[currentPlayer].xpos
+		temp0 -= player[currentPlayer].xpos
 		Abs(temp0)
 		if temp0 <= 0x40000
 			temp0 = object.ypos
-			temp0 -= object[currentPlayer].ypos
+			temp0 -= player[currentPlayer].ypos
 			temp1 = temp0
 			Abs(temp0)
 			if temp0 <= 0x120000
-				object[currentPlayer].animation = ANI_CLINGING
-				object[currentPlayer].direction = FLIP_NONE
-				object[currentPlayer].xpos = object.xpos
-				object[currentPlayer].xpos += temp3
-				temp2 = 1
+				player[currentPlayer].animation = ANI_CLINGING
+				player[currentPlayer].direction = FACING_RIGHT
+				player[currentPlayer].xpos = object.xpos
+				player[currentPlayer].xpos += temp3
+				temp2 = true
 			else
-				if object[currentPlayer].animation == ANI_CLINGING
-					object[currentPlayer].ypos = object.ypos
+				if player[currentPlayer].animation == ANI_CLINGING
+					player[currentPlayer].ypos = object.ypos
 					if temp1 < 0
-						object[currentPlayer].ypos += 0x120000
+						player[currentPlayer].ypos += 0x120000
 					else
-						object[currentPlayer].ypos -= 0x120000
+						player[currentPlayer].ypos -= 0x120000
 					end if
-					temp2 = 1
+					temp2 = true
 				end if
 			end if
-			if temp2 != 0
-				if object[currentPlayer].jumpPress != 0
-					object[currentPlayer].animation = ANI_FANROTATE
+
+			if temp2 != false
+				if player[currentPlayer].jumpPress != false
+					player[currentPlayer].animation = ANI_FANROTATE
 				end if
+
 				if object.frame == 1
-					object[currentPlayer].animation = ANI_FANROTATE
+					player[currentPlayer].animation = ANI_FANROTATE
 				else
 					if currentPlayer == 0
-						object.value0--
-						if object.value0 == 0
+						object.grabDuration--
+						if object.grabDuration == 0
 							object.frame = 1
 						end if
 					end if
@@ -90,21 +117,59 @@ event ObjectStartup
 	LoadSpriteSheet("LZ/Objects.gif")
 	SpriteFrame(-4, -32, 8, 64, 35, 1)
 	SpriteFrame(-4, -32, 14, 64, 44, 1)
+
 	foreach (TypeName[Grab Bar], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value0 = object[arrayPos0].propertyValue
-		object[arrayPos0].value0 *= 60
+		object[arrayPos0].grabDuration = object[arrayPos0].propertyValue
+		object[arrayPos0].grabDuration *= 60
 	next
+
 	SetTableValue(TypeName[Grab Bar], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(GrabBar_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(GrabBar_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // grabDuration
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // grabDuration
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-4, -32, 8, 64, 35, 1)
+
+	AddEditorVariable("grabDuration")
+	SetActiveVariable("grabDuration")
 end event

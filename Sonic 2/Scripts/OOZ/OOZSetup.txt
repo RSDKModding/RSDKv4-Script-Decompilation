@@ -1,241 +1,357 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: OOZ Setup Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 40 : TYPE_OOZSETUP
+// ========================
 
-// Function declarations
-reserve function OOZSetup_Function97
-reserve function OOZSetup_Function98
-reserve function OOZSetup_Function99
-reserve function OOZSetup_Function100
-reserve function OOZSetup_Function101
-reserve function OOZSetup_Function102
+private alias object.value0 : object.deformTimer
+private alias object.value1 : object.lightAniTileDelay
+private alias object.value2 : object.lightAniTileFrame
+private alias object.value3 : object.diamondAniTileDelay
+private alias object.value4 : object.diamondAniTileFrame
+private alias object.value5 : object.oilAniTileDelay
+private alias object.value6 : object.oilAniTileFrame
+private alias object.value7 : object.updatedBG
+private alias object.value8 : object.oilSlideTimer
 
-// Static Values
+// Tile Flag Aliases
+private alias 0 : TILE_NORMAL
+private alias 1 : TILE_OILPOOL
+private alias 3 : TILE_OILSTRIP
+private alias 5 : TILE_OILSLIDE
 
+// Tile Info ID Aliases
+private alias 1 : TILEINFO_DIRECTION
+private alias 8 : TILEINFO_ANGLEB
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.iypos : player.iypos
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.drawOrder : player.drawOrder
+private alias object.direction : player.direction
+private alias object.gravity : player.gravity
+private alias object.pushing : player.pushing
+private alias object.left : player.left
+private alias object.right : player.right
+private alias object.jumpPress : player.jumpPress
+private alias object.controlLock : player.controlLock
+private alias object.angle : player.angle
+private alias object.frame : player.frame
+private alias object.animation : player.animation
+private alias object.animationSpeed : player.animationSpeed
+private alias object.collisionMode : player.collisionMode
+private alias object.collisionBottom : player.collisionBottom
+private alias object.tileCollisions : player.tileCollisions
+
+private alias object.value1  : player.timer
+private alias object.value14 : player.skidding
+private alias object.value18 : player.sortedDrawOrder
+private alias object.value20 : player.topSpeed
+private alias object.value35 : player.jumpAbilityState
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
+private alias 2 : TRACK_INVINCIBLE
+private alias 3 : TRACK_CONTINUE
+private alias 4 : TRACK_BOSS
+private alias 5 : TRACK_GAMEOVER
+private alias 6 : TRACK_DROWNING
+private alias 7 : TRACK_SUPER
+
+// Reserved object slots
+private alias 10 : SLOT_ZONESETUP
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+private alias 26 : SLOT_MUSICEVENT_BOSS
+
+// Music Events
+private alias 2 : MUSICEVENT_TRANSITION
+
+private alias 0 : MUSICEVENT_FLAG_NOCHANGE
+private alias 1 : MUSICEVENT_FLAG_SPEEDUP
+private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+// Music Loops
+private alias 293572 : MUSIC_LOOP_OOZ
+private alias 235236 : MUSIC_LOOP_OOZ_F
+
+private alias 38679  : MUSIC_LOOP_INV
+private alias 30897  : MUSIC_LOOP_INV_F
+
+
+// ========================
+// Function Declarations
+// ========================
+
+// These first four functions are run by the Player Object, the ones with "PlayerState" in them are assigned to the player's state
+reserve function OOZSetup_OilWalkAnimSpeed
+reserve function OOZSetup_PlayerState_OilPool
+reserve function OOZSetup_HandleOilMovement
+reserve function OOZSetup_PlayerState_OilSlide
+
+reserve function OOZSetup_SpeedUpMusic
+reserve function OOZSetup_SlowDownMusic
+
+
+// ========================
 // Tables
-public table OOZSetup_table38
+// ========================
+
+private table OOZSetup_deformTable
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
 	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
 	1, 2, 1, 3, 1, 2, 2, 1, 2, 3, 1, 2, 1, 2, 0, 0
 	2, 0, 3, 2, 2, 3, 2, 2, 1, 3, 0, 0, 1, 0, 1, 3
 end table
 
-public table OOZSetup_table39
-	816, 12, 817, 6, 818, 10, 819, 4
+private table OOZSetup_lightAniFrameTable
+	816, 12
+	817, 6
+	818, 10
+	819, 4
 end table
 
-public table OOZSetup_table40
-	820, 7, 821, 7, 822, 7, 823, 7
+private table OOZSetup_diamondAniFrameTable1
+	820, 7
+	821, 7
+	822, 7
+	823, 7
 end table
 
-public table OOZSetup_table41
-	824, 7, 826, 7, 828, 7, 830, 7
+private table OOZSetup_diamondAniFrameTable2
+	824, 7
+	826, 7
+	828, 7
+	830, 7
 end table
 
-//0xF884
-private table OOZSetup_table0
+// This is MCZ's palette cycle, why is this here? I do not know
+private table OOZSetup_paletteCycle
 	0xC00000, 0xE06000, 0xE0C000, 0xE0E080
 end table
 
-// PlayerObject_WalkAnimSpd but with the animation speed changed to be faster
-function OOZSetup_Function97
-	object.animationSpeed = object.speed
-	if object.animationSpeed < 0
-		FlipSign(object.animationSpeed)
+
+// ========================
+// Function Definitions
+// ========================
+
+// TODO: update these to match new player func names
+
+private function OOZSetup_OilWalkAnimSpeed
+	player.animationSpeed = player.speed
+	if player.animationSpeed < 0
+		FlipSign(player.animationSpeed)
 	end if
-	object.animationSpeed *= 120
-	object.animationSpeed /= 0x60000
-	object.animationSpeed += 20
+	player.animationSpeed *= 120
+	player.animationSpeed /= 0x60000
+	player.animationSpeed += 20
 end function
 
 
-function OOZSetup_Function98
-	if object.animation != ANI_SKIDDING
-		temp7 = 1
+private function OOZSetup_PlayerState_OilPool
+	if player.animation != ANI_SKIDDING
+		temp7 = true
 	else
-		temp7 = 0
+		temp7 = false
 	end if
-	CallFunction(PlayerObject_HandleMovement)
-	if object.gravity == GRAVITY_AIR
-		object.state = PlayerObject_HandleAir
-		CallFunction(PlayerObject_HandleAirMovement)
+
+	CallFunction(Player_HandleGroundMovement)
+	if player.gravity == GRAVITY_AIR
+		player.state = Player_State_Air
+		CallFunction(Player_HandleAirMovement)
 	else
-		CallFunction(PlayerObject_ResetOnFloor)
-		if object.speed == 0
-			if object.collisionMode == CMODE_FLOOR
-				if object.value1 < 240
-					object.animation = ANI_STOPPED
-					object.value1++
+		CallFunction(Player_HandleOnGround)
+		if player.speed == 0
+			if player.collisionMode == CMODE_FLOOR
+				if player.timer < 240
+					player.animation = ANI_STOPPED
+					player.timer++
 				else
-					object.animation = ANI_WAITING
-					if stage.playerListPos == 2
-						object.value1++
-						if object.value1 == 834
-							object.value1 = 0
-							object.animation = ANI_STOPPED
+					player.animation = ANI_WAITING
+					if stage.playerListPos == PLAYER_KNUX_ALONE
+						player.timer++
+						if player.timer == 834
+							player.timer = 0
+							player.animation = ANI_STOPPED
 						end if
 					end if
 				end if
 			end if
 		else
-			object.value1 = 0
-			if object.speed > 0
-				if object.speed < 0x5F5C2
-					object.animation = ANI_WALKING
-					CallFunction(PlayerObject_WalkAnimSpd)
+			player.timer = 0
+			if player.speed > 0
+				if player.speed < 0x5F5C2
+					player.animation = ANI_WALKING
+					CallFunction(Player_HandleWalkAnimSpeed)
 				else
-					if object.speed > 0x9FFFF
-						object.animation = ANI_PEELOUT
+					if player.speed > 0x9FFFF
+						player.animation = ANI_PEELOUT
 					else
-						object.animation = ANI_RUNNING
+						player.animation = ANI_RUNNING
 					end if
-					CallFunction(PlayerObject_RunAnimSpd)
+					CallFunction(Player_HandleRunAnimSpeed)
 				end if
 			else
-				if object.speed > -0x5F5C2
-					object.animation = ANI_WALKING
-					CallFunction(PlayerObject_WalkAnimSpd)
+				if player.speed > -0x5F5C2
+					player.animation = ANI_WALKING
+					CallFunction(Player_HandleWalkAnimSpeed)
 				else
-					if object.speed < -0x9FFFF
-						object.animation = ANI_PEELOUT
+					if player.speed < -0x9FFFF
+						player.animation = ANI_PEELOUT
 					else
-						object.animation = ANI_RUNNING
+						player.animation = ANI_RUNNING
 					end if
-					CallFunction(PlayerObject_RunAnimSpd)
+					CallFunction(Player_HandleRunAnimSpeed)
 				end if
 			end if
 		end if
-		if object.value14 > 0
-			if temp7 == 1
-				PlaySfx(SfxName[Skidding], 0)
+
+		if player.skidding > 0
+			if temp7 == true
+				PlaySfx(SfxName[Skidding], false)
 			end if
-			object.animation = ANI_SKIDDING
-			object.animationSpeed = 0
-			object.value14--
+			player.animation = ANI_SKIDDING
+			player.animationSpeed = 0
+
+			player.skidding--
 			if ringTimer == 0
-				CreateTempObject(TypeName[Dust Puff], 0, object.xpos, object.ypos)
-				object[tempObjectPos].iypos += object.collisionBottom
-				object[tempObjectPos].drawOrder = object.value18
+				CreateTempObject(TypeName[Dust Puff], 0, player.xpos, player.ypos)
+				player[tempObjectPos].iypos += player.collisionBottom
+				player[tempObjectPos].drawOrder = player.sortedDrawOrder
 			end if
-			if object.speed > 0
-				object.direction = FLIP_NONE
+
+			if player.speed > 0
+				player.direction = FACING_RIGHT
 			else
-				object.direction = FLIP_X
+				player.direction = FACING_LEFT
 			end if
 		end if
-		if object.collisionMode == CMODE_FLOOR
-			if object.pushing == 2
-				object.animation = ANI_PUSHING
-				object.animationSpeed = 0
+
+		if player.collisionMode == CMODE_FLOOR
+			if player.pushing == 2
+				player.animation = ANI_PUSHING
+				player.animationSpeed = 0
 			end if
 		end if
-		if object.jumpPress == 1
-			CallFunction(PlayerObject_StartJump)
+
+		if player.jumpPress == true
+			CallFunction(Player_Action_Jump)
 		end if
 	end if
 end function
 
 
-function OOZSetup_Function99
-	if object.controlLock > 0
-		object.controlLock--
-		Sin256(temp0, object.angle)
+private function OOZSetup_HandleOilMovement
+	if player.controlLock > 0
+		player.controlLock--
+		Sin256(temp0, player.angle)
 		temp0 *= 0x2000
 		temp0 >>= 8
-		object.speed += temp0
+		player.speed += temp0
 	else
-		if object.left == 1
-			temp0 = object.value20
+		if player.left == true
+			temp0 = player.topSpeed
 			FlipSign(temp0)
-			if object.speed > temp0
-				object.speed -= 0x400
+			if player.speed > temp0
+				player.speed -= 0x400
 			end if
-			if object.speed <= 0
-				object.direction = FLIP_X
-			end if
-		end if
-		if object.right == 1
-			if object.speed < object.value20
-				object.speed += 0x400
-			end if
-			if object.speed >= 0
-				object.direction = FLIP_NONE
+
+			if player.speed <= 0
+				player.direction = FACING_LEFT
 			end if
 		end if
-		temp0 = object.left
-		temp0 |= object.right
-		if temp0 == 0
-			if object.speed > 0
-				object.speed -= 4
-				if object.speed < 0
-					object.speed = 0
+
+		if player.right == true
+			if player.speed < player.topSpeed
+				player.speed += 0x400
+			end if
+
+			if player.speed >= 0
+				player.direction = FACING_RIGHT
+			end if
+		end if
+
+		temp0 = player.left
+		temp0 |= player.right
+		if temp0 == false
+			if player.speed > 0
+				player.speed -= 4
+				if player.speed < 0
+					player.speed = 0
 				end if
 			else
-				object.speed += 4
-				if object.speed > 0
-					object.speed = 0
+				player.speed += 4
+				if player.speed > 0
+					player.speed = 0
 				end if
 			end if
-			if object.speed > 0x2000
-				Sin256(temp0, object.angle)
+
+			if player.speed > 0x2000
+				Sin256(temp0, player.angle)
 				temp0 *= 0x2000
 				temp0 >>= 8
-				object.speed += temp0
+				player.speed += temp0
 			end if
-			if object.speed < -0x2000
-				Sin256(temp0, object.angle)
+
+			if player.speed < -0x2000
+				Sin256(temp0, player.angle)
 				temp0 *= 0x2000
 				temp0 >>= 8
-				object.speed += temp0
+				player.speed += temp0
 			end if
-			if object.angle > 192
-				if object.angle < 228
-					if object.speed > -0x10000
-						if object.speed < 0x10000
-							object.controlLock = 30
+
+			if player.angle > 192
+				if player.angle < 228
+					if player.speed > -0x10000
+						if player.speed < 0x10000
+							player.controlLock = 30
 						end if
 					end if
 				end if
 			end if
-			if object.angle > 28
-				if object.angle < 64
-					if object.speed > -0x10000
-						if object.speed < 0x10000
-							object.controlLock = 30
+
+			if player.angle > 28
+				if player.angle < 64
+					if player.speed > -0x10000
+						if player.speed < 0x10000
+							player.controlLock = 30
 						end if
 					end if
 				end if
 			end if
 		else
-			Sin256(temp0, object.angle)
+			Sin256(temp0, player.angle)
 			temp0 *= 0x2000
 			temp0 >>= 8
-			object.speed += temp0
-			if object.right == 1
-				if object.left == 0
-					if object.angle > 192
-						if object.angle < 228
-							if object.speed < 0x28000
-								if object.speed > -0x20000
-									object.controlLock = 30
+			player.speed += temp0
+			if player.right == true
+				if player.left == false
+					if player.angle > 192
+						if player.angle < 228
+							if player.speed < 0x28000
+								if player.speed > -0x20000
+									player.controlLock = 30
 								end if
 							end if
 						end if
 					end if
 				end if
 			else
-				if object.left == 1
-					if object.angle > 28
-						if object.angle < 64
-							if object.speed > -0x28000
-								if object.speed < 0x20000
-									object.controlLock = 30
+				if player.left == true
+					if player.angle > 28
+						if player.angle < 64
+							if player.speed > -0x28000
+								if player.speed < 0x20000
+									player.controlLock = 30
 								end if
 							end if
 						end if
@@ -247,131 +363,146 @@ function OOZSetup_Function99
 end function
 
 
-function OOZSetup_Function100
-	CallFunction(OOZSetup_Function99)
-	if object.gravity == GRAVITY_AIR
-		object.state = PlayerObject_HandleAir
-		CallFunction(PlayerObject_HandleAirMovement)
+private function OOZSetup_PlayerState_OilSlide
+	CallFunction(OOZSetup_HandleOilMovement)
+
+	if player.gravity == GRAVITY_AIR
+		player.state = Player_State_Air
+		CallFunction(Player_HandleAirMovement)
 	else
-		CallFunction(PlayerObject_ResetOnFloor)
-		if object.speed == 0
-			if object.collisionMode == CMODE_FLOOR
-				if object.value1 < 240
-					object.animation = ANI_STOPPED
-					object.value1++
+		CallFunction(Player_HandleOnGround)
+		if player.speed == 0
+			if player.collisionMode == CMODE_FLOOR
+				if player.timer < 240
+					player.animation = ANI_STOPPED
+					player.timer++
 				else
-					object.animation = ANI_WAITING
-					if stage.playerListPos == 2
-						object.value1++
-						if object.value1 == 834
-							object.value1 = 0
-							object.animation = ANI_STOPPED
+					player.animation = ANI_WAITING
+					if stage.playerListPos == PLAYER_KNUX_ALONE
+						player.timer++
+						if player.timer == 834
+							player.timer = 0
+							player.animation = ANI_STOPPED
 						end if
 					end if
 				end if
 			end if
 		else
-			object.value1 = 0
-			if object.animation != ANI_WATERSLIDE
-				if object.speed > 0
-					if object.speed < 0x30000
-						object.animation = ANI_WALKING
-						CallFunction(OOZSetup_Function97)
+			player.timer = 0
+			if player.animation != ANI_WATERSLIDE
+				if player.speed > 0
+					if player.speed < 0x30000
+						player.animation = ANI_WALKING
+						CallFunction(OOZSetup_OilWalkAnimSpeed)
 					else
-						object.animation = ANI_RUNNING
-						object.animationSpeed = 240
+						player.animation = ANI_RUNNING
+						player.animationSpeed = 240
 					end if
 				else
-					if object.speed > -0x30000
-						object.animation = ANI_WALKING
-						CallFunction(OOZSetup_Function97)
+					if player.speed > -0x30000
+						player.animation = ANI_WALKING
+						CallFunction(OOZSetup_OilWalkAnimSpeed)
 					else
-						object.animation = ANI_RUNNING
-						object.animationSpeed = 240
+						player.animation = ANI_RUNNING
+						player.animationSpeed = 240
 					end if
 				end if
 			end if
 		end if
-		object.value14 = 0
-		if object.collisionMode == CMODE_FLOOR
-			if object.pushing == 2
-				object.animation = ANI_PUSHING
-				object.animationSpeed = 0
+
+		player.skidding = 0
+		if player.collisionMode == CMODE_FLOOR
+			if player.pushing == 2
+				player.animation = ANI_PUSHING
+				player.animationSpeed = 0
 			end if
 		end if
-		if object.jumpPress == 1
-			CallFunction(PlayerObject_StartJump)
+
+		if player.jumpPress == true
+			CallFunction(Player_Action_Jump)
 		end if
 	end if
 end function
 
 
-function OOZSetup_Function101
-	CheckEqual(object[25].type, TypeName[Music Event])
+private function OOZSetup_SpeedUpMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
 	if temp0 == 0
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x78B1)
-			SwapMusicTrack("OilOcean_F.ogg", 0, 0x396E4, 0x1F40)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
+			SwapMusicTrack("OilOcean_F.ogg", TRACK_STAGE, MUSIC_LOOP_OOZ_F, 8000)
 			break
-		case 2
-			SetMusicTrack("OilOcean_F.ogg", 0, 0x396E4)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 0x78B1, 0x1F40)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("OilOcean_F.ogg", TRACK_STAGE, MUSIC_LOOP_OOZ_F)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F, 8000)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("OilOcean_F.ogg", 0, 0x396E4)
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x78B1)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("OilOcean_F.ogg", TRACK_STAGE, MUSIC_LOOP_OOZ_F)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
 			break
+			
 		end switch
 	else
-		stage.musicFlag = 1
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
 	end if
 end function
 
 
-function OOZSetup_Function102
-	CheckEqual(object[25].type, TypeName[Music Event])
+private function OOZSetup_SlowDownMusic
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
 	if temp0 == 0
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 0x9717)
-			SwapMusicTrack("OilOcean.ogg", 0, 0x47AC4, 0x30D4)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
+			SwapMusicTrack("OilOcean.ogg", TRACK_STAGE, MUSIC_LOOP_OOZ, 12500)
 			break
-		case 2
-			SetMusicTrack("OilOcean.ogg", 0, 0x47AC4)
-			SwapMusicTrack("Invincibility.ogg", 2, 0x9717, 0x30D4)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("OilOcean.ogg", TRACK_STAGE, MUSIC_LOOP_OOZ)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV, 12500)
 			break
-		case 4
-		case 6
-		case 7
-			SetMusicTrack("OilOcean.ogg", 0, 0x47AC4)
-			SetMusicTrack("Invincibility.ogg", 2, 0x9717)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+		case TRACK_SUPER
+			SetMusicTrack("OilOcean.ogg", TRACK_STAGE, MUSIC_LOOP_OOZ)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
 			break
+			
 		end switch
 	else
-		stage.musicFlag = 2
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
 	end if
 end function
 
 
-event ObjectMain
-	if options.vsMode == 0
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Slightly update the BG for the boss
+	// (Realigns the city, otherwise the BG would look like the boss takes place in the sky)
+	if options.vsMode == false
 		if stage.actNum == 2
-			if object.value7 == 0
-				if screen.cameraY < 256
-					if screen.cameraX > 0x2140
+			if object.updatedBG == false
+				if camera[0].ypos < 256
+					if camera[0].xpos > 8512
 						temp0 = screen.yoffset
 						temp0 *= 44
 						temp0 <<= 8
@@ -384,175 +515,231 @@ event ObjectMain
 						tileLayer[1].scrollPos -= temp0
 						FlipSign(tileLayer[1].scrollPos)
 						tileLayer[1].parallaxFactor = temp1
-						object.value7 = 1
+						
+						object.updatedBG = true
 					end if
 				end if
 			end if
 		end if
 	end if
-	object.value0++
-	if object.value0 > 7
-		object.value0 = 0
+
+	object.deformTimer++
+	if object.deformTimer > 7
+		object.deformTimer = 0
 		tileLayer[1].deformationOffset++
-		RotatePalette(0, 170, 173, 0)
+		RotatePalette(0, 170, 173, false)
 	end if
-	if object.value1 < 2
-		GetTableValue(temp0, object.value2, OOZSetup_table39)
+
+	if object.lightAniTileDelay < 2
+		GetTableValue(temp0, object.lightAniTileFrame, OOZSetup_lightAniFrameTable)
+
 		Copy16x16Tile(756, temp0)
-		object.value2++
-		GetTableValue(object.value1, object.value2, OOZSetup_table39)
-		object.value2++
-		object.value2 &= 7
+		object.lightAniTileFrame++
+
+		GetTableValue(object.lightAniTileDelay, object.lightAniTileFrame, OOZSetup_lightAniFrameTable)
+		object.lightAniTileFrame++
+		object.lightAniTileFrame &= 7
 	else
-		object.value1--
+		object.lightAniTileDelay--
 	end if
-	if object.value3 < 2
-		GetTableValue(temp0, object.value4, OOZSetup_table40)
+
+	if object.diamondAniTileDelay < 2
+		GetTableValue(temp0, object.diamondAniTileFrame, OOZSetup_diamondAniFrameTable1)
 		Copy16x16Tile(757, temp0)
-		GetTableValue(temp0, object.value4, OOZSetup_table41)
+
+		GetTableValue(temp0, object.diamondAniTileFrame, OOZSetup_diamondAniFrameTable2)
 		Copy16x16Tile(758, temp0)
 		temp0++
+
 		Copy16x16Tile(759, temp0)
-		object.value4++
-		GetTableValue(object.value3, object.value4, OOZSetup_table40)
-		object.value4++
-		object.value4 &= 7
+		
+		object.diamondAniTileFrame++
+		GetTableValue(object.diamondAniTileDelay, object.diamondAniTileFrame, OOZSetup_diamondAniFrameTable1)
+		object.diamondAniTileFrame++
+		object.diamondAniTileFrame &= 7
 	else
-		object.value3--
+		object.diamondAniTileDelay--
 	end if
-	if object.value5 < 2
-		temp0 = object.value6
+	
+	// Oil!!!
+	if object.oilAniTileDelay < 2
+		temp0 = object.oilAniTileFrame
 		temp0 += 768
 		Copy16x16Tile(760, temp0)
 		temp0++
+
 		Copy16x16Tile(761, temp0)
 		temp0++
+
 		Copy16x16Tile(762, temp0)
 		temp0++
+
 		Copy16x16Tile(763, temp0)
 		temp0 += 21
+
 		Copy16x16Tile(764, temp0)
 		temp0++
+
 		Copy16x16Tile(765, temp0)
 		temp0++
+
 		Copy16x16Tile(766, temp0)
 		temp0++
+
 		Copy16x16Tile(767, temp0)
-		object.value5 = 18
-		object.value6 += 4
-		object.value6 %= 24
+		
+		object.oilAniTileDelay = 18
+		object.oilAniTileFrame += 4
+		object.oilAniTileFrame %= 24
 	else
-		object.value5--
+		object.oilAniTileDelay--
 	end if
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		if object[currentPlayer].state == PlayerObject_Blank
-			if object[currentPlayer].ypos < -0x800000
-				object[currentPlayer].state = PlayerObject_HandleAir
-				object[currentPlayer].gravity = GRAVITY_AIR
-				object[currentPlayer].value35 = 0
-				object[currentPlayer].tileCollisions = 1
+		if player[currentPlayer].state == Player_State_Static
+			if player[currentPlayer].ypos < -0x800000
+				// If the Player's up in the sky while static they were likely sent there by a Ball Cannon, so return them to normal now
+				
+				player[currentPlayer].state = Player_State_Air
+				player[currentPlayer].gravity = GRAVITY_AIR
+				player[currentPlayer].jumpAbilityState = 0
+				player[currentPlayer].tileCollisions = true
 			end if
 		end if
-		if object[currentPlayer].animation == ANI_TWIRL
-			object[currentPlayer].frame %= 24
+
+		if player[currentPlayer].animation == ANI_TWIRL
+			// (This is just to make sure the last frame in the Twirl animation isn't seen, since it's the same as the first frame and the animation loops)
+			player[currentPlayer].frame %= 24
 		end if
-		temp1 = object[currentPlayer].xpos
+		
+		temp1 = player[currentPlayer].xpos
 		temp1 >>= 16
-		temp2 = object[currentPlayer].ypos
+		temp2 = player[currentPlayer].ypos
 		temp2 >>= 16
 		temp2 += 6
+
 		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
 		switch temp0
-		case 1
-			if object[currentPlayer].yvel > -1
-				object[currentPlayer].state = OOZSetup_Function98
-				if object[currentPlayer].animation == ANI_JUMPING
-					object[currentPlayer].animation = ANI_WALKING
+		default
+		case TILE_NORMAL
+			break
+
+		case TILE_OILPOOL
+			if player[currentPlayer].yvel > -1
+				player[currentPlayer].state = OOZSetup_PlayerState_OilPool
+				if player[currentPlayer].animation == ANI_JUMPING
+					player[currentPlayer].animation = ANI_WALKING
 				end if
-				object[currentPlayer].gravity = GRAVITY_GROUND
-				object[currentPlayer].yvel = 0
-				object[currentPlayer].ypos += 0x10000
+				player[currentPlayer].gravity = GRAVITY_GROUND
+				player[currentPlayer].yvel = 0
+				player[currentPlayer].ypos += 0x10000
 			end if
 			break
-		case 3
-			if object[currentPlayer].gravity == GRAVITY_GROUND
-				object[currentPlayer].state = OOZSetup_Function100
+
+		case TILE_OILSTRIP
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				player[currentPlayer].state = OOZSetup_PlayerState_OilSlide
 			end if
 			break
-		case 5
-			if object[currentPlayer].gravity == GRAVITY_GROUND
-				object[currentPlayer].state = OOZSetup_Function100
-				object[currentPlayer].animation = ANI_WATERSLIDE
+
+		case TILE_OILSLIDE
+			if player[currentPlayer].gravity == GRAVITY_GROUND
+				player[currentPlayer].state = OOZSetup_PlayerState_OilSlide
+				player[currentPlayer].animation = ANI_WATERSLIDE
 				Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_DIRECTION)
 				switch temp0
-				case 0
-				case 2
-					if object[currentPlayer].speed > -0x80000
-						object[currentPlayer].speed -= 0x4000
+				case FLIP_NONE
+				case FLIP_Y
+					if player[currentPlayer].speed > -0x80000
+						player[currentPlayer].speed -= 0x4000
 					end if
 					break
-				case 1
-				case 3
-					if object[currentPlayer].speed < 0x80000
-						object[currentPlayer].speed += 0x4000
+
+				case FLIP_X
+				case FLIP_XY
+					if player[currentPlayer].speed < 0x80000
+						player[currentPlayer].speed += 0x4000
 					end if
+					break
+					
 				end switch
-				if object[currentPlayer].speed < 0
-					object[currentPlayer].direction = FLIP_X
+
+				if player[currentPlayer].speed < 0
+					player[currentPlayer].direction = FACING_LEFT
 				else
-					object[currentPlayer].direction = FLIP_NONE
+					player[currentPlayer].direction = FACING_RIGHT
 				end if
+
 				if currentPlayer == 0
-					if object.value8 == 0
-						PlaySfx(SfxName[Oil Slide], 0)
+					if object.oilSlideTimer == 0
+						PlaySfx(SfxName[Oil Slide], false)
 					end if
-					object.value8++
-					object.value8 &= 15
+					object.oilSlideTimer++
+					object.oilSlideTimer &= 15
 				end if
 			end if
 			break
+			
 		end switch
 	next
 end event
 
 
 event ObjectStartup
-	SetMusicTrack("OilOcean.ogg", 0, 0x47AC4)
-	SpeedUpMusic = OOZSetup_Function101
-	SlowDownMusic = OOZSetup_Function102
+	SetMusicTrack("OilOcean.ogg", TRACK_STAGE, MUSIC_LOOP_OOZ)
+
+	SpeedUpMusic = OOZSetup_SpeedUpMusic
+	SlowDownMusic = OOZSetup_SlowDownMusic
+
 	animalType1 = TypeName[Rocky]
 	animalType2 = TypeName[Pecky]
-	SetPaletteEntry(0, 192, 0)
-	object[10].type = TypeName[OOZ Setup]
-	object[10].priority = PRIORITY_ACTIVE
-	stage.newYBoundary2 = 0x768
+
+	// This is resetting the boss flash colour, [OOZ Eggman] does this too though so it's somewhat redundant
+	SetPaletteEntry(0, 192, 0x000000)
+
+	object[SLOT_ZONESETUP].type = TypeName[OOZ Setup]
+	object[SLOT_ZONESETUP].priority = PRIORITY_ACTIVE
+
+	stage.newYBoundary2 = 1896
 	stage.deathBoundary = stage.newYBoundary2
 	stage.deathBoundary -= 8
 	stage.deathBoundary <<= 16
+
 	arrayPos0 = 0
 	while arrayPos0 < 576
 		temp0 = arrayPos0
 		temp0 &= 63
-		GetTableValue(stage[arrayPos0].deformationData2, temp0, OOZSetup_table38)
+		GetTableValue(stage.deformationData2[arrayPos0], temp0, OOZSetup_deformTable)
 		arrayPos0++
 	loop
+
+	// Slightly update the BG for the boss if the player is respawning at the closest starpost to the boss
+	// (Realigns the city, otherwise the BG would look like the boss takes place in the sky)
 	if stage.actNum == 2
 		tileLayer[1].scrollPos = 0
 		tileLayer[1].parallaxFactor = 44
-		if screen.cameraY < 640
-			if screen.cameraX > 0x20FC
+		if camera[0].ypos < 640
+			if camera[0].xpos > 8444
 				tileLayer[1].parallaxFactor = 128
-				object[10].value7 = 1
+				object[SLOT_ZONESETUP].updatedBG = true
 			end if
 		end if
 	end if
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -1,19 +1,33 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: SBZ3 Fall Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 72 : TYPE_SBZ3FALL
+// ========================
 
-private alias 0 : STATE_STAGE	// Version of the object placed in a stage
-private alias 1 : STATE_PLAYER	// Version of the object spawned for a player
+private alias object.value0 : object.playerID
 
-event ObjectMain
+private alias 0 : SBZ3FALL_SETUP	
+private alias 1 : SBZ3FALL_HANDLEFALL
 
-	if object.state == 0
+// Player Aliases
+private alias object.state     : player.state
+private alias object.direction : player.direction
+private alias object.animation : player.animation
+private alias object.gravity   : player.gravity
+private alias object.value26   : player.flightVelocity
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == SBZ3FALL_SETUP
 		if recAnimation != 0
 			temp0 = recAnimation
 		else
@@ -27,13 +41,13 @@ event ObjectMain
 		currentPlayer = 0
 		while currentPlayer < playerCount
 			CreateTempObject(TypeName[SBZ3 Fall], 0, object.xpos, object.ypos)
-			object[tempObjectPos].state = 1
-			object[tempObjectPos].value0 = currentPlayer
+			object[tempObjectPos].state = SBZ3FALL_HANDLEFALL
+			object[tempObjectPos].playerID = currentPlayer
 			object[tempObjectPos].direction = temp0
-			object[tempObjectPos].direction &= 255
+			object[tempObjectPos].direction &= 0xFF
 			temp0 >>= 8
 			object[tempObjectPos].animation = temp0
-			object[tempObjectPos].animation &= 255
+			object[tempObjectPos].animation &= 0xFF
 			temp0 >>= 8
 
 			currentPlayer++
@@ -41,48 +55,56 @@ event ObjectMain
 
 		object.type = TypeName[Blank Object]
 	else
-		currentPlayer = object.value0
+		currentPlayer = object.playerID
 
-		if object[currentPlayer].gravity == GRAVITY_GROUND
+		if player[currentPlayer].gravity == 0
 			object.type = TypeName[Blank Object]
 		else
-			object[currentPlayer].direction = object.direction
-			object[currentPlayer].animation = object.animation
+			player[currentPlayer].direction = object.direction
+			player[currentPlayer].animation = object.animation
 
-			if object[currentPlayer].animation == ANI_JUMPING
-				object[currentPlayer].state = PlayerObject_HandleAir
+			if player[currentPlayer].animation == ANI_JUMPING
+				player[currentPlayer].state = Player_State_Air
 				object.type = TypeName[Blank Object]
 			end if
 
-			if object[currentPlayer].animation == ANI_FLYING
-				object[currentPlayer].state = PlayerObject_HandleTailsFlight
-				object[currentPlayer].value26 = 0x800
+			if player[currentPlayer].animation == ANI_FLYING
+				player[currentPlayer].state = Player_State_Fly
+				player[currentPlayer].flightVelocity = 0x800
 				object.type = TypeName[Blank Object]
 			end if
 
-			if object[currentPlayer].animation == ANI_GLIDING
-				if object[currentPlayer].direction == FLIP_X
-					object[currentPlayer].state = PlayerObject_KnuxGlideLeft
+			if player[currentPlayer].animation == ANI_GLIDING
+				if player[currentPlayer].direction == 1
+					player[currentPlayer].state = Player_State_GlideLeft
 				else
-					object[currentPlayer].state = PlayerObject_KnuxGlideRight
+					player[currentPlayer].state = Player_State_GlideRight
 				end if
 
 				object.type = TypeName[Blank Object]
 			end if
 
-			if object[currentPlayer].animation == ANI_GLIDING_DROP
-				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
+			if player[currentPlayer].animation == ANI_GLIDING_DROP
+				player[currentPlayer].state = Player_State_GlideDrop
 				object.type = TypeName[Blank Object]
 			end if
 		end if
 	end if
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	SpriteFrame(-8, -8, 16, 16, 239, 239) // "Trigger" - #0
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

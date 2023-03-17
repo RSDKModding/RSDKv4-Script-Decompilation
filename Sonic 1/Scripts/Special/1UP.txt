@@ -1,73 +1,96 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: 1UP Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 16 : TYPE_1UP
+// ========================
 
-// Function declarations
+// Music Events
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+private alias 2 : MUSICEVENT_TRANSITION
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function 1UP_DebugDraw
 reserve function 1UP_DebugSpawn
 
-function 1UP_DebugDraw
+
+// ========================
+// Function Definitions
+// ========================
+
+private function 1UP_DebugDraw
 	DrawSprite(stage.playerListPos)
 end function
 
 
-function 1UP_DebugSpawn
-	temp5 = 16
+private function 1UP_DebugSpawn
+	temp5 = TypeName[1UP]
 	temp4 = 0
-	CallFunction(DebugMode_Function11)
+	CallFunction(DebugMode_PlaceBlock)
 	object[arrayPos0].drawOrder = 4
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
+event ObjectUpdate
 	// Interact with player(s)
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 
-		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 		if checkResult == true
-
 			// Make the object disappear
 			object.type = TypeName[Ring Sparkle]
 
 			// Give an extra life
-			if options.gameMode != 2
+			if options.gameMode != MODE_TIMEATTACK
+#platform: USE_STANDALONE
 				player.lives++
-				PlaySfx(SfxName[Life], 0)
+#endplatform
+#platform: USE_ORIGINS
+				if game.coinMode == false
+					player.lives++
+				else
+					CallNativeFunction2(NotifyCallback, NOTIFY_ADD_COIN, 1)
+				end if
+#endplatform
+				PlaySfx(SfxName[Life], false)
 				PauseMusic()
-				ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
-				object[25].priority = PRIORITY_ACTIVE
+				ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+				object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
 			end if
-
 		end if
-
 	next
-
 end event
 
 
 event ObjectDraw
-	CallFunction(SpecialSetup_Function9)
+	CallFunction(SpecialSetup_GetBlockPos)
 	DrawSpriteXY(stage.playerListPos, temp0, temp1)
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Special/Objects.gif")
 
 	// Loop through all objects, view this as a foreach
-	arrayPos0 = 32
+	arrayPos0 = 0x20
 	while arrayPos0 < 0x420
 		if object[arrayPos0].type == TypeName[1UP]
 			object[arrayPos0].drawOrder = 4
 		end if
+		
 		arrayPos0++
 	loop
 
@@ -83,11 +106,19 @@ event ObjectStartup
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Special/Objects.gif")
 	SpriteFrame(-12, -12, 24, 24, 251, 176)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

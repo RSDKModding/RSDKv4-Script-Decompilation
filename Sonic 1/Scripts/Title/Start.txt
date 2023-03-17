@@ -1,40 +1,68 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Start Message Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias object.value0 : start.timer
+// ========================
+
+private alias object.value0 : object.timer
 // Not sure why it skips from 0 to 4, guess there must've been a revision or smth
-private alias object.value4 : start.attractTimer
+private alias object.value4 : object.attractTimer
 
 private alias 0 : START_FLASH
 private alias 1 : START_STARTGAME
 private alias 2 : START_STARTLVLSEL
-private alias 3 : START_STARTCONTINUE
+private alias 3 : START_STARTLVLSEL_OLD
 private alias 4 : START_STARTATTRACT
+private alias 5 : START_NOTIFYCALLBACK
+private alias 6 : START_WAITFORCALLBACK
+private alias 7 : START_FADETOEXIT
+private alias 8 : START_EXIT
 
-event ObjectMain
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	switch object.state
 	case START_FLASH
 		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
-		if inputPress.start == true
-			checkResult = 1
+		
+#platform: USE_STANDALONE
+		if keyPress[0].start == true
+			checkResult = true
 		end if
-		if inputPress.buttonA == true
-			checkResult = 1
+
+		if keyPress[0].buttonA == true
+			checkResult = true
 		end if
-		if inputPress.buttonB == true
-			checkResult = 1
+#endplatform
+
+		if keyPress[0].buttonB == true
+			checkResult = true
 		end if
-		if inputPress.buttonC == true
-			checkResult = 1
+
+#platform: USE_STANDALONE
+		if keyPress[0].buttonC == true
+			checkResult = true
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		if input.pressButton == true
+			checkResult = true
+		end if
+#endplatform
+
 		if checkResult > -1
+#platform: USE_STANDALONE
 			if options.stageSelectFlag == true
-				if checkResult > 0
+				if checkResult > 0 // This is a fancy way of seeing if two (or more) fingers are on the screen
 					object.state = START_STARTLVLSEL
 				else
 					object.state = START_STARTGAME
@@ -42,19 +70,38 @@ event ObjectMain
 			else
 				object.state = START_STARTGAME
 			end if
+
 			PlaySfx(SfxName[Menu Select], false)
 			StopMusic()
+#endplatform
+			
+#platform: USE_ORIGINS
+			if options.stageSelectFlag == true
+				if checkResult > 0
+					object.state = START_STARTLVLSEL
+					StopMusic()
+				else
+					object.state = START_NOTIFYCALLBACK
+				end if
+			else
+				if keyPress[0].buttonB == true
+					CallNativeFunction2(NotifyCallback, NOTIFY_BACK_TO_MAINMENU, 1)
+				else
+					object.state = START_NOTIFYCALLBACK
+				end if
+			end if
+#endplatform
 		else
-			start.attractTimer++
-			if start.attractTimer == 360
+			object.attractTimer++
+			if object.attractTimer == 360
 				object.state = START_STARTATTRACT
 			end if
 		end if
 		break
 
 	case START_STARTGAME
-		start.timer += 8
-		if start.timer == 320
+		object.timer += 8
+		if object.timer == 320
 			options.attractMode   = false
 			player.lives 		  = 3
 			player.continues 	  = 0
@@ -64,16 +111,19 @@ event ObjectMain
 			specialStage.listPos  = 0
 			specialStage.emeralds = 0
 			specialStage.nextZone = 0
+
+			// New Game - to GHZ1 you go!
 			stage.activeList 	  = REGULAR_STAGE
 			stage.listPos 		  = 0
+
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, start.timer)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
 
 	case START_STARTLVLSEL
-		start.timer += 8
-		if start.timer == 320
+		object.timer += 8
+		if object.timer == 320
 			options.attractMode   = false
 			player.lives 		  = 3
 			player.continues 	  = 0
@@ -83,26 +133,31 @@ event ObjectMain
 			specialStage.listPos  = 0
 			specialStage.emeralds = 0
 			specialStage.nextZone = 0
+
+			// Level Select!!
 			stage.activeList 	  = PRESENTATION_STAGE
 			stage.listPos 		  = 5
+
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, start.timer)
+		SetScreenFade(0, 0, 0, object.timer)
 		break
 
-	case START_STARTCONTINUE // I dont think this state is ever used??
-		start.timer += 8
-		if start.timer == 320
+	case START_STARTLVLSEL_OLD // Unused state
+		object.timer += 8
+		if object.timer == 320
+			// The Continue scene...?
+			// This state seems to be a leftover from CD, where its level select code was pretty much the same as this, including going to stage list pos 4
 			options.attractMode = false
 			stage.listPos 		= 4
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, start.timer)
+		SetScreenFade(0, 0, 0, object.timer)
 		break
 
 	case START_STARTATTRACT
-		start.timer += 8
-		if start.timer == 320
+		object.timer += 8
+		if object.timer == 320
 			player.lives 		  = 3
 			player.continues 	  = 0
 			player.score 		  = 0
@@ -127,8 +182,51 @@ event ObjectMain
 			credits.screen 		= 0
 			LoadStage()
 		end if
-		SetScreenFade(0, 0, 0, start.timer)
+		SetScreenFade(0x00, 0x00, 0x00, object.timer)
 		break
+
+#platform:USE_ORIGINS
+	case START_NOTIFYCALLBACK
+		game.continueFlag = false
+		game.callbackResult = -1
+		if game.playMode == BOOT_PLAYMODE_CLASSIC
+			CallNativeFunction2(NotifyCallback, NOTIFY_CHARACTER_SELECT, 1)
+		else
+			CallNativeFunction2(NotifyCallback, NOTIFY_CHARACTER_SELECT, 0)
+		end if
+		object.state = START_WAITFORCALLBACK
+		break
+		
+	case START_WAITFORCALLBACK
+		if game.callbackResult > 0
+			if game.continueFlag != false
+				game.continueFlag = false
+				object.state = START_FADETOEXIT
+			else
+				object.state = START_STARTGAME
+			end if
+			object.timer = 0
+			StopMusic()
+		else
+			if game.callbackResult == 0
+				object.state = START_FLASH
+			end if
+		end if
+		break
+		
+	case START_FADETOEXIT
+		object.timer += 4
+		if object.timer >= 384
+			object.state = START_EXIT
+		end if
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+		
+	case START_EXIT
+		engine.state = RESET_GAME
+		SetScreenFade(0, 0, 0, 255)
+		break
+#endplatform
 
 	end switch
 end event
@@ -139,6 +237,7 @@ event ObjectDraw
 	if object.animationTimer > 59
 		object.animationTimer = 0
 	end if
+
 	if object.animationTimer > 29
 		DrawSpriteScreenXY(0, object.xpos, object.ypos)
 	end if
@@ -146,23 +245,40 @@ end event
 
 
 event ObjectStartup
+#platform: USE_ORIGINS
+	// Level Select?
+	CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, 0)
+#endplatform
+	
 	LoadSpriteSheet("Title/Title.gif")
-
+	
+	// In the original S1 releases this was instead a engine.language switch for different languages, although all cases led to the same path
+	
 	switch engine.deviceType
-	case RETRO_STANDARD
+	case STANDARD
 		SpriteFrame(-48, -4, 96, 8, 1, 283)
 		break
-	case RETRO_MOBILE
+
+	case MOBILE
 		SpriteFrame(-56, -4, 112, 8, 1, 292)
 		break
+		
 	end switch
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Title/Title.gif")
+	SpriteFrame(-48, -4, 96, 8, 1, 283)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

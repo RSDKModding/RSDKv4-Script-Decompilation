@@ -1,53 +1,106 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Menu Control Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 2 : TYPE_MENUCONTROL
+// ========================
 
-private alias object.value0 : menuControl.fadeValue
-private alias object.value1 : menuControl.scrollDelayUp
-private alias object.value2 : menuControl.scrollDelayDown
-private alias object.value3 : menuControl.currentSelection
-private alias object.value4 : menuControl.soundTestCooldown
+private alias object.value0 : object.timer
+private alias object.value1 : object.scrollDelayUp
+private alias object.value2 : object.scrollDelayDown
+private alias object.value3 : object.currentSelection
+private alias object.value4 : object.soundTestCooldown
 
-private alias object.value0 : hexNo.number
-private alias object.value1 : hexNo.highlighted
+// States
+private alias 0 : MENUCONTROL_INIT
+private alias 1 : MENUCONTROL_FADEIN
+private alias 2 : MENUCONTROL_SELECTING
+private alias 3 : MENUCONTROL_LOADLEVEL
+private alias 4 : MENUCONTROL_LOADSPECIAL
 
 // The maximum number of selections available
 private alias 27 : MAX_SELECTION_COUNT
 
-// States
-private alias 0 : STATE_INIT
-private alias 1 : STATE_FADEIN
-private alias 2 : STATE_MAIN
-private alias 3 : STATE_LOADLEVEL
-private alias 4 : STATE_LOADSPECIAL
+// Aliases for some of the special options
+private alias 64 : SETTING_PLAYER
+private alias 65 : SETTING_SPINDASH
+private alias 66 : SETTING_GNDSPDCAP
+private alias 67 : SETTING_AIRSPDCAP
+private alias 68 : SETTING_S1SPIKES
+private alias 69 : SETTING_ITEMS
+private alias 70 : SETTING_EMERALDS
 
-// Function declarations
+private alias 71 : ENTRY_SOUNDTEST
+
+// HexNo Aliases
+private alias object.value0 : hexNo.number
+private alias object.value1 : hexNo.highlighted
+
+private alias 0  : HEXNO_HIGHLIGHT_FALSE
+private alias 16 : HEXNO_HIGHLIGHT_TRUE
+
+// Shield Types
+private alias 0 : MENUCONTROL_SHIELD_S1
+private alias 1 : MENUCONTROL_SHIELD_S2
+private alias 2 : MENUCONTROL_SHIELD_S3_S1
+private alias 3 : MENUCONTROL_SHIELD_S3_S2
+
+// Player List Pos Aliases
+private alias 0 : PLAYER_SONIC_ALONE
+private alias 1 : PLAYER_TAILS_ALONE
+private alias 2 : PLAYER_KNUX_ALONE
+private alias 3 : PLAYER_SONIC_AND_TAILS
+
+// Music loops
+private alias 635050 : MUSIC_LOOP_GHZ // 635970 in older S1 versions, changed some time around 1.0.7
+private alias 99380  : MUSIC_LOOP_MZ
+private alias 100712 : MUSIC_LOOP_SYZ // This is 101364 in the normal stage...
+private alias 84444  : MUSIC_LOOP_LZ
+private alias 84364  : MUSIC_LOOP_SLZ
+private alias 1      : MUSIC_LOOP_SBZ
+private alias 84680  : MUSIC_LOOP_FINAL
+private alias 39528  : MUSIC_LOOP_INV
+
+// Music Event Aliases
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+private alias 2 : MUSICEVENT_TRANSITION
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function MenuControl_HandleSecrets
-reserve function MenuControl_SoundTestPlayer
+reserve function MenuControl_PlaySong
 
+
+// ========================
 // Static Values
-public value MenuControl_value1 = 0;
-public value MenuControl_value2 = 0;
+// ========================
 
-private alias MenuControl_value1 : MenuControl_DebugCheat
-private alias MenuControl_value2 : MenuControl_EmeraldCheat
+private value MenuControl_DebugCheatCodePos 	= 0
+private value MenuControl_EmeraldCheatCodePos 	= 0
 
-private alias BGAnimation_value0 : BGAnimation_currentPreview
 
+// ========================
 // Tables
-public table MenuControl_SecretDebugMode
+// ========================
+
+private table MenuControl_DebugModeCheatCode
 	1, 9, 9, 1, 0, 6, 2, 3
 end table
 
-public table MenuControl_SecretEmeralds
+private table MenuControl_EmeraldsCheatCode
 	4, 1, 2, 6
 end table
+
+// TODO: The Origins-ification uglied up the below table quite a bit... 
+// pretty it up later - lave
 
 // This table holds data for every stage with six values for every stage,
 // -> First entry is menu table the stage option is on
@@ -55,84 +108,88 @@ end table
 // -> Third is the active stage list the stage is on
 // -> Fourth is the stage's position in the stage list
 // -> Fifth is the menu entry of what is on the opposite side of this selection, like how SBZ is to the right of GHZ and vice versa
-// -> Sixth is the icon the entry uses
-public table MenuControl_EntryTable
-	MENU_1, 0,  REGULAR_STAGE, 0, 15, 1 	// 0  - GHZ 1
-	MENU_1, 1,  REGULAR_STAGE, 1, 16, 1 	// 1  - GHZ 2
-	MENU_1, 2,  REGULAR_STAGE, 2, 17, 1 	// 2  - GHZ 3
-	MENU_1, 4,  REGULAR_STAGE, 3, 18, 2 	// 3  - MZ 1
-	MENU_1, 5,  REGULAR_STAGE, 4, 18, 2 	// 4  - MZ 2
-	MENU_1, 6,  REGULAR_STAGE, 5, 19, 2 	// 5  - MZ 3
-	MENU_1, 8,  REGULAR_STAGE, 6, 19, 3 	// 6  - SYZ 1
-	MENU_1, 9,  REGULAR_STAGE, 7, 20, 3 	// 7  - SYZ 2
-	MENU_1, 10, REGULAR_STAGE, 8, 21, 3 	// 8  - SYZ 3
-	MENU_1, 12, REGULAR_STAGE, 9, 23, 4 	// 9  - LZ 1
-	MENU_1, 13, REGULAR_STAGE, 10, 24, 4 	// 10 - LZ 2
-	MENU_1, 14, REGULAR_STAGE, 11, 25, 4 	// 11 - LZ 3
-	MENU_1, 16, REGULAR_STAGE, 12, 26, 5 	// 12 - SLZ 1
-	MENU_1, 17, REGULAR_STAGE, 13, 26, 5 	// 13 - SLZ 2
-	MENU_1, 18, REGULAR_STAGE, 14, 27, 5 	// 14 - SLZ 3
-	MENU_2, 0,  REGULAR_STAGE, 15, 0, 6 	// 15 - SBZ 1
-	MENU_2, 1,  REGULAR_STAGE, 16, 1, 6 	// 16 - SBZ 2
-	MENU_2, 2,  REGULAR_STAGE, 17, 2, 6 	// 17 - SBZ 3
-	MENU_2, 4,  REGULAR_STAGE, 18, 3, 7 	// 18 - Final Zone
-	MENU_2, 6,  SPECIAL_STATE, 0, 5, 8 		// 19 - Special Stage
-	MENU_2, 9,  0,             0, 64, 0		// 20 - Player Option
-	MENU_2, 10, 0,             0, 65, 0		// 21 - Spindash Setting
-	MENU_2, 11, 0,             0, 66, 0		// 22 - Ground Speed Cap Setting
-	MENU_2, 12, 0,             0, 67, 0		// 23 - Air Speed Cap Setting
-	MENU_2, 13, 0,             0, 68, 0		// 24 - S1 Spikes Setting
-	MENU_2, 14, 0,             0, 69, 0		// 25 - Items Setting
-	MENU_2, 15, 0,             0, 70, 0		// 26 - Max Emeralds Count
-	MENU_2, 18, 0,             0, 71, 0		// 27 - Sound Test
+//      -> For "special" selections (like settings) this value is instead used to hold a special ID
+// -> Sixth is the icon the entry uses (based on Sprite Frames in the BG Animation object)
+private table MenuControl_EntryTable
+	0,  0, 1, 0,  15, 1 	// 0  - GHZ 1
+	0,  1, 1, 1,  16, 1 	// 1  - GHZ 2
+	0,  2, 1, 2,  17, 1 	// 2  - GHZ 3
+	0,  4, 1, 3,  18, 2 	// 3  - MZ 1
+	0,  5, 1, 4,  18, 2 	// 4  - MZ 2
+	0,  6, 1, 5,  19, 2 	// 5  - MZ 3
+	0,  8, 1, 6,  19, 3 	// 6  - SYZ 1
+	0,  9, 1, 7,  20, 3 	// 7  - SYZ 2
+	0, 10, 1, 8,  21, 3 	// 8  - SYZ 3
+	0, 12, 1, 9,  23, 4 	// 9  - LZ 1
+	0, 13, 1, 10, 24, 4 	// 10 - LZ 2
+	0, 14, 1, 11, 25, 4 	// 11 - LZ 3
+	0, 16, 1, 12, 26, 5 	// 12 - SLZ 1
+	0, 17, 1, 13, 26, 5 	// 13 - SLZ 2
+	0, 18, 1, 14, 27, 5 	// 14 - SLZ 3
+	1,  0, 1, 15,  0, 6 	// 15 - SBZ 1
+	1,  1, 1, 16,  1, 6 	// 16 - SBZ 2
+	1,  2, 1, 17,  2, 6 	// 17 - SBZ 3
+	1,  4, 1, 18,  3, 7 	// 18 - Final Zone
+	1,  6, 2,  0,  5, 8 	// 19 - Special Stage
+	1,  9, 0,  0, 64, 0		// 20 - Player Option
+	1, 10, 0,  0, 65, 0		// 21 - Spindash Setting
+	1, 11, 0,  0, 66, 0		// 22 - Ground Speed Cap Setting
+	1, 12, 0,  0, 67, 0		// 23 - Air Speed Cap Setting
+	1, 13, 0,  0, 68, 0		// 24 - S1 Spikes Setting
+	1, 14, 0,  0, 69, 0		// 25 - Items Setting
+	1, 15, 0,  0, 70, 0		// 26 - Max Emeralds Count
+	1, 18, 0,  0, 71, 0		// 27 - Sound Test
 end table
 
 
-function MenuControl_HandleSecrets
+// ========================
+// Function Definitions
+// ========================
 
+private function MenuControl_HandleSecrets
 	if hexNo[+2].number < 8
 		SetTableValue(hexNo[+2].number, 117, MenuControl_EntryTable)
 	end if
 
-	GetTableValue(temp0, MenuControl_DebugCheat, MenuControl_SecretDebugMode)
+	GetTableValue(temp0, MenuControl_DebugCheatCodePos, MenuControl_DebugModeCheatCode)
 	if temp0 == hexNo[+2].number
-		MenuControl_DebugCheat++
-		if MenuControl_DebugCheat == 8
-			MenuControl_DebugCheat = 0
-			stage.debugMode = 1
-			PlaySfx(SfxName[Ring L], 0)
+		MenuControl_DebugCheatCodePos++
+		if MenuControl_DebugCheatCodePos == 8
+			MenuControl_DebugCheatCodePos = 0
+			stage.debugMode = true
+			PlaySfx(SfxName[Ring L], false)
 		end if
 	else
-		MenuControl_DebugCheat = 0
+		MenuControl_DebugCheatCodePos = 0
 	end if
 
-	GetTableValue(temp0, MenuControl_EmeraldCheat, MenuControl_SecretEmeralds)
+	GetTableValue(temp0, MenuControl_EmeraldCheatCodePos, MenuControl_EmeraldsCheatCode)
 	if temp0 == hexNo[+2].number
-		MenuControl_EmeraldCheat++
-		if MenuControl_EmeraldCheat == 4
-			MenuControl_EmeraldCheat = 0
+		MenuControl_EmeraldCheatCodePos++
+		if MenuControl_EmeraldCheatCodePos == 4
+			MenuControl_EmeraldCheatCodePos = 0
 			if options.superStates == true
-				specialStage.emeralds = 127 // Note that this isn't 127 emeralds, just seven 1's in binary
+				// Give the player all seven emeralds
+				specialStage.emeralds = 0x7F
 			else
-				specialStage.emeralds = 63 // This isn't 63 emeralds, either. Just 6 1's in binary
+				// Only give the player 6 emeralds, as the seventh one shouldn't really exist
+				specialStage.emeralds = 0x3F
 				specialStage.listPos = 6
 			end if
-			PlaySfx(SfxName[Emerald], 0)
+
+			PlaySfx(SfxName[Emerald], false)
 			StopMusic()
 		end if
 	else
-		MenuControl_EmeraldCheat = 0
+		MenuControl_EmeraldCheatCodePos = 0
 	end if
-
 end function
 
 
-function MenuControl_SoundTestPlayer
-
-	// Don't play songs in quick succession
-	if menuControl.soundTestCooldown == 0
-
-		menuControl.soundTestCooldown = 30
+private function MenuControl_PlaySong
+	// Don't allow playing of songs in quick succession
+	if object.soundTestCooldown == 0
+		object.soundTestCooldown = 30
 
 		switch hexNo[+2].number
 		case 0
@@ -140,45 +197,45 @@ function MenuControl_SoundTestPlayer
 			break
 
 		case 1
-			SetMusicTrack("GreenHill.ogg", 0, 0x9B0AA)
+			SetMusicTrack("GreenHill.ogg", 0, MUSIC_LOOP_GHZ)
 			PlayMusic(0)
 			break
 
 		case 2
-			SetMusicTrack("Marble.ogg", 0, 0x18434)
+			SetMusicTrack("Marble.ogg", 0, MUSIC_LOOP_MZ)
 			PlayMusic(0)
 			break
 
 		case 3
-			SetMusicTrack("SpringYard.ogg", 0, 0x18968)
+			SetMusicTrack("SpringYard.ogg", 0, MUSIC_LOOP_SYZ)
 			PlayMusic(0)
 			break
 
 		case 4
-			SetMusicTrack("Labyrinth.ogg", 0, 0x149DC)
+			SetMusicTrack("Labyrinth.ogg", 0, MUSIC_LOOP_LZ)
 			PlayMusic(0)
 			break
 
 		case 5
-			SetMusicTrack("Starlight.ogg", 0, 0x1498C)
+			SetMusicTrack("Starlight.ogg", 0, MUSIC_LOOP_SLZ)
 			PlayMusic(0)
 			break
 
 		case 6
-			SetMusicTrack("ScrapBrain.ogg", 0, true)
+			SetMusicTrack("ScrapBrain.ogg", 0, MUSIC_LOOP_SBZ)
 			PlayMusic(0)
 			break
 
 		case 7
-			SetMusicTrack("Invincibility.ogg", 0, 0x9A68)
+			SetMusicTrack("Invincibility.ogg", 0, MUSIC_LOOP_INV)
 			PlayMusic(0)
 			break
 
 		case 8
-			PlaySfx(SfxName[Life], 0)
+			PlaySfx(SfxName[Life], false)
 			PauseMusic()
-			ResetObjectEntity(25, TypeName[Music Event], 2, 0, 0)
-			object[25].priority = PRIORITY_ACTIVE
+			ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
+			object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
 			break
 
 		case 9
@@ -187,12 +244,12 @@ function MenuControl_SoundTestPlayer
 			break
 
 		case 10
-			SetMusicTrack("Titlescreen.ogg", 0, 0)
+			SetMusicTrack("Titlescreen.ogg", 0, false)
 			PlayMusic(0)
 			break
 
 		case 11
-			SetMusicTrack("Ending.ogg", 0, 0)
+			SetMusicTrack("Ending.ogg", 0, false)
 			PlayMusic(0)
 			break
 
@@ -202,55 +259,58 @@ function MenuControl_SoundTestPlayer
 			break
 
 		case 13
-			SetMusicTrack("Final.ogg", 0, 0x14AC8)
+			SetMusicTrack("Final.ogg", 0, MUSIC_LOOP_FINAL)
 			PlayMusic(0)
 			break
 
 		case 14
-			SetMusicTrack("ActComplete.ogg", 0, 0)
+			SetMusicTrack("ActComplete.ogg", 0, false)
 			PlayMusic(0)
 			break
 
 		case 15
-			SetMusicTrack("GameOver.ogg", 0, 0)
+			SetMusicTrack("GameOver.ogg", 0, false)
 			PlayMusic(0)
 			break
 
 		case 16
-			SetMusicTrack("Continue.ogg", 0, 0)
+			SetMusicTrack("Continue.ogg", 0, false)
 			PlayMusic(0)
 			break
 
 		case 17
-			SetMusicTrack("Credits.ogg", 0, 0)
+			SetMusicTrack("Credits.ogg", 0, false)
 			PlayMusic(0)
 			break
 
 		case 18
-			SetMusicTrack("Drowning.ogg", 0, 0)
+			SetMusicTrack("Drowning.ogg", 0, false)
 			PlayMusic(0)
 			break
-
+			
 		end switch
-
 	end if
-
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
+event ObjectUpdate
+	// Set up the positions of the two HexNo objects
+	// (Not sure why this can't be in INIT like the ypos setup, but if you really wanna ig)
 	object[+1].xpos = screen.xcenter
 	object[+1].xpos += 118
 	object[+2].xpos = object[+1].xpos
 
 	switch object.state
-	case STATE_INIT
-		menuControl.fadeValue = 320
+	case MENUCONTROL_INIT
+		object.timer = 320
 
-		SetScreenFade(0, 0, 0, menuControl.fadeValue)
+		SetScreenFade(0, 0, 0, object.timer)
 
-		// Setup the next two objects
+		// Setup the next two HexNo objects' positions
 
 		object[+1].ypos = 88
 		object[+1].priority = PRIORITY_ACTIVE
@@ -259,78 +319,76 @@ event ObjectMain
 		object[+2].priority = PRIORITY_ACTIVE
 
 		switch stage.playerListPos
-		case 0
-			object[+1].value0 = 1
+		case PLAYER_SONIC_ALONE
+			hexNo[+1].number = 1 // Sonic Alone
 			break
-		case 1
-			object[+1].value0 = 2
+			
+		case PLAYER_TAILS_ALONE
+			hexNo[+1].number = 2 // Tails
 			break
-		case 2
-			object[+1].value0 = 3
+			
+		case PLAYER_KNUX_ALONE
+			hexNo[+1].number = 3 // Knuckles
 			break
-		case 3
-			object[+1].value0 = 0
+			
+		case PLAYER_SONIC_AND_TAILS
+			hexNo[+1].number = 0 // Sonic & Tails
 			break
+			
 		end switch
 
 		object.state++
 		break
 
-	case STATE_FADEIN
-		if menuControl.fadeValue > 0
-			menuControl.fadeValue -= 16
+	case MENUCONTROL_FADEIN
+		if object.timer > 0
+			object.timer -= 16
 		else
 			object.state++
 		end if
 
-		SetScreenFade(0, 0, 0, menuControl.fadeValue)
+		SetScreenFade(0, 0, 0, object.timer)
 		break
 
-	case STATE_MAIN
-		if inputDown.down == true
+	case MENUCONTROL_SELECTING
+		if keyDown[0].down == true
+			object.scrollDelayUp = 0
+			object.scrollDelayDown++
 
-			menuControl.scrollDelayUp = 0
-
-			menuControl.scrollDelayDown++
-
-			if menuControl.scrollDelayDown == 1
-				menuControl.currentSelection++
+			if object.scrollDelayDown == 1
+				object.currentSelection++
 			end if
 
-			menuControl.scrollDelayDown %= 12
-
+			object.scrollDelayDown %= 12
 		else
 
-			if inputDown.up == true
+			if keyDown[0].up == true
+				object.scrollDelayDown = 0
 
-				menuControl.scrollDelayDown = 0
-
-				menuControl.scrollDelayUp++
-
-				if menuControl.scrollDelayUp == 1
-					menuControl.currentSelection--
+				object.scrollDelayUp++
+				if object.scrollDelayUp == 1
+					object.currentSelection--
 				end if
 
-				menuControl.scrollDelayUp %= 12
-
+				object.scrollDelayUp %= 12
 			else
-				menuControl.scrollDelayUp = 0
-				menuControl.scrollDelayDown = 0
+				object.scrollDelayUp = 0
+				object.scrollDelayDown = 0
 			end if
 		end if
 
 		// Loop back if max count reached
-		if menuControl.currentSelection > MAX_SELECTION_COUNT
-			menuControl.currentSelection = 0
+		if object.currentSelection > MAX_SELECTION_COUNT
+			object.currentSelection = 0
 		end if
 
 		// Go back to mex if player if trying to go back from the first entry
-		if menuControl.currentSelection < 0
-			menuControl.currentSelection = MAX_SELECTION_COUNT
+		if object.currentSelection < 0
+			object.currentSelection = MAX_SELECTION_COUNT
 		end if
 
 		// Get info about the current selection
-		temp0 = menuControl.currentSelection
+		temp0 = object.currentSelection
 		temp0 *= 6
 		temp0++
 
@@ -338,77 +396,77 @@ event ObjectMain
 		GetTableValue(temp2, temp0, MenuControl_EntryTable)
 		temp0 += 3
 
-		// Get what "scene" the selection should load
+		// Get the selection's special ID (will return a normal value if it's a normal selection)
 		GetTableValue(temp1, temp0, MenuControl_EntryTable)
 
-		// Switch statement based on the scene
+		// Switch statement based on the entry's special ID
 		switch temp1
 		default
 			// Default - anything that isn't an option or sound test will end up here
-			checkResult = inputPress.left
-			checkResult |= inputPress.right
+			checkResult = keyPress[0].left
+			checkResult |= keyPress[0].right
 
 			if checkResult == true
-				menuControl.currentSelection = temp1
+				object.currentSelection = temp1
 			end if
 
-			object[+1].value1 = 0
+			hexNo[+1].highlighted = HEXNO_HIGHLIGHT_FALSE
+			hexNo[+2].highlighted = HEXNO_HIGHLIGHT_FALSE
 
-			hexNo.highlighted[+2] = 0
-
-			if inputPress.buttonA == true
-				inputPress.start = true
+			if keyPress[0].buttonA == true
+				keyPress[0].start = true
 			end if
 			break
 
-		case 64
+		case SETTING_PLAYER
 			// Player option
-			object[+1].value1 = 16
+			hexNo[+1].highlighted = HEXNO_HIGHLIGHT_TRUE
+			hexNo[+2].highlighted = HEXNO_HIGHLIGHT_FALSE
 
-			hexNo.highlighted[+2] = 0
-
-			if inputPress.left == true
-				object[+1].value0--
+			if keyPress[0].left == true
+				hexNo[+1].number--
 			end if
 
-			if inputPress.right == true
-				object[+1].value0++
+			if keyPress[0].right == true
+				hexNo[+1].number++
 			end if
 
-			object[+1].value0 &= 3
+			hexNo[+1].number &= 3
 
-			switch object[+1].value0
+			switch hexNo[+1].number
 			case 0
-				stage.playerListPos = 3
+				stage.playerListPos = PLAYER_SONIC_AND_TAILS
 				break
 
 			case 1
-				stage.playerListPos = 0
+				stage.playerListPos = PLAYER_SONIC_ALONE
+				stage.player2Enabled = false
 				break
 
 			case 2
-				stage.playerListPos = 1
+				stage.playerListPos = PLAYER_TAILS_ALONE
+				stage.player2Enabled = false
 				break
 
 			case 3
-				stage.playerListPos = 2
+				stage.playerListPos = PLAYER_KNUX_ALONE
+				stage.player2Enabled = false
 				break
+				
 			end switch
 			break
 
-		case 65
-			// Spindash option
-			object[+1].value1 = 0
+		case SETTING_SPINDASH
+			// Spindash setting
+			hexNo[+1].highlighted = HEXNO_HIGHLIGHT_FALSE
+			hexNo[+2].highlighted = HEXNO_HIGHLIGHT_FALSE
 
-			hexNo.highlighted[+2] = 0
-
-			checkResult = inputPress.left
-			checkResult |= inputPress.right
+			checkResult = keyPress[0].left
+			checkResult |= keyPress[0].right
 
 			if checkResult == true
-
 				// Toggle it
-				options.spindash ^= 1
+				options.spindash ^= true
 
 				// Update the menu to match
 				if options.spindash == true
@@ -416,82 +474,75 @@ event ObjectMain
 				else
 					EditMenuEntry(MENU_2, "SPINDASH@@@@*OFF*", temp2, true)
 				end if
-
 			end if
 			break
 
-		case 66
+		case SETTING_GNDSPDCAP
 			// Ground speed cap option
-			checkResult = inputPress.left
-			checkResult |= inputPress.right
+			checkResult = keyPress[0].left
+			checkResult |= keyPress[0].right
 
 			if checkResult == true
-
 				// Toggle it
-				options.speedCap ^= 1
+				options.speedCap ^= true
 
-				// Update the menu to match the new setting
+				// Update the menu text to match the new setting
 				if options.speedCap == true
 					EditMenuEntry(MENU_2, "GND SPD CAP@@*ON*", temp2, true)
 				else
 					EditMenuEntry(MENU_2, "GND SPD CAP *OFF*", temp2, true)
 				end if
-
 			end if
 			break
 
-		case 67
+		case SETTING_AIRSPDCAP
 			// Air speed cap option
-			checkResult = inputPress.left
-			checkResult |= inputPress.right
+			checkResult = keyPress[0].left
+			checkResult |= keyPress[0].right
 
 			if checkResult == true
 
 				// Toggle it
-				options.airSpeedCap ^= 1
+				options.airSpeedCap ^= true
 
-				// Change the menu to match the new option setting
+				// Change the menu text to match the new option setting
 				if options.airSpeedCap == true
 					EditMenuEntry(MENU_2, "AIR SPD CAP@@*ON*", temp2, true)
 				else
 					EditMenuEntry(MENU_2, "AIR SPD CAP *OFF*", temp2, true)
 				end if
-
 			end if
 			break
 
-		case 68
+		case SETTING_S1SPIKES
 			// Spike behavior
-			checkResult = inputPress.left
-			checkResult |= inputPress.right
+			checkResult = keyPress[0].left
+			checkResult |= keyPress[0].right
 
 			if checkResult == true
-
 				// Toggle the option
-				options.spikeBehavior ^= 1
+				options.spikeBehavior ^= true
 				
-				// Update the menu
+				// Update the menu text
 				if options.spikeBehavior == true
 					EditMenuEntry(MENU_2, "S1 SPIKES@@@@*ON*", temp2, true)
 				else
 					EditMenuEntry(MENU_2, "S1 SPIKES@@@*OFF*", temp2, true)
 				end if
-
 			end if
 			break
 
 		case 69
 			// Monitors option
-			checkResult = inputPress.left
-			checkResult |= inputPress.right
+			checkResult = keyPress[0].left
+			checkResult |= keyPress[0].right
 
 			if checkResult == true
-
-				if inputPress.left == true
+				if keyPress[0].left == true
 					options.shieldType--
 				end if
 
-				if inputPress.right == true
+				if keyPress[0].right == true
 					options.shieldType++
 				end if
 
@@ -500,38 +551,36 @@ event ObjectMain
 
 				// Update the menu text to account for the new change
 				switch options.shieldType
-				case 0
+				case MENUCONTROL_SHIELD_S1
 					EditMenuEntry(MENU_2, "ITEMS@@@@@@@@*S1*", temp2, true)
 					break
 
-				case 1
+				case MENUCONTROL_SHIELD_S2
 					EditMenuEntry(MENU_2, "ITEMS@@@@@@@@*S2*", temp2, true)
 					break
 
-				case 2
+				case MENUCONTROL_SHIELD_S3_S1
 					EditMenuEntry(MENU_2, "ITEMS@@@@@*S1+S3*", temp2, true)
 					break
 
-				case 3
+				case MENUCONTROL_SHIELD_S3_S2
 					EditMenuEntry(MENU_2, "ITEMS@@@@@*S2+S3*", temp2, true)
 					break
-
 				end switch
 			end if
 			break
 
-		case 70
+		case SETTING_EMERALDS
 			// Max emeralds setting
-			object[+1].value1 = 0
+			hexNo[+1].highlighted = HEXNO_HIGHLIGHT_FALSE
+			hexNo[+2].highlighted = HEXNO_HIGHLIGHT_FALSE
 
-			hexNo.highlighted[+2] = 0
-			checkResult = inputPress.left
-			checkResult |= inputPress.right
+			checkResult = keyPress[0].left
+			checkResult |= keyPress[0].right
 
 			if checkResult == true
-
 				// Change the setting
-				options.superStates ^= 1
+				options.superStates ^= true
 
 				// And update the menu to match
 				if options.superStates == true
@@ -539,68 +588,60 @@ event ObjectMain
 				else
 					EditMenuEntry(MENU_2, "MAX EMERALDS *06*", temp2, true)
 				end if
-
 			end if
 			break
 
-		case 71
+		case ENTRY_SOUNDTEST
 			// Sound test
-			if menuControl.soundTestCooldown > 0
-				menuControl.soundTestCooldown--
+			if object.soundTestCooldown > 0
+				object.soundTestCooldown--
 			end if
 
-			object[+1].value1 = 0
+			hexNo[+1].highlighted = HEXNO_HIGHLIGHT_FALSE
+			hexNo[+2].highlighted = HEXNO_HIGHLIGHT_TRUE
 
-			hexNo[+2].highlighted = 16
 
-
-			if inputPress.buttonC == true
-
+			if keyPress[0].buttonC == true
 				// Add 16 to the count
 				hexNo[+2].number += 16
-
 			end if
 
-			if inputPress.left == true
+			if keyPress[0].left == true
 				hexNo[+2].number--
 			end if
 
-			if inputPress.right == true
+			if keyPress[0].right == true
 				hexNo[+2].number++
 			end if
 
-			// 31 max
+			// There are only 32 entries
 			hexNo[+2].number &= 31
 
-			if inputPress.buttonA == true
-				CallFunction(MenuControl_SoundTestPlayer)
+			if keyPress[0].buttonA == true
+				CallFunction(MenuControl_PlaySong)
 				CallFunction(MenuControl_HandleSecrets)
 			end if
 
-			if inputPress.buttonB == true
-				CallFunction(MenuControl_SoundTestPlayer)
+			if keyPress[0].buttonB == true
+				CallFunction(MenuControl_PlaySong)
 				CallFunction(MenuControl_HandleSecrets)
 			end if
 			break
-
+			
 		end switch
 
-		temp0 = menuControl.currentSelection
+		temp0 = object.currentSelection
 		temp0 *= 6
 
 		// Get what menu the current selection is on
 		GetTableValue(temp1, temp0, MenuControl_EntryTable)
 		temp0++
 		if temp1 == MENU_1
-
 			menu2.selection = -1
 			GetTableValue(menu1.selection, temp0, MenuControl_EntryTable)
-
 		else // MENU_2
-
 			menu1.selection = -1
 			GetTableValue(menu2.selection, temp0, MenuControl_EntryTable)
-
 		end if
 
 		temp0 += 4
@@ -609,43 +650,40 @@ event ObjectMain
 		GetTableValue(BGAnimation_currentPreview, temp0, MenuControl_EntryTable)
 
 		// Check if the player wants to enter the level
-		if inputPress.start == true
-
+		if keyPress[0].start == true
 			// Special stage?
-			if menuControl.currentSelection == 19
-
+			if object.currentSelection == 19
 				// Special fade for special stages
-				PlaySfx(SfxName[Warp], 0)
-				object.state = STATE_LOADSPECIAL
-				fadeColor = 208
+				PlaySfx(SfxName[Warp], false)
+				object.state = MENUCONTROL_LOADSPECIAL
+				fadeColor = 0xD0
 				fadeColor <<= 16
-				temp0 = 255
+				temp0 = 0xFF
 				temp0 <<= 8
 				fadeColor += temp0
-				fadeColor += 224
-
+				fadeColor += 0xE0
 			else
-
 				// Use the normal level loading routine
-				object.state = STATE_LOADLEVEL
-
+				object.state = MENUCONTROL_LOADLEVEL
 			end if
-
 		end if
 		break
 
-	case STATE_LOADLEVEL // Black fade for entering a normal stage
-
-		if menuControl.fadeValue < 256
+	case MENUCONTROL_LOADLEVEL // Black fade for entering a normal stage
+		if object.timer < 0x100
 			music.volume -= 10
-			menuControl.fadeValue += 16
-			SetScreenFade(0, 0, 0, menuControl.fadeValue)
+			object.timer += 16
+			SetScreenFade(0, 0, 0, object.timer)
 		else
+#platform: USE_ORIGINS
+			CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, 1)
+			CallNativeFunction2(NotifyCallback, NOTIFY_PLAYER_SET, stage.playerListPos)
+#endplatform
 
 			StopMusic()
 
 			// Start getting info about the currently selected stage
-			temp0 = menuControl.currentSelection
+			temp0 = object.currentSelection
 			temp0 *= 6
 			temp0 += 2
 
@@ -653,7 +691,7 @@ event ObjectMain
 			GetTableValue(temp1, temp0, MenuControl_EntryTable)
 			temp0++
 
-			// Get the stage list pos
+			// And then get the stage's list pos
 			GetTableValue(temp2, temp0, MenuControl_EntryTable)
 
 			stage.activeList = temp1
@@ -661,20 +699,19 @@ event ObjectMain
 
 			LoadStage()
 
-			SetScreenFade(0, 0, 0, 255)
-
+			SetScreenFade(0x00, 0x00, 0x00, 0xFF)
 		end if
 		break
 
-	case STATE_LOADSPECIAL
-		if menuControl.fadeValue < 768
+	case MENUCONTROL_LOADSPECIAL
+		if object.timer < 768
 			music.volume -= 10
-			menuControl.fadeValue += 8
-			SetScreenFade(208, 255, 224, menuControl.fadeValue)
+			object.timer += 8
+			SetScreenFade(0xD0, 0xFF, 0xE0, object.timer)
 		else
 			StopMusic()
 
-			temp0 = menuControl.currentSelection
+			temp0 = object.currentSelection
 			temp0 *= 6
 			temp0 += 2
 
@@ -682,7 +719,7 @@ event ObjectMain
 			GetTableValue(temp1, temp0, MenuControl_EntryTable)
 			temp0++
 
-			// Get the stage list pos
+			// And then get the stage's list position
 			GetTableValue(temp2, temp0, MenuControl_EntryTable)
 
 			stage.activeList = temp1
@@ -690,17 +727,16 @@ event ObjectMain
 
 			LoadStage()
 
-			SetScreenFade(208, 255, 224, 255)
+			SetScreenFade(0xD0, 0xFF, 0xE0, 0xFF)
 		end if
 		break
-
+		
 	end switch
 
 end event
 
 
 event ObjectDraw
-
 	temp0 = screen.xcenter
 	temp0 -= 10
 	DrawMenu(MENU_1, temp0, 16)
@@ -708,12 +744,10 @@ event ObjectDraw
 	temp0 = screen.xcenter
 	temp0 += 142
 	DrawMenu(MENU_2, temp0, 16)
-
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("LevelSelect/Text.gif")
 
 	foreach (TypeName[Menu Control], arrayPos0, ALL_ENTITIES)
@@ -721,45 +755,49 @@ event ObjectStartup
 		object[arrayPos0].priority = PRIORITY_ACTIVE
 	next
 
-	// Player is on stage select, set the flag
+	// Player is on stage select, so set the flag
 	options.stageSelectFlag = true
-
+	
+	// (Initial verions of S1 used to reset stage.player2Enabled here, but that line was later removed)
+	
 	// Setup the menu and its entries
 
 	// Left column
 	SetupMenu(MENU_1, 0, 3, 1)
 	AddMenuEntry(MENU_1, "GREEN HILL 1", true)
-	AddMenuEntry(MENU_1, "2", 0)
-	AddMenuEntry(MENU_1, "3", 0)
-	AddMenuEntry(MENU_1, " ", 0)
+	AddMenuEntry(MENU_1, "2", false)
+	AddMenuEntry(MENU_1, "3", false)
+	AddMenuEntry(MENU_1, " ", false)
 	AddMenuEntry(MENU_1, "MARBLE 1", true)
-	AddMenuEntry(MENU_1, "2", 0)
-	AddMenuEntry(MENU_1, "3", 0)
-	AddMenuEntry(MENU_1, " ", 0)
+	AddMenuEntry(MENU_1, "2", false)
+	AddMenuEntry(MENU_1, "3", false)
+	AddMenuEntry(MENU_1, " ", false)
 	AddMenuEntry(MENU_1, "SPRING YARD 1", true)
-	AddMenuEntry(MENU_1, "2", 0)
-	AddMenuEntry(MENU_1, "3", 0)
-	AddMenuEntry(MENU_1, " ", 0)
+	AddMenuEntry(MENU_1, "2", false)
+	AddMenuEntry(MENU_1, "3", false)
+	AddMenuEntry(MENU_1, " ", false)
 	AddMenuEntry(MENU_1, "LABYRINTH 1", true)
-	AddMenuEntry(MENU_1, "2", 0)
-	AddMenuEntry(MENU_1, "3", 0)
-	AddMenuEntry(MENU_1, " ", 0)
+	AddMenuEntry(MENU_1, "2", false)
+	AddMenuEntry(MENU_1, "3", false)
+	AddMenuEntry(MENU_1, " ", false)
 	AddMenuEntry(MENU_1, "STAR LIGHT 1", true)
-	AddMenuEntry(MENU_1, "2", 0)
-	AddMenuEntry(MENU_1, "3", 0)
-	AddMenuEntry(MENU_1, " ", 0)
+	AddMenuEntry(MENU_1, "2", false)
+	AddMenuEntry(MENU_1, "3", false)
+	AddMenuEntry(MENU_1, " ", false)
 
 	// Right column
 	SetupMenu(MENU_2, 0, 3, 1)
 	AddMenuEntry(MENU_2, "SCRAP BRAIN 1", true)
-	AddMenuEntry(MENU_2, "2", 0)
-	AddMenuEntry(MENU_2, "3", 0)
-	AddMenuEntry(MENU_2, " ", 0)
+	AddMenuEntry(MENU_2, "2", false)
+	AddMenuEntry(MENU_2, "3", false)
+	AddMenuEntry(MENU_2, " ", false)
 	AddMenuEntry(MENU_2, "FINAL ", true)
-	AddMenuEntry(MENU_2, " ", 0)
+	AddMenuEntry(MENU_2, " ", false)
 	AddMenuEntry(MENU_2, "SPECIAL STAGE ", true)
-	AddMenuEntry(MENU_2, " ", 0)
-	AddMenuEntry(MENU_2, " ", 0)
+	AddMenuEntry(MENU_2, " ", false)
+	AddMenuEntry(MENU_2, " ", false)
+
+	// (Neat note - In initial S1 versions, spaces were used as placeholder letters rather than @'s)
 
 	AddMenuEntry(MENU_2, "PLAYER@@@@@@@*@@*", true)
 
@@ -788,19 +826,19 @@ event ObjectStartup
 	end if
 
 	switch options.shieldType
-	case 0
+	case MENUCONTROL_SHIELD_S1
 		AddMenuEntry(MENU_2, "ITEMS@@@@@@@@*S1*", true)
 		break
 
-	case 1
+	case MENUCONTROL_SHIELD_S2
 		AddMenuEntry(MENU_2, "ITEMS@@@@@@@@*S2*", true)
 		break
 
-	case 2
+	case MENUCONTROL_SHIELD_S3_S1
 		AddMenuEntry(MENU_2, "ITEMS@@@@@*S1+S3*", true)
 		break
 
-	case 3
+	case MENUCONTROL_SHIELD_S3_S2
 		AddMenuEntry(MENU_2, "ITEMS@@@@@*S2+S3*", true)
 		break
 
@@ -812,20 +850,33 @@ event ObjectStartup
 		AddMenuEntry(MENU_2, "MAX EMERALDS *07*", true)
 	end if
 
-	AddMenuEntry(MENU_2, " ", 0)
-	AddMenuEntry(MENU_2, " ", 0)
+	AddMenuEntry(MENU_2, " ", false)
+	AddMenuEntry(MENU_2, " ", false)
 	AddMenuEntry(MENU_2, "SOUND TEST *@@*", true)
 
-	menu1.selection = 0
+	menu1.selection =  0
 	menu2.selection = -1
-
+	
+	// Not in the original, but origins compiler swaps the value of SPECIAL_STAGE to 2 (rather than 3 originally)
+	temp0 = 19
+	temp0 *= 6
+	temp0 += 2
+	SetTableValue(SPECIAL_STAGE, temp0, MenuControl_EntryTable)
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

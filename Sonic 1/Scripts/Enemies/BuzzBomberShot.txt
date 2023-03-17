@@ -1,38 +1,42 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Buzz Bomber Shot Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias object.value0 : buzzBomberShot.timer
+// ========================
+
+private alias object.value0 : object.timer
 
 private alias 0 : BBSHOT_CHARGE1 // frame 1
 private alias 1 : BBSHOT_CHARGE2 // frame 2
 private alias 2 : BBSHOT_SHOT	 // actually shot the projectile
 
-// Static Values
 
-// Tables
+// ========================
+// Events
+// ========================
 
-event ObjectMain
+event ObjectUpdate
 	switch object.state
 	case BBSHOT_CHARGE1
-		if buzzBomberShot.timer < 8
-			buzzBomberShot.timer++
+		if object.timer < 8
+			object.timer++
 		else
-			buzzBomberShot.timer = 0
+			object.timer = 0
 			object.state++
 			object.frame = 1
 		end if
 		break
 
 	case BBSHOT_CHARGE2
-		if buzzBomberShot.timer < 8
-			buzzBomberShot.timer++
+		if object.timer < 8
+			object.timer++
 		else
-			buzzBomberShot.timer = 0
+			object.timer = 0
 			object.state++
 			object.frame = 2
 		end if
@@ -41,14 +45,17 @@ event ObjectMain
 	case BBSHOT_SHOT
 		object.xpos += object.xvel
 		object.ypos += object.yvel
-		if buzzBomberShot.timer >= 2
+		
+		if object.timer >= 2
 			object.frame = 3
 		else
 			object.frame = 2
 		end if
-		buzzBomberShot.timer++
-		buzzBomberShot.timer &= 3
+
+		object.timer++
+		object.timer &= 3
 		break
+		
 	end switch
 
 	if object.outOfBounds == true
@@ -57,9 +64,9 @@ event ObjectMain
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		if object.state > BBSHOT_CHARGE1
-			BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 			if checkResult == true
-				CallFunction(PlayerObject_ProjectileHit)
+				CallFunction(Player_ProjectileHit)
 			end if
 		end if
 	next
@@ -109,32 +116,46 @@ event ObjectStartup
 	end if
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
-event RSDKLoad
-	CheckCurrentStageFolder("Zone01")
-	if checkResult == true
-		LoadSpriteSheet("GHZ/Objects.gif")
-		SpriteFrame(-6, -6, 12, 12, 160, 111)
-	end if
 
+event RSDKLoad
+	// Make sure we have a fall-back, in case the current folder isn't actually a valid one
+	temp0 = false
+	
 	CheckCurrentStageFolder("Zone02")
+	temp0 |= checkResult
 	if checkResult == true
 		LoadSpriteSheet("MZ/Objects.gif")
 		SpriteFrame(-6, -6, 12, 12, 37, 179)
 	end if
 
 	CheckCurrentStageFolder("Zone03")
+	temp0 |= checkResult
 	if checkResult == true
 		LoadSpriteSheet("SYZ/Objects.gif")
 		SpriteFrame(-6, -6, 12, 12, 83, 83)
 	end if
 
 	CheckCurrentStageFolder("Zone07")
+	temp0 |= checkResult
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-8, -8, 16, 16, 35, 51)
 	end if
+	
+	if temp0 == true
+		// We use GHZ's sprites as the fallback, "Zone01" (GHZ's folder) will come here too
+		LoadSpriteSheet("GHZ/Objects.gif")
+		SpriteFrame(-6, -6, 12, 12, 160, 111)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

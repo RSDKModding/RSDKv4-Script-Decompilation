@@ -1,72 +1,97 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Eggman Barrier Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 80 : TYPE_EGGMANBARRIER
+// ========================
 
-event ObjectMain
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : WFZEGGMANBARRIER_ACTIVATE
+private alias 1 : WFZEGGMANBARRIER_ACTIVE
+private alias 2 : WFZEGGMANBARRIER_DEACTIVATE
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.collisionLeft : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	switch object.state
-	case 0
+	case WFZEGGMANBARRIER_ACTIVATE
 		GetTableValue(temp0, 10, StageSetup_oscillationTable)
 		temp0 >>= 5
-		temp0 += 128
+		temp0 += 0x80
 		object.alpha += 4
 		if object.alpha >= temp0
-			object.state = 1
+			object.state = WFZEGGMANBARRIER_ACTIVE
 		end if
 		break
-	case 1
+
+	case WFZEGGMANBARRIER_ACTIVE
 		GetTableValue(object.alpha, 10, StageSetup_oscillationTable)
 		object.alpha >>= 5
-		object.alpha += 128
-		if object.value0 > 0
-			object.value0--
-			if object.value0 == 0
-				object.state = 2
+		object.alpha += 0x80
+
+		if object.timer > 0
+			object.timer--
+			if object.timer == 0
+				object.state = WFZEGGMANBARRIER_DEACTIVATE
 			end if
 		end if
 		break
-	case 2
+
+	case WFZEGGMANBARRIER_DEACTIVATE
 		object.alpha -= 4
 		if object.alpha <= 0
 			object.type = TypeName[Blank Object]
 		end if
 		break
+		
 	end switch
+
 	if object.propertyValue == 0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			temp0 = object[currentPlayer].collisionLeft
+			temp0 = player[currentPlayer].collisionLeft
 			temp0 <<= 16
-			temp0 += object[currentPlayer].xpos
+			temp0 += player[currentPlayer].xpos
 			temp1 = object.xpos
 			temp1 += 0x80000
 			if temp0 < temp1
-				object[currentPlayer].xvel = 0
-				object[currentPlayer].speed = 0
-				object[currentPlayer].xpos = temp1
-				temp0 = object[currentPlayer].collisionLeft
+				player[currentPlayer].xvel 	= 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos 	= temp1
+				temp0 = player[currentPlayer].collisionLeft
 				temp0 <<= 16
-				object[currentPlayer].xpos -= temp0
+				player[currentPlayer].xpos -= temp0
 			end if
 		next
 	else
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			temp0 = object[currentPlayer].collisionRight
+			temp0 = player[currentPlayer].collisionRight
 			temp0 <<= 16
-			temp0 += object[currentPlayer].xpos
+			temp0 += player[currentPlayer].xpos
 			temp1 = object.xpos
 			temp1 -= 0x80000
 			if temp0 > temp1
-				object[currentPlayer].xvel = 0
-				object[currentPlayer].speed = 0
-				object[currentPlayer].xpos = temp1
-				temp0 = object[currentPlayer].collisionRight
+				player[currentPlayer].xvel 	= 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos 	= temp1
+				temp0 = player[currentPlayer].collisionRight
 				temp0 <<= 16
-				object[currentPlayer].xpos -= temp0
+				player[currentPlayer].xpos -= temp0
 			end if
 		next
 	end if
@@ -80,7 +105,7 @@ end event
 
 event ObjectStartup
 	CheckCurrentStageFolder("Zone11")
-	if checkResult == 1
+	if checkResult == true
 		LoadSpriteSheet("SCZ/Objects.gif")
 		SpriteFrame(-8, -64, 16, 128, 294, 1)
 	else
@@ -89,11 +114,55 @@ event ObjectStartup
 	end if
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // type
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone11")
+	if checkResult == true
+		LoadSpriteSheet("SCZ/Objects.gif")
+		SpriteFrame(-8, -64, 16, 128, 294, 1)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -64, 16, 128, 463, 1)
+	end if
+	
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Left Barrier", 0)
+	AddEnumVariable("Right Barrier", 1)
 end event

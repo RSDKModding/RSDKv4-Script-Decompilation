@@ -1,97 +1,139 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Break Rock Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 55 : TYPE_BREAKROCK
+// ========================
 
-// Function declarations
+private alias 0 : BREAKROCK_ROCK
+private alias 1 : BREAKROCK_FRAGMENT
+
+// Player Aliases
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.value16 : player.isSidekick
+private alias object.value19 : player.badnikBonus
+
+// Global Variable ID Aliases
+private alias 22 : GLOBAL_PLAYERSCORE
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function BreakRock_DebugDraw
 reserve function BreakRock_DebugSpawn
 
-// Static Values
 
-// Tables
+// ========================
+// Function Definitions
+// ========================
 
-function BreakRock_DebugDraw
+private function BreakRock_DebugDraw
 	DrawSprite(0)
 end function
 
 
-function BreakRock_DebugSpawn
+private function BreakRock_DebugSpawn
 	CreateTempObject(TypeName[Break Rock], 0, object.xpos, object.ypos)
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	switch object.state
-	case 0
+	case BREAKROCK_ROCK
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			if object[currentPlayer].animation == ANI_JUMPING
-				BoxCollisionTest(C_BOX, object.entityPos, -16, -16, 16, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-				if checkResult == 1
-					object[currentPlayer].yvel = -0x30000
-					object[currentPlayer].gravity = GRAVITY_AIR
+			if player[currentPlayer].animation == ANI_JUMPING
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == COL_TOP
+					player[currentPlayer].yvel = -0x30000
+					player[currentPlayer].gravity = GRAVITY_AIR
+
+					// Create the rock fragments
+
 					CreateTempObject(TypeName[Break Rock], 1, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos -= 16
 					object[tempObjectPos].iypos -= 8
 					object[tempObjectPos].xvel = -0x20000
 					object[tempObjectPos].yvel = -0x20000
-					object[tempObjectPos].state = 1
+					object[tempObjectPos].state = BREAKROCK_FRAGMENT
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Rock], 2, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos += 0
 					object[tempObjectPos].iypos -= 8
 					object[tempObjectPos].xvel = 0
 					object[tempObjectPos].yvel = -0x28000
-					object[tempObjectPos].state = 1
+					object[tempObjectPos].state = BREAKROCK_FRAGMENT
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Rock], 3, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos += 16
 					object[tempObjectPos].iypos -= 8
 					object[tempObjectPos].xvel = 0x20000
 					object[tempObjectPos].yvel = -0x20000
-					object[tempObjectPos].state = 1
+					object[tempObjectPos].state = BREAKROCK_FRAGMENT
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Rock], 4, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos -= 16
 					object[tempObjectPos].iypos += 8
 					object[tempObjectPos].xvel = -0x1C000
 					object[tempObjectPos].yvel = -0x1C000
-					object[tempObjectPos].state = 1
+					object[tempObjectPos].state = BREAKROCK_FRAGMENT
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Rock], 5, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos += 0
 					object[tempObjectPos].iypos += 8
 					object[tempObjectPos].xvel = 0
 					object[tempObjectPos].yvel = -0x20000
-					object[tempObjectPos].state = 1
+					object[tempObjectPos].state = BREAKROCK_FRAGMENT
 					object[tempObjectPos].drawOrder = 5
+
 					CreateTempObject(TypeName[Break Rock], 6, object.xpos, object.ypos)
 					object[tempObjectPos].ixpos += 16
 					object[tempObjectPos].iypos += 8
 					object[tempObjectPos].xvel = 0x1C000
 					object[tempObjectPos].yvel = -0x1C000
-					object[tempObjectPos].state = 1
+					object[tempObjectPos].state = BREAKROCK_FRAGMENT
 					object[tempObjectPos].drawOrder = 5
+
+					// Make this object disappear
 					object.type = TypeName[Blank Object]
-					arrayPos0 = 22
-					if object[currentPlayer].value16 == 0
+
+					// global variable "array" (yes, this is actually how its done)
+					arrayPos0 = GLOBAL_PLAYERSCORE
+#platform: USE_DECOMP
+					arrayPos0 = VarName[player.score]
+#endplatform
+					if player[currentPlayer].isSidekick == 0
 						arrayPos0 += currentPlayer
 					end if
-					switch object[currentPlayer].value19
+
+					switch player[currentPlayer].badnikBonus
 					case 0
-						player.score += 100
+						global[arrayPos0] += 100
 						break
+
 					case 1
-						player.score += 200
+						global[arrayPos0] += 200
 						break
+
 					case 2
-						player.score += 500
+						global[arrayPos0] += 500
 						break
+
 					case 3
 					case 4
 					case 5
@@ -104,34 +146,39 @@ event ObjectMain
 					case 12
 					case 13
 					case 14
-						player.score += 1000
+						global[arrayPos0] += 1000
 						break
+						
 					case 15
-						player.score += 10000
+						global[arrayPos0] += 10000
 						break
 					end switch
-					CreateTempObject(TypeName[Object Score], object[currentPlayer].value19, object.xpos, object.ypos)
+
+					CreateTempObject(TypeName[Object Score], player[currentPlayer].badnikBonus, object.xpos, object.ypos)
 					object[tempObjectPos].drawOrder = 5
-					if object[currentPlayer].gravity == GRAVITY_AIR
-						if object[currentPlayer].value19 < 15
-							object[currentPlayer].value19++
+					if player[currentPlayer].gravity == 1
+						if player[currentPlayer].badnikBonus < 15
+							player[currentPlayer].badnikBonus++
 						end if
 					end if
-					PlaySfx(SfxName[Block Break], 0)
+					PlaySfx(SfxName[Block Break], false)
 				end if
 			else
-				BoxCollisionTest(C_BOX, object.entityPos, -24, -16, 24, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+				BoxCollisionTest(C_SOLID, object.entityPos, -24, -16, 24, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 			end if
 		next
 		break
-	case 1
+
+	case BREAKROCK_FRAGMENT
 		object.xpos += object.xvel
 		object.ypos += object.yvel
 		object.yvel += 0x1800
-		if object.outOfBounds == 1
+		
+		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
 		break
+
 	end switch
 end event
 
@@ -150,17 +197,27 @@ event ObjectStartup
 	SpriteFrame(-8, -8, 16, 16, 207, 110)
 	SpriteFrame(-8, -8, 16, 16, 223, 110)
 	SpriteFrame(-8, -8, 16, 16, 239, 110)
+
 	SetTableValue(TypeName[Break Rock], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(BreakRock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(BreakRock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("HTZ/Objects.gif")
+	SpriteFrame(-24, -16, 48, 32, 207, 94)
+	
+	// Although used by the object, it shouldn't be set by the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

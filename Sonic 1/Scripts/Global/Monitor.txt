@@ -1,69 +1,127 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Monitor Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 13 : TYPE_MONITOR
+// ========================
 
-private alias object.value16	:	player.isPlayer2
+private alias object.value0 : object.contentsPos.y
+private alias object.value1 : object.timer
 
-private alias StageSetup_value22 : StageSetup_monitorOverlayFrame
+// States
+private alias 0 : MONITOR_STATE_IDLE
+private alias 1 : MONITOR_STATE_FALL
 
-// Function declarations
+// Contents Types
+private alias 0  : MONITOR_BLANK
+private alias 1  : MONITOR_RINGS
+private alias 2  : MONITOR_SHIELD_BLUE
+private alias 3  : MONITOR_INVINCIBILITY
+private alias 4  : MONITOR_SPEEDSHOES
+private alias 5  : MONITOR_1UP_SONIC
+private alias 6  : MONITOR_1UP_TAILS
+private alias 7  : MONITOR_1UP_KNUX
+private alias 8  : MONITOR_SUPER
+private alias 9  : MONITOR_SHIELD_BUBBLE
+private alias 10 : MONITOR_SHIELD_FIRE
+private alias 11 : MONITOR_SHIELD_LIGHTNING
+private alias 12 : MONITOR_EGGMAN
+private alias 13 : MONITOR_SHIELD_GOGGLES
+private alias 14 : MONITOR_DEBUG_SPIKES
+private alias 15 : MONITOR_DEBUG_SHIELD
+private alias 16 : MONITOR_DEBUG_EMERALDS
+private alias 17 : MONITOR_COUNT
+
+// Broken Monitor Aliases
+private alias 0 : MONITOR_STATE_RISE
+
+// Player Aliases
+private alias object.yvel : player.yvel
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.value16 : player.isSidekick
+private alias object.value17 : debugMode.currentSelection
+private alias object.value25 : player.gravityStrength
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
+// Game Mode Aliases
+private alias 2 : MODE_TIMEATTACK
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+// Regular Stage Aliases
+private alias 12 : STAGE_R_SLZ1
+private alias 13 : STAGE_R_SLZ2
+private alias 17 : STAGE_R_SBZ3
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function Monitor_DebugDraw
 reserve function Monitor_DebugSpawn
 
+
+// ========================
 // Static Values
-public value Monitor_value24 = 0;
+// ========================
 
-private alias Monitor_value24 : Monitor_debugStart
+private value Monitor_startDebugID = 0
 
-// Tables
 
-function Monitor_DebugDraw
+// ========================
+// Function Definitions
+// ========================
 
+private function Monitor_DebugDraw
 	DrawSprite(0)
-	temp0 = object[0].value17
-	temp0 -= Monitor_debugStart
-	if temp0 == 5
+
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Monitor_startDebugID
+	if temp0 == MONITOR_1UP_SONIC
 		temp0 += stage.playerListPos
 	else
-		if temp0 > 5
+		if temp0 > MONITOR_1UP_SONIC
 			temp0 += 2
 		end if
 	end if
 
 
-	if temp0 > 12
-		// Is this happening in Labyrinth Zone?
+	if temp0 >= MONITOR_SHIELD_GOGGLES
+		// Only allow Goggles in Labyrinth, otherwise skip it
 		CheckCurrentStageFolder("Zone04")
-		if checkResult == 0
+		if checkResult == false
 			temp0++
 		end if
 	end if
+	
 	DrawSprite(temp0)
-
 end function
 
 
-function Monitor_DebugSpawn
-
-	temp0 = object[0].value17
-	temp0 -= Monitor_debugStart
-	if temp0 == 5
+private function Monitor_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Monitor_startDebugID
+	if temp0 == MONITOR_1UP_SONIC
 		temp0 += stage.playerListPos
 	else
-		if temp0 > 5
+		if temp0 > MONITOR_1UP_SONIC
 			temp0 += 2
 		end if
 	end if
 
 
-	if temp0 > 12
-		// Labyrinth Zone?
+	if temp0 >= MONITOR_SHIELD_GOGGLES
+		// only allow goggles in labyrinth, otherwise skip it
 		CheckCurrentStageFolder("Zone04")
 		if checkResult == 0
 			temp0++
@@ -75,57 +133,54 @@ function Monitor_DebugSpawn
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
-	if object.state == 1
+event ObjectUpdate
+	if object.state == MONITOR_STATE_FALL
 		object.yvel += 0x3800
 		object.ypos += object.yvel
 		if object.yvel >= 0
-			ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
-			if checkResult == 1
+			ObjectTileCollision(CSIDE_FLOOR, 0, 16, PATH_A)
+			if checkResult == true
 				object.yvel = 0
-				object.state = 0
+				object.state = MONITOR_STATE_IDLE
 			end if
 		end if
 	end if
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-
-		CheckGreater(object[currentPlayer].yvel, -1)
+		CheckGreater(player[currentPlayer].yvel, -1)
 		temp0 = checkResult
-		CheckEqual(object[currentPlayer].gravity, GRAVITY_GROUND)
+		CheckEqual(player[currentPlayer].gravity, 0)
 		temp0 |= checkResult
 
 		if temp0 == true
-
-			CheckEqual(object[currentPlayer].animation, ANI_JUMPING)
+			CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
 			temp0 = checkResult
-			CheckEqual(object[currentPlayer].animation, ANI_GLIDING)
+			CheckEqual(player[currentPlayer].animation, ANI_GLIDING)
 			temp0 |= checkResult
-			CheckEqual(object[currentPlayer].animation, ANI_GLIDING_STOP)
+			CheckEqual(player[currentPlayer].animation, ANI_GLIDING_STOP)
 			temp0 |= checkResult
 
 			if temp0 == true
-
-				// Is this Player 1?
-				if object[currentPlayer].value16 == false
+				if player[currentPlayer].isSidekick == false // Only P1 should be able to break monitors
 
 					// See if P1 has collided with the monitor
-					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 16, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-
-					if checkResult == 1
-
+					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					if checkResult == true
 						// Start resetting this object
-						object.state = 0
+						object.state = MONITOR_STATE_RISE
 
 						// Create and setup the smoke puff
 						CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
 						object[tempObjectPos].drawOrder = 4
-						object[currentPlayer].yvel += object[currentPlayer].value25
-						object[currentPlayer].yvel += object[currentPlayer].value25
+						player[currentPlayer].yvel += player[currentPlayer].gravityStrength
+						player[currentPlayer].yvel += player[currentPlayer].gravityStrength
 
 						// Player recoil
-						FlipSign(object[currentPlayer].yvel)
+						FlipSign(player[currentPlayer].yvel)
 
 						// Switch this item to the broken variant
 						object.type = TypeName[Broken Monitor]
@@ -135,50 +190,37 @@ event ObjectMain
 						end if
 
 						// Setup the alpha for the icon fading
-						object.alpha = 255
+						object.alpha = 0x100
 
-						object.value0 = object.ypos
-						object.value1 = -0x30000
+						object.contentsPos.y = object.ypos
+						object.timer = -0x30000
 
-						PlaySfx(SfxName[Destroy], 0)
-
+						PlaySfx(SfxName[Destroy], false)
 					end if
 				else
-
 					// Simply act as a box for P2 since only P1 can break monitors
-					BoxCollisionTest(C_BOX, object.entityPos, -15, -14, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-
+					BoxCollisionTest(C_SOLID, object.entityPos, -15, -14, 15, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 				end if
 			else
-
 				// Player isn't in a state to break the monitor, just act as a solid box
-				BoxCollisionTest(C_BOX, object.entityPos, -15, -14, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-
+				BoxCollisionTest(C_SOLID, object.entityPos, -15, -14, 15, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 			end if
-
 		else
-
 			// Check if the player hit the monitor
-			BoxCollisionTest(C_BOX, object.entityPos, -15, -16, 15, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			BoxCollisionTest(C_SOLID, object.entityPos, -15, -16, 15, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 
 			// Did the player hit the monitor as a roof?
 			if checkResult == COL_BOTTOM
-
-				object.state = 1
+				object.state = MONITOR_STATE_FALL
 				object.yvel = -0x20000
-				object[currentPlayer].yvel = 0x20000
-
+				player[currentPlayer].yvel = 0x20000
 			end if
-
 		end if
-
 	next
-
 end event
 
 
 event ObjectDraw
-
 	DrawSprite(0)
 
 	switch StageSetup_monitorOverlayFrame
@@ -198,14 +240,11 @@ event ObjectDraw
 
 	default
 		DrawSprite(object.propertyValue)
-
 	end switch
-
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Items.gif")
 
 	// Monitor frames
@@ -218,9 +257,19 @@ event ObjectStartup
 	SpriteFrame(-8, -9, 16, 14, 68, 16)
 	SpriteFrame(-8, -9, 16, 14, 51, 31)
 	SpriteFrame(-8, -9, 16, 14, 68, 31)
-	SpriteFrame(-8, -9, 16, 14, 51, 46)
-	SpriteFrame(-8, -9, 16, 14, 68, 46)
-	SpriteFrame(-8, -9, 16, 14, 51, 61)
+#platform: USE_ORIGINS
+	if game.coinMode == false
+#endplatform
+		SpriteFrame(-8, -9, 16, 14, 51, 46)
+		SpriteFrame(-8, -9, 16, 14, 68, 46)
+		SpriteFrame(-8, -9, 16, 14, 51, 61)
+#platform: USE_ORIGINS
+	else
+		SpriteFrame(-8, -9, 16, 14, 35, 100)
+		SpriteFrame(-8, -9, 16, 14, 35, 100)
+		SpriteFrame(-8, -9, 16, 14, 35, 100)
+	end if
+#endplatform
 	SpriteFrame(-8, -9, 16, 14, 68, 61)
 	SpriteFrame(-8, -9, 16, 14, 51, 91)
 	SpriteFrame(-8, -9, 16, 14, 68, 76)
@@ -234,77 +283,69 @@ event ObjectStartup
 	SpriteFrame(-8, -9, 16, 14, 51, 1)
 	SpriteFrame(-8, -9, 16, 14, 68, 1)
 	
-	temp0 = 0
-	
-	Monitor_debugStart = DebugMode_ObjCount
-	Monitor_debugStart--
+	Monitor_startDebugID = DebugMode_ObjCount
+	Monitor_startDebugID--
 	
 	// Loop to add all monitors to debug mode
-	while temp0 < 16
-		temp2 = 1
+	temp0 = MONITOR_RINGS
+	while temp0 < MONITOR_COUNT
+		temp2 = true
 
-		if temp0 >= 4
-			if temp0 <= 6
+		if temp0 >= MONITOR_1UP_SONIC
+			if temp0 <= MONITOR_1UP_KNUX
 				temp1 = temp0
-				temp1 -= 4
+				temp1 -= MONITOR_1UP_SONIC
 				if stage.playerListPos != temp1
-					temp2 = 0
+					temp2 = false
 				end if
 			end if
 		end if
 
-		if temp0 == 12
-
+		if temp0 == MONITOR_SHIELD_GOGGLES
 			// Goggles are only for Labyrinth Zone
 			CheckCurrentStageFolder("Zone04")
-
-			if checkResult == 0
-				temp2 = 0
+			if checkResult == false
+				temp2 = false
 			end if
-
 		end if
 
-		if temp2 == 1
-
+		if temp2 == true
 			SetTableValue(TypeName[Monitor], DebugMode_ObjCount, DebugMode_TypesTable)
 			SetTableValue(Monitor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 			SetTableValue(Monitor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
-
 			DebugMode_ObjCount++
-
 		end if
 
 		temp0++
-
 	loop
 
 	// Switch life icons to the Tails variant if Tails is the main character
-	if stage.playerListPos == PlayerName[TAILS]
+	if stage.playerListPos == PLAYER_TAILS_ALONE
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
-			if object[arrayPos0].propertyValue == 5
-				object[arrayPos0].propertyValue = 6
+			if object[arrayPos0].propertyValue == MONITOR_1UP_SONIC
+				object[arrayPos0].propertyValue = MONITOR_1UP_TAILS
 			end if
 		next
 	end if
 
 	// Switch life icons to the Knuckles variant if Knuckles is the main character
-	if stage.playerListPos == PlayerName[KNUCKLES]
+	if stage.playerListPos == PLAYER_KNUX_ALONE
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
-			if object[arrayPos0].propertyValue == 5
-				object[arrayPos0].propertyValue = 7
+			if object[arrayPos0].propertyValue == MONITOR_1UP_SONIC
+				object[arrayPos0].propertyValue = MONITOR_1UP_KNUX
 			end if
 		next
 	end if
 
 	if options.shieldType < 2
-
 		switch stage.listPos
-		case 12
-		case 13
-		case 17
+		case STAGE_R_SLZ1
+		case STAGE_R_SLZ2
+		case STAGE_R_SBZ3 // (aka LZ4)
 			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
-				if object[arrayPos0].propertyValue >= 9
-					if object[arrayPos0].propertyValue <= 11
+				if object[arrayPos0].propertyValue >= MONITOR_SHIELD_BUBBLE
+					if object[arrayPos0].propertyValue <= MONITOR_SHIELD_LIGHTNING
+						// Completely erase all elemental shield monitors
 						object[arrayPos0].type = TypeName[Blank Object]
 					end if
 				end if
@@ -313,34 +354,65 @@ event ObjectStartup
 
 		default
 			foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
-				if object[arrayPos0].propertyValue >= 9
-					if object[arrayPos0].propertyValue <= 11
-						object[arrayPos0].propertyValue = 2
+				if object[arrayPos0].propertyValue >= MONITOR_SHIELD_BUBBLE
+					if object[arrayPos0].propertyValue <= MONITOR_SHIELD_LIGHTNING
+						// Turn all elemental shield monitors into standard shields
+						object[arrayPos0].propertyValue = MONITOR_SHIELD_BLUE
 					end if
 				end if
 			next
+			break
+			
 		end switch
-
 	end if
 
-	// Is the game in time attack?
-	if options.gameMode == 2	
-
+	if options.gameMode == MODE_TIMEATTACK
 		// Delete every life monitor
 		foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
-			if object[arrayPos0].propertyValue == 5
+			if object[arrayPos0].propertyValue == MONITOR_1UP_SONIC
 				object[arrayPos0].type = TypeName[Blank Object]
 			end if
 		next
-
 	end if
-
 end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // contents
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // contents
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
+end event
+
 
 event RSDKDraw
 	DrawSprite(0)
 	DrawSprite(object.propertyValue)
 end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Global/Items.gif")
@@ -364,4 +436,24 @@ event RSDKLoad
 	SpriteFrame(-8, -9, 16, 14, 117, 71)
 	SpriteFrame(-8, -9, 16, 14, 51, 1)
 	SpriteFrame(-8, -9, 16, 14, 68, 1)
+
+	AddEditorVariable("contents")
+	SetActiveVariable("contents")
+	AddEnumVariable("None", 0)
+	AddEnumVariable("10 Rings", 1)
+	AddEnumVariable("Blue Shield", 2)
+	AddEnumVariable("Invincibility", 3)
+	AddEnumVariable("Speed Shoes", 4)
+	AddEnumVariable("1UP (Sonic)", 5)
+	AddEnumVariable("1UP (Tails)", 6)
+	AddEnumVariable("1UP (Knux)", 7)
+	AddEnumVariable("Super", 8)
+	AddEnumVariable("Bubble Shield", 9)
+	AddEnumVariable("Fire Shield", 10)
+	AddEnumVariable("Lightning Shield", 11)
+	AddEnumVariable("Eggman", 12)
+	AddEnumVariable("Goggles", 13)
+	AddEnumVariable("Spike Toggle", 14)
+	AddEnumVariable("Shields Toggle", 15)
+	AddEnumVariable("Emeralds Toggle", 16)
 end event

@@ -1,98 +1,175 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: H Platform Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 44 : TYPE_HPLATFORM
+// ========================
 
-// Function declarations
+private alias object.value0 : object.timer
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.collisionOffset.x
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function HPlatform_DebugDraw
 reserve function HPlatform_DebugSpawn
 
-// Static Values
 
-// Tables
+// ========================
+// Function Definitions
+// ========================
 
-function HPlatform_DebugDraw
+private function HPlatform_DebugDraw
 	DrawSprite(0)
 end function
 
 
-function HPlatform_DebugSpawn
+private function HPlatform_DebugSpawn
 	CreateTempObject(TypeName[H Platform], 0, object.xpos, object.ypos)
-	object[tempObjectPos].value1 = object[tempObjectPos].xpos
+	object[tempObjectPos].drawPos.x = object[tempObjectPos].xpos
 	if object.direction == FLIP_NONE
-		object[tempObjectPos].value1 += 0x680000
+		object[tempObjectPos].drawPos.x += 0x680000
 		object[tempObjectPos].xvel = -0x10000
-		object[tempObjectPos].value0 = 104
+		object[tempObjectPos].timer = 104
 	else
-		object[tempObjectPos].value1 -= 0x680000
+		object[tempObjectPos].drawPos.x -= 0x680000
 		object[tempObjectPos].xvel = 0x10000
-		object[tempObjectPos].value0 = -104
+		object[tempObjectPos].timer = -104
 	end if
 end function
 
 
-event ObjectMain
-	object.value1 += object.xvel
-	object.value2 = object.xvel
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.drawPos.x += object.xvel
+	object.collisionOffset.x = object.xvel
+
 	if object.xvel > 0
-		object.value0++
-		if object.value0 == 104
+		object.timer++
+		if object.timer == 104
 			FlipSign(object.xvel)
 		end if
 	else
-		object.value0--
-		if object.value0 == -104
+		object.timer--
+		if object.timer == -104
 			FlipSign(object.xvel)
 		end if
 	end if
+
+	// Backup the object's XPos and temporarily move it for hitbox tests
 	temp0 = object.xpos
-	object.xpos = object.value1
+	object.xpos = object.drawPos.x
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-		if checkResult == 1
-			object[currentPlayer].xpos += object.value2
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].xpos += object.collisionOffset.x
 		end if
 	next
+
+	// Move the object back
 	object.xpos = temp0
 end event
 
 
 event ObjectDraw
-	DrawSpriteXY(0, object.value1, object.ypos)
+	DrawSpriteXY(0, object.drawPos.x, object.ypos)
 end event
 
 
 event ObjectStartup
 	LoadSpriteSheet("MCZ/Objects.gif")
+
 	SpriteFrame(-24, -8, 48, 16, 141, 165)
+
 	foreach (TypeName[H Platform], arrayPos0, ALL_ENTITIES)
-		object[arrayPos0].value1 = object[arrayPos0].xpos
+		object[arrayPos0].drawPos.x = object[arrayPos0].xpos
 		if object[arrayPos0].propertyValue == 0
-			object[arrayPos0].value1 += 0x680000
+			object[arrayPos0].drawPos.x += 0x680000
 			object[arrayPos0].xvel = -0x10000
-			object[arrayPos0].value0 = 104
+			object[arrayPos0].timer = 104
 		else
-			object[arrayPos0].value1 -= 0x680000
+			object[arrayPos0].drawPos.x -= 0x680000
 			object[arrayPos0].xvel = 0x10000
-			object[arrayPos0].value0 = -104
+			object[arrayPos0].timer = -104
 		end if
 	next
+
+	// Add this object to the debug item list
 	SetTableValue(TypeName[H Platform], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(HPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(HPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
-event RSDKDraw
-	DrawSprite(0)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // startDir
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			break
+			
+		end switch
+	end if
 end event
 
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		temp0 = object.xpos
+		temp0 -= 0x680000
+		temp1 = object.xpos
+		temp1 += 0x680000
+		DrawLine(object.xpos, object.ypos, temp0, object.ypos, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("MCZ/Objects.gif")
+	SpriteFrame(-24, -8, 48, 16, 141, 165)
+
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
 end event

@@ -1,21 +1,83 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: LZ Setup Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 39 : TYPE_LZSETUP
+// ========================
 
-private alias object.value6 : LZSetup.C_Red
-private alias object.value7 : LZSetup.C_Green
-private alias object.value8 : LZSetup.C_Blue
+private alias object.value0  : object.deformTimer
+private alias object.value1  : object.paletteTimer1
+private alias object.value2  : object.beltPaletteTimer
+private alias object.value3  : object.beltPaletteIndex
+private alias object.value4  : object.waterfallLoopTimer
+private alias object.value5  : object.playingWaterfallLoop
+private alias object.value6  : object.clrDivisor_R
+private alias object.value7  : object.clrDivisor_G
+private alias object.value8  : object.clrDivisor_B
+private alias object.value9  : object.waterClrDivisor_R
+private alias object.value10 : object.waterClrDivisor_G
+private alias object.value11 : object.waterClrDivisor_B
 
-// Function declarations
-reserve function LZSetup_deformationDataA
-reserve function LZSetup_deformationDataB
-reserve function LZSetup_toneDownPalette
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.xvel : player.xvel
+private alias object.speed : player.speed
+private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.direction : player.direction
+private alias object.collisionBottom : player.collisionBottom
+
+// Tile Info ID Aliases
+private alias 0 : TILEINFO_INDEX
+private alias 1 : TILEINFO_DIRECTION
+private alias 8 : TILEINFO_ANGLEB
+
+// Tile Flag Aliases
+private alias 1 : TILE_WATERSLIDE
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 2 : TRACK_INVINCIBLE
+private alias 4 : TRACK_BOSS
+private alias 6 : TRACK_DROWNING
+
+// Reserved Object Slot Aliases
+private alias 10 : SLOT_ZONESETUP
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+// Music Events
+private alias 0 : MUSICEVENT_FADETOBOSS
+private alias 1 : MUSICEVENT_FADETOSTAGE
+private alias 2 : MUSICEVENT_TRANSITION
+
+private alias 0 : MUSICEVENT_FLAG_NOCHANGE
+private alias 1 : MUSICEVENT_FLAG_SPEEDUP
+private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
+
+// Music Loops
+private alias 84444 : MUSIC_LOOP_LZ
+private alias 67538 : MUSIC_LOOP_LZ_F
+
+private alias 1     : MUSIC_LOOP_SBZ
+private alias 1     : MUSIC_LOOP_SBZ_F
+
+private alias 39528 : MUSIC_LOOP_INV
+private alias 30436 : MUSIC_LOOP_INV_F
+
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function LZSetup_SetupRippleDeform1
+reserve function LZSetup_SetupRippleDeform2
+reserve function LZSetup_getClrDivisor
 reserve function LZSetup_InitSuperSonicPal
 reserve function LZSetup_InitSuperTailsPal
 reserve function LZSetup_InitSuperKnuxPal
@@ -24,767 +86,904 @@ reserve function LZSetup_SlowDownMusicLZ
 reserve function LZSetup_SpeedUpMusicSBZ3
 reserve function LZSetup_SlowDownMusicSBZ3
 
+
+// ========================
 // Static Values
-public value LZSetup_value30 = 0;
-public value LZSetup_value29 = 0;
+// ========================
 
-private alias LZSetup_value29 : LZSetup_flashTimer
+public value Water_flashTimer 		= 0  // Uses "Water_" since all water objects use it from the setup so its easier to make new objs this way
+public value LZSetup_beltDirection 	= 0
 
+
+// ========================
 // Tables
-public table LZSetup_palDelayTable
+// ========================
+
+private table LZSetup_beltPalDelayTable
 	2, 2, 1
 end table
 
-public table LZSetup_demoTable
-	0xA000000, 0x62C0000, 8, 49, 0, 9, 8, 102, 0, 86, 2, 13, 0, 11, 2, 10, 0, 9, 2, 13, 0, 7, 8, 13, 56, 1, 40, 3, 8, 38, 0, 27, 1, 13, 0, 13, 2, 13, 0, 10, 2, 7, 8, 9, 56, 1, 40, 4, 8, 27, 0, 13, 2, 12, 0, 12, 2, 10, 0, 15, 2, 7, 0, 14, 2, 10, 0, 35, 48, 1, 32, 4, 0, 8, 2, 6, 
+
+private table LZSetup_replay_credits_STK
+	0xA000000, 0x62C0000
+	0x08, 49
+	0x00, 9
+	0x08, 102
+	0x00, 86
+	0x02, 13
+	0x00, 11
+	0x02, 10
+	0x00, 9
+	0x02, 13
+	0x00, 7
+	0x08, 13
+	0x38, 1
+	0x28, 3
+	0x08, 38
+	0x00, 27
+	0x01, 13
+	0x00, 13
+	0x02, 13
+	0x00, 10
+	0x02, 7
+	0x08, 9
+	0x38, 1
+	0x28, 4
+	0x08, 27
+	0x00, 13
+	0x02, 12
+	0x00, 12
+	0x02, 10
+	0x00, 15
+	0x02, 7
+	0x00, 14
+	0x02, 10
+	0x00, 35
+	0x30, 1
+	0x20, 4
+	0x00, 8
+	0x02, 6
 end table
 
-function LZSetup_deformationDataA
 
-	stage[arrayPos0].deformationData1 = 1
+private function LZSetup_SetupRippleDeform1
+	stage.deformationData1[arrayPos0] = 1
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 1
+	stage.deformationData1[arrayPos0] = 1
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 2
+	stage.deformationData1[arrayPos0] = 2
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 2
+	stage.deformationData1[arrayPos0] = 2
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 3
+	stage.deformationData1[arrayPos0] = 3
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 3
+	stage.deformationData1[arrayPos0] = 3
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 3
+	stage.deformationData1[arrayPos0] = 3
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 3
+	stage.deformationData1[arrayPos0] = 3
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 2
+	stage.deformationData1[arrayPos0] = 2
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 2
+	stage.deformationData1[arrayPos0] = 2
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 1
+	stage.deformationData1[arrayPos0] = 1
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = 1
+	stage.deformationData1[arrayPos0] = 1
 	arrayPos0++
-
 end function
 
 
-function LZSetup_deformationDataB
-
-	stage[arrayPos0].deformationData1 = -1
+private function LZSetup_SetupRippleDeform2
+	stage.deformationData1[arrayPos0] = -1
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -1
+	stage.deformationData1[arrayPos0] = -1
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -2
+	stage.deformationData1[arrayPos0] = -2
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -2
+	stage.deformationData1[arrayPos0] = -2
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -3
+	stage.deformationData1[arrayPos0] = -3
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -3
+	stage.deformationData1[arrayPos0] = -3
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -3
+	stage.deformationData1[arrayPos0] = -3
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -3
+	stage.deformationData1[arrayPos0] = -3
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -2
+	stage.deformationData1[arrayPos0] = -2
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -2
+	stage.deformationData1[arrayPos0] = -2
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -1
+	stage.deformationData1[arrayPos0] = -1
 	arrayPos0++
 
-	stage[arrayPos0].deformationData1 = -1
+	stage.deformationData1[arrayPos0] = -1
 	arrayPos0++
-
 end function
 
 
-function LZSetup_toneDownPalette
+// Wacky function to take a normal color and turn it into an underwater color
+private function LZSetup_getClrDivisor
+	// Regular Colour
+	object.clrDivisor_R = temp1
+	object.clrDivisor_R >>= 16
 
-	// Wacky function to take a normal color and turn it into an underwater color
+	object.clrDivisor_G = temp1
+	object.clrDivisor_G >>= 8
+	object.clrDivisor_G &= 0xFF
 
-	LZSetup.C_Red = temp1
-	LZSetup.C_Red >>= 16
+	object.clrDivisor_B = temp1
+	object.clrDivisor_B &= 0xFF
 
-	LZSetup.C_Green = temp1
-	LZSetup.C_Green >>= 8
-	LZSetup.C_Green &= 255
+	// Underwater Colour
+	object.waterClrDivisor_R = temp2
+	object.waterClrDivisor_R >>= 16
 
-	LZSetup.C_Blue = temp1
-	LZSetup.C_Blue &= 255
+	object.waterClrDivisor_G = temp2
+	object.waterClrDivisor_G >>= 8
+	object.waterClrDivisor_G &= 0xFF
 
-	object.value9 = temp2
-	object.value9 >>= 16
+	object.waterClrDivisor_B = temp2
+	object.waterClrDivisor_B &= 0xFF
 
-	object.value10 = temp2
-	object.value10 >>= 8
-	object.value10 &= 255
-
-	object.value11 = temp2
-	object.value11 &= 255
-
-	// Minimum of 1
-	if object.value9 == 0
-		object.value9 = 1
+	// Minimum of 1 (don't wanna divide by 0!)
+	if object.waterClrDivisor_R == 0
+		object.waterClrDivisor_R = 1
 	end if
 
-	if object.value10 == 0
-		object.value10 = 1
+	if object.waterClrDivisor_G == 0
+		object.waterClrDivisor_G = 1
 	end if
 
-	if object.value11 == 0
-		object.value11 = 1
+	if object.waterClrDivisor_B == 0
+		object.waterClrDivisor_B = 1
 	end if
 
-	LZSetup.C_Red <<= 8
-	LZSetup.C_Green <<= 8
-	LZSetup.C_Blue <<= 8
+	object.clrDivisor_R <<= 8
+	object.clrDivisor_G <<= 8
+	object.clrDivisor_B <<= 8
 
-	LZSetup.C_Red /= object.value9
-	LZSetup.C_Green /= object.value10
-	LZSetup.C_Blue /= object.value11
+	object.clrDivisor_R /= object.waterClrDivisor_R
+	object.clrDivisor_G /= object.waterClrDivisor_G
+	object.clrDivisor_B /= object.waterClrDivisor_B
 
-	if LZSetup.C_Red == 0
-		LZSetup.C_Red = 256
+	if object.clrDivisor_R == 0
+		object.clrDivisor_R = 0x100
 	end if
 
-	if LZSetup.C_Green == 0
-		LZSetup.C_Green = 256
+	if object.clrDivisor_G == 0
+		object.clrDivisor_G = 0x100
 	end if
 
-	if LZSetup.C_Blue == 0
-		LZSetup.C_Blue = 256
+	if object.clrDivisor_B == 0
+		object.clrDivisor_B = 0x100
 	end if
 end function
 
 
-function LZSetup_InitSuperSonicPal
-
+private function LZSetup_InitSuperSonicPal
 	temp0 = 0
+
+	// First Set of colours is just the regular underwater palette
 	GetPaletteEntry(1, 2, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
-
+	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 	temp0++
+
 	GetPaletteEntry(1, 3, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
-
+	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 	temp0++
+
 	GetPaletteEntry(1, 4, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
-
+	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 	temp0++
-	GetPaletteEntry(1, 5, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
 
+	GetPaletteEntry(1, 5, temp1)
+	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 	temp0++
 
 	while temp0 < 64
+		GetPaletteEntry(0, 2, temp1) // Regular colour
+		GetPaletteEntry(1, 2, temp2) // Underwater colour
 
-		GetPaletteEntry(0, 2, temp1)
-		GetPaletteEntry(1, 2, temp2)
+		CallFunction(LZSetup_getClrDivisor)
 
-		CallFunction(LZSetup_toneDownPalette)
-		GetTableValue(temp1, temp0, PlayerObject_SonicSuperPal)
+		GetTableValue(temp1, temp0, Player_SonicSuperPal)
 
 		// Get the green in the color
 		temp2 = temp1
 		temp2 >>= 8
-		temp2 &= 255
+		temp2 &= 0xFF
 		
 		// Get the blue in the color
 		temp3 = temp1
-		temp3 &= 255
+		temp3 &= 0xFF
 
-
+		// Get the red in the color
 		temp1 >>= 16
-		temp1 *= 224
-		temp1 /= LZSetup.C_Red
 
-		temp2 *= 224
-		temp2 /= LZSetup.C_Green
+		temp1 *= 0xE0
+		temp1 /= object.clrDivisor_R
 
-		temp3 *= 224
-		temp3 /= LZSetup.C_Blue
+		temp2 *= 0xE0
+		temp2 /= object.clrDivisor_G
 
-		temp1 &= 240
-		temp2 &= 240
-		temp3 &= 240
+		temp3 *= 0xE0
+		temp3 /= object.clrDivisor_B
 
-		// Max of 224
+		// Max of 0xE0
 		//  -> Note that this game uses the "raw" colors from the original game rather than
 		//     "corrected" colors seen in many emulators
 		//     With this system, the brighest a color can be is E0E0E0, with all
 		//     the reds, greens, and blues having a max of 224, or E0
-		if temp1 > 224
-			temp1 = 224
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+		if temp1 > 0xE0
+			temp1 = 0xE0
 		end if
-		if temp2 > 224
-			temp2 = 224
+		if temp2 > 0xE0
+			temp2 = 0xE0
 		end if
-		if temp3 > 224
-			temp3 = 224
+		if temp3 > 0xE0
+			temp3 = 0xE0
 		end if
 
 		temp1 <<= 16
 		temp2 <<= 8
 		temp1 += temp2
 		temp1 += temp3
-		SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
-
-		// Process gets repeated a few more times now, pretty much everything is the same aside from the division part
-
+		SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 		temp0++
 
-		GetPaletteEntry(0, 3, temp1)
-		GetPaletteEntry(1, 3, temp2)
+		// Colour 2
+		GetPaletteEntry(0, 3, temp1) // Regular colour
+		GetPaletteEntry(1, 3, temp2) // Underwater colour
 
-		CallFunction(LZSetup_toneDownPalette)
-		GetTableValue(temp1, temp0, PlayerObject_SonicSuperPal)
+		CallFunction(LZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_SonicSuperPal)
 
 		temp2 = temp1
 		temp2 >>= 8
-		temp2 &= 255
+		temp2 &= 0xFF
+
 		temp3 = temp1
-		temp3 &= 255
+		temp3 &= 0xFF
+
 		temp1 >>= 16
-		temp1 *= 232
-		temp1 /= LZSetup.C_Red
-		temp2 *= 232
-		temp2 /= LZSetup.C_Green
-		temp3 *= 232
-		temp3 /= LZSetup.C_Blue
-		temp1 &= 240
-		temp2 &= 240
-		temp3 &= 240
-		if temp1 > 224
-			temp1 = 224
+
+		temp1 *= 0xE8
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0xE8
+		temp2 /= object.clrDivisor_G
+		
+		temp3 *= 0xE8
+		temp3 /= object.clrDivisor_B
+		
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+		if temp1 > 0xE0
+			temp1 = 0xE0
 		end if
-		if temp2 > 224
-			temp2 = 224
+		if temp2 > 0xE0
+			temp2 = 0xE0
 		end if
-		if temp3 > 224
-			temp3 = 224
+		if temp3 > 0xE0
+			temp3 = 0xE0
 		end if
+
 		temp1 <<= 16
 		temp2 <<= 8
 		temp1 += temp2
 		temp1 += temp3
-		SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
+		SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 		temp0++
-		GetPaletteEntry(0, 4, temp1)
-		GetPaletteEntry(1, 4, temp2)
-		CallFunction(LZSetup_toneDownPalette)
-		GetTableValue(temp1, temp0, PlayerObject_SonicSuperPal)
+
+		// Colour 3
+		GetPaletteEntry(0, 4, temp1) // Regular colour
+		GetPaletteEntry(1, 4, temp2) // Underwater colour
+
+		CallFunction(LZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_SonicSuperPal)
+
 		temp2 = temp1
 		temp2 >>= 8
-		temp2 &= 255
+		temp2 &= 0xFF
+
 		temp3 = temp1
-		temp3 &= 255
+		temp3 &= 0xFF
+
 		temp1 >>= 16
-		temp1 *= 244
-		temp1 /= LZSetup.C_Red
-		temp2 *= 244
-		temp2 /= LZSetup.C_Green
-		temp3 *= 244
-		temp3 /= LZSetup.C_Blue
-		temp1 &= 240
-		temp2 &= 240
-		temp3 &= 240
-		if temp1 > 224
-			temp1 = 224
+		
+		temp1 *= 0xF4
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0xF4
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0xF4
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+		if temp1 > 0xE0
+			temp1 = 0xE0
 		end if
-		if temp2 > 224
-			temp2 = 224
+		if temp2 > 0xE0
+			temp2 = 0xE0
 		end if
-		if temp3 > 224
-			temp3 = 224
+		if temp3 > 0xE0
+			temp3 = 0xE0
 		end if
+
 		temp1 <<= 16
 		temp2 <<= 8
 		temp1 += temp2
 		temp1 += temp3
-		SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
+		SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 		temp0++
-		GetPaletteEntry(0, 5, temp1)
-		GetPaletteEntry(1, 5, temp2)
-		CallFunction(LZSetup_toneDownPalette)
-		GetTableValue(temp1, temp0, PlayerObject_SonicSuperPal)
+
+		// Colour 4
+		GetPaletteEntry(0, 5, temp1) // Regular colour
+		GetPaletteEntry(1, 5, temp2) // Underwater colour
+
+		CallFunction(LZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_SonicSuperPal)
 		temp2 = temp1
 		temp2 >>= 8
-		temp2 &= 255
+		temp2 &= 0xFF
+
 		temp3 = temp1
-		temp3 &= 255
+		temp3 &= 0xFF
+
 		temp1 >>= 16
-		temp1 *= 256
-		temp1 /= LZSetup.C_Red
-		temp2 *= 256
-		temp2 /= LZSetup.C_Green
-		temp3 *= 256
-		temp3 /= LZSetup.C_Blue
-		temp1 &= 240
-		temp2 &= 240
-		temp3 &= 240
-		if temp1 > 224
-			temp1 = 224
+
+		temp1 *= 0x100
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0x100
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0x100
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+		if temp1 > 0xE0
+			temp1 = 0xE0
 		end if
-		if temp2 > 224
-			temp2 = 224
+		if temp2 > 0xE0
+			temp2 = 0xE0
 		end if
-		if temp3 > 224
-			temp3 = 224
+		if temp3 > 0xE0
+			temp3 = 0xE0
 		end if
+
 		temp1 <<= 16
 		temp2 <<= 8
 		temp1 += temp2
 		temp1 += temp3
-		SetTableValue(temp1, temp0, PlayerObject_SonicSuperAltPal)
+		SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 		temp0++
 	loop
 end function
 
 
-function LZSetup_InitSuperTailsPal
+private function LZSetup_InitSuperTailsPal
 	temp0 = 0
+
 	GetPaletteEntry(1, 13, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
+	SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
 	temp0++
+
 	GetPaletteEntry(1, 17, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
+	SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
 	temp0++
+
 	GetPaletteEntry(1, 18, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
+	SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
 	temp0++
+
 	GetPaletteEntry(1, 16, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
+	SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
 	temp0++
+
 	while temp0 < 24
+		// Colour 1
 		GetPaletteEntry(0, 13, temp1)
 		GetPaletteEntry(1, 13, temp2)
-		CallFunction(LZSetup_toneDownPalette)
-		GetTableValue(temp1, temp0, PlayerObject_TailsSuperPal)
+
+		CallFunction(LZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_TailsSuperPal)
+
 		temp2 = temp1
 		temp2 >>= 8
-		temp2 &= 255
+		temp2 &= 0xFF
+
 		temp3 = temp1
-		temp3 &= 255
+		temp3 &= 0xFF
+
 		temp1 >>= 16
-		temp1 *= 248
-		temp1 /= LZSetup.C_Red
-		temp2 *= 248
-		temp2 /= LZSetup.C_Green
-		temp3 *= 248
-		temp3 /= LZSetup.C_Blue
-		temp1 &= 240
-		temp2 &= 240
-		temp3 &= 240
-		if temp1 > 224
-			temp1 = 224
+
+		temp1 *= 0xF8
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0xF8
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0xF8
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+		if temp1 > 0xE0
+			temp1 = 0xE0
 		end if
-		if temp2 > 224
-			temp2 = 224
+		if temp2 > 0xE0
+			temp2 = 0xE0
 		end if
-		if temp3 > 224
-			temp3 = 224
+		if temp3 > 0xE0
+			temp3 = 0xE0
 		end if
+
 		temp1 <<= 16
 		temp2 <<= 8
 		temp1 += temp2
 		temp1 += temp3
-		SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
+		SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
 		temp0++
+
+		// Colour 2
 		GetPaletteEntry(0, 17, temp1)
 		GetPaletteEntry(1, 17, temp2)
-		CallFunction(LZSetup_toneDownPalette)
-		GetTableValue(temp1, temp0, PlayerObject_TailsSuperPal)
+
+		CallFunction(LZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_TailsSuperPal)
+
 		temp2 = temp1
 		temp2 >>= 8
-		temp2 &= 255
+		temp2 &= 0xFF
+
 		temp3 = temp1
-		temp3 &= 255
+		temp3 &= 0xFF
+
 		temp1 >>= 16
-		temp1 *= 256
-		temp1 /= LZSetup.C_Red
-		temp2 *= 256
-		temp2 /= LZSetup.C_Green
-		temp3 *= 256
-		temp3 /= LZSetup.C_Blue
-		temp1 &= 240
-		temp2 &= 240
-		temp3 &= 240
-		if temp1 > 224
-			temp1 = 224
+
+		temp1 *= 0x100
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0x100
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0x100
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+		if temp1 > 0xE0
+			temp1 = 0xE0
 		end if
-		if temp2 > 224
-			temp2 = 224
+		if temp2 > 0xE0
+			temp2 = 0xE0
 		end if
-		if temp3 > 224
-			temp3 = 224
+		if temp3 > 0xE0
+			temp3 = 0xE0
 		end if
+
 		temp1 <<= 16
 		temp2 <<= 8
 		temp1 += temp2
 		temp1 += temp3
-		SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
+		SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
 		temp0++
+		
+		// Colour 3
 		GetPaletteEntry(0, 18, temp1)
 		GetPaletteEntry(1, 18, temp2)
-		CallFunction(LZSetup_toneDownPalette)
-		GetTableValue(temp1, temp0, PlayerObject_TailsSuperPal)
+
+		CallFunction(LZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_TailsSuperPal)
+
 		temp2 = temp1
 		temp2 >>= 8
-		temp2 &= 255
+		temp2 &= 0xFF
+
 		temp3 = temp1
-		temp3 &= 255
+		temp3 &= 0xFF
+
 		temp1 >>= 16
-		temp1 *= 256
-		temp1 /= LZSetup.C_Red
-		temp2 *= 256
-		temp2 /= LZSetup.C_Green
-		temp3 *= 256
-		temp3 /= LZSetup.C_Blue
-		temp1 &= 240
-		temp2 &= 240
-		temp3 &= 240
-		if temp1 > 224
-			temp1 = 224
+
+		temp1 *= 0x100
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0x100
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0x100
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+		if temp1 > 0xE0
+			temp1 = 0xE0
 		end if
-		if temp2 > 224
-			temp2 = 224
+		if temp2 > 0xE0
+			temp2 = 0xE0
 		end if
-		if temp3 > 224
-			temp3 = 224
+		if temp3 > 0xE0
+			temp3 = 0xE0
 		end if
+
 		temp1 <<= 16
 		temp2 <<= 8
 		temp1 += temp2
 		temp1 += temp3
-		SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
+		SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
 		temp0++
+		
+		// Colour 4
 		GetPaletteEntry(0, 16, temp1)
 		GetPaletteEntry(1, 16, temp2)
-		CallFunction(LZSetup_toneDownPalette)
-		GetTableValue(temp1, temp0, PlayerObject_TailsSuperPal)
+
+		CallFunction(LZSetup_getClrDivisor)
+
+		GetTableValue(temp1, temp0, Player_TailsSuperPal)
+
 		temp2 = temp1
 		temp2 >>= 8
-		temp2 &= 255
+		temp2 &= 0xFF
+
 		temp3 = temp1
-		temp3 &= 255
+		temp3 &= 0xFF
+
 		temp1 >>= 16
-		temp1 *= 256
-		temp1 /= LZSetup.C_Red
-		temp2 *= 256
-		temp2 /= LZSetup.C_Green
-		temp3 *= 256
-		temp3 /= LZSetup.C_Blue
-		temp1 &= 240
-		temp2 &= 240
-		temp3 &= 240
-		if temp1 > 224
-			temp1 = 224
+
+		temp1 *= 0x100
+		temp1 /= object.clrDivisor_R
+
+		temp2 *= 0x100
+		temp2 /= object.clrDivisor_G
+
+		temp3 *= 0x100
+		temp3 /= object.clrDivisor_B
+
+		temp1 &= 0xF0
+		temp2 &= 0xF0
+		temp3 &= 0xF0
+		if temp1 > 0xE0
+			temp1 = 0xE0
 		end if
-		if temp2 > 224
-			temp2 = 224
+
+		if temp2 > 0xE0
+			temp2 = 0xE0
 		end if
-		if temp3 > 224
-			temp3 = 224
+		
+		if temp3 > 0xE0
+			temp3 = 0xE0
 		end if
+
 		temp1 <<= 16
 		temp2 <<= 8
 		temp1 += temp2
 		temp1 += temp3
-		SetTableValue(temp1, temp0, PlayerObject_TailsSuperAltPal)
+		SetTableValue(temp1, temp0, Player_TailsSuperAltPal)
 		temp0++
 	loop
 end function
 
 
-function LZSetup_InitSuperKnuxPal
+private function LZSetup_InitSuperKnuxPal
 	temp0 = 0
+
 	GetPaletteEntry(1, 26, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_KnuxSuperAltPal)
+	SetTableValue(temp1, temp0, Player_KnuxSuperAltPal)
 	temp0++
+
 	GetPaletteEntry(1, 27, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_KnuxSuperAltPal)
+	SetTableValue(temp1, temp0, Player_KnuxSuperAltPal)
 	temp0++
+
 	GetPaletteEntry(1, 28, temp1)
-	SetTableValue(temp1, temp0, PlayerObject_KnuxSuperAltPal)
+	SetTableValue(temp1, temp0, Player_KnuxSuperAltPal)
 	temp0++
 end function
 
 
-function LZSetup_SpeedUpMusicLZ
-	CheckEqual(object[25].type, TypeName[Music Event])
+private function LZSetup_SpeedUpMusicLZ
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
-			SwapMusicTrack("Labyrinth_F.ogg", 0, 0x107D2, 0x1F40)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
+			SwapMusicTrack("Labyrinth_F.ogg", TRACK_STAGE, MUSIC_LOOP_LZ_F, 8000)
 			break
-		case 2
-			SetMusicTrack("Labyrinth_F.ogg", 0, 0x107D2)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 0x76E4, 0x1F40)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("Labyrinth_F.ogg", TRACK_STAGE, MUSIC_LOOP_LZ_F)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F, 8000)
 			break
-		case 4
-		case 6
-			SetMusicTrack("Labyrinth_F.ogg", 0, 0x107D2)
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+			SetMusicTrack("Labyrinth_F.ogg", TRACK_STAGE, MUSIC_LOOP_LZ_F)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
 			break
+			
 		end switch
 	else
-		stage.musicFlag = 1
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
 	end if
 end function
 
 
-function LZSetup_SlowDownMusicLZ
-	CheckEqual(object[25].type, TypeName[Music Event])
+private function LZSetup_SlowDownMusicLZ
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
-			SwapMusicTrack("Labyrinth.ogg", 0, 0x149DC, 0x30D4)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
+			SwapMusicTrack("Labyrinth.ogg", TRACK_STAGE, MUSIC_LOOP_LZ, 12500)
 			break
-		case 2
-			SetMusicTrack("Labyrinth.ogg", 0, 0x149DC)
-			SwapMusicTrack("Invincibility.ogg", 2, 0x9A68, 0x30D4)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("Labyrinth.ogg", TRACK_STAGE, MUSIC_LOOP_LZ)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV, 12500)
 			break
-		case 4
-		case 6
-			SetMusicTrack("Labyrinth.ogg", 0, 0x149DC)
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+			SetMusicTrack("Labyrinth.ogg", TRACK_STAGE, MUSIC_LOOP_LZ)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
 			break
+			
 		end switch
 	else
-		stage.musicFlag = 2
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
 	end if
 end function
 
 
-function LZSetup_SpeedUpMusicSBZ3
-	CheckEqual(object[25].type, TypeName[Music Event])
+private function LZSetup_SpeedUpMusicSBZ3
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
-			SwapMusicTrack("ScrapBrain_F.ogg", 0, 1, 0x1F40)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
+			SwapMusicTrack("ScrapBrain_F.ogg", TRACK_STAGE, MUSIC_LOOP_SBZ_F, 8000)
 			break
-		case 2
-			SetMusicTrack("ScrapBrain_F.ogg", 0, 1)
-			SwapMusicTrack("Invincibility_F.ogg", 2, 0x76E4, 0x1F40)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("ScrapBrain_F.ogg", TRACK_STAGE, MUSIC_LOOP_SBZ_F)
+			SwapMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F, 8000)
 			break
-		case 4
-		case 6
-			SetMusicTrack("ScrapBrain_F.ogg", 0, 1)
-			SetMusicTrack("Invincibility_F.ogg", 2, 0x76E4)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+			SetMusicTrack("ScrapBrain_F.ogg", TRACK_STAGE, MUSIC_LOOP_SBZ_F)
+			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
 			break
+			
 		end switch
 	else
-		stage.musicFlag = 1
+		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
 	end if
 end function
 
 
-function LZSetup_SlowDownMusicSBZ3
-	CheckEqual(object[25].type, TypeName[Music Event])
+private function LZSetup_SlowDownMusicSBZ3
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
-	CheckEqual(object[25].propertyValue, 2)
+	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].propertyValue, MUSICEVENT_TRANSITION)
 	temp0 &= checkResult
-	CheckEqual(stage.musicFlag, 0)
+	CheckEqual(stage.musicFlag, MUSICEVENT_FLAG_NOCHANGE)
 	temp0 &= checkResult
-	if temp0 == 0
+	if temp0 == false
 		switch music.currentTrack
-		case 0
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
-			SwapMusicTrack("ScrapBrain.ogg", 0, 1, 0x30D4)
+		case TRACK_STAGE
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
+			SwapMusicTrack("ScrapBrain.ogg", TRACK_STAGE, MUSIC_LOOP_SBZ, 12500)
 			break
-		case 2
-			SetMusicTrack("ScrapBrain.ogg", 0, 1)
-			SwapMusicTrack("Invincibility.ogg", 2, 0x9A68, 0x30D4)
+
+		case TRACK_INVINCIBLE
+			SetMusicTrack("ScrapBrain.ogg", TRACK_STAGE, MUSIC_LOOP_SBZ)
+			SwapMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV, 12500)
 			break
-		case 4
-		case 6
-			SetMusicTrack("ScrapBrain.ogg", 0, 1)
-			SetMusicTrack("Invincibility.ogg", 2, 0x9A68)
+
+		case TRACK_BOSS
+		case TRACK_DROWNING
+			SetMusicTrack("ScrapBrain.ogg", TRACK_STAGE, MUSIC_LOOP_SBZ)
+			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
 			break
+			
 		end switch
 	else
-		stage.musicFlag = 2
+		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
 	end if
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
-	object.value0++
-	if object.value0 > 1
+event ObjectUpdate
+	object.deformTimer++
+	if object.deformTimer > 1
 		tileLayer[0].deformationOffsetW++
 		tileLayer[1].deformationOffsetW++
-		object.value0 = 0
+		object.deformTimer = 0
 	end if
 
-	object.value1++
-	if object.value1 == 3
-		object.value1 = 0
-		RotatePalette(0, 171, 174, 0)
-		RotatePalette(1, 171, 174, 0)
+	object.paletteTimer1++
+	if object.paletteTimer1 == 3
+		object.paletteTimer1 = 0
+		RotatePalette(0, 171, 174, false)
+		RotatePalette(1, 171, 174, false)
 	end if
 
-	if object.value2 > 0
-		object.value2--
+	if object.beltPaletteTimer > 0
+		object.beltPaletteTimer--
 	else
-		object.value3++
-		object.value3 %= 3
-		GetTableValue(object.value2, object.value3, LZSetup_palDelayTable)
-		RotatePalette(0, 187, 189, LZSetup_value30)
-		RotatePalette(1, 187, 189, LZSetup_value30)
+		object.beltPaletteIndex++
+		object.beltPaletteIndex %= 3
+		GetTableValue(object.beltPaletteTimer, object.beltPaletteIndex, LZSetup_beltPalDelayTable)
+
+		RotatePalette(0, 187, 189, LZSetup_beltDirection)
+		RotatePalette(1, 187, 189, LZSetup_beltDirection)
 	end if
 
-	// Cycle through all players
+	// Handle Player Tile Interactions
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-
-		temp1 = object[currentPlayer].xpos
+		temp1 = player[currentPlayer].xpos
 		temp1 >>= 16
 
-		temp2 = object[currentPlayer].ypos
+		temp2 = player[currentPlayer].ypos
 		temp2 >>= 16
-
-		temp2 += object[currentPlayer].collisionBottom
+		temp2 += player[currentPlayer].collisionBottom
 		temp2--
 
 		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_INDEX)
 
+		// Check if it's a waterfall tile
 		CheckEqual(temp0, 71)
 		temp3 = checkResult
 		CheckEqual(temp0, 72)
 		temp3 |= checkResult
-
+		
 		if temp3 == true
-
-			CheckEqual(object[currentPlayer].state, PlayerObject_KnuxGlideLeft)
+			// Force unstick Knuckles, if needed
+			
+			CheckEqual(player[currentPlayer].state, Player_State_GlideLeft)
 			temp3 = checkResult
-			CheckEqual(object[currentPlayer].state, PlayerObject_KnuxGlideRight)
+			CheckEqual(player[currentPlayer].state, Player_State_GlideRight)
 			temp3 |= checkResult
-			CheckEqual(object[currentPlayer].state, PlayerObject_KnuxWallClimb)
+			CheckEqual(player[currentPlayer].state, Player_State_Climb)
 			temp3 |= checkResult
-			CheckEqual(object[currentPlayer].state, PlayerObject_KnuxLedgePullUp)
+			CheckEqual(player[currentPlayer].state, Player_State_LedgePullUp)
 			temp3 |= checkResult
-
 			if temp3 == true
-
-				if object[currentPlayer].state == PlayerObject_KnuxGlideLeft
-					FlipSign(object[currentPlayer].xvel)
-					FlipSign(object[currentPlayer].speed)
+				if player[currentPlayer].state == Player_State_GlideLeft
+					FlipSign(player[currentPlayer].xvel)
+					FlipSign(player[currentPlayer].speed)
 				end if
 
-				object[currentPlayer].state = PlayerObject_KnuxGlideDrop
-				object[currentPlayer].animation = ANI_GLIDING_DROP
-
+				player[currentPlayer].state = Player_State_GlideDrop
+				player[currentPlayer].animation = ANI_GLIDING_DROP
 			end if
-
 		end if
 
-
-		if object[currentPlayer].gravity == GRAVITY_GROUND
-
+		if player[currentPlayer].gravity == GRAVITY_GROUND
 			Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
-
-			if temp0 == 1
-
-				object[currentPlayer].state = PlayerObject_WaterSlide
+			if temp0 == TILE_WATERSLIDE
+				player[currentPlayer].state = Player_State_WaterSlide
 
 				Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_DIRECTION)
-
 				switch temp0
-				case 0
-				case 2
-					object[currentPlayer].direction = FLIP_X
+				case FLIP_NONE
+				case FLIP_Y
+					player[currentPlayer].direction = FACING_LEFT
 					break
-				case 1
-				case 3
-					object[currentPlayer].direction = FLIP_NONE
-				end switch
 
+				case FLIP_X
+				case FLIP_XY
+					player[currentPlayer].direction = FACING_RIGHT
+					break
+					
+				end switch
 			end if
 		end if
 	next
 
-	if object[0].state == PlayerObject_WaterSlide
-		if object.value4 == 0
-			if object.value5 == 0
-				PlaySfx(SfxName[Waterfall], 0)
+	if player[0].state == Player_State_WaterSlide
+		if object.waterfallLoopTimer == 0
+			if object.playingWaterfallLoop == false
+				PlaySfx(SfxName[Waterfall], false)
 				StopSfx(SfxName[Waterfall Loop])
-				object.value5 = 1
+				object.playingWaterfallLoop = true
 			else
 				StopSfx(SfxName[Waterfall])
-				PlaySfx(SfxName[Waterfall Loop], 0)
+				PlaySfx(SfxName[Waterfall Loop], false)
 			end if
 		end if
-		object.value4++
-		object.value4 &= 63
+
+		object.waterfallLoopTimer++
+		object.waterfallLoopTimer &= 0x3F
 	else
-		if object.value4 != 0
-			object.value4++
-			object.value4 &= 63
+		if object.waterfallLoopTimer != 0
+			object.waterfallLoopTimer++
+			object.waterfallLoopTimer &= 0x3F
 		else
-			object.value4 = 0
-			object.value5 = 0
+			object.waterfallLoopTimer = 0
+			object.playingWaterfallLoop = false
 		end if
 	end if
-	if LZSetup_flashTimer > 0
-		LZSetup_flashTimer--
+
+	if Water_flashTimer > 0
+		Water_flashTimer--
 	end if
 end event
 
 
 event ObjectDraw
-
 	// Change the palette to the underwater one after the water level's Y Pos
 	temp0 = stage.waterLevel
 	temp0 -= screen.yoffset
 
-	// Minimum of 0
+	// Enforce a minimum of 0
 	if temp0 < 0
 		temp0 = 0
 	end if
 
-	// Maximum of the screen's Y size
+	// Enforce a maximum of the screen's vertical size
 	if temp0 > screen.ysize
 		temp0 = screen.ysize
 	end if
@@ -793,92 +992,74 @@ event ObjectDraw
 	SetActivePalette(0, 0, temp0)
 
 	// Set the underwater palette for the bottom part of the screen
-
-	if LZSetup_flashTimer > 0
-
+	if Water_flashTimer > 0
 		// Use the lightning palette if needed
 		SetActivePalette(2, temp0, screen.ysize)
-
 	else
-
-		// Otherwise use the normal UW palette
+		// Otherwise, use the normal water palette
 		SetActivePalette(1, temp0, screen.ysize)
-
 	end if
-
 end event
 
 
 event ObjectStartup
-
-	// If in act 1-3, set the normal Labyrinth music
+	// If in acts 1-3, set the normal Labyrinth music
 	if stage.actNum < 4
-
 		// Set the speed up/slow down functions, too
-		SetMusicTrack("Labyrinth.ogg", 0, 0x149DC)
+		SetMusicTrack("Labyrinth.ogg", TRACK_STAGE, MUSIC_LOOP_LZ)
 		SpeedUpMusic = LZSetup_SpeedUpMusicLZ
 		SlowDownMusic = LZSetup_SlowDownMusicLZ
-
 	else
-
-		// If in "act 4", or SBZ 3, then use Scrap Brain's music instead
-		SetMusicTrack("ScrapBrain.ogg", 0, 1)
+		// If in "act 4" - AKA SBZ 3 - then use Scrap Brain's music instead
+		SetMusicTrack("ScrapBrain.ogg", TRACK_STAGE, MUSIC_LOOP_SBZ)
 		SpeedUpMusic = LZSetup_SpeedUpMusicSBZ3
 		SlowDownMusic = LZSetup_SlowDownMusicSBZ3
-
 	end if
 
 	// Pecky and Rocky are the inhabitants of this labyrinth
 	animalType1 = TypeName[Pecky]
 	animalType2 = TypeName[Rocky]
 
-	// Set object slot 10 to be the LZ Setup object
-	object[10].type = TypeName[LZ Setup]
-	object[10].priority = PRIORITY_ACTIVE
-	object[10].drawOrder = 0
+	// Place an LZ Setup Object into the scene
+	object[SLOT_ZONESETUP].type 		= TypeName[LZ Setup]
+	object[SLOT_ZONESETUP].priority 	= PRIORITY_ACTIVE
+	object[SLOT_ZONESETUP].drawOrder 	= 0
 
 	// Start the initial palette cycle stuff
-	GetTableValue(object[10].value2, 0, LZSetup_palDelayTable)
-
+	GetTableValue(object[SLOT_ZONESETUP].beltPaletteTimer, 0, LZSetup_beltPalDelayTable)
 
 	// Set stage deformation data
 	// (FG layer properties)
 
 	arrayPos0 = 0
-	CallFunction(LZSetup_deformationDataA)
+	CallFunction(LZSetup_SetupRippleDeform1)
 
 	arrayPos0 = 128
-	CallFunction(LZSetup_deformationDataA)
+	CallFunction(LZSetup_SetupRippleDeform1)
 
 	arrayPos0 = 160
-	CallFunction(LZSetup_deformationDataB)
+	CallFunction(LZSetup_SetupRippleDeform2)
 
-	arrayPos0 = 256
-
+	arrayPos0 = 0x100
 	while arrayPos0 < 576
 		arrayPos1 = arrayPos0
-		arrayPos1 -= 256
-		stage[arrayPos0].deformationData1 = stage[arrayPos1].deformationData1
+		arrayPos1 -= 0x100
+		stage.deformationData1[arrayPos0] = stage.deformationData1[arrayPos1]
 		arrayPos0++
 	loop
 
 	SetLayerDeformation(3, 128, 4, 0, 0, 0)
 
 	if stage.actNum < 4
-
-		// If in act 1-3, then only load the underwater palette
+		// If in acts 1-3, then only load the LZ underwater palette
 		LoadPalette("LZ_WaterPal.act", 1, 0, 0, 256)
-
 	else
-
 		// SBZ3: Load not only the water palette, but also the main stage palette
 		LoadPalette("SBZ3_Pal.act", 0, 128, 128, 192)
 		LoadPalette("SBZ3_WaterPal.act", 1, 0, 0, 256)
-	
 	end if
 	
 	// Set up Super colours
-
 	CallFunction(LZSetup_InitSuperSonicPal)
 	CallFunction(LZSetup_InitSuperTailsPal)
 	CallFunction(LZSetup_InitSuperKnuxPal)
@@ -887,27 +1068,32 @@ event ObjectStartup
 	LoadPalette("ElectricFlash.act", 2, 0, 0, 256)
 
 	// Reset the flash timer
-	LZSetup_flashTimer = 0
+	Water_flashTimer = 0
 
 	if options.attractMode == true
-
 		if credits.screen > 0
-			PlayerObject_ReplayTable = LZSetup_demoTable
-			PlayerObject_ReplaySize = 76
-			PlayerObject_ReplayLength = 540
+			Player_attractTable 	= LZSetup_replay_credits_STK
+			Player_attractTableSize 	= 76
+			Player_attractDuration 	= 540
 		end if
 	
-		CallFunction(PlayerObject_InitReplay)
-	
+		CallFunction(Player_SetupAttractDemo)
 	end if
-
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

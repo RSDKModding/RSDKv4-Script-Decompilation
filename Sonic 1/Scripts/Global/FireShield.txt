@@ -1,14 +1,15 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Fire Shield Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 28 : TYPE_FIRESHIELD
+// ========================
 
-private alias object.value0 : object.timer
+private alias object.value0  : object.timer
 private alias object.value18 : object.sortedDrawOrder
 
 private alias -1 : DRAWORDER_PLAYER
@@ -18,95 +19,95 @@ private alias object.xpos  : player.xpos
 private alias object.ypos  : player.ypos
 
 // Flame shield states
-// Divided into 2 - passive versions and active versions
-private alias 0 : STATE_INITP
-private alias 1 : STATE_MAINP
-private alias 2 : STATE_INITA
-private alias 3 : STATE_MAINA
+private alias 0 : FIRESHIELD_IDLE_SETUP
+private alias 1 : FIRESHIELD_IDLE
+private alias 2 : FIRESHIELD_DASH_SETUP
+private alias 3 : FIRESHIELD_DASH
 
+// Super States
+private alias 1 : SUPERSTATE_SUPER
+
+
+// ========================
 // Tables
+// ========================
 
 // Passive/idle ver - just staying around the player normally
-public table FireShield_animSpriteTableP
+private table FireShield_idleFrameTable
 	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 6, 7, 4, 5, 2, 3, 0, 1
 end table
 
 // Active - During flame dash
-public table FireShield_animSpriteTableA
+private table FireShield_dashFrameTable
 	10, 11, 12, 10, 12, 13, 10, 11, 12, 10, 12, 13, 0
 end table
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
+event ObjectUpdate
 	object.drawOrder = DRAWORDER_PLAYER
 
 	// Unload if the player shouldn't have a shield
-	if player[-playerCount].state == PlayerObject_Death
+	if player[-playerCount].state == Player_State_Death
 		object.type = TypeName[Blank Object]
 	end if
-	if player[-playerCount].state == PlayerObject_Drown
+	if player[-playerCount].state == Player_State_Drown
 		object.type = TypeName[Blank Object]
 	end if
 
 	switch object.state
-	case STATE_INITP
+	case FIRESHIELD_IDLE_SETUP
 		object.animationTimer = 0
 		object.timer = 0
 		object.sortedDrawOrder = 0
-		object.direction = FLIP_NONE
-		GetTableValue(object.frame, object.timer, FireShield_animSpriteTableP)
+		object.direction = FACING_RIGHT
+		GetTableValue(object.frame, object.timer, FireShield_idleFrameTable)
 		object.state++
-		// Fall through to below
-	case STATE_MAINP
+		// [Fallthrough]
+	case FIRESHIELD_IDLE
 		object.animationTimer++
 
 		if object.animationTimer >= 3
-
 			object.animationTimer = 1
 			object.timer++
 			object.sortedDrawOrder ^= 1
 
 			if object.timer >= 10
-
 				object.direction = FLIP_Y
 
 				if object.timer >= 18
 					object.timer = 0
-					object.direction = FLIP_NONE
+					object.direction = FACING_RIGHT
 				end if
-
 			end if
 
-			GetTableValue(object.frame, object.timer, FireShield_animSpriteTableP)
-
+			GetTableValue(object.frame, object.timer, FireShield_idleFrameTable)
 		end if
-
 		break
 
-	case STATE_INITA
+	case FIRESHIELD_DASH_SETUP
 		object.animationTimer = 0
 		object.timer = 0
 		object.sortedDrawOrder = 0
-		GetTableValue(object.frame, object.timer, FireShield_animSpriteTableA)
+		GetTableValue(object.frame, object.timer, FireShield_dashFrameTable)
 		object.state++
-		// Fall through again
-	case STATE_MAINA
+		// [Fallthrough]
+	case FIRESHIELD_DASH
 		object.animationTimer++
 
 		if object.animationTimer >= 3
-
 			object.animationTimer = 1
 			object.timer++
 
 			if object.timer >= 12
-				object.state = STATE_INITP
+				object.state = FIRESHIELD_IDLE_SETUP
 			end if
 
-			GetTableValue(object.frame, object.timer, FireShield_animSpriteTableA)
-
+			GetTableValue(object.frame, object.timer, FireShield_dashFrameTable)
 		end if
-
 		break
 
 	end switch
@@ -114,16 +115,13 @@ end event
 
 
 event ObjectDraw
-
-	if PlayerObject_SuperState != 1
+	if Player_superState != SUPERSTATE_SUPER
 		DrawSpriteFX(object.frame, FX_FLIP, player[-playerCount].xpos, player[-playerCount].ypos)
 	end if
-
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Items3.gif")
 
 	// Flame shield frames
@@ -142,14 +140,21 @@ event ObjectStartup
 	SpriteFrame(-32, -19, 56, 38, 135, 175)
 	SpriteFrame(-40, -24, 63, 47, 192, 166)
 	SpriteFrame(0, 0, 1, 1, 1, 1) // (Empty)
-
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
 	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

@@ -1,128 +1,151 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Tails Object Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 2 : TYPE_TAILSOBJECT
+// ========================
 
-// Function declarations
-reserve function TailsObject_Function61
+private alias object.value2  : player.abilityTimer			// Note: Also used by death/drowning state
+private alias object.value3  : player.drownTimer			// Countdown before player moves to next drown "level"
+private alias object.value4  : player.drownLevel
+private alias object.value8  : player.blinkTimer
+private alias object.value12 : player.tailFrame
+private alias object.value13 : player.tailAnim
+private alias object.value17 : debugMode.currentSelection
+private alias object.value19 : player.badnikBonus
+private alias object.value30 : player.jumpOffset
+private alias object.value34 : player.collisionDisabled
+private alias object.value35 : player.jumpAbilityState
+private alias object.value42 : player.prevGravity
 
-function TailsObject_Function61
 
-	switch object.value13
-	case 0
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TailsObject_ProcessTailSprite
+
+
+// ========================
+// Function Definitions
+// ========================
+
+public function TailsObject_ProcessTailSprite
+	switch player.tailAnim
+	case 0 // ANI_STOPPED
 		if object.frame == 0
-			object.value12++
-			object.value12 %= 40
+			player.tailFrame++
+			player.tailFrame %= 40
 		end if
 		break
 		
-	case 1
-	case 3
-	case 4
-		object.value12++
-		object.value12 %= 40
+	case 1 // ANI_WAITING
+	case 3 // ANI_LOOKINGUP
+	case 4 // ANI_LOOKINGDOWN
+		player.tailFrame++
+		player.tailFrame %= 40
 		break
 		
-	case 7
-	case 9
-	case 10
-	case 43
-		object.value12++
-		object.value12 %= 12
+	case 7 // ANI_SKIDDING
+	case 9 // ANI_SPINDASH
+	case 10 // ANI_JUMPING
+	case 43 // Unknown, this was probably "SSRoll" before it got moved to its own ani file
+		player.tailFrame++
+		player.tailFrame %= 12
 		break
 		
-	case 17
-		object.value12++
-		object.value12 %= 30
+	case 17 // ANI_PUSHING
+		player.tailFrame++
+		player.tailFrame %= 30
 		break
 		
 	end switch
-	
 end function
 
-
-event ObjectMain
-
+event ObjectUpdate
 	if stage.debugMode == true
-	
-		CallFunction(PlayerObject_ProcessPlayer)
+		CallFunction(Player_ProcessUpdate)
 		
-		CheckEqual(options.attractMode, 0)
+		CheckEqual(options.attractMode, false)
 		temp0 = checkResult
-		CheckEqual(inputPress.buttonB, 1)
+		CheckEqual(keyPress[0].buttonB, true)
 		temp0 &= checkResult
 		
 		if temp0 == true
-		
 			object.type = TypeName[Debug Mode]
 			object.yvel = 0
-			object.state = PlayerObject_Blank
+			object.state = Player_State_Static
 			object.frame = 0
 			object.rotation = 0
-			object.interaction = 0
+			object.interaction = false
 			object.drawOrder = 4
 			object.priority = PRIORITY_ACTIVE
-			object.value8 = 0
-			object.visible = 1
-			object.value2 = 0
-			object.value3 = 0
-			object.value4 = 0
-			object.frame = object.value17
-			screen.cameraEnabled = 1
-			screen.cameraStyle = 0
+			player.blinkTimer = 0
+			object.visible = true
+			player.abilityTimer = 0
+			player.drownTimer = 0
+			player.drownLevel = 0
+			object.frame = debugMode.currentSelection
+			camera[0].enabled = true
+			camera[0].style = CAMERASTYLE_FOLLOW
 			StopSfx(SfxName[Flying])
 			StopSfx(SfxName[Jump])
-			if stage.state == 3
+
+			if stage.state == STAGE_FROZEN
 				stage.state = STAGE_RUNNING
 			end if
+
 			if object[1].type == TypeName[Player 2 Object]
 				object[1].priority = PRIORITY_ACTIVE
 			end if
+
 			if object[+playerCount].propertyValue == 3
 				object[+playerCount].type = TypeName[Invincibility]
 				object[+playerCount].propertyValue = 0
 			end if
 		else
-			if object.gravity == GRAVITY_GROUND
-				object.value35 = 0
+			if object.gravity == 0
+				player.jumpAbilityState = 0
 			end if
+
 			CallFunction(object.state)
 			ProcessAnimation()
-			CallFunction(TailsObject_Function61)
+			CallFunction(TailsObject_ProcessTailSprite)
+
 			if object.animation == ANI_JUMPING
-				screen.adjustCameraY = object.value30
+				camera[0].adjustY = player.jumpOffset
 			else
-				if screen.adjustCameraY == object.value30
-					screen.adjustCameraY = 0
-					object.iypos += object.value30
+				if camera[0].adjustY == player.jumpOffset
+					camera[0].adjustY = 0
+					object.iypos += player.jumpOffset
 				end if
 			end if
-			if object.value34 == 0
-				temp0 = object.value42
-				object.value42 = object.gravity
+
+			if player.collisionDisabled == false
+				temp0 = player.prevGravity
+				player.prevGravity = object.gravity
 				ProcessObjectMovement()
-				object.value42 ^= 1
-				CheckEqual(object.gravity, GRAVITY_GROUND)
-				object.value42 |= checkResult
-				object.value42 ^= 1
+				player.prevGravity ^= 1
+				CheckEqual(object.gravity, 0)
+				player.prevGravity |= checkResult
+				player.prevGravity ^= 1
 				if temp0 == 1
-					if object.value42 == 0
-						object.value19 = 0
+					if player.prevGravity == 0
+						player.badnikBonus = 0
 						achieveRingCount = 0
 						if object.animation == ANI_JUMPING
-							if object.down == 0
-								if object.state != PlayerObject_HandleRoll
-									if object.state != PlayerObject_Unknown2
+							if object.down == false
+								if object.state != Player_State_Roll
+									if object.state != Player_State_TubeRoll
 										object.animation = ANI_WALKING
-										if object.entityPos == screen.cameraTarget
-											screen.adjustCameraY = 0
+										if object.entityPos == camera[0].target
+											camera[0].adjustY = 0
 										end if
-										object.iypos += object.value30
+										object.iypos += player.jumpOffset
 									end if
 								end if
 							end if
@@ -130,46 +153,50 @@ event ObjectMain
 					end if
 				end if
 			else
-				object.value34 = 0
+				player.collisionDisabled = false
 			end if
 		end if
 	else
-		CallFunction(PlayerObject_ProcessPlayer)
-		if object.gravity == GRAVITY_GROUND
-			object.value35 = 0
+		CallFunction(Player_ProcessUpdate)
+
+		if object.gravity == 0
+			player.jumpAbilityState = 0
 		end if
+
 		CallFunction(object.state)
 		ProcessAnimation()
-		CallFunction(TailsObject_Function61)
+		CallFunction(TailsObject_ProcessTailSprite)
+
 		if object.animation == ANI_JUMPING
-			screen.adjustCameraY = object.value30
+			camera[0].adjustY = player.jumpOffset
 		else
-			if screen.adjustCameraY == object.value30
-				screen.adjustCameraY = 0
-				object.iypos += object.value30
+			if camera[0].adjustY == player.jumpOffset
+				camera[0].adjustY = 0
+				object.iypos += player.jumpOffset
 			end if
 		end if
-		if object.value34 == 0
-			temp0 = object.value42
-			object.value42 = object.gravity
+
+		if player.collisionDisabled == false
+			temp0 = player.prevGravity
+			player.prevGravity = object.gravity
 			ProcessObjectMovement()
-			object.value42 ^= 1
-			CheckEqual(object.gravity, GRAVITY_GROUND)
-			object.value42 |= checkResult
-			object.value42 ^= 1
+			player.prevGravity ^= 1
+			CheckEqual(object.gravity, 0)
+			player.prevGravity |= checkResult
+			player.prevGravity ^= 1
 			if temp0 == 1
-				if object.value42 == 0
-					object.value19 = 0
+				if player.prevGravity == 0
+					player.badnikBonus = 0
 					achieveRingCount = 0
 					if object.animation == ANI_JUMPING
-						if object.down == 0
-							if object.state != PlayerObject_HandleRoll
-								if object.state != PlayerObject_Unknown2
+						if object.down == false
+							if object.state != Player_State_Roll
+								if object.state != Player_State_TubeRoll
 									object.animation = ANI_WALKING
-									if object.entityPos == screen.cameraTarget
-										screen.adjustCameraY = 0
+									if object.entityPos == camera[0].target
+										camera[0].adjustY = 0
 									end if
-									object.iypos += object.value30
+									object.iypos += player.jumpOffset
 								end if
 							end if
 						end if
@@ -177,15 +204,15 @@ event ObjectMain
 				end if
 			end if
 		else
-			object.value34 = 0
+			player.collisionDisabled = false
 		end if
 	end if
-	CallFunction(PlayerObject_ProcessSuperForms)
+
+	CallFunction(Player_HandleSuperForm)
 end event
 
 
 event ObjectDraw
-
 	if object.animation != object.prevAnimation
 		object.prevAnimation = object.animation
 		object.frame = 0
@@ -193,21 +220,23 @@ event ObjectDraw
 		object.animationSpeed = 0
 	end if
 	
-	if object.value13 != object.animation
+	if player.tailAnim != object.animation
 		if object.animation > 4
-			object.value12 = 0
+			player.tailFrame = 0
 		end if
-		if object.value13 > 4
-			object.value12 = 0
+
+		if player.tailAnim > 4
+			player.tailFrame = 0
 		end if
-		object.value13 = object.animation
+
+		player.tailAnim = object.animation
 	end if
 	
 	// Draw the Tails part of Tails
-	switch object.value13
-	case 0
+	switch player.tailAnim
+	case 0 // ANI_STOPPED
 		if object.frame == 0
-			temp0 = object.value12
+			temp0 = player.tailFrame
 			temp0 >>= 3
 			if object.visible == true
 				DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
@@ -215,30 +244,30 @@ event ObjectDraw
 		end if
 		break
 		
-	case 1
-	case 3
-	case 4
-	case 37
-		temp0 = object.value12
+	case 1 // ANI_WAITING
+	case 3 // ANI_LOOKINGUP
+	case 4 // ANI_LOOKINGDOWN
+	case 37 // ANI_CONTINUE_UP
+		temp0 = player.tailFrame
 		temp0 >>= 3
-		if object.visible == 1
+		if object.visible == true
 			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		end if
 		break
 		
-	case 7
-	case 9
-		temp0 = object.value12
+	case 7 // ANI_SKIDDING
+	case 9 // ANI_SPINDASH
+		temp0 = player.tailFrame
 		temp0 >>= 2
 		temp0 += 11
-		if object.visible == 1
+		if object.visible == true
 			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		end if
 		break
 		
-	case 10
-	case 43
-		temp0 = object.value12
+	case 10 // ANI_JUMPING
+	case 43 // Unknown, this was probably "SSRoll" before it got moved to its own ani file
+		temp0 = player.tailFrame
 		temp0 >>= 2
 		CheckEqual(object.xvel, 0)
 		temp1 = checkResult
@@ -247,79 +276,88 @@ event ObjectDraw
 		temp2 = object.rotation
 		if temp1 == 0
 			ATan2(object.rotation, object.xvel, object.yvel)
-			object.rotation += 16
-			object.rotation &= 255
+			object.rotation += 0x10
+			object.rotation &= 0xFF
 			object.rotation >>= 5
 			switch object.rotation
 			case 0
 			case 8
 				temp0 += 5
-				object.rotation = 0
+				object.rotation = 0x00
 				break
+
 			case 1
 				temp0 += 8
-				if object.direction == FLIP_NONE
-					object.rotation = 64
+				if object.direction == FACING_RIGHT
+					object.rotation = 0x40
 				else
-					object.rotation = 0
+					object.rotation = 0x00
 				end if
 				break
+
 			case 2
 				temp0 += 5
-				object.rotation = 64
+				object.rotation = 0x40
 				break
+
 			case 3
 				temp0 += 8
-				if object.direction == FLIP_NONE
-					object.rotation = 128
+				if object.direction == FACING_RIGHT
+					object.rotation = 0x80
 				else
-					object.rotation = 64
+					object.rotation = 0x40
 				end if
 				break
+
 			case 4
 				temp0 += 5
-				object.rotation = 128
+				object.rotation = 0x80
 				break
+
 			case 5
 				temp0 += 8
-				if object.direction == FLIP_NONE
-					object.rotation = 192
+				if object.direction == FACING_RIGHT
+					object.rotation = 0xC0
 				else
-					object.rotation = 128
+					object.rotation = 0x80
 				end if
 				break
+
 			case 6
 				temp0 += 5
-				object.rotation = 192
+				object.rotation = 0xC0
 				break
+
 			case 7
 				temp0 += 8
-				if object.direction == FLIP_NONE
-					object.rotation = 0
+				if object.direction == FACING_RIGHT
+					object.rotation = 0x00
 				else
-					object.rotation = 192
+					object.rotation = 0xC0
 				end if
 				break
 			end switch
-			if object.direction == FLIP_X
-				object.rotation += 128
+
+			if object.direction == FACING_LEFT
+				object.rotation += 0x80
 			end if
 		else
 			temp0 += 5
-			object.rotation = 0
+			object.rotation = 0x00
 		end if
+
 		object.rotation <<= 1
-		if object.visible == 1
+		if object.visible == true
 			DrawSpriteFX(temp0, FX_ROTATE, object.xpos, object.ypos)
 		end if
 		object.rotation = temp2
 		break
 		
-	case 17
-		temp0 = object.value12
+	case 17 // ANI_PUSHING
+		temp0 = player.tailFrame
 		temp0 /= 10
 		temp0 += 11
-		if object.visible == 1
+		if object.visible == true
 			DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
 		end if
 		break
@@ -327,44 +365,54 @@ event ObjectDraw
 	end switch
 	
 	// Draw Tails himself
-	// (Separate tails are drawn in the process above)
+	// (His separate tails are drawn in the process above, notably done before this function call since Tails is supposed to be ontop of his Tails)
 	DrawObjectAnimation()
-	
 end event
 
 
 event ObjectStartup
-
 	if stage.playerListPos == true
-	
 		LoadSpriteSheet("Players/Tails1.gif")
 		
 		LoadAnimation("Tails.ani")
 		
+		// Idle Tail Sprites - #0-4
 		SpriteFrame(-22, -8, 16, 24, 82, 199)
 		SpriteFrame(-26, -8, 20, 24, 99, 199)
 		SpriteFrame(-26, -8, 20, 24, 120, 199)
 		SpriteFrame(-26, -8, 20, 24, 141, 199)
 		SpriteFrame(-26, -8, 20, 24, 162, 199)
+
+		// Jumping Tail Sprites - #5-7
 		SpriteFrame(-35, -8, 24, 16, 231, 166)
 		SpriteFrame(-35, -8, 24, 16, 231, 183)
 		SpriteFrame(-35, -8, 24, 16, 231, 200)
+
+		// Jumping Tail Sprites (45 Degrees) - #8-10
 		SpriteFrame(-25, 9, 20, 16, 235, 217)
 		SpriteFrame(-25, 9, 18, 16, 237, 234)
 		SpriteFrame(-25, 9, 20, 16, 216, 234)
+
+		// Pushing Tail Sprites - #11-13
 		SpriteFrame(-30, -6, 24, 16, 231, 166)
 		SpriteFrame(-30, -6, 24, 16, 231, 183)
 		SpriteFrame(-30, -6, 24, 16, 231, 200)
-		
 	end if
-	
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("Players/Tails1.gif")
+	SpriteFrame(-22, -8, 16, 24, 82, 199) // snip
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

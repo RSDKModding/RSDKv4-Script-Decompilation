@@ -1,70 +1,98 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Zone Block Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 18 : TYPE_ZONEBLOCK
+// ========================
 
-// Function declarations
+private alias object.value0 : object.timer
+
+private alias 0 : BLOCK_ZONE_IDLE
+private alias 1 : BLOCK_ZONE_ACTIVATED
+
+// Player aliases
+private alias object.value10 : debugMode.currentSelection
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function ZoneBlock_DebugDraw
 reserve function ZoneBlock_DebugSpawn
 
+
+// ========================
 // Static Values
-public value ZoneBlock_value17 = 0;
+// ========================
 
-private alias ZoneBlock_value17 : ZoneBlock_debugStart
+private value ZoneBlock_startDebugID = 0
 
-// Tables
 
-function ZoneBlock_DebugDraw
+// ========================
+// Function Definitions
+// ========================
 
-	temp4 = object[0].value10
-	temp4 -= ZoneBlock_debugStart
+private function ZoneBlock_DebugDraw
+	temp4 = debugMode[0].currentSelection
+	temp4 -= ZoneBlock_startDebugID
 	DrawSprite(temp4)
-
 end function
 
 
-function ZoneBlock_DebugSpawn
-	temp4 = object[0].value10
-	temp4 -= ZoneBlock_debugStart
-	temp5 = 18
-	CallFunction(DebugMode_Function11)
+private function ZoneBlock_DebugSpawn
+	temp4 = debugMode[0].currentSelection
+	temp4 -= ZoneBlock_startDebugID
+	temp5 = TypeName[Zone Block]
+	CallFunction(DebugMode_PlaceBlock)
 	object[arrayPos0].drawOrder = 4
 	object[arrayPos0].groupID = GROUP_BLOCKS
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
 
-	if object.state == 1
-		object.frame = object.value0
+event ObjectUpdate
+	if object.state == BLOCK_ZONE_ACTIVATED
+		object.frame = object.timer
 		object.frame >>= 3
-		object.value0++
-		if object.value0 == 32
-			object.value0 = 0
-			object.state = 0
+		object.timer++
+		if object.timer == 32
+			object.timer = 0
+			object.state = BLOCK_ZONE_IDLE
 			object.frame = 0
 		end if
 	end if
 
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		CallFunction(SpecialSetup_Function10)
+		CallFunction(SpecialSetup_PlayerBlockCol)
 	next
 end event
 
 
 event ObjectDraw
-	CallFunction(SpecialSetup_Function9)
+	CallFunction(SpecialSetup_GetBlockPos)
+#platform: USE_ORIGINS
+	// This object isn't even used normally, but it's cool to see them update it regardless
+	if game.playMode == BOOT_PLAYMODE_MIRRORING
+		object.direction = FACING_LEFT
+		DrawSpriteFX(object.propertyValue, FX_FLIP, temp0, temp1)
+	else
+		DrawSpriteXY(object.propertyValue, temp0, temp1)
+	end if
+#endplatform
+#platform: USE_STANDALONE
 	DrawSpriteXY(object.propertyValue, temp0, temp1)
+#endplatform
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Special/Objects.gif")
 
 	// Zone block frames
@@ -80,9 +108,9 @@ event ObjectStartup
 		object[arrayPos0].groupID = GROUP_BLOCKS
 	next
 
-	// Add the Zone Block to the debug object list seven times
+	// Add the Zone Block to the debug object list seven times for the seven different zones
 	temp0 = 0
-	ZoneBlock_debugStart = DebugMode_ObjCount
+	ZoneBlock_startDebugID = DebugMode_ObjCount
 	while temp0 < 7
 		SetTableValue(TypeName[Zone Block], DebugMode_ObjCount, DebugMode_TypeTable)
 		SetTableValue(ZoneBlock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
@@ -92,9 +120,42 @@ event ObjectStartup
 	loop
 end event
 
-event RSDKDraw
-	DrawSpriteXY(object.propertyValue)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			break
+			
+		case 0 // zoneID
+			checkResult = object.propertyValue
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			break
+			
+		case 0 // zoneID
+			object.propertyValue = temp0
+			break
+			
+		end switch
+	end if
 end event
+
+
+event RSDKDraw
+	DrawSprite(object.propertyValue)
+end event
+
 
 event RSDKLoad
 	LoadSpriteSheet("Special/Objects.gif")
@@ -105,4 +166,14 @@ event RSDKLoad
 	SpriteFrame(-12, -12, 24, 24, 451, 176)
 	SpriteFrame(-12, -12, 24, 24, 476, 176)
 	SpriteFrame(-12, -12, 24, 24, 476, 276)
+	
+	AddEditorVariable("zoneID")
+	SetActiveVariable("zoneID")
+	AddEnumVariable("Zone 1", 0)
+	AddEnumVariable("Zone 2", 1)
+	AddEnumVariable("Zone 3", 2)
+	AddEnumVariable("Zone 4", 3)
+	AddEnumVariable("Zone 5", 4)
+	AddEnumVariable("Zone 6", 5)
+	AddEnumVariable("Zone 7", 6)
 end event

@@ -1,36 +1,46 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Air Bubble Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 43 : TYPE_AIRBUBBLE
+// ========================
 
 private alias object.value0 : object.timer
-private alias object.value1 : object.mainY
+private alias object.value1 : object.originPos.x
 private alias object.value2 : object.targetPlayer
+private alias object.value3 : object.bubbleUsed
+
+private alias 0 : AIRBUBBLE_ACTIVE
+private alias 1 : AIRBUBBLE_USED
 
 // Player values
-private alias object.state			:	player.state
-private alias object.animation		:	player.animation
-private alias object.animationSpeed	:	player.animationSpeed
-private alias object.xvel			:	player.xvel
-private alias object.yvel			:	player.yvel
-private alias object.speed			:	player.speed
-private alias object.value3			:	player.drownCounter
-private alias object.value4			:	player.drownLevel
-private alias object.value36		:	player.tailsGrabTimeout
-private alias object.value37		:	player.shield
+private alias object.state			: player.state
+private alias object.animation		: player.animation
+private alias object.animationSpeed	: player.animationSpeed
+private alias object.xvel			: player.xvel
+private alias object.yvel			: player.yvel
+private alias object.speed			: player.speed
+private alias object.value3			: player.drownTimer
+private alias object.value4			: player.drownLevel
+private alias object.value36		: player.flyCarryTimer
+private alias object.value37		: player.shield
 
 // Shield constants
 private alias 2 : SHIELD_BUBBLE
 
-event ObjectMain
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	currentPlayer = object.targetPlayer
 
-	if object.state == 0
+	if object.state == AIRBUBBLE_ACTIVE
 		object.timer++
 		if object.timer > 15
 			object.timer = 0
@@ -45,9 +55,9 @@ event ObjectMain
 
 		object.ypos += object.yvel
 		if currentPlayer != 0xFFFF
-			if player[currentPlayer].state == PlayerObject_Clinging
+			if player[currentPlayer].state == Player_State_Clinging
 				if object.propertyValue < 3
-					object.mainY += 0x40000
+					object.originPos.x += 0x40000
 				end if
 			end if
 		end if
@@ -55,7 +65,7 @@ event ObjectMain
 		if object.frame < 7
 			Sin(object.xpos, object.angle)
 			object.xpos <<= 9
-			object.xpos += object.mainY
+			object.xpos += object.originPos.x
 			object.angle += 4
 			object.angle &= 511
 		end if
@@ -78,13 +88,13 @@ event ObjectMain
 		CheckEqual(player[currentPlayer].animation, ANI_DYING)
 		temp0 |= checkResult
 
-		if temp0 != 0
-			object.value3 = 0
+		if temp0 != false
+			object.bubbleUsed = false
 		end if
 
 		if object.timer < 20
 			object.timer++
-			if object.value3 != 0
+			if object.bubbleUsed != false
 				player[currentPlayer].animation = ANI_BREATHING
 			end if
 
@@ -94,7 +104,7 @@ event ObjectMain
 		else
 			object.type = TypeName[Blank Object]
 
-			if object.value3 != 0
+			if object.bubbleUsed != false
 				player[currentPlayer].animation = ANI_WALKING
 				player[currentPlayer].animationSpeed = 20
 			end if
@@ -109,11 +119,11 @@ event ObjectMain
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			if player[currentPlayer].animation != ANI_DYING
 				if player[currentPlayer].shield != SHIELD_BUBBLE
-					BoxCollisionTest(C_TOUCH, object.entityPos, -2, -2, 2, 2, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+					BoxCollisionTest(C_TOUCH, object.entityPos, -2, -2, 2, 2, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 
 					if checkResult == true
 						object.frame = 7
-						object.state = 1
+						object.state = AIRBUBBLE_USED
 						object.timer = 0
 						object.yvel = 0
 						object.targetPlayer = currentPlayer
@@ -141,22 +151,25 @@ event ObjectMain
 
 						if temp0 == false
 							player[currentPlayer].animation = ANI_BREATHING
-							object.value3 = 1
+							object.bubbleUsed = true
+#platform: USE_ORIGINS
+							CallNativeFunction4(NotifyCallback, NOTIFY_STATS_PARAM_1, 1, 0, 0)
+#endplatform
 						end if
 
-						player[currentPlayer].drownCounter = 0
+						player[currentPlayer].drownTimer = 0
 						player[currentPlayer].drownLevel = 0
 
-						if player[currentPlayer].state == PlayerObject_RollingJump
-							player[currentPlayer].state = PlayerObject_HandleAir
+						if player[currentPlayer].state == Player_State_RollJump
+							player[currentPlayer].state = Player_State_Air
 						end if
 
-						if player[currentPlayer].state == PlayerObject_FlyCarry
-							player[currentPlayer].state = PlayerObject_HandleAir
-							player[1].tailsGrabTimeout = 30
+						if player[currentPlayer].state == Player_State_Carried
+							player[currentPlayer].state = Player_State_Air
+							player[1].flyCarryTimer = 30
 						end if
 
-						PlaySfx(SfxName[Breathing], 0)
+						PlaySfx(SfxName[Breathing], false)
 					end if
 				end if
 			end if
@@ -171,7 +184,6 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("LZ/Objects.gif")
 
 	// Bubble frames
@@ -184,14 +196,21 @@ event ObjectStartup
 	SpriteFrame(-16, -16, 32, 32, 86, 18)
 	SpriteFrame(-16, -16, 32, 32, 123, 1)
 	SpriteFrame(-15, -15, 30, 30, 156, 3)
-
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 86, 18)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

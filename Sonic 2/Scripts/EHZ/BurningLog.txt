@@ -1,43 +1,61 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Burning Log Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 65 : TYPE_BURNINGLOG
+// ========================
+
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : BURNINGLOG_BURN
+private alias 1 : BURNINGLOG_FALL
+
+// Player Aliases
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 
-// Static Values
+// ========================
+// Events
+// ========================
 
-// Tables
-
-event ObjectMain
+event ObjectUpdate
 	switch object.state
-	case 0
-		object.value0--
-		if object.value0 <= 0
-			object.state = 1
+	case BURNINGLOG_BURN
+		object.timer--
+		if object.timer <= 0
+			object.state = BURNINGLOG_FALL
 		end if
 		break
-	case 1
+
+	case BURNINGLOG_FALL
 		object.ypos += object.yvel
 		object.yvel += 0x3800
+
 		if object.outOfBounds == true
 			object.type = TypeName[Blank Object]
 		end if
 		break
+		
 	end switch
+
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-		BoxCollisionTest(C_PLATFORM, object.entityPos, -8, -8, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
-		if object.value0 <= 15
-			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -16, 8, 8, currentPlayer, object[currentPlayer].value40, object[currentPlayer].value38, object[currentPlayer].value41, object[currentPlayer].value39)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -8, -8, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if object.timer <= 15
+			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -16, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
 			if checkResult == true
-				CallFunction(PlayerObject_FireHit)
+				CallFunction(Player_FireHit)
 			end if
 		end if
 	next
+	
 	object.frame = object.animationTimer
 	object.frame /= 3
 	object.frame += 3
@@ -50,7 +68,8 @@ end event
 
 event ObjectDraw
 	DrawSprite(0)
-	if object.value0 <= 15
+	
+	if object.timer <= 15
 		GetBit(object.direction, oscillation, 2)
 		DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
 	end if
@@ -70,11 +89,25 @@ event ObjectStartup
 	end if
 end event
 
+
+// ========================
+// Editor Events
+// ========================
+
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	CheckCurrentStageFolder("Zone01")
+	if checkResult == true
+		LoadSpriteSheet("EHZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 82, 78)
+	else
+		LoadSpriteSheet("MBZ/Objects.gif")
+		SpriteFrame(-8, -8, 16, 16, 137, 313)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

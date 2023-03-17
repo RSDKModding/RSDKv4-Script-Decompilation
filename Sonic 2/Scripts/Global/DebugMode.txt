@@ -1,100 +1,90 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 2
 // Script Description: Debug Mode Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 9 : TYPE_DEBUGMODE
+// ========================
 
-private alias object.value17	:	debugMode.currentSelection
-private alias object.value18	:	player.currentPlane
+// This object is run from the Player Object slot, so values are the same between the two
+// `object.` vs `player.` is used in this script to mark what's being run as a Debug Mode object, as opposed to being run from the Player Object
 
-// Function declarations
+private alias object.value3  : player.drownTimer
+private alias object.value4  : player.drownLevel
+private alias object.value17 : debugMode.currentSelection
+private alias object.value18 : player.sortedDrawOrder
+
+private alias object.state : player.state
+private alias object.xvel : player.xvel
+private alias object.yvel : player.yvel
+private alias object.speed : player.speed
+private alias object.animation : player.animation
+private alias object.animationSpeed : player.animationSpeed
+private alias object.frame : player.frame
+private alias object.controlMode : player.controlMode
+private alias object.drawOrder : player.drawOrder
+private alias object.interaction : player.interaction
+private alias object.tileCollisions : player.tileCollisions
+private alias object.visible : player.visible
+
+private alias -1 : DRAWORDER_PLAYER
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function DebugMode_BlankSpawn
 reserve function DebugMode_BlankDraw
 
+
+// ========================
 // Static Values
-public value DebugMode_ObjCount = 0;
-public value DebugMode_ExitTimer = 0;
+// ========================
 
+public value DebugMode_ObjCount = 0
+private value DebugMode_ExitTimer = 0
+
+
+// ========================
 // Tables
+// ========================
 
-// Large table to hold the types of every object
-public table DebugMode_TypesTable
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-end table
+// Large table to hold the types of every entry
+public table DebugMode_TypesTable[256]
 
-// Large table to hold the draw functions of every object
-public table DebugMode_DrawTable
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-end table
+// Large table to hold the draw functions of every entry
+public table DebugMode_DrawTable[256]
 
-// Large table to hold the spawn functions of every object
-public table DebugMode_SpawnTable
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-end table
+// Large table to hold the spawn functions of every entry
+public table DebugMode_SpawnTable[256]
 
 
-function DebugMode_BlankSpawn
+// ========================
+// Function Definitions
+// ========================
+
+private function DebugMode_BlankSpawn
 	temp0 = 0
 end function
 
 
-function DebugMode_BlankDraw
+private function DebugMode_BlankDraw
 	DrawSprite(0)
 end function
 
-event ObjectMain
-	if DebugMode_ExitTimer == 0
-		if options.touchControls == true
 
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if DebugMode_ExitTimer == 0
+#platform: USE_STANDALONE
+		if options.touchControls == true
 			CheckTouchRect(0, 96, screen.xcenter, screen.ysize)
 
 			if checkResult > -1
@@ -109,39 +99,39 @@ event ObjectMain
 				temp2 >>= 5
 				switch temp2
 				case 0
-					inputDown.right = true
+					keyDown[0].right = true
 					break
 
 				case 1
-					inputDown.right = true
-					inputDown.down = true
+					keyDown[0].right = true
+					keyDown[0].down = true
 					break
 
 				case 2
-					inputDown.down = true
+					keyDown[0].down = true
 					break
 
 				case 3
-					inputDown.down = true
-					inputDown.left = true
+					keyDown[0].down = true
+					keyDown[0].left = true
 					break
 
 				case 4
-					inputDown.left = true
+					keyDown[0].left = true
 					break
 
 				case 5
-					inputDown.left = true
-					inputDown.up = true
+					keyDown[0].left = true
+					keyDown[0].up = true
 					break
 
 				case 6
-					inputDown.up = true
+					keyDown[0].up = true
 					break
 
 				case 7
-					inputDown.up = true
-					inputDown.right = true
+					keyDown[0].up = true
+					keyDown[0].right = true
 					break
 
 				end switch
@@ -187,11 +177,11 @@ event ObjectMain
 					break
 
 				case 0
-					inputDown.buttonC = true
+					keyDown[0].buttonC = true
 					if touchJump == false
-						inputPress.buttonC |= inputDown.buttonC
+						keyPress[0].buttonC |= keyDown[0].buttonC
 					end if
-					touchJump = inputDown.buttonC
+					touchJump = keyDown[0].buttonC
 					break
 
 				end switch
@@ -203,24 +193,22 @@ event ObjectMain
 			CheckTouchRect(temp0, 0, screen.xsize, 40)
 			if checkResult > -1
 				if options.stageSelectFlag == true
-
 					// Start going to level select
 					StopMusic()
 					DebugMode_ExitTimer = 8
-					object.priority = PRIORITY_ACTIVE_PAUSED
-					options.touchControls = 0
-					stage.state = 3
-
+					object.priority = PRIORITY_ALWAYS
+					options.touchControls = false
+					stage.state = STAGE_FROZEN
 				else
 					// Pause the game
-					PlaySfx(SfxName[Menu Back], 0)
+					PlaySfx(SfxName[Menu Back], false)
 					engine.state = 5
 				end if
 			end if
 
-			if inputPress.start == true
+			if keyPress[0].start == true
 				// Pause the game
-				PlaySfx(SfxName[Menu Back], 0)
+				PlaySfx(SfxName[Menu Back], false)
 				engine.state = 5
 			end if
 		end if
@@ -228,35 +216,60 @@ event ObjectMain
 		CheckTouchRect(0, 0, 112, 56)
 		
 		if checkResult > -1
-			inputDown.buttonB = true
+			keyDown[0].buttonB = true
 		end if
 
 		if touchDebug == false
-			inputPress.buttonB |= inputDown.buttonB
+			keyPress[0].buttonB |= keyDown[0].buttonB
 		end if
 
-		touchDebug = inputDown.buttonB
+		touchDebug = keyDown[0].buttonB
 		temp0 = false
 
-		if inputDown.left == true
+		if keyDown[0].left == true
 			object.xpos -= object.yvel
 			temp0 = true
 		end if
 
-		if inputDown.right == true
+		if keyDown[0].right == true
 			object.xpos += object.yvel
 			temp0 = true
 		end if
 
-		if inputDown.up == true
+		if keyDown[0].up == true
 			object.ypos -= object.yvel
 			temp0 = true
 		end if
 
-		if inputDown.down == true
+		if keyDown[0].down == true
 			object.ypos += object.yvel
 			temp0 = true
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		// They forgot to add the ability to pause in Debug Mode...
+	
+		if keyDown[1].left == true
+			object.xpos -= object.yvel
+			temp0 = true
+		end if
+
+		if keyDown[1].right == true
+			object.xpos += object.yvel
+			temp0 = true
+		end if
+
+		if keyDown[1].up == true
+			object.ypos -= object.yvel
+			temp0 = true
+		end if
+
+		if keyDown[1].down == true
+			object.ypos += object.yvel
+			temp0 = true
+		end if
+#endplatform
 
 		if temp0 == true
 			object.yvel += 0xC00
@@ -267,52 +280,65 @@ event ObjectMain
 			object.yvel = 0
 		end if
 
-		object.value3 = 0
-		object.value4 = 0
+		player.drownTimer = 0
+		player.drownLevel = 0
 
-		if inputPress.buttonB == true
+		if keyPress[0].buttonB == true
 			if DebugMode_ExitTimer == 0
-
 				// Exit Debug Mode
-				if stage.playerListPos == PlayerName[TAILS]
+				
+				if stage.playerListPos == PLAYER_TAILS_ALONE
 					object.type = TypeName[Tails Object]
 				else
 					object.type = TypeName[Player Object]
 				end if
-		
-				object.speed = 0
-				object.xvel = 0
-				object.yvel = 0
-				object.state = PlayerObject_HandleAir
-				object.animation = ANI_WALKING
-				object.animationSpeed = 0
-				object.frame = 0
-				object.controlMode = false
-				object.drawOrder = -1
-				player.currentPlane = 4
-				object.interaction = true
-				object.tileCollisions = true
-				object.visible = true
+				
+				player.speed = 0
+				player.xvel = 0
+				player.yvel = 0
+				player.state = Player_State_Air
+				player.animation = ANI_WALKING
+				player.animationSpeed = 0
+				player.frame = 0
+				player.controlMode = CONTROLMODE_P1
+				player.drawOrder = DRAWORDER_PLAYER
+				player.sortedDrawOrder = 4
+				player.interaction = true
+				player.tileCollisions = true
+				player.visible = true
 
 			end if
 		else
-			if inputPress.buttonA == true
+			if keyPress[0].buttonA == true
 				// Go up one on the debug item list
 				debugMode.currentSelection++
+#platform: USE_ORIGINS
+				// Skip the life/coin monitor (no farming coins!)
+				if debugMode.currentSelection == 5
+					debugMode.currentSelection++
+				end if
+#endplatform
 				if debugMode.currentSelection >= DebugMode_ObjCount
 					debugMode.currentSelection = 0
 				end if
 			end if
-			if inputDown.buttonA == true
-				if inputPress.buttonC == true
+			
+			if keyDown[0].buttonA == true
+				if keyPress[0].buttonC == true
 					// Go down one on the debug item list
 					debugMode.currentSelection--
+#platform: USE_ORIGINS
+					// Skip the life/coin monitor (no farming coins!)
+					if debugMode.currentSelection == 5
+						debugMode.currentSelection--
+					end if
+#endplatform
 					if debugMode.currentSelection < 0
 						debugMode.currentSelection += DebugMode_ObjCount
 					end if
 				end if
 			else
-				if inputPress.buttonC == true
+				if keyPress[0].buttonC == true
 					// Place the object
 					GetTableValue(temp0, debugMode.currentSelection, DebugMode_SpawnTable)
 					CallFunction(temp0)
@@ -321,29 +347,27 @@ event ObjectMain
 			end if
 		end if
 	else
-
+		// This goes unused in Origins because you can't pause in Debug Mode!!!
+		
 		options.touchControls = false
 
 		DebugMode_ExitTimer += 8
 		SetScreenFade(0, 0, 0, DebugMode_ExitTimer)
 
 		if DebugMode_ExitTimer == 384
-
 			// Load the level select
+			
 			starPostID = 0
 			stage.activeList = PRESENTATION_STAGE
 			stage.listPos = 5
 			LoadStage()
-
 		end if
-
 	end if
 end event
 
 
 event ObjectDraw
-
-	// Set this object to the selected type
+	// Set this object to the current selection's type selected type
 	GetTableValue(object.type, debugMode.currentSelection, DebugMode_TypesTable)
 
 	// Get the draw function of the selected object
@@ -352,40 +376,46 @@ event ObjectDraw
 	// Call said draw function
 	CallFunction(temp0)
 
-	// Go back to being a Debug Mode object
+	// Restore this object to being a Debug Mode object
 	object.type = TypeName[Debug Mode]
-
 end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Global/Display.gif")
 
-	// Appears as just a white square in this game, but it would be Sonic's (otherwise unused) CD life icon if using S1 2013's sheets
+	// Appears as just a white square in this game, but it would be Sonic's (otherwise unused) CD life icon if using S1 2013's Global Display sheet
+	// (This frame data is the same as S1's and wasn't updated, in other words)
 	SpriteFrame(-8, -8, 16, 16, 188, 239)
 
 	DebugMode_ObjCount = 0
 
-	// Fill the table wilt empty values
+	// Fill the table with placeholder values
 	// - Not needed on first run, but needed when refreshing a new scene in order to clear the table
 	temp0 = 0
 	while temp0 < 256
-		SetTableValue(TypeName[DebugMode], temp0, DebugMode_TypesTable)
-		SetTableValue(DebugMode_BlankDraw, temp0, DebugMode_DrawTable)
+		SetTableValue(TypeName[Debug Mode], temp0, DebugMode_TypesTable)
+		SetTableValue(DebugMode_BlankDraw,  temp0, DebugMode_DrawTable)
 		SetTableValue(DebugMode_BlankSpawn, temp0, DebugMode_SpawnTable)
 		temp0++
 	loop
 
 	DebugMode_ExitTimer = 0
-
 end event
+
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
 end event
 
+
 event RSDKLoad
 	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	SpriteFrame(-8, -8, 16, 16, 188, 239) // just a white square but hey, if that's what the object does then it's fine
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

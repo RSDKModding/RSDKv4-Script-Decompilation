@@ -1,74 +1,107 @@
 // ----------------------------------
-// RSDK Project: Sonic 1/Sonic 2
+// RSDK Project: Sonic 1
 // Script Description: Door Horizontal Object
 // Script Author: Christian Whitehead/Simon Thomley
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// ========================
 // Aliases
-private alias 64 : TYPE_DOORHORIZONTAL
+// ========================
 
-// Function declarations
+private alias object.value0 : object.timer
+private alias object.value1 : object.collisionOffset.y
+
+// States
+private alias 0 : HORIZONTALDOOR_AWAITBUTTON
+private alias 1 : HORIZONTALDOOR_MOVING
+private alias 2 : HORIZONTALDOOR_MOVED
+private alias 3 : HORIZONTALDOOR_AWAITWATER
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// Push Button aliases
+private alias object.value0 : pushButton.stood
+
+
+// ========================
+// Function Declarations
+// ========================
+
 reserve function DoorHorizontal_DebugDraw
 reserve function DoorHorizontal_DebugSpawn
 
-// Static Values
 
-// Tables
+// ========================
+// Function Definitions
+// ========================
 
-function DoorHorizontal_DebugDraw
+private function DoorHorizontal_DebugDraw
 	DrawSprite(0)
 end function
 
 
-function DoorHorizontal_DebugSpawn
+private function DoorHorizontal_DebugSpawn
 	CreateTempObject(TypeName[Door Horizontal], 0, object.xpos, object.ypos)
 	object[tempObjectPos].direction = object.direction
 	object[tempObjectPos].priority = PRIORITY_ACTIVE
-	object[tempObjectPos].value0 = 64
+	object[tempObjectPos].timer = 64
 end function
 
 
-event ObjectMain
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
 	switch object.state
-	case 3
-		if Water_value32 == 1
-			object.state = 1
+	case HORIZONTALDOOR_AWAITWATER
+		if Water_activateFlag == true
+			object.state = HORIZONTALDOOR_MOVING
 		end if
-	case 0
-		if object[+1].value0 == 1
+		// [Fall-through]
+	case HORIZONTALDOOR_AWAITBUTTON
+		if pushButton[+1].stood == true
 			object.state++
 		end if
-	case 2
+		// [Fall-through]
+	case HORIZONTALDOOR_MOVED
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			BoxCollisionTest(C_BOX, object.entityPos, -64, -16, 64, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
+			BoxCollisionTest(C_SOLID, object.entityPos, -64, -16, 64, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 		next
 		break
-	case 1
+
+	case HORIZONTALDOOR_MOVING
 		temp0 = object.xpos
-		temp0 &= -0x10000
+		temp0 &= 0xFFFF0000
 		if object.direction == FLIP_NONE
 			object.xpos -= 0x20000
 		else
 			object.xpos += 0x20000
 		end if
-		object.value0--
-		if object.value0 < 0
+
+		object.timer--
+		if object.timer < 0
 			object.state++
 		end if
-		object.value1 = object.xpos
-		object.value1 &= -0x10000
-		object.value1 -= temp0
+
+		object.collisionOffset.y = object.xpos
+		object.collisionOffset.y &= 0xFFFF0000
+		object.collisionOffset.y -= temp0
 		temp1 = object.xpos
+
 		object.xpos = temp0
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			BoxCollisionTest(C_BOX, object.entityPos, -64, -16, 64, 16, currentPlayer, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO, HITBOX_AUTO)
-			if checkResult == 1
-				object[currentPlayer].xpos += object.value1
+			BoxCollisionTest(C_SOLID, object.entityPos, -64, -16, 64, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == COL_TOP
+				player[currentPlayer].xpos += object.collisionOffset.y
 			end if
 		next
+
 		object.xpos = temp1
 		break
+		
 	end switch
 end event
 
@@ -81,24 +114,78 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("LZ/Objects.gif")
 	SpriteFrame(-64, -16, 128, 32, 84, 223)
+
 	foreach (TypeName[Door Horizontal], arrayPos0, ALL_ENTITIES)
 		object[arrayPos0].priority = PRIORITY_ACTIVE
-		object[arrayPos0].value0 = 64
+		object[arrayPos0].timer = 64
 		if object[arrayPos0].propertyValue == 1
-			object[arrayPos0].state = 3
+			object[arrayPos0].state = HORIZONTALDOOR_AWAITWATER
 		end if
 	next
+
+	// Add this object to the debug item list
 	SetTableValue(TypeName[Door Horizontal], DebugMode_ObjCount, DebugMode_TypesTable)
 	SetTableValue(DoorHorizontal_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
 	SetTableValue(DoorHorizontal_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
 	DebugMode_ObjCount++
 end event
 
-event RSDKDraw
-	DrawSprite(0)
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		case 0 // activationType
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+			
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		case 0 // activationType
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+			
+		end switch
+	end if
 end event
 
+
+event RSDKDraw
+	DrawSprite(0)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		// Draw a line connecting the door to its trigger button
+		DrawLine(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
 event RSDKLoad
-	LoadSpriteSheet("Global/Display.gif")
-	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	LoadSpriteSheet("LZ/Objects.gif")
+	SpriteFrame(-64, -16, 128, 32, 84, 223)
+
+	AddEditorVariable("activationType")
+	SetActiveVariable("activationType")
+	AddEnumVariable("Button", 0)
+	AddEnumVariable("Water", 1)
 end event
