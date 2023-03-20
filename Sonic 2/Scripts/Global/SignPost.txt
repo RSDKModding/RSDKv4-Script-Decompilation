@@ -36,6 +36,7 @@ private alias object.speed			: player.speed
 private alias object.xvel 			: player.xvel
 private alias object.yvel 			: player.yvel
 private alias object.gravity 		: player.gravity
+private alias object.animation		: player.animation
 private alias object.controlMode 	: player.controlMode
 private alias object.scrollTracking : player.scrollTracking
 private alias object.interaction 	: player.interaction
@@ -47,6 +48,7 @@ private alias object.left 			: player.left
 private alias object.right 			: player.right
 private alias object.value7 		: player.invincibleTimer
 private alias object.value21 		: player.acceleration
+private alias object.value30		: player.jumpOffset
 
 private alias 1 : SUPERSTATE_SUPER
 private alias 2 : SUPERSTATE_FADEOUT
@@ -408,22 +410,31 @@ event ObjectUpdate
 			player[currentPlayer].jumpPress 	= false
 			player[currentPlayer].jumpHold 		= false
 		end if
+	
+#platform: USE_DECOMP
+		// Another ultrawide screen fix, this time for when the screen is wide enough to extend beyond
+		// the stage width, causing the player to constantly fall and wrap around the stage vertically
+		if player[currentPlayer].xpos > object.xpos
+			if player[currentPlayer].gravity == GRAVITY_AIR
+				temp1 = object.ypos
+				temp1 += 0x50000
+				if player[currentPlayer].animation == ANI_JUMPING
+					temp2 = player[currentPlayer].jumpOffset
+					temp2 <<= 16
+					temp1 -= temp2
+				end if
+				if player[currentPlayer].ypos > temp1
+					player[currentPlayer].ypos	= temp1
+					player[currentPlayer].yvel	= 0
+				end if
+			end if
+		end if
+#endplatform
 
 		if player[currentPlayer].xpos > temp0
 			player[currentPlayer].xpos 	= temp0
 			player[currentPlayer].speed	= 0
 			player[currentPlayer].xvel 	= 0
-#platform: USE_DECOMP
-			// Another ultrawide screen fix, this time for when the screen is wide enough to extend beyond the stage width,
-			// causing the player to constantly fall and wrap around the stage vertically
-			// It doesn't work 100% of the time, but it's the best we can do without things getting too complicated
-			if player[currentPlayer].gravity == GRAVITY_AIR
-				if player[currentPlayer].ypos > object.ypos
-					player[currentPlayer].ypos	= object.ypos
-					player[currentPlayer].yvel	= 0
-				end if
-			end if
-#endplatform
 		end if
 
 		if player[currentPlayer].type == TypeName[Debug Mode]
