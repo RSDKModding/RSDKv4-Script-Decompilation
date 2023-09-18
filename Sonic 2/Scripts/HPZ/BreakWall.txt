@@ -12,11 +12,17 @@
 private alias object.propertyValue : object.isDebris
 
 // Player Aliases
+private alias object.propertyValue : player.character
 private alias object.state : player.state
 private alias object.xpos : player.xpos
 private alias object.speed : player.speed
 private alias object.direction : player.direction
 private alias object.animation : player.animation
+private alias object.value16 : player.isSidekick
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 private alias 1 : SUPERSTATE_SUPER
 
@@ -70,17 +76,48 @@ event ObjectUpdate
 					checkResult = true
 				end if
 			end if
-
-			if stage.playerListPos == PLAYER_KNUX_ALONE
+			
+#platform: USE_STANDALONE
+			if stage.playerListPos == PLAYER_KNUCKLES_A
+#endplatform
+#platform: USE_ORIGINS
+			// Origins Plus fixed a bug where sidekick Tails could break walls when playing as Knuckles & Tails
+			if player[currentPlayer].character == PLAYER_KNUCKLES
+#endplatform
 				checkResult = true
 			end if
-
+			
 			if Player_superState == SUPERSTATE_SUPER
 				checkResult = true
 			end if
-
+			
+#platform: USE_STANDALONE
 			if checkResult == true
 				BoxCollisionTest(C_TOUCH, object.entityPos, -17, -32, 17, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+			if stage.playerListPos == PLAYER_AMY
+				if player[currentPlayer].isSidekick == false
+					if player[currentPlayer].animation == ANI_HAMMER_JUMP
+						checkResult = 2
+					end if
+					if player[currentPlayer].animation == ANI_HAMMER_DASH
+						checkResult = 2
+					end if
+				end if
+			end if
+			
+			if checkResult != false
+				switch checkResult
+				case 1
+					BoxCollisionTest(C_TOUCH, object.entityPos, -17, -32, 17, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					break
+					
+				case 2
+					BoxCollisionTest(C_TOUCH, object.entityPos, -17, -32, 17, 32, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					break
+				end switch
+#endplatform
 				if checkResult == true
 					object.type = TypeName[Blank Object]
 					PlaySfx(SfxName[Ledge Break], false)
@@ -208,7 +245,7 @@ event ObjectStartup
 	arrayPos0 = 0x20
 	while arrayPos0 < 0x420
 		if object[arrayPos0].type == TypeName[Breakable Wall]
-			object[arrayPos0].isDebris = false
+			object[arrayPos0].isDebris = false // Make sure we don't accidentally spawn debris by mistake
 			object[arrayPos0].drawOrder = 4
 		end if
 		

@@ -74,6 +74,7 @@ private alias  0 : ACHIEVEMENT_QUICKRUN
 private alias  3 : ACHIEVEMENT_SUPERSTAR
 private alias 10 : ACHIEVEMENT_SCRAMBLEDEGG
 
+
 // ========================
 // Function Declarations
 // ========================
@@ -113,8 +114,11 @@ event ObjectUpdate
 		temp0 += 0x400000
 		if player[0].ypos < temp0
 			if object.centerOffset > 0
-				temp0 = object.ixpos
-				temp0 -= player[0].ixpos
+				// These two lines used to use ixpos, but Plus changed them to xpos
+				temp0 = object.xpos
+				temp0 -= player[0].xpos
+				temp0 >>= 16
+				
 				CheckGreater(temp0, 0)
 				temp1 = checkResult
 				CheckLower(temp0, object.centerOffset)
@@ -142,18 +146,21 @@ event ObjectUpdate
 				stage.newXBoundary1 -= screen.xcenter
 				
 				switch player[0].character
-				case PLAYER_SONIC_ALONE
+				case PLAYER_SONIC_A
 					EditFrame(5, -24, -16, 48, 32, 34, 1)
 					break
 
-				case PLAYER_TAILS_ALONE
+				case PLAYER_TAILS_A
 					EditFrame(5, -24, -16, 48, 32, 34, 34)
 					break
 
-				case PLAYER_KNUX_ALONE
+				case PLAYER_KNUCKLES_A
 					EditFrame(5, -24, -16, 48, 32, 34, 67)
 					break
 
+				case PLAYER_AMY_A
+					EditFrame(5, -24, -16, 48, 32, 34, 149)
+					break
 				end switch
 
 				// No achievements in debug mode!
@@ -310,18 +317,21 @@ event ObjectUpdate
 						vsGame[30].countdownPlayer ^= 1
 						
 						switch player[currentPlayer].character
-						case PLAYER_SONIC_ALONE
+						case PLAYER_SONIC_A
 							EditFrame(5, -24, -16, 48, 32, 34, 1)
 							break
-
-						case PLAYER_TAILS_ALONE
+							
+						case PLAYER_TAILS_A
 							EditFrame(5, -24, -16, 48, 32, 34, 34)
 							break
-
-						case PLAYER_KNUX_ALONE
+							
+						case PLAYER_KNUCKLES_A
 							EditFrame(5, -24, -16, 48, 32, 34, 67)
 							break
-
+							
+						case PLAYER_AMY_A
+							EditFrame(5, -24, -16, 48, 32, 34, 149)
+							break
 						end switch
 					else
 						object[30].state = VSGAME_DISPLAYTAGS
@@ -394,7 +404,7 @@ event ObjectUpdate
 	
 	// Invisible off-screen barrier
 	temp0 = 40
-	temp0 += 212
+	temp0 += 212 // (screen.xcenter)
 	temp0 <<= 16
 	temp0 += object.xpos
 	currentPlayer = 0
@@ -445,14 +455,35 @@ event ObjectStartup
 	LoadSpriteSheet("Global/Items2.gif")
 	
 	SpriteFrame(-24, 16, 48, 16, 34, 132)
-	SpriteFrame(-24, -16, 48, 32, 34, 100)
-	SpriteFrame(-16, -16, 32, 32, 149, 99)
-	SpriteFrame(-4, -16, 8, 32, 247, 2)
-	SpriteFrame(-16, -16, 32, 32, 116, 99)
-	SpriteFrame(-24, -16, 48, 32, 34, 1)
-	SpriteFrame(-16, -16, 32, 32, 149, 99)
-	SpriteFrame(-4, -16, 8, 32, 247, 2)
-	SpriteFrame(-16, -16, 32, 32, 116, 99)
+	switch stage.playerListPos
+	// Has Sonic Team never heard of a default case?
+	case PLAYER_SONIC_A
+	case PLAYER_TAILS_A
+	case PLAYER_KNUCKLES_A
+	case PLAYER_SONIC_TAILS_A
+	case PLAYER_KNUCKLES_TAILS_A
+		SpriteFrame(-24, -16, 48, 32, 34, 100)	// #1 - Eggman giving a big smile
+		SpriteFrame(-16, -16, 32, 32, 149, 99)	// #2 - Spin frame 1
+		SpriteFrame(-4, -16, 8, 32, 247, 2)		// #3 - Spin frame 2
+		SpriteFrame(-16, -16, 32, 32, 116, 99)	// #4 - Spin frame 3
+		SpriteFrame(-24, -16, 48, 32, 34, 1)	// #5 - Main character frame (Sonic here, but will change to the appropriate character in-game)
+		SpriteFrame(-16, -16, 32, 32, 149, 99)	// #6 - Spin frame 4 (duplicate of frame 1)
+		SpriteFrame(-4, -16, 8, 32, 247, 2)		// #7 - Spin frame 5 (duplicate of frame 2)
+		SpriteFrame(-16, -16, 32, 32, 116, 99)	// #8 - Spin frame 6 (duplicate of frame 3)
+		break
+		
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		SpriteFrame(-24, -16, 48, 32, 34, 100)	// #1 - Eggman giving a big smile
+		SpriteFrame(-16, -16, 32, 32, 149, 132)	// #2 - Spin frame 1 (Amy)
+		SpriteFrame(-4, -16, 8, 32, 247, 2)		// #3 - Spin frame 2
+		SpriteFrame(-16, -16, 32, 32, 116, 132)	// #4 - Spin frame 3 (Amy)
+		SpriteFrame(-24, -16, 48, 32, 34, 149)	// #5 - Amy frame
+		SpriteFrame(-16, -16, 32, 32, 149, 132)	// #6 - Spin frame 4 (duplicate of frame 1)
+		SpriteFrame(-4, -16, 8, 32, 247, 2)		// #7 - Spin frame 5 (duplicate of frame 2)
+		SpriteFrame(-16, -16, 32, 32, 116, 132)	// #8 - Spin frame 6 (duplicate of frame 3)
+		break
+	end switch
 
 	foreach (TypeName[Sign Post2], arrayPos0, ALL_ENTITIES)
 		CheckGreater(object[arrayPos0].propertyValue, 0)

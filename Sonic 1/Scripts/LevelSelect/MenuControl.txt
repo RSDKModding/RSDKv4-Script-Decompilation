@@ -36,6 +36,16 @@ private alias 70 : SETTING_EMERALDS
 
 private alias 71 : ENTRY_SOUNDTEST
 
+// Player IDs
+private alias 0 : MENUCONTROL_PLAYER_ST
+private alias 1 : MENUCONTROL_PLAYER_S
+private alias 2 : MENUCONTROL_PLAYER_T
+private alias 3 : MENUCONTROL_PLAYER_K
+
+// Origins Plus Player IDs
+private alias 4 : MENUCONTROL_PLAYER_A
+private alias 5 : MENUCONTROL_PLAYER_AT
+
 // HexNo Aliases
 private alias object.value0 : hexNo.number
 private alias object.value1 : hexNo.highlighted
@@ -43,17 +53,20 @@ private alias object.value1 : hexNo.highlighted
 private alias 0  : HEXNO_HIGHLIGHT_FALSE
 private alias 16 : HEXNO_HIGHLIGHT_TRUE
 
-// Shield Types
-private alias 0 : MENUCONTROL_SHIELD_S1
-private alias 1 : MENUCONTROL_SHIELD_S2
-private alias 2 : MENUCONTROL_SHIELD_S3_S1
-private alias 3 : MENUCONTROL_SHIELD_S3_S2
+// Shield Type Aliases
+private alias 0 : SHIELDTYPE_S1
+private alias 1 : SHIELDTYPE_S2
+private alias 2 : SHIELDTYPE_S3_S1
+private alias 3 : SHIELDTYPE_S3_S2
 
 // Player List Pos Aliases
-private alias 0 : PLAYER_SONIC_ALONE
-private alias 1 : PLAYER_TAILS_ALONE
-private alias 2 : PLAYER_KNUX_ALONE
-private alias 3 : PLAYER_SONIC_AND_TAILS
+public alias 0 : PLAYER_SONIC_A
+public alias 1 : PLAYER_TAILS_A
+public alias 2 : PLAYER_KNUCKLES_A
+public alias 3 : PLAYER_SONIC_TAILS_A
+public alias 4 : PLAYER_KNUCKLES_TAILS_A
+public alias 5 : PLAYER_AMY_A
+public alias 6 : PLAYER_AMY_TAILS_A
 
 // Music loops
 private alias 635050 : MUSIC_LOOP_GHZ // 635970 in older S1 versions, changed some time around 1.0.7
@@ -98,9 +111,6 @@ end table
 private table MenuControl_EmeraldsCheatCode
 	4, 1, 2, 6
 end table
-
-// TODO: The Origins-ification uglied up the below table quite a bit... 
-// pretty it up later - lave
 
 // This table holds data for every stage with six values for every stage,
 // -> First entry is menu table the stage option is on
@@ -319,21 +329,30 @@ event ObjectUpdate
 		object[+2].priority = PRIORITY_ACTIVE
 
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
-			hexNo[+1].number = 1 // Sonic Alone
+		case PLAYER_SONIC_A
+			hexNo[+1].number = MENUCONTROL_PLAYER_S
 			break
 			
-		case PLAYER_TAILS_ALONE
-			hexNo[+1].number = 2 // Tails
+		case PLAYER_TAILS_A
+			hexNo[+1].number = MENUCONTROL_PLAYER_T
 			break
 			
-		case PLAYER_KNUX_ALONE
-			hexNo[+1].number = 3 // Knuckles
+		case PLAYER_KNUCKLES_A
+			hexNo[+1].number = MENUCONTROL_PLAYER_K
 			break
 			
-		case PLAYER_SONIC_AND_TAILS
-			hexNo[+1].number = 0 // Sonic & Tails
+		case PLAYER_SONIC_TAILS_A
+			hexNo[+1].number = MENUCONTROL_PLAYER_ST
 			break
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A
+			hexNo[+1].number = MENUCONTROL_PLAYER_A
+			break
+			
+		case PLAYER_AMY_TAILS_A
+			hexNo[+1].number = MENUCONTROL_PLAYER_AT
+			break
+#endplatform
 			
 		end switch
 
@@ -425,33 +444,97 @@ event ObjectUpdate
 
 			if keyPress[0].left == true
 				hexNo[+1].number--
+#platform: USE_ORIGINS
+				if hexNo[+1].number == MENUCONTROL_PLAYER_A
+					if game.hasPlusDLC == false
+						hexNo[+1].number--
+					end if
+				end if
+				
+				if hexNo[+1].number < MENUCONTROL_PLAYER_ST
+					if game.hasPlusDLC == true
+						hexNo[+1].number = MENUCONTROL_PLAYER_AT
+					else
+						hexNo[+1].number = MENUCONTROL_PLAYER_K
+					end if
+				end if
+#endplatform
 			end if
 
 			if keyPress[0].right == true
 				hexNo[+1].number++
+#platform: USE_ORIGINS
+				if game.hasPlusDLC == false
+					if hexNo[+1].number == MENUCONTROL_PLAYER_A
+						hexNo[+1].number++
+					end if
+					
+					if hexNo[+1].number == MENUCONTROL_PLAYER_AT
+						hexNo[+1].number++
+					end if
+				end if
+				
+				if hexNo[+1].number > MENUCONTROL_PLAYER_AT
+					hexNo[+1].number = MENUCONTROL_PLAYER_ST
+				end if
+#endplatform
 			end if
-
-			hexNo[+1].number &= 3
+			
+#platform: USE_STANDALONE
+			hexNo[+1].number &= MENUCONTROL_PLAYER_K
+#endplatform
 
 			switch hexNo[+1].number
-			case 0
-				stage.playerListPos = PLAYER_SONIC_AND_TAILS
+			case MENUCONTROL_PLAYER_ST
+#platform: USE_STANDALONE
+				stage.playerListPos = PLAYER_SONIC_TAILS_A
+#endplatform
+#platform: USE_ORIGINS
+				stage.playerListPos = PLAYER_SONIC_TAILS
+#endplatform
 				break
 
-			case 1
-				stage.playerListPos = PLAYER_SONIC_ALONE
+			case MENUCONTROL_PLAYER_S
+#platform: USE_STANDALONE
+				stage.playerListPos = PLAYER_SONIC_A
+#endplatform
+#platform: USE_ORIGINS
+				stage.playerListPos = PLAYER_SONIC
+#endplatform
 				stage.player2Enabled = false
 				break
 
-			case 2
-				stage.playerListPos = PLAYER_TAILS_ALONE
+			case MENUCONTROL_PLAYER_T
+#platform: USE_STANDALONE
+				stage.playerListPos = PLAYER_TAILS_A
+#endplatform
+#platform: USE_ORIGINS
+				stage.playerListPos = PLAYER_TAILS
+#endplatform
 				stage.player2Enabled = false
 				break
 
-			case 3
-				stage.playerListPos = PLAYER_KNUX_ALONE
+			case MENUCONTROL_PLAYER_K
+#platform: USE_STANDALONE
+				stage.playerListPos = PLAYER_KNUCKLES_A
+#endplatform
+#platform: USE_ORIGINS
+				stage.playerListPos = PLAYER_KNUCKLES
+#endplatform
 				stage.player2Enabled = false
 				break
+				
+#platform: USE_ORIGINS
+			case MENUCONTROL_PLAYER_A
+				stage.playerListPos = PLAYER_AMY
+				stage.player2Enabled = false
+				break
+				
+			case MENUCONTROL_PLAYER_AT
+				stage.playerListPos = PLAYER_AMY_TAILS
+				stage.player2Enabled = true
+				break
+#endplatform
 				
 			end switch
 			break
@@ -501,7 +584,6 @@ event ObjectUpdate
 			checkResult |= keyPress[0].right
 
 			if checkResult == true
-
 				// Toggle it
 				options.airSpeedCap ^= true
 
@@ -532,7 +614,7 @@ event ObjectUpdate
 			end if
 			break
 
-		case 69
+		case SETTING_ITEMS
 			// Monitors option
 			checkResult = keyPress[0].left
 			checkResult |= keyPress[0].right
@@ -546,24 +628,23 @@ event ObjectUpdate
 					options.shieldType++
 				end if
 
-				// Limit it to have 3 be the max
-				options.shieldType &= 3
+				options.shieldType &= SHIELDTYPE_S3_S2
 
 				// Update the menu text to account for the new change
 				switch options.shieldType
-				case MENUCONTROL_SHIELD_S1
+				case SHIELDTYPE_S1
 					EditMenuEntry(MENU_2, "ITEMS@@@@@@@@*S1*", temp2, true)
 					break
 
-				case MENUCONTROL_SHIELD_S2
+				case SHIELDTYPE_S2
 					EditMenuEntry(MENU_2, "ITEMS@@@@@@@@*S2*", temp2, true)
 					break
 
-				case MENUCONTROL_SHIELD_S3_S1
+				case SHIELDTYPE_S3_S1
 					EditMenuEntry(MENU_2, "ITEMS@@@@@*S1+S3*", temp2, true)
 					break
 
-				case MENUCONTROL_SHIELD_S3_S2
+				case SHIELDTYPE_S3_S2
 					EditMenuEntry(MENU_2, "ITEMS@@@@@*S2+S3*", temp2, true)
 					break
 				end switch
@@ -676,7 +757,7 @@ event ObjectUpdate
 			SetScreenFade(0, 0, 0, object.timer)
 		else
 #platform: USE_ORIGINS
-			CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, 1)
+			CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, true)
 			CallNativeFunction2(NotifyCallback, NOTIFY_PLAYER_SET, stage.playerListPos)
 #endplatform
 
@@ -732,7 +813,6 @@ event ObjectUpdate
 		break
 		
 	end switch
-
 end event
 
 
@@ -826,19 +906,19 @@ event ObjectStartup
 	end if
 
 	switch options.shieldType
-	case MENUCONTROL_SHIELD_S1
+	case SHIELDTYPE_S1
 		AddMenuEntry(MENU_2, "ITEMS@@@@@@@@*S1*", true)
 		break
 
-	case MENUCONTROL_SHIELD_S2
+	case SHIELDTYPE_S2
 		AddMenuEntry(MENU_2, "ITEMS@@@@@@@@*S2*", true)
 		break
 
-	case MENUCONTROL_SHIELD_S3_S1
+	case SHIELDTYPE_S3_S1
 		AddMenuEntry(MENU_2, "ITEMS@@@@@*S1+S3*", true)
 		break
 
-	case MENUCONTROL_SHIELD_S3_S2
+	case SHIELDTYPE_S3_S2
 		AddMenuEntry(MENU_2, "ITEMS@@@@@*S2+S3*", true)
 		break
 

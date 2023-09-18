@@ -71,7 +71,7 @@ private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 //    - This is what the Sound Test uses as well
 //  - However, the loop point set when slowing down the tracks is 18672
 //  - This may just be a one sample difference but I assure you, it's quite important because now it makes everything more complicated
-//  - Here, I've just decided to label the speed-up version as the proper one, I do hope you'll understand...
+//  - Here, I've just decided to label the slow-down version as the proper one, I do hope you'll understand...
 private alias 18672 : MUSIC_LOOP_MCZ_2P
 private alias 15272 : MUSIC_LOOP_MCZ_2P_F
 
@@ -92,6 +92,7 @@ reserve function HPZSetup_getClrDivisor
 reserve function HPZSetup_InitSuperSonicPal
 reserve function HPZSetup_InitSuperTailsPal
 reserve function HPZSetup_InitSuperKnuxPal
+reserve function HPZSetup_InitSuperAmyPal
 reserve function HPZSetup_SpeedUpMusic
 reserve function HPZSetup_SlowDownMusic
 
@@ -150,7 +151,7 @@ end table
 
 // Wacky function to take a normal color and turn it into an underwater color
 private function HPZSetup_getClrDivisor
-	// Regular Colour
+	// Regular Color
 	object.clrDivisor_R = temp1
 	object.clrDivisor_R >>= 16
 
@@ -161,7 +162,7 @@ private function HPZSetup_getClrDivisor
 	object.clrDivisor_B = temp1
 	object.clrDivisor_B &= 0xFF
 
-	// Underwater Colour
+	// Underwater Color
 	object.waterClrDivisor_R = temp2
 	object.waterClrDivisor_R >>= 16
 
@@ -209,7 +210,7 @@ end function
 private function HPZSetup_InitSuperSonicPal
 	temp0 = 0
 	
-	// First Set of colours is just the regular underwater palette
+	// First Set of colors is just the regular underwater palette
 	GetPaletteEntry(1, 2, temp1)
 	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 	temp0++
@@ -244,7 +245,7 @@ private function HPZSetup_InitSuperSonicPal
 		SetPaletteEntry(3, 3, temp1)
 		temp0 -= 3
 
-		// Just mix the 2 palettes, we'll use the results as our new colours
+		// Just mix the 2 palettes, we'll use the results as our new colors
 		SetPaletteFade(5, 3, 4, 48, 0, 4)
 
 		GetPaletteEntry(5, 0, temp1)
@@ -498,6 +499,85 @@ private function HPZSetup_InitSuperKnuxPal
 	GetPaletteEntry(1, 28, temp1)
 	SetTableValue(temp1, temp0, Player_KnuxSuperAltPal)
 	temp0++
+end function
+
+
+private function HPZSetup_InitSuperAmyPal
+#platform: USE_ORIGINS
+	temp0 = 0
+	
+	GetPaletteEntry(1, 54, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 50, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 51, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 52, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 53, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	while temp0 < 30
+		temp4 = temp0
+		temp4 -= 5
+		
+		GetTableValue(temp1, temp4, Player_AmySuperAltPal)
+		
+		temp2 = temp1
+		temp2 >>= 8
+		temp2 &= 255
+		
+		temp3 = temp1
+		temp3 &= 255
+		
+		temp1 >>= 16
+		temp1 += 32
+		if temp1 > 255
+			temp1 = 255
+		end if
+		
+		temp2 += 32
+		if temp2 > 255
+			temp2 = 255
+		end if
+		
+		temp3 += 32
+		if temp3 > 255
+			temp3 = 255
+		end if
+		
+		temp1 <<= 16
+		temp2 <<= 8
+		temp1 += temp2
+		temp1 += temp3
+		SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+		temp0++
+	loop
+	
+	temp6 = 25
+	while temp0 < 50
+		temp5 = 0
+		while temp5 < 5
+			temp4 = temp6
+			temp4 += temp5
+			GetTableValue(temp1, temp4, Player_AmySuperAltPal)
+			SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+			temp0++
+			temp5++
+		loop
+		
+		temp6 -= 5
+	loop
+#endplatform
 end function
 
 
@@ -812,13 +892,11 @@ end event
 event ObjectStartup
 	if stage.actNum == 1
 		// Act 1 is the normal Hidden Palace Zone, as reachable in a normal playthrough
-		
 		SetMusicTrack("MysticCave2.ogg", TRACK_STAGE, 18671) // see note up top as for why MUSIC_LOOP_MCZ_2P isn't being used here
 		SpeedUpMusic = HPZSetup_SpeedUpMusic
 		SlowDownMusic = HPZSetup_SlowDownMusic
 	else
 		// Act 2 is Proto Palace Zone, as a secret in the Sound Test
-		
 		SetMusicTrack("Extra.ogg", TRACK_STAGE, MUSIC_LOOP_PPZ)
 	end if
 
@@ -844,6 +922,9 @@ event ObjectStartup
 	CallFunction(HPZSetup_InitSuperSonicPal)
 	CallFunction(HPZSetup_InitSuperTailsPal)
 	CallFunction(HPZSetup_InitSuperKnuxPal)
+#platform: USE_ORIGINS
+	CallFunction(HPZSetup_InitSuperAmyPal)
+#endplatform
 
 	// Load the electric flash palette in case the player gets an eletric shield
 	LoadPalette("ElectricFlash.act", 2, 0, 0, 256)
@@ -852,8 +933,8 @@ event ObjectStartup
 	HPZSetup_bossFightActive = false
 
 	// The Stage List Pos should be set to HPZ's entry already, but double-check just in case
-	stage.listPos = 20
 	stage.activeList = REGULAR_STAGE
+	stage.listPos = 20
 
 	SetLayerDeformation(1, 64, 2, 0, 0, 0)
 

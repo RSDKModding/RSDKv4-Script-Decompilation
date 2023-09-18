@@ -153,7 +153,14 @@ event ObjectUpdate
 			object.timer 		= 0
 			starPostID 			= 0
 			object.direction 	= FLIP_NONE // if you really wanna, ig
+#platform: USE_STANDALONE
 			engine.state 		= 8
+#endplatform
+#platform: USE_ORIGINS
+			stage.activeList	= PRESENTATION_STAGE
+			stage.listPos		= 0
+			LoadStage()
+#endplatform
 		end if
 		break
 		
@@ -180,29 +187,36 @@ event ObjectStartup
 	player[0].xpos = screen.xcenter
 	player[0].xpos <<= 16
 
-	// Set the player's animation, although it gets set to ANI_CONTINUE a few lines below again anyways
+	// Set the player's animation, although it gets set to ANI_CONTINUE a few lines below again anyway
 	player[0].animation = ANI_FANROTATE
 
 	player[0].state = Player_State_ContinueRun
 
 	// Different starting offsets based on P1
 	switch stage.playerListPos
-	case PLAYER_SONIC_ALONE
-	case PLAYER_SONIC_AND_TAILS
+	case PLAYER_SONIC_A
+	case PLAYER_SONIC_TAILS_A
 		// 172 pixels
 		player[0].ypos = 0xAC0000
 		break
 
-	case PLAYER_TAILS_ALONE
+	case PLAYER_TAILS_A
 		// Also 172 pixels, still separate from the above for whatever reason
 		player[0].ypos = 0xAC0000
 		break
 
-	case PLAYER_KNUX_ALONE
+	case PLAYER_KNUCKLES_A // There's no check for Knuckles & Tails here in Origins, not that it's really needed anyway
 		// 176 pixels
 		player[0].ypos = 0xB00000
 		break
 		
+#platform: USE_ORIGINS
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		// 175 pixels
+		player[0].ypos = 0xAF0000
+		break
+#endplatform
 	end switch
 
 	// Set the proper P1 animation here
@@ -223,9 +237,35 @@ event ObjectStartup
 		player[1].xpos += 0x100000
 		player[1].ypos = player[0].ypos
 		player[1].ypos += 0x40000
-
+		
+#platform: USE_STANDALONE
 		// ...now set P2's animation *again*...?
 		player[1].animation = ANI_BORED
+#endplatform
+
+#platform: USE_ORIGINS
+		switch stage.playerListPos
+		case PLAYER_SONIC_A
+		case PLAYER_TAILS_A
+		case PLAYER_SONIC_TAILS_A
+			player[1].ypos += 0x40000
+			player[1].animation = ANI_BORED
+			break
+			
+		case PLAYER_KNUCKLES_A
+		case PLAYER_KNUCKLES_TAILS_A
+			player[1].xpos -= 0x40000
+			player[1].ypos += 0x30000
+			player[1].animation = ANI_BORED
+			break
+			
+		case PLAYER_AMY_A
+		case PLAYER_AMY_TAILS_A
+			player[1].ypos += 0x10000
+			player[1].animation = ANI_CONTINUE
+			break
+		end switch
+#endplatform
 	end if
 
 	stage.newXBoundary2 = screen.xsize
@@ -237,7 +277,7 @@ event ObjectStartup
 	stage.pauseEnabled = false
 	
 #platform: USE_DECOMP
-	// Not in the original game, but this is for the above to fixe an issue where
+	// Not in the original game, but this is for the above to fix an issue where
 	// pressing start to continue also pauses the entire game
 	player[0].controlMode = CONTROLMODE_NONE
 #endplatform

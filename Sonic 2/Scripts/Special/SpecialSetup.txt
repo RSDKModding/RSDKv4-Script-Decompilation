@@ -74,10 +74,13 @@ public alias 3 : COL_RIGHT
 public alias 4 : COL_BOTTOM
 
 // Players List Pos Aliases
-public alias 0 : PLAYER_SONIC_ALONE
-public alias 1 : PLAYER_TAILS_ALONE
-public alias 2 : PLAYER_KNUX_ALONE
-public alias 3 : PLAYER_SONIC_AND_TAILS
+public alias 0 : PLAYER_SONIC_A
+public alias 1 : PLAYER_TAILS_A
+public alias 2 : PLAYER_KNUCKLES_A
+public alias 3 : PLAYER_SONIC_TAILS_A
+public alias 4 : PLAYER_KNUCKLES_TAILS_A
+public alias 5 : PLAYER_AMY_A
+public alias 6 : PLAYER_AMY_TAILS_A
 
 private alias object.value1 : object.palTimer
 private alias object.value2 : object.palID1
@@ -110,8 +113,8 @@ private alias 496644 : MUSIC_LOOP_SPECIAL
 // ========================
 
 public value SpecialSetup_gotEmerald 	 = 0
-public value SpecialSetup_StageColour1 	 = 0
-public value SpecialSetup_StageColour2 	 = 0
+public value SpecialSetup_StageColor1 	 = 0
+public value SpecialSetup_StageColor2 	 = 0
 public value SpecialSetup_checkpointID 	 = 0
 public value SpecialSetup_ringCountTable = 0
 
@@ -176,16 +179,22 @@ end event
 
 event ObjectStartup
 #platform: USE_ORIGINS
-	if stage.playerListPos > PLAYER_SONIC_AND_TAILS // If playing as Knuckles & Tails
-		stage.playerListPos = PLAYER_KNUX_ALONE
+	switch stage.playerListPos
+	case PLAYER_SONIC_TAILS_A
+		stage.playerListPos = PLAYER_SONIC
 		stage.player2Enabled = true
-	end if
-	
-	// This same code still appears later in this event so this was likely a remnant of copy-pasting the K&T check from above
-	if stage.playerListPos > PLAYER_KNUX_ALONE // If playing as Sonic & Tails
-		stage.playerListPos = PLAYER_SONIC_ALONE
+		break
+		
+	case PLAYER_KNUCKLES_TAILS_A
+		stage.playerListPos = PLAYER_KNUCKLES
 		stage.player2Enabled = true
-	end if
+		break
+		
+	case PLAYER_AMY_TAILS_A
+		stage.playerListPos = PLAYER_AMY
+		stage.player2Enabled = true
+		break
+	end switch
 #endplatform
 
 	SetMusicTrack("SpecialStage.ogg", TRACK_STAGE, MUSIC_LOOP_SPECIAL)
@@ -206,10 +215,12 @@ event ObjectStartup
 	object[SLOT_SPECIALHUD].priority  	= PRIORITY_ACTIVE
 	object[SLOT_SPECIALHUD].drawOrder 	= 6
 	
-	if stage.playerListPos > PLAYER_KNUX_ALONE // If playing as Sonic & Tails
-		stage.playerListPos = PLAYER_SONIC_ALONE
+#platform: USE_STANDALONE
+	if stage.playerListPos >= PLAYER_SONIC_TAILS_A
+		stage.playerListPos = PLAYER_SONIC_A
 		stage.player2Enabled = true
 	end if
+#endplatform
 
 	if options.vsMode == false
 		// In normal Special Stages, use a palette corresponding to the current act number
@@ -236,12 +247,12 @@ event ObjectStartup
 	temp0 -= 8
 	LoadPalette("SpecialStage.act", 0, 192, temp0, temp1)
 	
-	// Grab the primary colours, for the Halfpipe vertex colours
-	GetPaletteEntry(0, 197, SpecialSetup_StageColour1)
-	SpecialSetup_StageColour1 |= 0xFF000000
+	// Grab the primary colors, for the Halfpipe vertex colors
+	GetPaletteEntry(0, 197, SpecialSetup_StageColor1)
+	SpecialSetup_StageColor1 |= 0xFF000000
 	
-	GetPaletteEntry(0, 192, SpecialSetup_StageColour2)
-	SpecialSetup_StageColour2 |= 0xFF000000
+	GetPaletteEntry(0, 192, SpecialSetup_StageColor2)
+	SpecialSetup_StageColor2 |= 0xFF000000
 	
 	if options.attractMode == false
 		// Huh. Normally there'd be STANDARD platform specific code here, but even Origins has this condition empty...
@@ -276,7 +287,7 @@ event ObjectStartup
 	if stage.player2Enabled == true
 		SpecialSetup_ringCountTable = SpecialSetup_ringCount2P
 	else
-		if stage.playerListPos == PLAYER_KNUX_ALONE
+		if stage.playerListPos == PLAYER_KNUCKLES_A
 			SpecialSetup_ringCountTable = SpecialSetup_ringCountKnux
 		else
 			SpecialSetup_ringCountTable = SpecialSetup_ringCountSonic

@@ -24,12 +24,6 @@ private alias object.value9  : object.stingerPos
 private alias object.value10 : object.grabbedBlockSlot
 private alias object.value11 : object.playerDetected
 
-// Marker Aliases
-private alias object.xpos  : bossMarker.xpos
-private alias object.ypos  : bossMarker.ypos
-private alias object.ixpos : bossMarker.ixpos
-private alias object.iypos : bossMarker.iypos
-
 // Eggman States
 private alias 0  : SYZEGGMAN_AWAITPLAYER
 private alias 1  : SYZEGGMAN_MOVELEFT
@@ -62,11 +56,20 @@ private alias 0 : FLAME_INACTIVE
 private alias 1 : FLAME_ACTIVE
 private alias 2 : FLAME_EXPLODE
 
+// Marker Aliases
+private alias object.xpos  : bossMarker.xpos
+private alias object.ypos  : bossMarker.ypos
+private alias object.ixpos : bossMarker.ixpos
+private alias object.iypos : bossMarker.iypos
+
 // Boss Barrier Aliases
 private alias object.state : bossBarrier.state
 
 private alias 1 : BOSSBARRIER_RISE
 private alias 2 : BOSSBARRIER_LOWER
+
+// Boss Block Aliases
+private alias 1 : BOSSBLOCK_NONSOLID
 
 // Player Aliases
 private alias object.xpos : player.xpos
@@ -75,12 +78,18 @@ private alias object.speed : player.speed
 private alias object.animation : player.animation
 private alias object.collisionRight : player.collisionRight
 
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
 // Music Events
 private alias 26 : SLOT_MUSICEVENT_BOSS
 
 private alias 0 : MUSICEVENT_FADETOBOSS
 private alias 1 : MUSICEVENT_FADETOSTAGE
 private alias 2 : MUSICEVENT_TRANSITION
+
 
 // ========================
 // Function Declarations
@@ -173,8 +182,7 @@ event ObjectUpdate
 			object.xvel = -0x10000
 			object.flameAnim = FLAME_ACTIVE
 			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOBOSS, 0, 0)
-			// 26 = SLOT_MUSICEVENT_BOSS
-			object[26].priority = PRIORITY_ACTIVE
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
 			object.grabbedBlockSlot = -1
 			object.state++
 		end if
@@ -225,7 +233,7 @@ event ObjectUpdate
 		foreach (TypeName[Boss Block], arrayPos0, ACTIVE_ENTITIES)
 			BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 32, arrayPos0, -16, -16, 16, 16)
 			if checkResult == true
-				object[arrayPos0].state = SYZEGGMAN_MOVELEFT
+				object[arrayPos0].state = BOSSBLOCK_NONSOLID
 				object.grabbedBlockSlot = arrayPos0
 			end if
 		next
@@ -396,8 +404,7 @@ event ObjectUpdate
 			object.timer = 0
 			object.direction = FACING_LEFT
 			ResetObjectEntity(SLOT_MUSICEVENT_BOSS, TypeName[Music Event], MUSICEVENT_FADETOSTAGE, 0, 0)
-			// 26 = SLOT_MUSICEVENT_BOSS
-			object[26].priority = PRIORITY_ACTIVE
+			object[SLOT_MUSICEVENT_BOSS].priority = PRIORITY_ACTIVE
 			object.state++
 		end if
 		break
@@ -473,7 +480,12 @@ event ObjectUpdate
 					end if
 				end if
 
+#platform: USE_STANDALONE
 				BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+				BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+#endplatform
 				if checkResult == true
 					CallFunction(Player_CheckHit)
 					if checkResult == true

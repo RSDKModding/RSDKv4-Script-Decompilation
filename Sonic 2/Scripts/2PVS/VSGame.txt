@@ -18,6 +18,7 @@ private alias object.value3 : object.storedPosP2.x
 private alias object.value4 : object.storedPosP2.y
 private alias object.value5 : object.countdownPlayer
 private alias object.value6 : object.countdownTimer
+private alias object.value7 : object.waterSlotID
 
 // States
 private alias 0 : VSGAME_DISPLAYTAGS
@@ -28,6 +29,9 @@ private alias 4 : VSGAME_GOTOVSRESULTS
 private alias 5 : VSGAME_BOSSATTACK_FADEIN
 private alias 6 : VSGAME_BOSSATTACK_END
 private alias 7 : VSGAME_SCREENFADE
+
+// Water Aliases
+private alias object.value1 : object.constBubbleTimer
 
 // Player Aliases
 private alias object.type : player.type
@@ -44,8 +48,11 @@ private alias object.visible : player.visible
 private alias object.collisionPlane : player.collisionPlane
 private alias object.propertyValue : player.character
 private alias object.value0  : player.rings
+private alias object.value1  : player.timer
+private alias object.value4  : player.drownLevel
 private alias object.value6  : player.speedShoesTimer
 private alias object.value7  : player.invincibleTimer
+private alias object.value18 : player.sortedDrawOrder
 private alias object.value37 : player.shield
 
 // Super States
@@ -53,6 +60,11 @@ private alias 1 : SUPERSTATE_SUPER
 
 // Shields
 private alias 1 : SHIELD_NORMAL
+
+// Reserved Object Slots
+private alias 0  : SLOT_PLAYER1
+private alias 1  : SLOT_PLAYER2
+private alias 30 : SLOT_VSGAME
 
 
 // ========================
@@ -69,14 +81,14 @@ event ObjectUpdate
 			end if
 		end if
 
-		if player[0].state != Player_State_Static
-			object.storedPosP1.x = player[0].xpos
-			object.storedPosP1.y = player[0].ypos
+		if player[SLOT_PLAYER1].state != Player_State_Static
+			object.storedPosP1.x = player[SLOT_PLAYER1].xpos
+			object.storedPosP1.y = player[SLOT_PLAYER1].ypos
 		end if
 
-		if player[1].state != Player_State_Static
-			object.storedPosP2.x = player[1].xpos
-			object.storedPosP2.y = player[1].ypos
+		if player[SLOT_PLAYER2].state != Player_State_Static
+			object.storedPosP2.x = player[SLOT_PLAYER2].xpos
+			object.storedPosP2.y = player[SLOT_PLAYER2].ypos
 		end if
 		break
 
@@ -84,34 +96,104 @@ event ObjectUpdate
 		if object.timer < 384
 			object.timer += 16
 
-			if player[0].state == Player_State_Static
+			if player[SLOT_PLAYER1].state == Player_State_Static
 				object.state = VSGAME_FADEOUT
 			end if
 
-			if player[1].state == Player_State_Static
+			if player[SLOT_PLAYER2].state == Player_State_Static
 				object.state = VSGAME_FADEOUT
 			end if
 		else
 			object.state = VSGAME_FADEOUT
-			if player[1].type != TypeName[Blank Object]
-				player[0].state = Player_State_Air
-				player[0].xpos = object[30].storedPosP2.x
-				player[0].ypos = object[30].storedPosP2.y
+			if player[SLOT_PLAYER2].type != TypeName[Blank Object]
+#platform: USE_STANDALONE
+				player[SLOT_PLAYER1].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[SLOT_PLAYER1].state = Player_State_Air_NoDropDash
+#endplatform
+				player[SLOT_PLAYER1].xpos = object[SLOT_VSGAME].storedPosP2.x
+				player[SLOT_PLAYER1].ypos = object[SLOT_VSGAME].storedPosP2.y
 
-				player[1].state = Player_State_Air
-				player[1].xpos = object[30].storedPosP1.x
-				player[1].ypos = object[30].storedPosP2.y
+#platform: USE_STANDALONE
+				player[SLOT_PLAYER2].state = Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[SLOT_PLAYER2].state = Player_State_Air_NoDropDash
+#endplatform
+				player[SLOT_PLAYER2].xpos = object[SLOT_VSGAME].storedPosP1.x
+				player[SLOT_PLAYER2].ypos = object[SLOT_VSGAME].storedPosP2.y
 
-				camera[0].xpos = player[0].ixpos
-				camera[0].ypos = player[0].iypos
+				camera[0].xpos = player[SLOT_PLAYER1].ixpos
+				camera[0].ypos = player[SLOT_PLAYER1].iypos
 
-				temp0 = player[0].collisionPlane
-				player[0].collisionPlane = player[1].collisionPlane
-				player[1].collisionPlane = temp0
+				temp0 = player[SLOT_PLAYER1].collisionPlane
+				player[SLOT_PLAYER1].collisionPlane = player[SLOT_PLAYER2].collisionPlane
+				player[SLOT_PLAYER2].collisionPlane = temp0
 
-				temp0 = player[0].shield
-				player[0].shield = player[1].shield
-				player[1].shield = temp0
+				temp0 = player[SLOT_PLAYER1].shield
+				player[SLOT_PLAYER1].shield = player[SLOT_PLAYER2].shield
+				player[SLOT_PLAYER2].shield = temp0
+				
+#platform: USE_ORIGINS
+				if object[SLOT_VSGAME].waterSlotID != 0
+					arrayPos0 = 0
+					arrayPos1 = 0
+					
+					CheckNotEqual(player[SLOT_PLAYER1].drownLevel, 0)
+					temp0 = checkResult
+					CheckEqual(player[SLOT_PLAYER2].drownLevel, 0)
+					checkResult &= temp0
+					if checkResult != false
+						arrayPos0 = 0
+						arrayPos1 = 1
+					end if
+					
+					CheckEqual(player[SLOT_PLAYER1].drownLevel, 0)
+					temp0 = checkResult
+					CheckNotEqual(player[SLOT_PLAYER2].drownLevel, 0)
+					checkResult &= temp0
+					if checkResult != false
+						arrayPos0 = 1
+						arrayPos1 = 0
+					end if
+					
+					if arrayPos0 != arrayPos1
+						player[arrayPos0].drownLevel = 0
+						currentPlayer = arrayPos0
+						CallFunction(BrokenMonitor_ResetDrownMusic)
+						player[arrayPos0].yvel <<= 1
+						if player[arrayPos0].yvel < -0x100000
+							player[arrayPos0].yvel = -0x100000
+						end if
+						
+						if player[arrayPos0].state == Player_State_Fly
+							if player[arrayPos0].timer < 480
+								PlaySfx(SfxName[Flying], true)
+							else
+								PlaySfx(SfxName[Jump], true)
+							end if
+						end if
+						
+						if player[arrayPos1].yvel > 0
+							player[arrayPos1].yvel >>= 2
+						end if
+						
+						if player[arrayPos1].state == Player_State_Fly
+							StopSfx(SfxName[Flying])
+							StopSfx(SfxName[Jump])
+						end if
+						
+						player[arrayPos1].xvel >>= 1
+						player[arrayPos1].speed >>= 1
+						arrayPos0 = object.waterSlotID
+						arrayPos0 += 0 // the world would crumble if this wasn't here
+						object[arrayPos0].constBubbleTimer = 52
+						arrayPos0++
+						object[arrayPos0].constBubbleTimer = 52
+					end if
+				end if
+#endplatform
 
 				arrayPos0 = 0
 				arrayPos0 += playerCount
@@ -120,7 +202,7 @@ event ObjectUpdate
 				// Normally players shouldn't be Super in 2PVS, but if they are then just make them have some invincibility
 				if Player_superState == SUPERSTATE_SUPER
 					temp0 = invincibilityType
-					player[0].invincibleTimer = 1260
+					player[SLOT_PLAYER1].invincibleTimer = 1260
 				end if
 
 				arrayPos1 = 1
@@ -134,31 +216,31 @@ event ObjectUpdate
 						arrayPos0 = arrayPos1
 						CallFunction(Player_ApplyShield)
 					else
-						temp0 = player[0].invincibleTimer
-						player[0].invincibleTimer = player[1].invincibleTimer
-						player[1].invincibleTimer = temp0
+						temp0 = player[SLOT_PLAYER1].invincibleTimer
+						player[SLOT_PLAYER1].invincibleTimer = player[SLOT_PLAYER2].invincibleTimer
+						player[SLOT_PLAYER2].invincibleTimer = temp0
 					end if
 				else
 					if temp0 == invincibilityType
 						currentPlayer = 0
 						CallFunction(Player_ApplyShield)
-						ResetObjectEntity(arrayPos1, invincibilityType, 0, player[1].xpos, player[1].ypos)
+						ResetObjectEntity(arrayPos1, invincibilityType, 0, player[SLOT_PLAYER2].xpos, player[SLOT_PLAYER2].ypos)
 						object[arrayPos1].priority = PRIORITY_ACTIVE
 
-						temp0 = player[0].invincibleTimer
-						player[0].invincibleTimer = player[1].invincibleTimer
-						player[1].invincibleTimer = temp0
+						temp0 = player[SLOT_PLAYER1].invincibleTimer
+						player[SLOT_PLAYER1].invincibleTimer = player[SLOT_PLAYER2].invincibleTimer
+						player[SLOT_PLAYER2].invincibleTimer = temp0
 					else
 						if temp1 == invincibilityType
-							ResetObjectEntity(arrayPos0, invincibilityType, 0, player[0].xpos, player[0].ypos)
+							ResetObjectEntity(arrayPos0, invincibilityType, 0, player[SLOT_PLAYER1].xpos, player[SLOT_PLAYER1].ypos)
 							object[arrayPos0].priority = PRIORITY_ACTIVE
 							currentPlayer = 1
 							arrayPos0 = arrayPos1
 							CallFunction(Player_ApplyShield)
 
-							temp0 = player[0].invincibleTimer
-							player[0].invincibleTimer = player[1].invincibleTimer
-							player[1].invincibleTimer = temp0
+							temp0 = player[SLOT_PLAYER1].invincibleTimer
+							player[SLOT_PLAYER1].invincibleTimer = player[SLOT_PLAYER2].invincibleTimer
+							player[SLOT_PLAYER2].invincibleTimer = temp0
 						else
 							currentPlayer = 0
 							CallFunction(Player_ApplyShield)
@@ -169,9 +251,16 @@ event ObjectUpdate
 					end if
 				end if
 
-				temp0 = player[0].speedShoesTimer
-				player[0].speedShoesTimer = player[1].speedShoesTimer
-				player[1].speedShoesTimer = temp0
+				temp0 = player[SLOT_PLAYER1].speedShoesTimer
+				player[SLOT_PLAYER1].speedShoesTimer = player[SLOT_PLAYER2].speedShoesTimer
+				player[SLOT_PLAYER2].speedShoesTimer = temp0
+				
+#platform: USE_ORIGINS
+				temp0 = player[SLOT_PLAYER1].sortedDrawOrder
+				player[SLOT_PLAYER1].sortedDrawOrder = player[SLOT_PLAYER2].sortedDrawOrder
+				player[SLOT_PLAYER2].sortedDrawOrder = temp0
+#endplatform
+				
 				currentPlayer = 0
 				CallFunction(Player_UpdatePhysicsState)
 				currentPlayer = 1
@@ -179,12 +268,8 @@ event ObjectUpdate
 
 				foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 					switch player[currentPlayer].character
-					default
-					case PLAYER_SONIC_ALONE
-						break
-
-					case PLAYER_TAILS_ALONE
-					case PLAYER_KNUX_ALONE
+					case PLAYER_TAILS_A
+					case PLAYER_KNUCKLES_A
 						if player[currentPlayer].shield > SHIELD_NORMAL
 							player[currentPlayer].shield = SHIELD_NORMAL
 							arrayPos0 = currentPlayer
@@ -193,7 +278,7 @@ event ObjectUpdate
 								CallFunction(Player_ApplyShield)
 							end if
 						end if
-						break
+						// no break, but who cares
 					end switch
 				next
 			end if
@@ -211,52 +296,65 @@ event ObjectUpdate
 		break
 
 	case VSGAME_FINISH_COUNTDOWN
+#platform: USE_STANDALONE
 		if object.countdownTimer > 0
+#endplatform
 			currentPlayer = object.countdownPlayer
 			if player[currentPlayer].state != Player_State_Death
 				if player[currentPlayer].type != TypeName[Death Event]
-					object.timer++
-					if object.timer == 60
-						object.timer = 0
-						object.countdownTimer--
-						if object.countdownTimer == 0
-							if currentPlayer == 0
-								if vs.playerID == 0
-									temp2 = 0
+#platform: USE_ORIGINS
+					if object.countdownTimer > 0
+#endplatform
+						object.timer++
+						if object.timer == 60
+							object.timer = 0
+							object.countdownTimer--
+							if object.countdownTimer == 0
+								if currentPlayer == 0
+									if vs.playerID == 0
+										temp2 = 0
+									else
+										temp2 = 1
+									end if
 								else
-									temp2 = 1
+									if vs.playerID == 0
+										temp2 = 1
+									else
+										temp2 = 0
+									end if
 								end if
-							else
-								if vs.playerID == 0
-									temp2 = 1
+
+								if temp2 == 0
+									vs.time1P = stage.seconds
+									vs.time1P *= 100
+									temp2 = stage.minutes
+									temp2 *= 6000
+									vs.time1P += temp2
+									vs.time1P += stage.milliSeconds
 								else
-									temp2 = 0
+									vs.time2P = stage.seconds
+									vs.time2P *= 100
+									temp2 = stage.minutes
+									temp2 *= 6000
+									vs.time2P += temp2
+									vs.time2P += stage.milliSeconds
 								end if
-							end if
 
-							if temp2 == 0
-								vs.time1P = stage.seconds
-								vs.time1P *= 100
-								temp2 = stage.minutes
-								temp2 *= 6000
-								vs.time1P += temp2
-								vs.time1P += stage.milliSeconds
-							else
-								vs.time2P = stage.seconds
-								vs.time2P *= 100
-								temp2 = stage.minutes
-								temp2 *= 6000
-								vs.time2P += temp2
-								vs.time2P += stage.milliSeconds
+								stage.timeOver = true
+#platform: USE_ORIGINS
+								stage.timeEnabled = false
+#endplatform
+								CallFunction(Player_Kill)
 							end if
-
-							stage.timeOver = true
-							CallFunction(Player_Kill)
 						end if
+#platform: USE_ORIGINS
 					end if
+#endplatform
 				end if
 			end if
+#platform: USE_STANDALONE
 		end if
+#endplatform
 		break
 
 	case VSGAME_GOTOVSRESULTS
@@ -264,11 +362,11 @@ event ObjectUpdate
 			object.timer += 16
 		else
 			if vs.playerID == 0
-				vs.rings1P = player[0].rings
-				vs.rings2P = player[1].rings
+				vs.rings1P = player[SLOT_PLAYER1].rings
+				vs.rings2P = player[SLOT_PLAYER2].rings
 			else
-				vs.rings1P = player[1].rings
-				vs.rings2P = player[0].rings
+				vs.rings1P = player[SLOT_PLAYER2].rings
+				vs.rings2P = player[SLOT_PLAYER1].rings
 			end if
 			stage.activeList = PRESENTATION_STAGE
 			stage.listPos = 3
@@ -282,12 +380,12 @@ event ObjectUpdate
 
 	case VSGAME_BOSSATTACK_FADEIN
 		if object.timer == 320
-			player[0].rings = vs.rings1P
-			player[0].speed = vs.speed
-			player[0].xvel = vs.speed
-			player[0].yvel = 0
-			player[0].gravity = GRAVITY_GROUND
-			player[0].shield = vs.items1P
+			player[SLOT_PLAYER1].rings = vs.rings1P
+			player[SLOT_PLAYER1].speed = vs.speed
+			player[SLOT_PLAYER1].xvel = vs.speed
+			player[SLOT_PLAYER1].yvel = 0
+			player[SLOT_PLAYER1].gravity = GRAVITY_GROUND
+			player[SLOT_PLAYER1].shield = vs.items1P
 			temp0 = currentPlayer
 			temp1 = arrayPos0
 			currentPlayer = 0
@@ -312,10 +410,10 @@ event ObjectUpdate
 		if object.timer < 256
 			stage.state = STAGE_RUNNING
 			stage.timeEnabled = true
-			player[0].visible = true
+			player[SLOT_PLAYER1].visible = true
 		else
 			if stage.listPos == 2 // CPZ (Boss Rush)
-				player[0].ypos = object.ypos
+				player[SLOT_PLAYER1].ypos = object.ypos
 			end if
 		end if
 
@@ -333,22 +431,22 @@ event ObjectUpdate
 			if object.timer < 320
 				object.timer += 16
 			else
-				vs.rings1P = player[0].rings
+				vs.rings1P = player[SLOT_PLAYER1].rings
 				vs.time1P = stage.seconds
 				vs.time1P *= 100
 				temp2 = stage.minutes
 				temp2 *= 6000
 				vs.time1P += temp2
 				vs.time1P += stage.milliSeconds
-				vs.items1P = player[0].shield
-				vs.speed = player[0].speed
+				vs.items1P = player[SLOT_PLAYER1].shield
+				vs.speed = player[SLOT_PLAYER1].speed
 				stage.listPos++
 				LoadStage()
 			end if
 
 			SetScreenFade(0, 0, 0, object.timer)
 		else
-			if player[0].xpos > object.xpos
+			if player[SLOT_PLAYER1].xpos > object.xpos
 				object.timer = 0
 			end if
 		end if
@@ -375,7 +473,7 @@ event ObjectDraw
 #platform: USE_STANDALONE
 		temp0 = vs.playerID
 		temp0 ^= 1
-		DrawSpriteXY(temp0, player[1].xpos, player[1].ypos)
+		DrawSpriteXY(temp0, player[SLOT_PLAYER2].xpos, player[SLOT_PLAYER2].ypos)
 #endplatform
 
 #platform: USE_ORIGINS
@@ -383,9 +481,9 @@ event ObjectDraw
 		currentPlayer ^= 1
 		if game.playMode == BOOT_PLAYMODE_MIRRORING
 			object.direction = FLIP_X
-			DrawSpriteFX(currentPlayer, FX_FLIP, object[currentPlayer].xpos, object[currentPlayer].ypos)
+			DrawSpriteFX(currentPlayer, FX_FLIP, player[currentPlayer].xpos, player[currentPlayer].ypos)
 		else
-			DrawSpriteXY(currentPlayer, object[currentPlayer].xpos, object[currentPlayer].ypos)
+			DrawSpriteXY(currentPlayer, player[currentPlayer].xpos, player[currentPlayer].ypos)
 		end if
 #endplatform
 		break
@@ -394,7 +492,7 @@ event ObjectDraw
 #platform: USE_STANDALONE
 		temp0 = vs.playerID
 		temp0 ^= 1
-		DrawSpriteXY(temp0, player[1].xpos, player[1].ypos)
+		DrawSpriteXY(temp0, player[SLOT_PLAYER2].xpos, player[SLOT_PLAYER2].ypos)
 
 		temp0 = object.countdownTimer
 		temp0 /= 10
@@ -415,9 +513,9 @@ event ObjectDraw
 		currentPlayer ^= 1
 		if game.playMode == BOOT_PLAYMODE_MIRRORING
 			object.direction = FLIP_X
-			DrawSpriteFX(currentPlayer, FX_FLIP, object[currentPlayer].xpos, object[currentPlayer].ypos)
+			DrawSpriteFX(currentPlayer, FX_FLIP, player[currentPlayer].xpos, player[currentPlayer].ypos)
 		else
-			DrawSpriteXY(currentPlayer, object[currentPlayer].xpos, object[currentPlayer].ypos)
+			DrawSpriteXY(currentPlayer, player[currentPlayer].xpos, player[currentPlayer].ypos)
 		end if
 		
 		if screen.currentID == object.countdownPlayer
@@ -486,7 +584,7 @@ event ObjectStartup
 			object[arrayPos0].timer = 320
 			object[arrayPos0].priority = PRIORITY_ALWAYS
 			object[arrayPos0].drawOrder = 6
-			player[0].visible = false
+			player[SLOT_PLAYER1].visible = false
 			stage.state = STAGE_PAUSED
 			temp0++
 			break
@@ -499,10 +597,8 @@ event ObjectStartup
 			break
 
 		default
-		case 0
 			object[arrayPos0].type = TypeName[Blank Object]
 			break
-			
 		end switch
 	next
 
@@ -511,10 +607,10 @@ event ObjectStartup
 	end if
 
 	if options.vsMode == true
-		object[30].type = TypeName[VS Game]
-		object[30].priority = PRIORITY_ACTIVE
-		object[30].drawOrder = 5
-		object[30].countdownTimer = 60
+		object[SLOT_VSGAME].type = TypeName[VS Game]
+		object[SLOT_VSGAME].priority = PRIORITY_ACTIVE
+		object[SLOT_VSGAME].drawOrder = 5
+		object[SLOT_VSGAME].countdownTimer = 60
 	end if
 end event
 

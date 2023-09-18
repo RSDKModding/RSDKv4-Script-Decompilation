@@ -49,6 +49,11 @@ private alias 2 : CONFIGSCREEN_PLAYER_T
 private alias 3 : CONFIGSCREEN_PLAYER_K
 private alias 4 : CONFIGSCREEN_PLAYER_KT
 
+// Origins Plus Player IDs
+private alias 4 : CONFIGSCREEN_PLAYER_A
+private alias 5 : CONFIGSCREEN_PLAYER_KT_O
+private alias 6 : CONFIGSCREEN_PLAYER_AT
+
 // Shield Types Aliases
 private alias 0 : SHIELDTYPE_S2
 private alias 1 : SHIELDTYPE_S3
@@ -56,11 +61,68 @@ private alias 2 : SHIELDTYPE_RAND_S2
 private alias 3 : SHIELDTYPE_RAND_S3
 
 // Player List Pos Aliases
-private alias 0 : PLAYER_SONIC_ALONE
-private alias 1 : PLAYER_TAILS_ALONE
-private alias 2 : PLAYER_KNUX_ALONE
-private alias 3 : PLAYER_SONIC_AND_TAILS
+private alias 0 : PLAYER_SONIC_A
+private alias 1 : PLAYER_TAILS_A
+private alias 2 : PLAYER_KNUCKLES_A
+private alias 3 : PLAYER_SONIC_TAILS_A
+private alias 4 : PLAYER_KNUCKLES_TAILS_A
+private alias 5 : PLAYER_AMY_A
+private alias 6 : PLAYER_AMY_TAILS_A
 
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function ConfigScreen_SetPlayer
+
+
+// ========================
+// Function Definitions
+// ========================
+
+private function ConfigScreen_SetPlayer
+#platform: USE_ORIGINS
+	// Introduced in Origins Plus
+	
+	switch object.playerID
+	case CONFIGSCREEN_PLAYER_ST
+		stage.playerListPos = PLAYER_SONIC
+		stage.player2Enabled = true
+		break
+		
+	case CONFIGSCREEN_PLAYER_S
+		stage.playerListPos = PLAYER_SONIC
+		stage.player2Enabled = false
+		break
+		
+	case CONFIGSCREEN_PLAYER_T
+		stage.playerListPos = PLAYER_TAILS
+		stage.player2Enabled = false
+		break
+		
+	case CONFIGSCREEN_PLAYER_K
+		stage.playerListPos = PLAYER_KNUCKLES
+		stage.player2Enabled = false
+		break
+		
+	case CONFIGSCREEN_PLAYER_KT_O
+		stage.playerListPos = PLAYER_KNUCKLES
+		stage.player2Enabled = true
+		break
+		
+	case CONFIGSCREEN_PLAYER_A
+		stage.playerListPos = PLAYER_AMY
+		stage.player2Enabled = false
+		break
+		
+	case CONFIGSCREEN_PLAYER_AT
+		stage.playerListPos = PLAYER_AMY
+		stage.player2Enabled = true
+		break
+	end switch
+#endplatform
+end function
 
 // ========================
 // Events
@@ -129,46 +191,92 @@ event ObjectUpdate
 			case CONFIGSCREEN_SEL_PLAYER
 				if keyPress[0].left == true
 					object.playerID--
+					
+#platform: USE_STANDALONE
 					if object.playerID < CONFIGSCREEN_PLAYER_ST
 						object.playerID = CONFIGSCREEN_PLAYER_KT
 					end if
+#endplatform
+					
+#platform: USE_ORIGINS
+					if object.playerID == CONFIGSCREEN_PLAYER_A
+						if game.hasPlusDLC == false
+							object.playerID--
+						end if
+					end if
+					
+					if object.playerID < CONFIGSCREEN_PLAYER_ST
+						if game.hasPlusDLC == true
+							object.playerID = CONFIGSCREEN_PLAYER_AT
+						else
+							object.playerID = CONFIGSCREEN_PLAYER_KT_O
+						end if
+					end if
+#endplatform
 					PlaySfx(SfxName[Menu Move], false)
 				end if
 
 				if keyPress[0].right == true
 					object.playerID++
+					
+#platform: USE_STANDALONE
 					if object.playerID > CONFIGSCREEN_PLAYER_KT
 						object.playerID = CONFIGSCREEN_PLAYER_ST
 					end if
+#endplatform
+					
+#platform: USE_ORIGINS
+					if object.playerID == CONFIGSCREEN_PLAYER_A
+						if game.hasPlusDLC == false
+							object.playerID++
+						end if
+					end if
+					
+					if object.playerID == CONFIGSCREEN_PLAYER_AT
+						if game.hasPlusDLC == false
+							object.playerID++
+						end if
+					end if
+					
+					if object.playerID > CONFIGSCREEN_PLAYER_AT
+						object.playerID = CONFIGSCREEN_PLAYER_ST
+					end if
+#endplatform
 					PlaySfx(SfxName[Menu Move], false)
 				end if
-
+				
+#platform: USE_STANDALONE
 				switch object.playerID
 				case CONFIGSCREEN_PLAYER_ST
-					stage.playerListPos  = PLAYER_SONIC_ALONE
+					stage.playerListPos  = PLAYER_SONIC_A
 					stage.player2Enabled = true
 					break
 
 				case CONFIGSCREEN_PLAYER_S
-					stage.playerListPos  = PLAYER_SONIC_ALONE
+					stage.playerListPos  = PLAYER_SONIC_A
 					stage.player2Enabled = false
 					break
 
 				case CONFIGSCREEN_PLAYER_T
-					stage.playerListPos  = PLAYER_TAILS_ALONE
+					stage.playerListPos  = PLAYER_TAILS_A
 					stage.player2Enabled = false
 					break
 
 				case CONFIGSCREEN_PLAYER_K
-					stage.playerListPos  = PLAYER_KNUX_ALONE
+					stage.playerListPos  = PLAYER_KNUCKLES_A
 					stage.player2Enabled = false
 					break
 
 				case CONFIGSCREEN_PLAYER_KT
-					stage.playerListPos  = PLAYER_KNUX_ALONE
+					stage.playerListPos  = PLAYER_KNUCKLES_A
 					stage.player2Enabled = true
 					break
 				end switch
+#endplatform
+				
+#platform: USE_ORIGINS
+				CallFunction(ConfigScreen_SetPlayer)
+#endplatform
 				break
 
 			case CONFIGSCREEN_SEL_ITEMS
@@ -332,36 +440,49 @@ event ObjectUpdate
 				if object.prevPlayerSelected == true
 					object.prevPlayerSelected = false
 					object.playerID--
+
+#platform: USE_STANDALONE
 					if object.playerID < CONFIGSCREEN_PLAYER_ST
 						object.playerID = CONFIGSCREEN_PLAYER_KT
 					end if
 
 					switch object.playerID
 					case CONFIGSCREEN_PLAYER_ST
-						stage.playerListPos  = PLAYER_SONIC_ALONE
+						stage.playerListPos  = PLAYER_SONIC_A
 						stage.player2Enabled = true
 						break
 
 					case CONFIGSCREEN_PLAYER_S
-						stage.playerListPos  = PLAYER_SONIC_ALONE
+						stage.playerListPos  = PLAYER_SONIC_A
 						stage.player2Enabled = false
 						break
 
 					case CONFIGSCREEN_PLAYER_T
-						stage.playerListPos  = PLAYER_TAILS_ALONE
+						stage.playerListPos  = PLAYER_TAILS_A
 						stage.player2Enabled = false
 						break
 
 					case CONFIGSCREEN_PLAYER_K
-						stage.playerListPos  = PLAYER_KNUX_ALONE
+						stage.playerListPos  = PLAYER_KNUCKLES_A
 						stage.player2Enabled = false
 						break
 
 					case CONFIGSCREEN_PLAYER_KT
-						stage.playerListPos  = PLAYER_KNUX_ALONE
+						stage.playerListPos  = PLAYER_KNUCKLES_A
 						stage.player2Enabled = true
 						break
 					end switch
+#endplatform
+
+#platform: USE_ORIGINS
+					// Uh... there's no DLC checks here...
+					// Yeah, Origins doesn't have touch controls, but why did they edit this at all at that point?
+					if object.playerID < CONFIGSCREEN_PLAYER_ST
+						object.playerID = CONFIGSCREEN_PLAYER_AT
+					end if
+					
+					CallFunction(ConfigScreen_SetPlayer)
+#endplatform
 
 					PlaySfx(SfxName[Menu Move], false)
 				end if
@@ -382,32 +503,44 @@ event ObjectUpdate
 						object.playerID = CONFIGSCREEN_PLAYER_ST
 					end if
 
+#platform: USE_STANDALONE
 					switch object.playerID
 					case CONFIGSCREEN_PLAYER_ST
-						stage.playerListPos  = PLAYER_SONIC_ALONE
+						stage.playerListPos  = PLAYER_SONIC_A
 						stage.player2Enabled = true
 						break
 
 					case CONFIGSCREEN_PLAYER_S
-						stage.playerListPos  = PLAYER_SONIC_ALONE
+						stage.playerListPos  = PLAYER_SONIC_A
 						stage.player2Enabled = false
 						break
 
 					case CONFIGSCREEN_PLAYER_T
-						stage.playerListPos  = PLAYER_TAILS_ALONE
+						stage.playerListPos  = PLAYER_TAILS_A
 						stage.player2Enabled = false
 						break
 
 					case CONFIGSCREEN_PLAYER_K
-						stage.playerListPos  = PLAYER_KNUX_ALONE
+						stage.playerListPos  = PLAYER_KNUCKLES_A
 						stage.player2Enabled = false
 						break
 
 					case CONFIGSCREEN_PLAYER_KT
-						stage.playerListPos  = PLAYER_KNUX_ALONE
+						stage.playerListPos  = PLAYER_KNUCKLES_A
 						stage.player2Enabled = true
 						break
 					end switch
+#endplatform
+
+#platform: USE_ORIGINS
+					// Uh... there's no DLC checks here...
+					// Yeah, Origins doesn't have touch controls, but why did they edit this at all at that point?
+					if object.playerID > CONFIGSCREEN_PLAYER_AT
+						object.playerID = CONFIGSCREEN_PLAYER_ST
+					end if
+					
+					CallFunction(ConfigScreen_SetPlayer)
+#endplatform
 
 					PlaySfx(SfxName[Menu Move], false)
 				end if
@@ -637,26 +770,44 @@ event ObjectDraw
 		DrawSpriteScreenFX(22, FX_INK, screen.xcenter, 41)
 		DrawSpriteScreenFX(23, FX_INK, screen.xcenter, 41)
 		break
-
+		
 	case CONFIGSCREEN_PLAYER_S
 		DrawSpriteScreenFX(24, FX_INK, screen.xcenter, 41)
 		break
-
+		
 	case CONFIGSCREEN_PLAYER_T
 		DrawSpriteScreenFX(25, FX_INK, screen.xcenter, 41)
 		break
-
+		
 	case CONFIGSCREEN_PLAYER_K
 		DrawSpriteScreenFX(26, FX_INK, screen.xcenter, 41)
 		break
-
+		
+#platform: USE_STANDALONE
 	case CONFIGSCREEN_PLAYER_KT
 		DrawSpriteScreenFX(27, FX_INK, screen.xcenter, 41)
 		DrawSpriteScreenFX(28, FX_INK, screen.xcenter, 41)
 		break
+#endplatform
 		
+#platform: USE_ORIGINS
+	case CONFIGSCREEN_PLAYER_KT_O
+		DrawSpriteScreenFX(27, FX_INK, screen.xcenter, 41)
+		DrawSpriteScreenFX(28, FX_INK, screen.xcenter, 41)
+		break
+		
+	case CONFIGSCREEN_PLAYER_A
+		DrawSpriteScreenFX(29, FX_INK, screen.xcenter, 41)
+		break
+		
+	case CONFIGSCREEN_PLAYER_AT
+		DrawSpriteScreenFX(30, FX_INK, screen.xcenter, 41)
+		DrawSpriteScreenFX(31, FX_INK, screen.xcenter, 41)
+		break
+#endplatform
 	end switch
 
+#platform: USE_STANDALONE
 	switch options.shieldType
 	case SHIELDTYPE_S2
 		DrawSpriteScreenFX(29, FX_INK, screen.xcenter, 86)
@@ -674,8 +825,29 @@ event ObjectDraw
 		DrawSpriteScreenFX(30, FX_INK, screen.xcenter, 78)
 		DrawSpriteScreenFX(32, FX_INK, screen.xcenter, 78)
 		break
-		
 	end switch
+#endplatform
+
+#platform: USE_ORIGINS
+	switch options.shieldType
+	case SHIELDTYPE_S2
+		DrawSpriteScreenFX(32, FX_INK, screen.xcenter, 86)
+		break
+
+	case SHIELDTYPE_S3
+		DrawSpriteScreenFX(33, FX_INK, screen.xcenter, 78)
+		break
+
+	case SHIELDTYPE_RAND_S2
+		DrawSpriteScreenFX(34, FX_INK, screen.xcenter, 86)
+		break
+
+	case SHIELDTYPE_RAND_S3
+		DrawSpriteScreenFX(33, FX_INK, screen.xcenter, 78)
+		DrawSpriteScreenFX(35, FX_INK, screen.xcenter, 78)
+		break
+	end switch
+#endplatform
 end event
 
 
@@ -714,11 +886,16 @@ event ObjectStartup
 	SpriteFrame(26, 0, 16, 23, 80, 386)		// Knuckles (Alone) 	- #26
 	SpriteFrame(16, 0, 16, 23, 80, 386)		// Knuckles (& Tails) 	- #27
 	SpriteFrame(36, 0, 16, 23, 63, 386)		// Tails 	(& Knux) 	- #28
-
-	SpriteFrame(26, 0, 16, 14, 207, 314)	// Shields (S2)	- #29
-	SpriteFrame(17, 0, 34, 30, 207, 314)	// Shields (S3)	- #30
-	SpriteFrame(26, 0, 16, 14, 228, 299)	// Random (S2)	- #31
-	SpriteFrame(17, 0, 16, 14, 228, 299)	// Random (S3)	- #32
+#platform: USE_ORIGINS
+	SpriteFrame(25, 1, 17, 22, 83, 410)		// Amy (Alone) 			- #29
+	SpriteFrame(17, 1, 17, 22, 83, 410)		// Amy (& Tails) 		- #30
+	SpriteFrame(36, 0, 16, 23, 63, 386)		// Tails (& Amy) 		- #31
+#endplatform
+	
+	SpriteFrame(26, 0, 16, 14, 207, 314)	// Shields (S2)	- #29/32
+	SpriteFrame(17, 0, 34, 30, 207, 314)	// Shields (S3)	- #30/33
+	SpriteFrame(26, 0, 16, 14, 228, 299)	// Random (S2)	- #31/34
+	SpriteFrame(17, 0, 16, 14, 228, 299)	// Random (S3)	- #32/35
 end event
 
 

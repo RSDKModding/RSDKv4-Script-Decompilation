@@ -15,8 +15,12 @@ private alias object.value2 : object.scrollDelayDown
 private alias object.value3 : object.currentSelection
 private alias object.value4 : object.soundTestCooldown
 
+// HexNo Aliases
 private alias object.value0 : hexNo.number
 private alias object.value1 : hexNo.highlighted
+
+private alias 0  : HEXNO_HIGHLIGHT_FALSE
+private alias 16 : HEXNO_HIGHLIGHT_TRUE
 
 private alias 0 : MENUCONTROL_INIT
 private alias 1 : MENUCONTROL_FADEIN
@@ -46,6 +50,9 @@ private alias 99874  : MUSIC_LOOP_WFZ
 private alias 59852  : MUSIC_LOOP_PPZ
 private alias 496644 : MUSIC_LOOP_SPECIAL
 private alias 38679  : MUSIC_LOOP_INV
+
+// Music Event Aliases
+private alias 2 : MUSICEVENT_TRANSITION
 
 
 // ========================
@@ -98,7 +105,7 @@ private table MenuControl_SecretPPZ
 end table
 
 
-// This table holds data for every stage with six values for every stage, 
+// This table holds data for every stage with six values for every stage,
 // -> First entry is menu table the stage option is on
 // -> Second is what number this one is on the list, from top to bottom
 // -> Third is the active stage list the stage is on
@@ -185,7 +192,10 @@ private function MenuControl_HandleSecrets
 			MenuControl_emeraldCodeCounter = 0
 
 			// Give the player all 7 emeralds
-			specialStage.emeralds = 127
+			specialStage.emeralds = 0x7F
+#platform: USE_ORIGINS
+			game.cheatEmeralds = true
+#endplatform
 			PlaySfx(SfxName[Emerald], false)
 			StopMusic()
 		end if
@@ -224,7 +234,6 @@ private function MenuControl_HandleSecrets
 
 #platform: USE_STANDALONE
 				// Change the Hidden Palace slot to use Proto Palace instead
-				// (Origins removed this)
 				SetTableValue(BONUS_STAGE, 122, MenuControl_EntryTable)
 				SetTableValue(11, 123, MenuControl_EntryTable)
 #endplatform
@@ -368,7 +377,7 @@ private function MenuControl_SoundTestPlayer
 		case 24
 			PlaySfx(SfxName[Life], false)
 			PauseMusic()
-			ResetObjectEntity(26, TypeName[Music Event], 2, 0, 0)
+			ResetObjectEntity(26, TypeName[Music Event], MUSICEVENT_TRANSITION, 0, 0)
 			object[26].priority = PRIORITY_ACTIVE
 			break
 
@@ -406,7 +415,6 @@ private function MenuControl_SoundTestPlayer
 			SetMusicTrack("Drowning.ogg", 0, false)
 			PlayMusic(0)
 			break
-			
 		end switch
 	end if
 end function
@@ -490,7 +498,7 @@ event ObjectUpdate
 					object.currentSelection = temp1
 				end if
 
-				hexNo[+1].highlighted = 0
+				hexNo[+1].highlighted = HEXNO_HIGHLIGHT_FALSE
 
 				if keyPress[0].buttonA == true
 					keyPress[0].start = true
@@ -502,7 +510,7 @@ event ObjectUpdate
 					object.soundTestCooldown--
 				end if
 
-				hexNo[+1].highlighted = 16
+				hexNo[+1].highlighted = HEXNO_HIGHLIGHT_TRUE
 
 				if keyPress[0].buttonA == true
 					hexNo[+1].number += 16
@@ -587,7 +595,7 @@ event ObjectUpdate
 			SetScreenFade(0, 0, 0, object.timer)
 		else
 #platform: USE_ORIGINS
-			CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, 1)
+			CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, true)
 			CallNativeFunction4(NotifyCallback, NOTIFY_PLAYER_SET, stage.playerListPos, stage.player2Enabled, 0)
 #endplatform
 
@@ -624,7 +632,6 @@ event ObjectUpdate
 			SetScreenFade(0xD0, 0xFF, 0xE0, 0xFF)
 		end if
 		break
-		
 	end switch
 end event
 
@@ -635,7 +642,7 @@ event ObjectDraw
 	temp0 = screen.xcenter
 	temp0 -= 10
 	DrawMenu(MENU_1, temp0, 16)
-
+	
 	temp0 = screen.xcenter
 	temp0 += 142
 	DrawMenu(MENU_2, temp0, 16)

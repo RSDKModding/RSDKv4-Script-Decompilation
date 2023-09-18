@@ -19,6 +19,8 @@ private alias object.speed : player.speed
 private alias object.xvel  : player.xvel
 private alias object.yvel  : player.yvel
 private alias object.gravity : player.gravity
+private alias object.animation : player.animation
+private alias object.frame	: player.frame
 
 private alias object.value1  : player.timer
 private alias object.value44 : player.missionBlockID
@@ -35,9 +37,18 @@ event ObjectUpdate
 	CheckNotEqual(player[SLOT_PLAYER1].state, Player_State_Drown) // drowning is checked against but not death? if you really wanna, ig
 	temp0 = checkResult
 	CheckNotEqual(player[SLOT_PLAYER1].state, Player_State_LPullUp_Mission)
+	temp0 &= checkResult
+	CheckNotEqual(player[SLOT_PLAYER1].state, Player_State_LedgePullUp)
 	checkResult &= temp0
 	if checkResult == true
 		BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, SLOT_PLAYER1, C_BOX, C_BOX, C_BOX, C_BOX)
+		if player[SLOT_PLAYER1].state == Player_State_Climb_Mission
+			checkResult = COL_NONE
+		end if
+		if player[SLOT_PLAYER1].state == Player_State_Climb
+			checkResult = COL_NONE
+		end if
+		
 		if checkResult == COL_BOTTOM
 			if object.disableCrush == false // value set from editor
 				// ...it looks like this crush code was copied from SYZ's VBlock for some reason? it's not too hard to just make your own...
@@ -47,24 +58,23 @@ event ObjectUpdate
 						CallFunction(Player_Kill)
 					end if
 					
-					if object.angle < 128
-						// This object's angle is always 0, so this always returns true
+					if object.angle < 128 // This object's angle is always 0 so this check always passes
 						CallFunction(Player_Kill)
 					end if
 				end if
 			end if
 		end if
 		
-		// Store what collision type the Block got
+		// Store what collision type the block got
 		temp0 = checkResult
 		
-		// See if the Player hit the left side of a Block, while gliding right
+		// See if the Player hit the left side of a block, while gliding right
 		CheckEqual(temp0, COL_LEFT)
 		temp1 = checkResult
 		CheckEqual(player[SLOT_PLAYER1].state, Player_State_GlideRight)
 		temp1 &= checkResult
 		
-		// And then see if the Player hit the Right side of a block, while gliding left
+		// And then see if the Player hit the right side of a block, while gliding left
 		CheckEqual(temp0, COL_RIGHT)
 		temp2 = checkResult
 		CheckEqual(player[SLOT_PLAYER1].state, Player_State_GlideLeft)
@@ -84,8 +94,9 @@ event ObjectUpdate
 			if checkResult != false
 				// Allow Knuckles to pull himself up this block
 				
+				player[SLOT_PLAYER1].animation = ANI_CLIMBING
+				player[SLOT_PLAYER1].frame = 0
 				player[SLOT_PLAYER1].missionBlockID = TypeName[MissionBlock]
-				
 				player[SLOT_PLAYER1].state = Player_State_Climb_Mission
 				player[SLOT_PLAYER1].speed = 0
 				player[SLOT_PLAYER1].xvel = 0
@@ -95,6 +106,12 @@ event ObjectUpdate
 				PlaySfx(SfxName[Catch], false)
 			end if
 		end if
+	end if
+	
+	// Little bit of code added in Origins Plus to make extra sure that the player's Mission Block ID is set
+	BoxCollisionTest(C_TOUCH, object.entityPos, -20, -20, 20, 20, SLOT_PLAYER1, C_BOX, C_BOX, C_BOX, C_BOX)
+	if checkResult != false
+		player[SLOT_PLAYER1].missionBlockID = TypeName[MissionBlock]
 	end if
 end event
 

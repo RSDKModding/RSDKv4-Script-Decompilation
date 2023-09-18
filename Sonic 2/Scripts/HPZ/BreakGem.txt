@@ -20,6 +20,10 @@ private alias object.animation 	: player.animation
 private alias object.gravity 	: player.gravity
 private alias object.yvel 	 	: player.yvel
 private alias object.value19 	: player.badnikBonus
+private alias object.value40	: player.hitboxLeft
+private alias object.value38	: player.hitboxTop
+private alias object.value41	: player.hitboxRight
+private alias object.value39	: player.hitboxBottom
 
 // ========================
 // Function Declarations
@@ -60,10 +64,32 @@ event ObjectUpdate
 
 		// Cycle through all players
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
-			// Is the player rolling?
+#platform: USE_STANDALONE
 			if player[currentPlayer].animation == ANI_JUMPING
-				// Check if the gem should be broken
 				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+			checkResult = false
+			
+			if player[currentPlayer].animation == ANI_JUMPING
+				checkResult = true
+			end if
+			
+			if player[currentPlayer].animation == ANI_HAMMER_JUMP
+				checkResult = 2
+			end if
+			
+			if checkResult != false
+				switch checkResult
+				case 1
+					BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					break
+					
+				case 2
+					BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					break
+				end switch
+#endplatform
 				if checkResult == COL_TOP
 					// Player has rolled into gem, break the gem into fragments
 					player[currentPlayer].yvel = -0x30000

@@ -5,6 +5,9 @@
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// This script is a copy of the normal Batbrain script, just with a check to see if the object's visible before playing sfx
+// ..yes that's it, that's the only change
+
 // ========================
 // Aliases
 // ========================
@@ -27,13 +30,13 @@ private alias 0 : BATBRAIN_ANI_IDLE
 private alias 1 : BATBRAIN_ANI_DROPPING
 private alias 2 : BATBRAIN_ANI_FLYING
 
-// Player aliases
+// Player Aliases
 private alias object.xpos : player.xpos
 private alias object.ypos : player.ypos
-private alias object.value38 : player.hitboxTop
-private alias object.value39 : player.hitboxBottom
 private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
 private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Path ID Aliases
 private alias 0 : PATH_A
@@ -65,6 +68,9 @@ end function
 
 
 private function Batbrain_CheckOutOfRange
+	// This function is new to Batbrain2
+	// There's not really much to say about it, it just sees if the object is visible at all
+	
 	temp1 = object.ixpos
 	temp1 -= screen.xoffset
 	CheckLower(temp1, 0)
@@ -92,6 +98,7 @@ event ObjectUpdate
 	switch object.state
 	case BATBRAIN_AWAITPLAYER
 		object.priority = PRIORITY_ACTIVE
+		
 		object.targetDistance = 0x7FFFFFFF
 		object.backupPlayer = 0
 		object.targetPlayer = 0xFFFF
@@ -109,7 +116,7 @@ event ObjectUpdate
 				if player[currentPlayer].ypos >= object.ypos
 					if object.targetPlayer != 0xFFFF
 						arrayPos0 = object.targetPlayer
-						if player[currentPlayer].ypos < object[arrayPos0].ypos
+						if player[currentPlayer].ypos < player[arrayPos0].ypos
 							object.targetPlayer = currentPlayer
 						end if
 					else
@@ -121,14 +128,14 @@ event ObjectUpdate
 		
 		if object.targetPlayer != 0xFFFF
 			arrayPos0 = object.targetPlayer
-			temp0 = object[arrayPos0].ypos
+			temp0 = player[arrayPos0].ypos
 			temp0 -= object.ypos
 			if temp0 >= 0
 				if temp0 <= 0x800000
 					Rand(temp0, 8)
 					if temp0 == 0
 						object.state = BATBRAIN_DROPPING
-						object.dropPos.y = object[arrayPos0].ypos
+						object.dropPos.y = player[arrayPos0].ypos
 						object.animation = BATBRAIN_ANI_DROPPING
 					end if
 				end if
@@ -137,7 +144,7 @@ event ObjectUpdate
 			arrayPos0 = object.backupPlayer
 		end if
 		
-		if object[arrayPos0].xpos < object.xpos
+		if player[arrayPos0].xpos < object.xpos
 			object.direction = FLIP_NONE
 		else
 			object.direction = FLIP_X
@@ -148,11 +155,12 @@ event ObjectUpdate
 		object.ypos += object.yvel
 		object.yvel += 0x1800
 		arrayPos0 = object.targetPlayer
-		if object[arrayPos0].xpos < object.xpos
+		if player[arrayPos0].xpos < object.xpos
 			object.direction = FLIP_NONE
 		else
 			object.direction = FLIP_X
 		end if
+		
 		temp0 = object.dropPos.y
 		temp0 -= object.ypos
 		if temp0 < 0x100000
@@ -170,7 +178,7 @@ event ObjectUpdate
 	case BATBRAIN_FLYING
 		object.xpos += object.xvel
 		arrayPos0 = object.targetPlayer
-		temp0 = object[arrayPos0].xpos
+		temp0 = player[arrayPos0].xpos
 		temp0 -= object.xpos
 		Abs(temp0)
 		if temp0 >= 0x800000
@@ -218,7 +226,6 @@ event ObjectUpdate
 	
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -18, 12, 18, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
-		
 		if checkResult == true
 			CallFunction(Player_BadnikBreak)
 		end if
@@ -235,8 +242,10 @@ event ObjectUpdate
 		
 	case BATBRAIN_ANI_FLYING
 		if object.animationTimer == 0
+			// this is the only change in this (Batbrain2) script
+			// ..thanks ig?
 			CallFunction(Batbrain_CheckOutOfRange)
-			if checkResult == 0
+			if checkResult == false
 				PlaySfx(SfxName[Batbrain Fly], false)
 			end if
 		end if
@@ -260,11 +269,13 @@ event ObjectStartup
 	CheckCurrentStageFolder("Zone02")
 	temp0 = checkResult
 	if game.playMode == BOOT_PLAYMODE_MISSION
+		// In Origins's missions, GHZ and SYZ qualify for loading MZ sprites too
 		CheckCurrentStageFolder("Zone01")
 		temp0 |= checkResult
 		CheckCurrentStageFolder("Zone03")
 		temp0 |= checkResult
 	end if
+	
 	if temp0 == true
 		LoadSpriteSheet("MZ/Objects.gif")
 		SpriteFrame(-7, -12, 14, 24, 37, 98)
@@ -307,30 +318,14 @@ end event
 
 
 event RSDKLoad
-	CheckCurrentStageFolder("Zone01")
-	temp0 = checkResult
-	CheckCurrentStageFolder("Zone02")
-	temp0 |= checkResult
-	CheckCurrentStageFolder("Zone03")
-	temp0 |= checkResult
-	if temp0 == true
-		// This following sheet *should* be only in Zone02, but Sonic Team kinda just didn't wanna...
-		LoadSpriteSheet("MZ/Objects.gif")
-		SpriteFrame(-7, -12, 14, 24, 37, 98)
-		SpriteFrame(-12, -14, 32, 30, 52, 81)
-		SpriteFrame(-15, -6, 35, 20, 1, 106)
-		SpriteFrame(-12, -8, 29, 28, 85, 81)
-		SpriteFrame(-15, -6, 35, 20, 1, 106)
-	end if
-	
 	CheckCurrentStageFolder("Zone07")
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-7, -12, 14, 24, 52, 68)
-		SpriteFrame(-12, -14, 32, 30, 1, 93)
-		SpriteFrame(-15, -6, 35, 20, 64, 99)
-		SpriteFrame(-12, -8, 29, 28, 34, 93)
-		SpriteFrame(-15, -6, 35, 20, 64, 99)
+	else
+		// We just load MZ sprites as the backup, not checking for MZ (or GHZ or SYZ) here
+		LoadSpriteSheet("MZ/Objects.gif")
+		SpriteFrame(-7, -12, 14, 24, 37, 98)
 	end if
 	
 	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")

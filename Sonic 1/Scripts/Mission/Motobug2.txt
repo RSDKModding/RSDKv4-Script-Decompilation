@@ -79,8 +79,10 @@ event ObjectUpdate
 			object.animation = MOTOBUG_ANI_IDLE
 		end if
 		
-		// This bit of code is new to Motobug2
-		if object.state == MOTOBUG_PAUSED // This won't be true most of the time, except when the Motobug just turned around due to the code from above
+		// This bit of code is new to Motobug2, let's check collision with Mission Blocks and use them as an extension of normal ground
+		
+		// If we just turned around, then let's see if there's actually more Mission Blocks in the direction we were going
+		if object.state == MOTOBUG_PAUSED
 			foreach (TypeName[MissionBlock], arrayPos0, ACTIVE_ENTITIES)
 				temp1 = false
 				
@@ -99,12 +101,14 @@ event ObjectUpdate
 				temp1 &= checkResult
 				
 				if temp1 == true
+					// There's still more Mission Blocks for us to drive on, so instead of turning around let's just keep going
 					object.state = MOTOBUG_MOVING
 					object.animation = MOTOBUG_ANI_MOVING
 				end if
 			next
 		end if
 		
+		// If we're moving, then let's see if there are more Mission Blocks ahead of us
 		if object.state == MOTOBUG_MOVING
 			temp0 = false
 			
@@ -129,6 +133,7 @@ event ObjectUpdate
 			next
 			
 			if temp0 != false
+				// If we're at the end of the row of Mission Blocks, then let's turn around
 				object.state = MOTOBUG_PAUSED
 				object.animation = MOTOBUG_ANI_IDLE
 			end if
@@ -140,7 +145,6 @@ event ObjectUpdate
 		else
 			object.exhaustTimer = 0
 
-			// Create the exhaust object
 			CreateTempObject(TypeName[Motobug Exhaust], 0, object.xpos, object.ypos)
 			
 			// Offset the exhaust based on the Motobug's direction
@@ -150,7 +154,7 @@ event ObjectUpdate
 				object[tempObjectPos].xpos -= 0x160000
 			end if
 
-			// Set the object to match the Motobug's direction
+			// Set the exhaust to match the Motobug's direction
 			object[tempObjectPos].direction = object.direction
 		end if
 		break

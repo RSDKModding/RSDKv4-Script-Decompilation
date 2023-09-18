@@ -125,10 +125,13 @@ private alias object.value15 : player.upDownBlockTimer
 private alias 0 : SLOT_PLAYER1
 
 // Player List Pos Aliases
-public alias 0 : PLAYER_SONIC_ALONE
-public alias 1 : PLAYER_TAILS_ALONE
-public alias 2 : PLAYER_KNUX_ALONE
-public alias 3 : PLAYER_SONIC_AND_TAILS
+public alias 0 : PLAYER_SONIC_A
+public alias 1 : PLAYER_TAILS_A
+public alias 2 : PLAYER_KNUCKLES_A
+public alias 3 : PLAYER_SONIC_TAILS_A
+public alias 4 : PLAYER_KNUCKLES_TAILS_A
+public alias 5 : PLAYER_AMY_A
+public alias 6 : PLAYER_AMY_TAILS_A
 
 // TitleCard aliases
 private alias 8 : TITLECARD_FADETOTITLE
@@ -354,7 +357,15 @@ end function
 
 
 public function Player_HandleRollAnimSpeed
-	if stage.playerListPos == PLAYER_TAILS_ALONE
+#platform: USE_STANDALONE
+	if stage.playerListPos == PLAYER_TAILS_A
+#endplatform
+#platform: USE_ORIGINS
+	// Bug Details:
+	// pretty sure this should be PLAYER_TAILS, this would be giving sonic a constant animation speed of 120 like Tails would.
+	if stage.playerListPos == PLAYER_SONIC
+#endplatform
+
 		player.animationSpeed = 120
 	else
 		player.animationSpeed = player.moveSpeed
@@ -560,7 +571,14 @@ event ObjectUpdate
 		if keyPress[0].buttonB == true
 			player.type = TypeName[Debug Mode]
 			
-			if stage.playerListPos == PLAYER_TAILS_ALONE
+#platform: USE_STANDALONE
+			if stage.playerListPos == PLAYER_TAILS_A
+#endplatform
+#platform: USE_ORIGINS
+			// Bug Details:
+			// pretty sure this should be PLAYER_TAILS...?
+			if stage.playerListPos == PLAYER_SONIC
+#endplatform
 				// Clear the following Tails Object if needed too
 				object[+1].type = TypeName[Blank Object]
 			end if
@@ -602,13 +620,30 @@ end event
 
 
 event ObjectStartup
-	LoadSpriteSheet("Global/Display.gif") // We don't even use any Sprite Frames, but go ahead and load the sheet anyways..?
+	LoadSpriteSheet("Global/Display.gif") // We don't even use any SpriteFrames, but go ahead and load the sheet anyway..?
 	
 	foreach (TypeName[Player Object], arrayPos0, ALL_ENTITIES)
-		if stage.playerListPos >= PLAYER_SONIC_AND_TAILS
-			stage.playerListPos = PLAYER_SONIC_ALONE
+#platform: USE_STANDALONE
+		if stage.playerListPos >= PLAYER_SONIC_TAILS_A
+			stage.playerListPos = PLAYER_SONIC_A
 			stage.player2Enabled = true
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		switch stage.playerListPos
+		case PLAYER_SONIC_TAILS_A
+			stage.playerListPos = PLAYER_SONIC
+			stage.player2Enabled = true
+			break
+			
+		case PLAYER_AMY_TAILS_A
+			stage.playerListPos = PLAYER_AMY
+			stage.player2Enabled = true
+			break
+		end switch
+#endplatform
+
 
 		// 0 = SLOT_PLAYER1
 		ResetObjectEntity(SLOT_PLAYER1, TypeName[Player Object], 0, player[arrayPos0].xpos, player[arrayPos0].ypos)
@@ -621,22 +656,29 @@ event ObjectStartup
 		Player_playerSlot = player.entityPos
 
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
+		case PLAYER_SONIC_A
 			LoadAnimation("SonicSS.ani")
 			player[0].animationSpeed = 48
 			break
 			
-		case PLAYER_TAILS_ALONE
+		case PLAYER_TAILS_A
 			LoadAnimation("TailsSS.ani")
 			player[0].animationSpeed = 120
 			break
 			
-		case PLAYER_KNUX_ALONE
+		case PLAYER_KNUCKLES_A
 			LoadAnimation("KnucklesSS.ani")
 			player[0].animationSpeed = 48
 			break
+			
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A
+			LoadAnimation("AmySS.ani")
+			player[0].animationSpeed = 48
+			break
+#endplatform
 		end switch
-		
+
 		// Note - player.animation never needs to be set since the desired animation is animation ID 0 in the file
 
 		player[0].state = Player_State_SS_Roll

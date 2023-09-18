@@ -17,6 +17,11 @@ private alias object.yvel : player.yvel
 private alias object.gravity : player.gravity
 private alias object.animation : player.animation
 private alias object.value19 : player.badnikBonus
+private alias object.value16 : player.isSidekick
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Achievement Aliases
 private alias 3 : ACHIEVEMENT_BLOCKBUSTER
@@ -52,9 +57,39 @@ event ObjectUpdate
 	switch object.state
 	case BREAKBLOCK_BLOCK
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+#platform: USE_STANDALONE
 			if player[currentPlayer].animation == ANI_JUMPING
 				BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
-				if checkResult == COL_TOP
+#endplatform
+#platform: USE_ORIGINS
+			checkResult = false
+			
+			if player[currentPlayer].animation == ANI_JUMPING
+				checkResult = true
+			end if
+			
+			if stage.playerListPos == PLAYER_AMY
+				if player[currentPlayer].isSidekick == false
+					if player[currentPlayer].animation == ANI_HAMMER_JUMP
+						checkResult = 2
+					end if
+				end if
+			end if
+			
+			if checkResult != false
+				// For some reason, they changed the collision type from C_SOLID to C_TOUCH
+				// Guess they wanted the Hammer Jump to be able to hit multiple blocks at once, but why did they apply this to the regular rolling animation too?
+				switch checkResult
+				case 1
+					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					break
+					
+				case 2
+					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					break
+				end switch
+#endplatform
+				if checkResult == COL_TOP // well it's "COL_TOP" in Standalone but "true" in Origins, they both have the same numeric value though so we can leave it like this
 					player[currentPlayer].yvel = -0x30000
 					player[currentPlayer].gravity = GRAVITY_AIR
 

@@ -5,6 +5,8 @@
 // Unpacked by Rubberduckycooly's script unpacker
 // ----------------------------------
 
+// This script is a copy of the normal Ball Hog script but with tile collisions removed so that the badnik can be placed on Mission Blocks
+
 // ========================
 // Aliases
 // ========================
@@ -36,11 +38,11 @@ reserve function BallHog_DebugSpawn
 // Tables
 // ========================
 
-public table BallHog_frameTable
-	0, 2, 3, 2, 0, 2, 3, 2, 0, 2, 3, 2, 0, 1, 0
+private table BallHog_frameTable
+	0,  2,  3,  2,  0,  2,  3,  2,  0,  2,  3,  2,  0,  1, 0
 end table
 
-public table BallHog_frameDelayTable
+private table BallHog_frameDelayTable
 	20, 20, 10, 10, 20, 20, 10, 10, 20, 20, 10, 10, 20, 10
 end table
 
@@ -66,30 +68,30 @@ end function
 // ========================
 
 event ObjectUpdate
-	
-	// Check interaction with Players
 	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -18, 12, 18, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
-		
 		if checkResult == true
 			CallFunction(Player_BadnikBreak)
 		end if
 	next
 	
+	// Sidestep a little
 	if object.frame == 3
 		object.ypos += object.yvel
 		object.yvel += 0x95C0
 		
+		// (This bit is different in BallHog2, normally tile collisions are checked here but instead we're just checking against originY directly
 		if object.ypos < object.originY
 			object.animationTimer = 2
 		end if
 	end if
 	
-	// Animate the Object
+	// Update animation & ball lobbing
 	object.animationTimer--
 	if object.animationTimer <= 0
 		GetTableValue(object.animationTimer, object.timer, BallHog_frameDelayTable)
 		GetTableValue(object.frame, object.timer, BallHog_frameTable)
+		
 		object.timer++
 		if object.timer >= 14
 			object.timer = 0
@@ -102,7 +104,7 @@ event ObjectUpdate
 		end if
 		
 		if object.frame == 1
-			// Create a Bomb
+			// Drop a bomb ball
 			
 			CreateTempObject(TypeName[Ball Hog Bomb], 0, object.xpos, object.ypos)
 			if object.direction == FLIP_NONE
@@ -115,7 +117,8 @@ event ObjectUpdate
 			
 			object[tempObjectPos].ypos += 0xC0000
 			
-			// Make the Bomb bounce 13 pixels below the Ball Hog
+			// This part is more new BallHog2 stuff
+			// Since the bomb can't check tile collisions let's just make it bounce when it's 13 pixels below the Ball Hog's own position
 			object[tempObjectPos].bouncePos = object.ypos
 			object[tempObjectPos].bouncePos += 0xD0000
 			
@@ -158,6 +161,7 @@ event ObjectStartup
 			object[arrayPos0].propertyValue &= 0x7F
 		end if
 		
+		// (This line is new to BallHog2)
 		object[arrayPos0].originY = object[arrayPos0].ypos
 	next
 	
@@ -197,6 +201,8 @@ event RSDKEdit
 			
 		case 0 // bombTime
 			object.propertyValue &= 0x80
+			editor.variableValue &= 0x7F
+			
 			object.propertyValue |= editor.variableValue
 			break
 			
@@ -217,16 +223,19 @@ end event
 
 
 event RSDKLoad
-	CheckCurrentStageFolder("Zone06")
-	if checkResult == true
-		LoadSpriteSheet("SBZ/Objects.gif")
-		SpriteFrame(-11, -17, 22, 37, 1, 170)
-	end if
-	
 	CheckCurrentStageFolder("Zone07")
 	if checkResult == true
 		LoadSpriteSheet("MBZ/Objects.gif")
 		SpriteFrame(-11, -17, 22, 37, 76, 292)
+		SpriteFrame(-11, -17, 22, 37, 99, 292)
+		SpriteFrame(-12, -12, 24, 32, 122, 297)
+		SpriteFrame(-11, -20, 22, 40, 147, 289)
+	else
+		LoadSpriteSheet("SBZ/Objects.gif")
+		SpriteFrame(-11, -17, 22, 37, 1, 170)
+		SpriteFrame(-11, -17, 22, 37, 24, 170)
+		SpriteFrame(-12, -12, 24, 32, 47, 175)
+		SpriteFrame(-11, -20, 22, 40, 72, 167)
 	end if
 	
 	AddEditorVariable("bombTime")

@@ -128,8 +128,11 @@ event ObjectUpdate
 		// The tallying system seems to be a bit off, though...
 
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
-		case PLAYER_SONIC_AND_TAILS
+		case PLAYER_SONIC_A
+		case PLAYER_SONIC_TAILS_A
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A
+#endplatform
 			temp0 = 0
 			foreach (TypeName[Ring], arrayPos0, ALL_ENTITIES)
 				if object[arrayPos0].propertyValue <= 1 // Is this supposed to be just a `<`?
@@ -138,8 +141,8 @@ event ObjectUpdate
 			next
 			break
 			
-		case PLAYER_TAILS_ALONE
-		case PLAYER_KNUX_ALONE
+		case PLAYER_TAILS_A
+		case PLAYER_KNUCKLES_A
 			temp0 = 0
 			foreach (TypeName[Ring], arrayPos0, ALL_ENTITIES)
 				if object[arrayPos0].propertyValue != 2
@@ -159,6 +162,10 @@ event ObjectUpdate
 				CallNativeFunction2(SetAchievement, ACHIEVEMENT_PERFECTIONIST, 100)
 			end if
 		end if
+		
+#platform: USE_STANDALONE
+		object.state++
+#endplatform
 		
 #platform: USE_ORIGINS
 		if game.playMode == BOOT_PLAYMODE_MISSION
@@ -186,9 +193,6 @@ event ObjectUpdate
 		StatsUsabilityParam3 = 0
 		StatsUsabilityParam4 = 0
 		StatsUsabilityParam5 = 0
-#endplatform
-#platform: USE_STANDALONE
-		object.state++
 #endplatform
 		break
 
@@ -327,7 +331,7 @@ event ObjectUpdate
 			object.direction = FACING_RIGHT
 			
 #platform: USE_ORIGINS
-			// These following two lines were added in Origins 1.0.4
+			// These following two lines were added in Origins 1.04
 			// -> In standalone RSDKv4, all SFX are stopped when transitioning scenes so this wasn't a problem
 			// -> In Origins's cross implementation of Hedgehog Engine 2 and RSDKv5U, however, SFX continue to play (and loop) between scenes
 			StopSfx(SfxName[Flying])
@@ -356,7 +360,24 @@ event ObjectUpdate
 				arrayPos1 = options.saveSlot
 				arrayPos1 <<= 3
 				if stage.player2Enabled == true
-					saveRAM[arrayPos1] = 3
+#platform: USE_STANDALONE
+					saveRAM[arrayPos1] = PLAYER_SONIC_TAILS_A
+#endplatform
+#platform: USE_ORIGINS
+					switch stage.playerListPos
+					case PLAYER_SONIC_A
+						saveRAM[arrayPos1] = PLAYER_SONIC_TAILS
+						break
+						
+					case PLAYER_KNUCKLES_A
+						saveRAM[arrayPos1] = PLAYER_KNUCKLES_TAILS
+						break
+						
+					case PLAYER_AMY_A
+						saveRAM[arrayPos1] = PLAYER_AMY_TAILS
+						break
+					end switch
+#endplatform
 				else
 					saveRAM[arrayPos1] = stage.playerListPos
 				end if
@@ -381,6 +402,8 @@ event ObjectUpdate
 			end if
 
 #platform: USE_ORIGINS
+			recScore = player.score
+			
 			if game.oneStageFlag != false
 				stage.listPos--
 				object.state = ACTFINISH_SETSCREENFADE
@@ -398,7 +421,7 @@ event ObjectUpdate
 						CallNativeFunction2(SetLeaderboard, stage.listPos, timeAttack.result)
 					else
 						// If we're on a non-regular stage, then we're in the Boss Rush so use its special ID
-						// (This was written in a pre-Origins world, before anything and everything was shoved into the BONUS_STATE list)
+						// (This was written in a pre-Origins world, before anything and everything was shoved into the BONUS_STAGE list)
 						CallNativeFunction2(SetLeaderboard, 21, timeAttack.result)
 					end if
 					
@@ -432,7 +455,7 @@ event ObjectUpdate
 		break
 		
 	case ACTFINISH_SETSCREENFADE
-		SetScreenFade(0, 0, 0, 255)
+		SetScreenFade(0, 0, 0, 0xFF)
 		break
 #endplatform
 	end switch
@@ -467,28 +490,28 @@ event ObjectDraw
 	DrawSpriteScreenXY(8, temp7, 120)
 	DrawSpriteScreenXY(13, temp7, 120)
 	temp7 += 88
-	DrawNumbers(14, temp7, 121, object.timeBonus, 6, 8, 0)
+	DrawNumbers(14, temp7, 121, object.timeBonus, 6, 8, false)
 	
 	temp7 = object.ringPos
 	temp7 += screen.xcenter
 	DrawSpriteScreenXY(9, temp7, 136)
 	DrawSpriteScreenXY(13, temp7, 136)
 	temp7 += 88
-	DrawNumbers(14, temp7, 137, object.ringBonus, 5, 8, 0)
+	DrawNumbers(14, temp7, 137, object.ringBonus, 5, 8, false)
 	if object.hasPerfectBonus == true
 		temp7 = object.perfectPos
 		temp7 += screen.xcenter
 		DrawSpriteScreenXY(10, temp7, 152)
 		DrawSpriteScreenXY(11, temp7, 152)
 		temp7 += 88
-		DrawNumbers(14, temp7, 153, object.perfectBonus, 5, 8, 0)
+		DrawNumbers(14, temp7, 153, object.perfectBonus, 5, 8, false)
 	end if
 	
 	temp7 = object.totalPos
 	temp7 += screen.xcenter
 	DrawSpriteScreenXY(12, temp7, 168)
 	temp7 += 88
-	DrawNumbers(14, temp7, 169, object.totalScore, 6, 8, 0)
+	DrawNumbers(14, temp7, 169, object.totalScore, 6, 8, false)
 	
 	if object.hasContinue == true
 #platform: USE_ORIGINS
@@ -535,13 +558,13 @@ event ObjectStartup
 
 	// Assign sprite frames based on current characters in play
 	switch stage.playerListPos
-	case PLAYER_SONIC_ALONE
-	case PLAYER_SONIC_AND_TAILS
+	case PLAYER_SONIC_A
+	case PLAYER_SONIC_TAILS_A
 		SpriteFrame(-64, 0, 72, 16, 1, 222)			// 0  - "SONIC" large text
 		SpriteFrame(16, 0, 48, 16, 1, 205)			// 1  - "GOT" large text
 		break
 
-	case PLAYER_TAILS_ALONE
+	case PLAYER_TAILS_A
 		// Determine Miles Vs Tails
 		if options.region == false
 			SpriteFrame(-61, 0, 69, 16, 74, 222)	// 0  - "TAILS" large text
@@ -551,11 +574,21 @@ event ObjectStartup
 		SpriteFrame(16, 0, 48, 16, 1, 205)			// 1  - "GOT" large text
 		break
 		
-	case PLAYER_KNUX_ALONE
+	case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+	case PLAYER_KNUCKLES_TAILS_A
+#endplatform
 		SpriteFrame(-94, 0, 128, 16, 34, 188)		// 0  - "KNUCKLES" large text
-		SpriteFrame(40, 0, 48, 16, 1, 205)			// 1  - "GOT" large text, note its different offset from the other two
+		SpriteFrame(40, 0, 48, 16, 1, 205)			// 1  - "GOT" large text, note its different offset from the others
 		break
 		
+#platform: USE_ORIGINS
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		SpriteFrame(-55, 0, 54, 16, 188, 239)		// 0  - "AMY" large text
+		SpriteFrame(7, 0, 48, 16, 1, 205)			// 1  - "GOT" large text, note its different offset from the others
+		break
+#endplatform
 	end switch
 
 	// Frames that are the same for everyone
@@ -583,22 +616,32 @@ event ObjectStartup
 	SpriteFrame(0, 0, 8, 11, 10, 74)				// 23 - Number 9
 
 	switch stage.playerListPos
-	case PLAYER_SONIC_ALONE
-	case PLAYER_SONIC_AND_TAILS
+	case PLAYER_SONIC_A
+	case PLAYER_SONIC_TAILS_A
 		SpriteFrame(-8, -11, 16, 23, 178, 113)		// 24 - Sonic continue frame 1
 		SpriteFrame(-8, -11, 16, 23, 195, 113)		// 25 - Sonic continue frame 2
 		break
 		
-	case PLAYER_TAILS_ALONE
+	case PLAYER_TAILS_A
 		SpriteFrame(-8, -11, 16, 23, 212, 113)		// 24 - Tails continue frame 1
 		SpriteFrame(-8, -11, 16, 23, 229, 113)		// 25 - Tails continue frame 2
 		break
 		
-	case PLAYER_KNUX_ALONE
+	case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+	case PLAYER_KNUCKLES_TAILS_A
+#endplatform
 		SpriteFrame(-8, -11, 16, 23, 178, 137)		// 24 - Knuckles continue frame 1
 		SpriteFrame(-8, -11, 16, 23, 195, 137)		// 25 - Knuckles continue frame 2
 		break
 		
+#platform: USE_ORIGINS
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		SpriteFrame(-8, -11, 17, 22, 212, 138)		// 24 - Amy continue frame 1
+		SpriteFrame(-8, -11, 17, 22, 230, 138)		// 25 - Amy continue frame 2
+		break
+#endplatform
 	end switch
 
 #platform: USE_ORIGINS

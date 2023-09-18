@@ -21,6 +21,10 @@ private alias object.collisionPlane : player.collisionPlane
 
 private alias object.value16 : player.isSidekick
 private alias object.value19 : player.badnikBonus
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 // Debug Mode aliases
 private alias object.value17 : debugMode.currentSelection
@@ -43,6 +47,7 @@ reserve function BreakBlock_DebugSpawn
 
 private value BreakBlock_debugStartID = 0
 private value BreakBlock_groundOffset = 0
+private value BreakBlock_playerHit = 0 // Introduced in Origins Plus, because using a temp value wasn't good enough
 
 
 // ========================
@@ -101,6 +106,8 @@ event ObjectUpdate
 			temp0 <<= 3
 			temp1 = temp0
 			FlipSign(temp0)
+			
+#platform: USE_STANDALONE
 			if player[currentPlayer].animation != ANI_JUMPING
 				temp0 += BreakBlock_groundOffset
 			end if
@@ -108,6 +115,31 @@ event ObjectUpdate
 			BoxCollisionTest(C_SOLID, object.entityPos, -16, temp0, 16, temp1, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
 			if checkResult == COL_TOP
 				if player[currentPlayer].animation == ANI_JUMPING
+#endplatform
+#platform: USE_ORIGINS
+			BreakBlock_playerHit = false
+			
+			if player[currentPlayer].animation == ANI_JUMPING
+				BreakBlock_playerHit = true
+			end if
+			
+			if player[currentPlayer].animation == ANI_HAMMER_JUMP
+				BreakBlock_playerHit = 2
+			end if
+			
+			if BreakBlock_playerHit == false
+				temp0 += BreakBlock_groundOffset
+			end if
+			
+			if BreakBlock_playerHit != 2
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, temp0, 16, temp1, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			else
+				BoxCollisionTest(C_SOLID, object.entityPos, -16, temp0, 16, temp1, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+			end if
+			
+			if checkResult == true
+				if BreakBlock_playerHit != false
+#endplatform
 					GetBit(temp3, object.propertyValue, 7)
 					CheckEqual(player[currentPlayer].collisionPlane, 1)
 					temp3 |= checkResult

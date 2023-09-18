@@ -15,6 +15,11 @@ private alias object.xpos : player.xpos
 private alias object.speed : player.speed
 private alias object.direction : player.direction
 private alias object.animation : player.animation
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+private alias object.value16 : player.isSidekick
 
 private alias object.value17 : debugMode.currentSelection
 
@@ -85,7 +90,7 @@ event ObjectUpdate
 				end if
 			end if
 
-			if stage.playerListPos == PLAYER_KNUX_ALONE
+			if stage.playerListPos == PLAYER_KNUCKLES_A
 				// Knuckles can break all walls, regardless if he's rolling or not
 				// (Though, this implementation results in P2 Tails also being able to break all walls if Knux is P1...)
 				checkResult = true
@@ -96,8 +101,32 @@ event ObjectUpdate
 				checkResult = true
 			end if
 
+#platform: USE_STANDALONE
 			if checkResult == true
 				BoxCollisionTest(C_TOUCH, object.entityPos, -17, -32, 17, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+
+#platform: USE_ORIGINS
+			if stage.playerListPos == PLAYER_AMY
+				if player[currentPlayer].isSidekick == false
+					if player[currentPlayer].animation == ANI_HAMMER_JUMP
+						checkResult = 2
+					end if
+					if player[currentPlayer].animation == ANI_HAMMER_DASH
+						checkResult = 2
+					end if
+				end if
+			end if
+			if checkResult != 0
+				switch checkResult
+				case 1
+					BoxCollisionTest(C_TOUCH, object.entityPos, -17, -32, 17, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					break
+				case 2
+					BoxCollisionTest(C_TOUCH, object.entityPos, -17, -32, 17, 32, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+					break
+				end switch
+#endplatform
 				if checkResult == true
 					object.type = TypeName[Blank Object]
 					PlaySfx(SfxName[Block Break], false)

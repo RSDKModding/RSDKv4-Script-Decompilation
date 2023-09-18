@@ -48,7 +48,9 @@ private alias 1 : MUSICEVENT_FLAG_SPEEDUP
 private alias 2 : MUSICEVENT_FLAG_SLOWDOWN
 
 // Player aliases
-private alias object.type 			: player.type
+private alias object.type			: player.type
+private alias object.interaction	 : player.interaction
+private alias object.groupID		: player.groupID
 private alias object.controlMode 	: player.controlMode
 private alias object.visible 		: player.visible
 private alias object.left 			: player.left
@@ -61,12 +63,19 @@ private alias object.ypos 			: player.ypos
 private alias object.collisionLeft 	: player.collisionLeft
 private alias object.value18 		: player.sortedDrawOrder
 
+// Shield Type Aliases
+private alias 0 : SHIELDTYPE_S1
+private alias 1 : SHIELDTYPE_S2
+private alias 2 : SHIELDTYPE_S3_S1
+private alias 3 : SHIELDTYPE_S3_S2
+
 
 // ========================
 // Function Declarations
 // ========================
 
 reserve function StageSetup_HandleOscillationTable
+reserve function StageSetup_CheckDeathBoundary
 
 
 // ========================
@@ -136,6 +145,47 @@ private function StageSetup_HandleOscillationTable
 
 		temp0++
 	loop
+end function
+
+private function StageSetup_CheckDeathBoundary
+#platform: USE_ORIGINS
+	// Check for death bounds
+	temp0 = player[currentPlayer].collisionLeft
+	temp0 <<= 16
+	temp0 += player[currentPlayer].xpos
+	temp1 = stage.curXBoundary1
+	temp1 <<= 16
+
+	if temp0 < temp1
+		if player[currentPlayer].right == true
+			player[currentPlayer].xvel  = 0x10000
+			player[currentPlayer].speed = 0x10000
+		else
+			player[currentPlayer].xvel  = 0x00000
+			player[currentPlayer].speed = 0x00000
+		end if
+
+		player[currentPlayer].xpos = temp1
+
+		temp0 = player[currentPlayer].collisionLeft
+		temp0 <<= 16
+
+		player[currentPlayer].xpos -= temp0
+	end if
+
+	temp1 = stage.curYBoundary2
+	temp1 <<= 16
+
+	if temp1 < stage.deathBoundary
+		if player[currentPlayer].ypos > stage.deathBoundary
+			CallFunction(Player_Kill)
+		end if
+	else
+		if player[currentPlayer].ypos > temp1
+			CallFunction(Player_Kill)
+		end if
+	end if
+#endplatform
 end function
 
 
@@ -230,7 +280,7 @@ event ObjectUpdate
 #endplatform
 			end if
 		end if
-
+#platform: USE_STANDALONE
 		// Check for death bounds
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
 			temp0 = player[currentPlayer].collisionLeft
@@ -269,6 +319,39 @@ event ObjectUpdate
 				end if
 			end if
 		next
+#endplatform
+
+#platform: USE_ORIGINS
+		CheckEqual(player[0].interaction, false)
+		temp0 = checkResult
+		CheckEqual(player[0].controlMode, CONTROLMODE_NONE)
+		temp0 &= checkResult
+		if temp0 == true
+			currentPlayer = 0
+			if player[currentPlayer].groupID == GROUP_PLAYERS
+				CallFunction(StageSetup_CheckDeathBoundary)
+			end if
+			
+			if stage.player2Enabled == true
+				currentPlayer = 1
+				if player[currentPlayer].groupID == GROUP_PLAYERS
+					CallFunction(StageSetup_CheckDeathBoundary)
+				end if
+			end if
+		else
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				CallFunction(StageSetup_CheckDeathBoundary)
+			next
+		end if
+		
+		if game.forceKillPlayer == true
+			game.forceKillPlayer = false
+			currentPlayer = 0
+			player[0].type = TypeName[Player Object]
+			CallFunction(Player_Kill)
+		end if
+#endplatform
+
 	end if
 
 #platform: USE_STANDALONE
@@ -387,19 +470,19 @@ event ObjectStartup
 	// Bonus options can only be used in no save mode
 	// Note this is actually bugged as this only checks for the last three save slots, ignoring the first one
 	if options.saveSlot > 0
-		options.shieldType  = 0
+		options.shieldType  = SHIELDTYPE_S1
 		options.superStates = false
 	end if
 
 	switch options.shieldType
-	case 0
-	case 2
+	case SHIELDTYPE_S1
+	case SHIELDTYPE_S3_S1
 		blueShieldType    = TypeName[Blue Shield]
 		invincibilityType = TypeName[Invincibility]
 		break
 
-	case 1
-	case 3
+	case SHIELDTYPE_S2
+	case SHIELDTYPE_S3_S2
 		blueShieldType    = TypeName[Blue Shield 2]
 		invincibilityType = TypeName[Invincibility 2]
 		break

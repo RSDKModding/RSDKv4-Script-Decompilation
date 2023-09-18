@@ -167,21 +167,28 @@ event ObjectUpdate
 
 		// Check if it's the good ending
 		if specialStage.emeralds >= 0x7F
-
 			// Do some anti-Tails checks in case his Super form is turned off
 			// (Which it always is, meaning Tails never really gets a good ending)
-			CheckEqual(stage.playerListPos, PLAYER_TAILS_ALONE)
+			CheckEqual(stage.playerListPos, PLAYER_TAILS_A)
 			temp0 = checkResult
 			CheckEqual(options.superTails, false)
 			temp0 &= checkResult
+#platform: USE_ORIGINS
+			// Amy doesn't get her super form in the ending either
+			CheckEqual(stage.playerListPos, PLAYER_AMY)
+			temp0 |= checkResult
+			CheckEqual(stage.playerListPos, PLAYER_AMY_TAILS)
+			temp0 |= checkResult
+#endplatform
 
 			if temp0 == false
 				// Make the player go Super
 				Player_superState = SUPERSTATE_SUPER
-
+				
 				player[0].sortedDrawOrder = 5
-
-				if stage.playerListPos == PLAYER_KNUX_ALONE
+				
+#platform: USE_STANDALONE
+				if stage.playerListPos == PLAYER_KNUCKLES_A
 					// Knuckles gets to glide down all cool and all
 					player[0].animation = ANI_GLIDING
 					player[0].prevAnimation = ANI_GLIDING
@@ -191,16 +198,17 @@ event ObjectUpdate
 					// (Though again, this doesn't get used since the variable for it is turned off)
 					player[0].animation = ANI_FLYING
 				end if
+#endplatform
 
 				player[0].speed 			= 0x100000
 				player[0].invincibleTimer 	= 60
 				player[0].blinkTimer 		= 0
 				player[0].visible 			= true
-				player[0].rings 			= 0xFFFF // Don't know if this even does anything...
+				player[0].rings 			= 0xFFFF // In case the player has their super form, this makes sure they don't lose it
 
 				switch stage.playerListPos
-				case PLAYER_SONIC_ALONE
-				case PLAYER_SONIC_AND_TAILS
+				case PLAYER_SONIC_A
+				case PLAYER_SONIC_TAILS_A
 					// Super Sonic does his air run when descending
 					player[0].animation = ANI_RUNNING
 
@@ -210,15 +218,33 @@ event ObjectUpdate
 					LoadAnimation("SuperSonic.ani")
 					stage.entityPos = arrayPos0
 					break
-
+					
+#platform: USE_ORIGINS
+				case PLAYER_TAILS_A
+					player[0].animation = ANI_FLYING
+					break
+					
+				case PLAYER_KNUCKLES_A
+				case PLAYER_KNUCKLES_TAILS_A
+					player[0].animation = ANI_GLIDING
+					player[0].prevAnimation = ANI_GLIDING
+					player[0].frame = 2
+					break
+					
+				case PLAYER_AMY_A
+				case PLAYER_AMY_TAILS_A
+					break
+#endplatform
 				end switch
 			end if
 		end if
 
 		object.srcBlendPal = 3
 		SetPaletteFade(1, 0, object.srcBlendPal, object.blendAmount, 0, 255)
-		if stage.playerListPos != PLAYER_SONIC_ALONE
-			if stage.playerListPos != PLAYER_SONIC_AND_TAILS
+		
+#platform: USE_STANDALONE
+		if stage.playerListPos != PLAYER_SONIC_A
+			if stage.playerListPos != PLAYER_SONIC_TAILS_A
 				// Don't display the images for other characters and make them fall for a really long time instead
 
 				// Set the active layer to space
@@ -233,6 +259,25 @@ event ObjectUpdate
 				object.state 		= ENDSETUP_ENTERPLAYER
 			end if
 		end if
+#endplatform
+
+#platform: USE_ORIGINS
+		// I don't really know what was wrong with how it worked before, but they changed this check
+		switch stage.playerListPos
+		case PLAYER_TAILS_A
+		case PLAYER_KNUCKLES_A
+		case PLAYER_KNUCKLES_TAILS_A
+		case PLAYER_AMY_A
+		case PLAYER_AMY_TAILS_A
+			stage.activeLayer[0] = 1
+			player[0].xpos = 0x00D40000
+			player[0].ypos = 0x01050000
+			object.frame 		= 4
+			object.blendAmount 	= 976
+			object.state 		= ENDSETUP_ENTERPLAYER
+			break
+		end switch
+#endplatform
 
 		SetActivePalette(1, 0, screen.ysize)
 		break
@@ -354,13 +399,27 @@ event ObjectUpdate
 		end if
 
 		temp0 = 488
-
-		if stage.playerListPos != PLAYER_SONIC_ALONE
-			if stage.playerListPos != PLAYER_SONIC_AND_TAILS
+		
+#platform: USE_STANDALONE
+		if stage.playerListPos != PLAYER_SONIC_A
+			if stage.playerListPos != PLAYER_SONIC_TAILS_A
 				// The other characters don't get special images at all, so make their timer ridiculously long
 				temp0 = 2608
 			end if
 		end if
+#endplatform
+		
+#platform: USE_ORIGINS
+		// Again, what was wrong before?
+		switch stage.playerListPos
+		case PLAYER_TAILS_A
+		case PLAYER_KNUCKLES_A
+		case PLAYER_KNUCKLES_TAILS_A
+		case PLAYER_AMY_A
+		case PLAYER_AMY_TAILS_A
+			temp0 = 2608
+		end switch
+#endplatform
 
 		if object.tornadoTimer == temp0
 			// Spawn the Tornado
@@ -371,10 +430,29 @@ event ObjectUpdate
 			object[33].ypos = screen.ycenter
 			object[33].ypos += camera[0].ypos
 			object[33].ypos += 21
-			if stage.playerListPos != PLAYER_TAILS_ALONE
+			
+#platform: USE_STANDALONE
+			if stage.playerListPos != PLAYER_TAILS_A
 				// Shift the Tornado a bit for other characters since they have a different hitbox than Tails
 				object[33].ypos += 4
 			end if
+#endplatform
+			
+#platform: USE_ORIGINS
+			switch stage.playerListPos
+			case PLAYER_SONIC_A
+			case PLAYER_KNUCKLES_A
+			case PLAYER_SONIC_TAILS_A
+			case PLAYER_KNUCKLES_TAILS_A
+				object[33].ypos += 4
+				break
+				
+			case PLAYER_AMY_A
+			case PLAYER_AMY_TAILS_A
+				object[33].ypos++
+				break
+			end switch
+#endplatform
 
 			// Turn the YPos from screen-space into world-space
 			object[33].ypos <<= 16

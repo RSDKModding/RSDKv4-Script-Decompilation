@@ -38,7 +38,7 @@ private alias object.collisionMode : player.collisionMode
 private alias object.tileCollisions : player.tileCollisions
 
 private alias object.value1  : player.timer
-private alias object.value25 : player.gravityStrength 	
+private alias object.value25 : player.gravityStrength
 
 // ========================
 // Function Declarations
@@ -53,7 +53,7 @@ end function
 
 
 private function SteamPiston_DebugSpawn
-	CreateTempObject(TypeName[Steam Piston], object.direction, object.xpos, object.ypos)
+	CreateTempObject(TypeName[Steam Piston], object.direction, object.xpos, object.ypos) // this obj's prop val doesn't really matter
 	object[tempObjectPos].ypos += 0x100000
 	object[tempObjectPos].startPos.y = object.ypos
 end function
@@ -133,9 +133,23 @@ event ObjectUpdate
 		if checkResult == COL_TOP
 			SetBit(object.stoodPlayers, temp2, true)
 			if object.state == STEAMPISTON_OPENING
-				player[currentPlayer].yvel 				= -0xA0000
+#platform: USE_STANDALONE
+				// Technically not a bug, but this value is a bit bigger compared to the Genesis version,
+				// causing issues like a piston in Act 3 launching you straight into a group of spikes
+				player[currentPlayer].yvel = -0xA0000
+#endplatform
+#platform: USE_ORIGINS
+				// Origins Plus fixed the above issue
+				player[currentPlayer].yvel = -0x9B000
+#endplatform
+
 				player[currentPlayer].yvel 				-= player[currentPlayer].gravityStrength
-				player[currentPlayer].state 			= Player_State_Air
+#platform: USE_STANDALONE
+				player[currentPlayer].state				= Player_State_Air
+#endplatform
+#platform: USE_ORIGINS
+				player[currentPlayer].state				= Player_State_Air_NoDropDash
+#endplatform
 				player[currentPlayer].tileCollisions 	= true
 				player[currentPlayer].gravity 			= 1
 				player[currentPlayer].timer 			= 0

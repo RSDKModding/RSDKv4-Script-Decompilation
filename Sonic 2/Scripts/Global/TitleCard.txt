@@ -12,7 +12,7 @@
 private alias object.value0 : object.timer
 private alias object.value1 : object.actNamePos
 private alias object.value2 : object.zonePos
-private alias object.value3 : object.blueRectPos
+private alias object.value3 : object.blueRectPos // well yeah it's green with Knuckles in Plus but you know what i mean
 private alias object.value4 : object.yellowRectPos
 private alias object.value5 : object.redRectPos
 private alias object.value6 : object.displayedActNo
@@ -40,17 +40,25 @@ private alias 4 : TITLECARD_TYPE_ZONE
 private alias 5 : TITLECARD_TYPE_ZONE_MBZ
 
 // Player Aliases
-private alias object.controlMode : player.controlMode
-private alias object.jumpPress 	 : player.jumpPress
-private alias object.jumpHold 	 : player.jumpHold
-private alias object.up 		 : player.up
-private alias object.down 		 : player.down
-private alias object.left 		 : player.left
-private alias object.right 		 : player.right
-private alias object.value1 	 : player.timer
+private alias object.propertyValue	: player.character
+private alias object.controlMode 	: player.controlMode
+private alias object.jumpPress 	 	: player.jumpPress
+private alias object.jumpHold 	 	: player.jumpHold
+private alias object.up 		 	: player.up
+private alias object.down 		 	: player.down
+private alias object.left 		 	: player.left
+private alias object.right 		 	: player.right
+private alias object.value1 	 	: player.timer
 
 // Tracks
 private alias 0 : TRACK_STAGE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TitleCard_DrawBG
+
 
 // ========================
 // Static Values
@@ -61,8 +69,32 @@ public value TitleCard_showZoneText = 0
 
 
 // ========================
+// Function Definitions
+// ========================
+
+private function TitleCard_DrawBG
+#platform: USE_ORIGINS
+	// Introduced in Plus, draws the BG and determines if it should be blue (regular Sonic 2) or green (Knuckles in Sonic 2)
+	
+	if screen.currentID == 0
+		temp0 = player[0].character
+	else
+		temp0 = vs.player2Type
+	end if
+	
+	if temp0 == PLAYER_KNUCKLES
+		DrawRect(0, 0, screen.xsize, object.blueRectPos, 0, 135, 1, 0xFF)
+	else
+		DrawRect(0, 0, screen.xsize, object.blueRectPos, 32, 64, 192, 0xFF)
+	end if
+#endplatform
+end function
+
+
+// ========================
 // Events
 // ========================
+
 
 event ObjectUpdate
 	options.touchControls = false
@@ -101,11 +133,8 @@ event ObjectUpdate
 			break
 
 		default
-		case TITLECARD_TYPE_ZONE
-		case TITLECARD_TYPE_ZONE_MBZ
 			TitleCard_showZoneText = true
 			break
-			
 		end switch
 
 		if options.vsMode == true
@@ -159,8 +188,8 @@ event ObjectUpdate
 		if object.timer < 30
 			object.timer++
 		else
-			//if we're in VS mode, only continue if we're ready
 			if options.vsMode == true
+				// Only continue if we're ready
 				CallNativeFunction2(SendEntity, object.entityPos, false)
 				if ReceiveValue == -1 // if we don't have the recieve func, we cant do VS mode, continue.
 					object.vsReady = true
@@ -347,10 +376,14 @@ event ObjectDraw
 	case TITLECARD_ENTERTITLECARD
 	case TITLECARD_SHOWTITLECARD
 		SetActivePalette(0, 0, screen.ysize)
-
-		// Blue BG Rect
+		
+#platform: USE_STANDALONE
 		DrawRect(0, 0, screen.xsize, object.blueRectPos, 0x20, 0x40, 0xC0, 0xFF)
-
+#endplatform
+#platform: USE_ORIGINS
+		CallFunction(TitleCard_DrawBG)
+#endplatform
+		
 		DrawRect(0, object.blueRectPos, screen.xsize, screen.ysize, 0x00, 0x00, 0x00, 0xFF)
 
 #platform: USE_STANDALONE
@@ -399,9 +432,14 @@ event ObjectDraw
 	case TITLECARD_EXITREDYELLOWRECT
 	case TITLECARD_EXITBLUERECT
 		SetActivePalette(0, 0, screen.ysize)
-
+		
+#platform: USE_STANDALONE
 		DrawRect(0, 0, screen.xsize, object.blueRectPos, 0x20, 0x40, 0xC0, 0xFF)
-
+#endplatform
+#platform: USE_ORIGINS
+		CallFunction(TitleCard_DrawBG)
+#endplatform
+		
 		DrawRect(object.yellowRectPos, 168, screen.xsize, 72, 0xE0, 0xE0, 0x00, 0xFF)
 
 		temp0 = object.yellowRectPos
@@ -457,7 +495,6 @@ event ObjectDraw
 			DrawSpriteScreenXY(temp1, temp0, 88)
 		end if
 		break
-		
 	end switch
 end event
 

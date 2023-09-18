@@ -26,6 +26,10 @@ private alias object.animation : player.animation
 
 private alias object.value5  : player.rollAnimationSpeed
 private alias object.value17 : debugMode.currentSelection
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
 
 
 // ========================
@@ -132,10 +136,38 @@ event ObjectUpdate
 	switch object.state
 	case GASBREAKBLOCK_BLOCKS
 		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+#platform: USE_STANDALONE
 			if player[currentPlayer].animation == ANI_JUMPING
+#endplatform
+#platform: USE_ORIGINS
+			checkResult = false
+			
+			if player[currentPlayer].animation == ANI_JUMPING
+				checkResult = true
+			end if
+			
+			if player[currentPlayer].animation == ANI_HAMMER_JUMP
+				checkResult = 2
+			end if
+			
+			if checkResult != false
+#endplatform
 				if object.state == GASBREAKBLOCK_BLOCKS
 					temp0 = player[currentPlayer].yvel
+#platform: USE_STANDALONE
 					BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+					switch checkResult
+					case 1
+						BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+						break
+						
+					case 2
+						BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+						break
+					end switch
+#endplatform
 					player[currentPlayer].yvel = temp0
 					if checkResult == COL_TOP
 						player[currentPlayer].gravity = GRAVITY_AIR
@@ -183,6 +215,9 @@ event ObjectUpdate
 					player[currentPlayer].rollAnimationSpeed	= 0xF0
 					player[currentPlayer].xpos 					= object.xpos
 					player[currentPlayer].ypos 					= object.ypos
+#platform: USE_ORIGINS
+					player[currentPlayer].gravity = GRAVITY_AIR
+#endplatform
 					if object.propertyValue == 0
 						// Vertical Block
 						player[currentPlayer].xvel = 0

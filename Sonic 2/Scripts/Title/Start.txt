@@ -15,8 +15,8 @@ private alias object.value5 : object.menuSelection
 
 // States
 private alias  0 : START_AWAITACTION
-private alias  1 : START_NEWGAME
-private alias  1 : START_FLASHPRESSBUTTON
+private alias  1 : START_NEWGAME // State 1 is this in Standalone..
+private alias  1 : START_FLASHPRESSBUTTON // ..but it's this in Origins
 private alias  2 : START_LEVELSELECT
 private alias  3 : START_CONTINUESCREEN
 private alias  4 : START_ATTRACTMODE
@@ -28,9 +28,11 @@ private alias  9 : START_ORIGINSSTARTGAME
 private alias 10 : START_2PSENDCALLBACK
 
 // Player List Pos Aliases
-private alias 2 : PLAYER_KNUX_ALONE
+private alias 3 : PLAYER_SONIC_TAILS_A
+private alias 5 : PLAYER_AMY_A
+private alias 6 : PLAYER_AMY_TAILS_A
 
-// Origins Menu Aliases
+// Origins Menu Selection Aliases
 // (The in-game menu on the title screen, to clarify)
 private alias 0 : MENU_1PLAYER
 private alias 1 : MENU_2PLAYERVS
@@ -47,6 +49,14 @@ event ObjectUpdate
 	CheckTouchRect(0, 0, screen.xsize, screen.ysize) // Funny this is here since mouse input is mapped to buttonA in Origins
 	if keyPress[0].buttonB == true
 		checkResult = 1
+	end if
+	
+	if keyPress[0].start == true
+		checkResult = 2
+	end if
+	
+	if keyPress[0].buttonA == true
+		checkResult = 2
 	end if
 	
 	if input.pressButton == true
@@ -94,6 +104,7 @@ event ObjectUpdate
 			PlaySfx(SfxName[Menu Select], false)
 			StopMusic()
 #endplatform
+			
 #platform: USE_ORIGINS
 			if options.stageSelectFlag == true
 				object.state = START_LEVELSELECT
@@ -110,6 +121,9 @@ event ObjectUpdate
 		else
 			object.attractTimer++
 			if object.attractTimer == 420
+#platform: USE_ORIGINS
+				object.timer = 0
+#endplatform
 				object.state = START_ATTRACTMODE
 			end if
 		end if
@@ -194,7 +208,7 @@ event ObjectUpdate
 			specialStage.emeralds 	= 0
 			specialStage.nextZone 	= 0
 
-			// Attract Mode timee
+			// Attract Mode time
 			stage.activeList = REGULAR_STAGE
 			stage.listPos = attract.stage
 			stage.listPos <<= 1
@@ -203,6 +217,19 @@ event ObjectUpdate
 			attract.stage &= 3
 			options.attractMode = true
 			credits.screen = 0
+			
+#platform: USE_ORIGINS
+			// Amy isn't allowed to be in the demos, apparently
+			switch stage.playerListPos
+			case PLAYER_AMY_A
+				stage.playerListPos = PLAYER_SONIC
+				break
+				
+			case PLAYER_AMY_TAILS_A
+				stage.playerListPos = PLAYER_SONIC_TAILS
+				break
+			end switch
+#endplatform
 
 			LoadStage()
 		end if
@@ -247,6 +274,7 @@ event ObjectUpdate
 		if object.animationTimer > 59
 			object.animationTimer = 0
 		end if
+		
 		object.timer++
 		if object.timer >= 30
 			object.timer = 0
@@ -272,7 +300,7 @@ event ObjectUpdate
 	case START_1PWAITFORCHARSELECT
 		if game.callbackResult > 0
 			object.state = START_ORIGINSSTARTGAME
-			if stage.playerListPos > PLAYER_KNUX_ALONE
+			if stage.playerListPos > PLAYER_SONIC_TAILS_A // Not really sure what this check is for
 				CallNativeFunction2(NotifyCallback, NOTIFY_1P_VS_SELECT, 0)
 			end if
 			StopMusic()
@@ -281,6 +309,7 @@ event ObjectUpdate
 				object.state = START_AWAITACTION
 			end if
 		end if
+		// Fall-through
 		
 	case START_ORIGINSSTARTGAME
 		object.timer += 8
@@ -298,11 +327,18 @@ event ObjectUpdate
 				specialStage.listPos = 0
 				specialStage.emeralds = 0
 				specialStage.nextZone = 0
+				recWaterState = 0
+				recWaterLevel = 0
+				recMilliSeconds = 0
+				recRing = 0
+				recScore = 0
 				
 				if object.menuSelection == MENU_1PLAYER
+					// EHZ1
 					stage.activeList = REGULAR_STAGE
 					stage.listPos = 0
 				else
+					// 2P VS menu
 					stage.activeList = PRESENTATION_STAGE
 					stage.listPos = 3
 				end if
@@ -349,6 +385,7 @@ event ObjectDraw
 		if object.animationTimer > 59
 			object.animationTimer = 0
 		end if
+		
 		if object.animationTimer > 29
 			DrawSpriteScreenXY(0, screen.xcenter, object.ypos)
 		end if
@@ -357,8 +394,8 @@ event ObjectDraw
 	case START_ORIGINSMENU
 	case START_FLASHOPTION
 	case START_1PSENDCALLBACK
-		temp0 = object.ypos
-		temp1 = object.ypos
+		temp0 = object.ypos // temp0: "1 Player" line ypos
+		temp1 = object.ypos // temp1: "2 Player VS" line ypos
 		temp1 += 12
 		if object.menuSelection == MENU_1PLAYER
 			if object.animationTimer < 29
@@ -379,7 +416,6 @@ event ObjectDraw
 	case START_ORIGINSSTARTGAME
 	case START_2PSENDCALLBACK
 		break
-		
 	end switch
 #endplatform
 end event
@@ -387,18 +423,18 @@ end event
 
 event ObjectStartup
 #platform: USE_ORIGINS
-	CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, 0) // On the title screen??
+	CallNativeFunction2(NotifyCallback, NOTIFY_LEVEL_SELECT_MENU, false)
 #endplatform
+	
 	LoadSpriteSheet("Title/Title.gif")
 	switch engine.deviceType
 	case STANDARD
 		SpriteFrame(-49, -1, 98, 9, 1, 380)		// Press Button 	- #0
-			break
-			
-		case MOBILE
-		SpriteFrame(-57, -1, 114, 9, 1, 390)	// Touch To Start 	- #0
 		break
 		
+	case MOBILE
+		SpriteFrame(-57, -1, 114, 9, 1, 390)	// Touch To Start 	- #0
+		break
 	end switch
 	
 #platform: USE_ORIGINS
@@ -422,7 +458,7 @@ end event
 
 event RSDKLoad
 	LoadSpriteSheet("Title/Title.gif")
-	SpriteFrame(-49, -1, 98, 9, 1, 380)		// Press Button 	- #0
+	SpriteFrame(-49, -1, 98, 9, 1, 380)	// Press Button 	- #0
 	
 	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
 end event

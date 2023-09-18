@@ -56,7 +56,7 @@ private alias object.right		:	player.right
 private alias object.value0  : player.rings
 private alias object.value1  : player.timer
 private alias object.value9  : player.skidSpeed
-private alias object.value20 : player.topSpeed 			
+private alias object.value20 : player.topSpeed
 private alias object.value21 : player.acceleration
 private alias object.value22 : player.deceleration
 private alias object.value23 : player.airAcceleration
@@ -177,7 +177,7 @@ event ObjectUpdate
 		if object.xpos < temp0
 			object.type = TypeName[Blank Object]
 		else
-			if stage.playerListPos == PLAYER_TAILS_ALONE
+			if stage.playerListPos == PLAYER_TAILS_A
 				// Main player is Tails, shift him down a bit to account for his shorter height
 				player[0].ypos += 0x40000
 			end if
@@ -241,7 +241,7 @@ event ObjectUpdate
 		break
 
 	case TORNADO_SETUPOUTRO
-		// Start of end-of-level cutscene, start removing control from the player, 
+		// Start of end-of-level cutscene, start removing control from the player,
 		BoxCollisionTest(C_TOUCH, object.entityPos, -640, -192, 0, 0, 0, C_BOX, C_BOX, C_BOX, C_BOX)
 		if checkResult == true
 			if player[0].gravity == GRAVITY_GROUND
@@ -310,15 +310,19 @@ event ObjectUpdate
 			player[0].jumpStrength 		= 0x68000
 			player[0].jumpCap 			= -0x40000
 
-			object.state 		= TORNADO_LANDONTORNADO
+			object.state = TORNADO_LANDONTORNADO
 		end if
 		break
 
 	case TORNADO_LANDONTORNADO
 		object.xpos += object.xvel
 		object.ypos += object.yvel
-
 		object.timer++
+#platform: USE_ORIGINS
+		// Added in Origins Plus, make sure Sonic or Amy don't Drop Dash to their deaths
+		// This is a global variable, which is why we aren't specifying the object position
+		player.dropdashCount0 = 0
+#endplatform
 		BoxCollisionTest(C_PLATFORM, object.entityPos, -20, -8, 20, 8, 0, C_BOX, C_BOX, C_BOX, C_BOX)
 		if checkResult == true
 			player[0].jumpPress 	= false
@@ -455,7 +459,24 @@ event ObjectUpdate
 					arrayPos1 = options.saveSlot
 					arrayPos1 <<= 3
 					if stage.player2Enabled == true
+#platform: USE_STANDALONE
 						saveRAM[arrayPos1] = 3
+#endplatform
+#platform: USE_ORIGINS
+						switch stage.playerListPos
+						case PLAYER_SONIC_A
+							saveRAM[arrayPos1] = PLAYER_SONIC_TAILS
+							break
+							
+						case PLAYER_KNUCKLES_A
+							saveRAM[arrayPos1] = PLAYER_KNUCKLES_TAILS
+							break
+							
+						case PLAYER_AMY_A
+							saveRAM[arrayPos1] = PLAYER_AMY_TAILS
+							break
+						end switch
+#endplatform
 					else
 						saveRAM[arrayPos1] = stage.playerListPos
 					end if
@@ -536,7 +557,6 @@ event ObjectUpdate
 #endplatform
 		end if
 		break
-		
 	end switch
 
 	temp0 = object.ypos
@@ -563,7 +583,7 @@ event ObjectUpdate
 	object.frame &= 3
 
 	if object.pilotFrameDelay < 2
-		if stage.playerListPos == PLAYER_TAILS_ALONE
+		if stage.playerListPos == PLAYER_TAILS_A
 			GetTableValue(object.pilotFrame, object.pilotAnimPos, Tornado_SonicPilotFrameTable)
 			object.pilotAnimPos++
 

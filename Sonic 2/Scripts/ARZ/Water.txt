@@ -55,6 +55,9 @@ private alias object.value37 : player.shield
 
 private alias 1 : SUPERSTATE_SUPER
 
+private alias 30 : SLOT_VSGAME
+private alias object.value7 : object.waterSlotID
+
 // Death Event Aliases
 private alias object.value4 : object.timeOver
 
@@ -208,7 +211,7 @@ event ObjectUpdate
 	arrayPos0 = object.entityPos
 	CallFunction(object.proccessActEffects)
 
-	// ARZ water doesn't really move, but the functionality for it is here anyways just in case ig
+	// ARZ water doesn't really move, but the functionality for it is here anyway just in case ig
 	if object.ypos < stage.newWaterLevel
 		object.ypos += 0x10000
 	end if
@@ -231,6 +234,7 @@ event ObjectUpdate
 			end if
 		end if
 #endplatform
+		
 		if player[currentPlayer].gravityStrength == 0x3800
 			CheckNotEqual(player[currentPlayer].type, TypeName[Debug Mode])
 			temp0 = checkResult
@@ -415,10 +419,18 @@ event ObjectUpdate
 					player[currentPlayer].drownTimer++
 					if player[currentPlayer].drownTimer == 1800
 						if player[currentPlayer].state != Player_State_Death
-							if currentPlayer == 0
-								stage.timeEnabled = false
-								camera[0].enabled = false
+#platform: USE_ORIGINS
+							if options.vsMode == false
+#endplatform
+								if currentPlayer == 0
+									stage.timeEnabled = false
+									camera[0].enabled = false
+								end if
+#platform: USE_ORIGINS
+							else
+								camera[currentPlayer].style = CAMERASTYLE_STATIC
 							end if
+#endplatform
 							player[currentPlayer].state = Player_State_Drown
 							player[currentPlayer].animation = ANI_DROWNING
 							player[currentPlayer].speed = 0
@@ -492,7 +504,7 @@ event ObjectUpdate
 
 #platform: USE_STANDALONE
 					// Fixes a bug where jumping at the surface of the water will set your velocity too high
-					// Also yep this fix isn't in Origins, this is taken from the Sega Forever releases of the game
+					// Also yep this fix isn't in Origins, this is taken from the Sega Forever version of the game
 					if player[currentPlayer].animation == ANI_JUMPING
 						if player[currentPlayer].timer > 0
 							if player[currentPlayer].yvel < -0x68000
@@ -562,7 +574,7 @@ event ObjectStartup
 		object[arrayPos0].drawOrder = 5
 		object[arrayPos0].inkEffect = INK_ALPHA
 		object[arrayPos0].alpha = 0xA0
-		if credits.screen == 0 // (This check will always pass, see below)
+		if credits.screen == 0 // This check will always pass, see below
 			stage.newWaterLevel = object[arrayPos0].ypos
 		else
 			// Leftover from S1 LZ Water, there aren't any in-game credits in this game so this doesn't really matter...
@@ -588,7 +600,7 @@ event ObjectStartup
 			arrayPos0 = Water_waterSlotID
 			object[arrayPos0].ypos = stage.newWaterLevel
 		else
-			if credits.screen == 0 // This check will always pass too since this game doesn't have in-game credits, just a S1 leftover
+			if credits.screen == 0 // This check will always pass, see above
 				stage.waterState = 0
 			end if
 		end if
@@ -608,7 +620,7 @@ event ObjectStartup
 			player[currentPlayer].airAcceleration >>= 1
 			player[currentPlayer].airDeceleration >>= 1
 			player[currentPlayer].gravityStrength = 0x1000
-			if stage.playerListPos == PLAYER_KNUX_ALONE
+			if stage.playerListPos == PLAYER_KNUCKLES_A
 				player[currentPlayer].jumpStrength = 0x30000
 			else
 				player[currentPlayer].jumpStrength = 0x38000
@@ -619,6 +631,12 @@ event ObjectStartup
 			object[arrayPos0].constBubbleTimer = 52
 		end if
 	next
+	
+#platform: USE_ORIGINS
+	if options.vsMode == true
+		object[SLOT_VSGAME].waterSlotID = Water_waterSlotID
+	end if
+#endplatform
 	
 	// The only ARZ object to actually use this sheet...
 	// All the other water-related objects (besides Water Splash) use "CPZ/Objects2.gif" instead...

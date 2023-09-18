@@ -34,7 +34,7 @@ private alias object.xvel			: player.xvel
 private alias object.animation		: player.animation
 private alias object.animationSpeed : player.animationSpeed
 private alias object.controlMode	: player.controlMode
-
+private alias object.propertyValue	: player.character
 
 // ========================
 // Events
@@ -69,21 +69,28 @@ event ObjectUpdate
 		
 		// Every character has a unique target position
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
-		case PLAYER_SONIC_AND_TAILS
+		case PLAYER_SONIC_A
+		case PLAYER_SONIC_TAILS_A
 			// 172 pixels
 			temp1 = 0xAC0000
 			break
 
-		case PLAYER_TAILS_ALONE
+		case PLAYER_TAILS_A
 			// 177 pixels
 			temp1 = 0xB10000
 			break
 
-		case PLAYER_KNUX_ALONE
+		case PLAYER_KNUCKLES_A
 			// 168 pixels
 			temp1 = 0xA80000
 			break
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A
+		case PLAYER_AMY_TAILS_A
+			// 172 pixels
+			temp1 = 0xAC0000
+			break
+#endplatform
 
 		end switch
 
@@ -130,11 +137,25 @@ event ObjectUpdate
 		if keyPress[0].start == true
 			player[0].animation = ANI_CONTINUE_UP
 			player[0].speed = 0
-			if stage.playerListPos == PLAYER_KNUX_ALONE
+#platform: USE_STANDALONE
+			if stage.playerListPos == PLAYER_KNUCKLES_A
 				player[0].ypos -= 0x20000
 			else
 				player[0].ypos -= 0x60000
 			end if
+#endplatform
+
+#platform: USE_ORIGINS
+			switch player[0].character
+			case PLAYER_KNUCKLES_A
+			case PLAYER_AMY_A
+				player[0].ypos -= 0x20000
+				break
+			default
+				player[0].ypos -= 0x60000
+			end switch
+#endplatform
+
 			PlaySfx(SfxName[Charge], false)
 			
 			object.state++
@@ -267,19 +288,28 @@ event ObjectStartup
 
 	// Make minor position corrections based on the main character
 	switch stage.playerListPos
-	case PLAYER_SONIC_ALONE
-	case PLAYER_SONIC_AND_TAILS
+	case PLAYER_SONIC_A
+	case PLAYER_SONIC_TAILS_A
 		// Sonic doesn't need any corrections
 		break
 		
-	case PLAYER_TAILS_ALONE
+	case PLAYER_TAILS_A
 		player[0].ypos += 0x50000
 		break
 		
-	case PLAYER_KNUX_ALONE
+	case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+	case PLAYER_KNUCKLES_TAILS_A // Again...? This isn't a combo in Origins Plus...
+#endplatform
 		player[0].ypos -= 0x40000
 		break
-		
+#platform: USE_ORIGINS
+	case PLAYER_AMY_A
+	case PLAYER_AMY_TAILS_A
+		// Amy (and Tails) don't need any corrections?
+		break
+#endplatform
+
 	end switch
 
 	stage.newXBoundary2 = screen.xsize

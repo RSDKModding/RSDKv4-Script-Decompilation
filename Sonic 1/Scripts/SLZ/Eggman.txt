@@ -23,7 +23,7 @@ private alias object.value9  : object.targetSeeSaw
 private alias object.value10 : object.boundsL
 private alias object.value11 : object.boundsR
 private alias object.value12 : object.targetScreenPos.y
-private alias object.value13 : object.usedSpikeBall
+private alias object.value13 : object.playerHit // as in, if Eggman's been hit by the player at all (as opposed to getting hit by a seesaw bomb)
 
 // SeeSaw Aliases
 private alias object.value0  : object.orbTimer
@@ -32,6 +32,7 @@ private alias object.value9  : object.orbTargetPos.y
 private alias object.value10 : object.orbFrame
 private alias object.value12 : object.stood
 
+private alias 2 : SEESAW_ORB_LAUNCHED
 private alias 3 : SEESAW_NO_ORB
 
 // Eggman States
@@ -73,6 +74,11 @@ private alias object.speed : player.speed
 private alias object.animation : player.animation
 private alias object.collisionRight : player.collisionRight
 
+private alias object.value40 : player.hitboxLeft
+private alias object.value38 : player.hitboxTop
+private alias object.value41 : player.hitboxRight
+private alias object.value39 : player.hitboxBottom
+
 // Achievement Aliases
 private alias 7 : ACHIEVEMENT_BOMBSAWAY
 
@@ -90,13 +96,13 @@ reserve function SLZEggman_Oscillate
 // Tables
 // ========================
 
+// entityPos offsets
 private table SLZEggman_seesawSlotOffsets
 	2, 3, 1
 end table
 
-private table SLZEggman_seesawDropPos
-	0, 0, 0, 0, 0, 0
-end table
+// x positions of where Eggman should drop bombs
+private table SLZEggman_seesawDropPos[6]
 
 
 // ========================
@@ -116,7 +122,7 @@ private function SLZEggman_Hit
 		object.animationTimer = 0
 		object.state = SLZEGGMAN_EXPLODE
 		if stage.debugMode == false
-			if object.usedSpikeBall == false
+			if object.playerHit == false
 				// Grant the "Bombs Away" Achievement
 				CallNativeFunction2(SetAchievement, ACHIEVEMENT_BOMBSAWAY, 100)
 			end if
@@ -139,7 +145,7 @@ private function SLZEggman_DropSpikeBall
 	if object[arrayPos0].state == SEESAW_NO_ORB
 		if object[arrayPos0].stood == false
 			object.xpos = temp0
-			object[arrayPos0].state = 2
+			object[arrayPos0].state = SEESAW_ORB_LAUNCHED
 			object[arrayPos0].xvel = 0
 			object[arrayPos0].yvel = 0
 			object[arrayPos0].orbTargetPos.x = object.xpos
@@ -150,7 +156,7 @@ private function SLZEggman_DropSpikeBall
 			object[arrayPos0].animationTimer = 44
 			object.timer = 40
 			object.flameAnim = FLAME_INACTIVE
-			object.state++
+			object.state++ // should move state into SLZEGGMAN_DROPPEDBALL
 		end if
 	end if
 end function
@@ -360,11 +366,16 @@ event ObjectUpdate
 					end if
 				end if
 
+#platform: USE_STANDALONE
 				BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+#endplatform
+#platform: USE_ORIGINS
+				BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+#endplatform
 				if checkResult == true
 					CallFunction(Player_CheckHit)
 					if checkResult == true
-						object.usedSpikeBall = true
+						object.playerHit = true // since we've hit Eggman ourselves instead of using a seesaw bomb, we're no longer eligible for the Bombs Away achievement..
 						CallFunction(SLZEggman_Hit)
 					end if
 				end if
@@ -568,7 +579,7 @@ event ObjectStartup
 #endplatform
 
 			temp0 = screen.xcenter
-			temp0 -= 160
+			temp0 -= 160 // xcenter if screen width was 320 like the original game
 			temp0 -= 4
 			if temp0 < 0
 				temp0 = 0
@@ -610,6 +621,10 @@ event ObjectStartup
 	next
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)

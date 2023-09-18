@@ -31,6 +31,8 @@ private alias object.value15 : object.blockPos8.y
 private alias object.value16 : object.startPos.x
 private alias object.value17 : object.startPos.y
 
+private alias object.value20 : object.playerCollisions // Introduced in Origins Plus, stores what side of the stairs each player is touching
+
 // Player Aliases
 private alias object.state : player.state
 private alias object.xpos : player.xpos
@@ -55,6 +57,10 @@ reserve function RotatingStair_ProcessBlock
 // ========================
 
 private value RotatingStair_debugStartID = 0
+
+// Introduced in Origins Plus
+private value RotatingStair_playerSideStore  = 0
+private value RotatingStair_playerSideStore2 = 0
 
 
 // ========================
@@ -141,7 +147,6 @@ private function RotatingStair_ProcessBlock
 		temp1 += object.startPos.x
 		temp6 = temp1
 		break
-		
 	end switch
 
 	temp6 &= 0xFFFF0000
@@ -161,6 +166,20 @@ private function RotatingStair_ProcessBlock
 
 		case COL_LEFT
 		case COL_RIGHT
+#platform: USE_ORIGINS
+			if checkResult == COL_LEFT
+				RotatingStair_playerSideStore = 1
+				RotatingStair_playerSideStore <<= currentPlayer
+				RotatingStair_playerSideStore <<= currentPlayer
+				object.playerCollisions |= RotatingStair_playerSideStore
+			else
+				RotatingStair_playerSideStore = 2
+				RotatingStair_playerSideStore <<= currentPlayer
+				RotatingStair_playerSideStore <<= currentPlayer
+				object.playerCollisions |= RotatingStair_playerSideStore
+			end if
+#endplatform
+			
 			if player[currentPlayer].state == Player_State_Climb
 				player[currentPlayer].timer = 0
 				player[currentPlayer].animation = ANI_GLIDING_DROP
@@ -175,7 +194,6 @@ private function RotatingStair_ProcessBlock
 				end if
 			end if
 			break
-			
 		end switch
 	next
 end function
@@ -191,48 +209,83 @@ event ObjectUpdate
 	if temp0 == true
 		temp4 ^= 1
 	end if
+	
+#platform: USE_ORIGINS
+	object.playerCollisions = 0
+#endplatform
 
 	GetBit(temp0, object.propertyValue, 1)
 	if temp0 == false
 		temp5 = 0x100000
 		temp3 = 20
-		
 		object.xpos = object.blockPos1.x
 		object.ypos = object.blockpos1.y
 		CallFunction(RotatingStair_ProcessBlock)
 		object.blockPos1.x = temp6
 		object.blockpos1.y = temp7
-		temp4 ^= 2
 
+		temp4 ^= 2
 		object.xpos = object.blockpos2.x
 		object.ypos = object.blockpos2.y
 		CallFunction(RotatingStair_ProcessBlock)
 		object.blockpos2.x = temp6
 		object.blockpos2.y = temp7
+
 		temp4 ^= 2
 	end if
 
 	temp5 = 0x300000
 	temp3 = 22
-
 	object.xpos = object.blockpos3.x
 	object.ypos = object.blockpos3.y
 	CallFunction(RotatingStair_ProcessBlock)
 	object.blockpos3.x = temp6
 	object.blockpos3.y = temp7
-	temp4 ^= 2
 
+	temp4 ^= 2
 	object.xpos = object.blockpos4.x
 	object.ypos = object.blockpos4.y
 	CallFunction(RotatingStair_ProcessBlock)
 	object.blockpos4.x = temp6
 	object.blockpos4.y = temp7
-	temp4 ^= 2
 
+	temp4 ^= 2
 	temp5 = 0x500000
 	temp3 = 24
+	// (normally in the SLZ script block 5 would be processed right here, but CPZ staris only have 4 blocks, so..)
+
 	object.xpos = object.startPos.x
 	object.ypos = object.startPos.y
+	
+#platform: USE_ORIGINS
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		RotatingStair_playerSideStore2 = object.playerCollisions
+		RotatingStair_playerSideStore2 >>= currentPlayer
+		RotatingStair_playerSideStore2 >>= currentPlayer
+		
+		if RotatingStair_playerSideStore2 > 0
+			temp6 = player[currentPlayer].xpos
+			temp7 = player[currentPlayer].ypos
+			
+			ObjectTileCollision(CSIDE_LENTITY, currentPlayer, object.collisionRight, 45)
+			if checkResult == true
+				RotatingStair_playerSideStore2 |= 1
+			end if
+			
+			ObjectTileCollision(CSIDE_RENTITY, currentPlayer, object.collisionLeft, 45)
+			if checkResult == true
+				RotatingStair_playerSideStore2 |= 2
+			end if
+			
+			if RotatingStair_playerSideStore2 == 3
+				CallFunction(Player_Kill)
+			end if
+			
+			player[currentPlayer].xpos = temp6
+			player[currentPlayer].ypos = temp7
+		end if
+	next
+#endplatform
 end event
 
 

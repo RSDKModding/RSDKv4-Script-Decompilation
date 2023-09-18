@@ -71,6 +71,7 @@ reserve function CPZSetup_getClrDivisor
 reserve function CPZSetup_InitSuperSonicPal
 reserve function CPZSetup_InitSuperTailsPal
 reserve function CPZSetup_InitSuperKnuxPal
+reserve function CPZSetup_InitSuperAmyPal
 reserve function CPZSetup_SpeedUpMusic
 reserve function CPZSetup_SlowDownMusic
 
@@ -121,7 +122,7 @@ private table CPZSetup_deformationTable
 end table
 
 // Unused palette table, also found in DEZSetup and EndSetup and even Mania's CPZ!
-// These are actually colours for one of WFZ's palette cycles
+// These are actually colors for one of WFZ's palette cycles
 // However, you won't find this in WFZSetup because in this 2013 remake, WFZ only uses 1 of the 3 palette cycles it had in the original game,
 // this one being among the 2 that were cut
 // Why they were cut, I have no idea, but at the very least, it's certainly a mystery how one of them ended up here of all places...
@@ -186,10 +187,8 @@ private table CPZSetup_replay_attract_S
 	0x04, 7
 	0x00, 20
 	0x04, 30
-	0x00 // (?)
+	0x00 // There's supposed to be an even amount of entries, since these come in pairs, but I guess this table felt like having an extra value?
 end table
-
-// About that above table, there's supposed to be an even amount of entries, since it all comes in pairs, but I guess it just didn't wanna?
 
 private table CPZSetup_replay_attract_T
 	0x380000, 0x1F00000
@@ -375,7 +374,7 @@ end table
 
 // Wacky function to take a normal color and turn it into an underwater color
 private function CPZSetup_getClrDivisor
-	// Regular Colour
+	// Regular Color
 	object.clrDivisor_R = temp1
 	object.clrDivisor_R >>= 16
 
@@ -386,7 +385,7 @@ private function CPZSetup_getClrDivisor
 	object.clrDivisor_B = temp1
 	object.clrDivisor_B &= 0xFF
 
-	// Underwater Colour
+	// Underwater Color
 	object.waterClrDivisor_R = temp2
 	object.waterClrDivisor_R >>= 16
 
@@ -434,7 +433,7 @@ end function
 private function CPZSetup_InitSuperSonicPal
 	temp0 = 0
 
-	// First Set of colours is just the regular underwater palette
+	// First Set of colors is just the regular underwater palette
 	GetPaletteEntry(1, 2, temp1)
 	SetTableValue(temp1, temp0, Player_SonicSuperAltPal)
 	temp0++
@@ -469,7 +468,7 @@ private function CPZSetup_InitSuperSonicPal
 		SetPaletteEntry(3, 3, temp1)
 		temp0 -= 3
 
-		// Just mix the 2 palettes, we'll use the results as our new colours
+		// Just mix the 2 palettes, we'll use the results as our new colors
 		SetPaletteFade(5, 3, 4, 48, 0, 4)
 
 		GetPaletteEntry(5, 0, temp1)
@@ -726,6 +725,85 @@ private function CPZSetup_InitSuperKnuxPal
 end function
 
 
+private function CPZSetup_InitSuperAmyPal
+#platform: USE_ORIGINS
+	temp0 = 0
+	
+	GetPaletteEntry(1, 54, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 50, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 51, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 52, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	GetPaletteEntry(1, 53, temp1)
+	SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+	temp0++
+	
+	while temp0 < 30
+		temp4 = temp0
+		temp4 -= 5
+		
+		GetTableValue(temp1, temp4, Player_AmySuperAltPal)
+		
+		temp2 = temp1
+		temp2 >>= 8
+		temp2 &= 255
+		
+		temp3 = temp1
+		temp3 &= 255
+		
+		temp1 >>= 16
+		temp1 += 32
+		if temp1 > 255
+			temp1 = 255
+		end if
+		
+		temp2 += 32
+		if temp2 > 255
+			temp2 = 255
+		end if
+		
+		temp3 += 32
+		if temp3 > 255
+			temp3 = 255
+		end if
+		
+		temp1 <<= 16
+		temp2 <<= 8
+		temp1 += temp2
+		temp1 += temp3
+		SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+		temp0++
+	loop
+	
+	temp6 = 25
+	while temp0 < 50
+		temp5 = 0
+		while temp5 < 5
+			temp4 = temp6
+			temp4 += temp5
+			GetTableValue(temp1, temp4, Player_AmySuperAltPal)
+			SetTableValue(temp1, temp0, Player_AmySuperAltPal)
+			temp0++
+			temp5++
+		loop
+		
+		temp6 -= 5
+	loop
+#endplatform
+end function
+
+
 private function CPZSetup_SpeedUpMusic
 	CheckEqual(object[SLOT_MUSICEVENT_CHANGE].type, TypeName[Music Event])
 	temp0 = checkResult
@@ -751,7 +829,6 @@ private function CPZSetup_SpeedUpMusic
 			SetMusicTrack("ChemicalPlant_F.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ_F)
 			SetMusicTrack("Invincibility_F.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV_F)
 			break
-			
 		end switch
 	else
 		stage.musicFlag = MUSICEVENT_FLAG_SPEEDUP
@@ -784,7 +861,6 @@ private function CPZSetup_SlowDownMusic
 			SetMusicTrack("ChemicalPlant.ogg", TRACK_STAGE, MUSIC_LOOP_CPZ)
 			SetMusicTrack("Invincibility.ogg", TRACK_INVINCIBLE, MUSIC_LOOP_INV)
 			break
-			
 		end switch
 	else
 		stage.musicFlag = MUSICEVENT_FLAG_SLOWDOWN
@@ -797,80 +873,84 @@ end function
 // ========================
 
 event ObjectUpdate
-	GetTableValue(temp0, 21, StageSetup_oscillationTable)
-	if temp0 == 0
-		CPZSetup_rotatingStairTimer++
-		CPZSetup_rotatingStairTimer &= 3
-	end if
+#platform: USE_ORIGINS
+	if stage.state != STAGE_FROZEN
+#endplatform
+		GetTableValue(temp0, 21, StageSetup_oscillationTable)
+		if temp0 == 0
+			CPZSetup_rotatingStairTimer++
+			CPZSetup_rotatingStairTimer &= 3
+		end if
 
-	object.rippleTimer++
-	if object.rippleTimer > 7
-		tileLayer[1].deformationOffset++
-		object.rippleTimer = 0
-	end if
+		object.rippleTimer++
+		if object.rippleTimer > 7
+			tileLayer[1].deformationOffset++
+			object.rippleTimer = 0
+		end if
 
-	// Animate the converyor belts in the background
-	object.aniTileTimer++
-	if object.aniTileTimer == 5
-		object.aniTileTimer = 0
+		// Animate the converyor belts in the background
+		object.aniTileTimer++
+		if object.aniTileTimer == 5
+			object.aniTileTimer = 0
 
-		object.frame++
-		object.frame &= 7
-		temp0 = object.frame
-		temp0 += 768
-		Copy16x16Tile(767, temp0)
-	end if
+			object.frame++
+			object.frame &= 7
+			temp0 = object.frame
+			temp0 += 768
+			Copy16x16Tile(767, temp0)
+		end if
 
-	if Water_flashTimer > 0
-		Water_flashTimer--
-	end if
+		if Water_flashTimer > 0
+			Water_flashTimer--
+		end if
 
-	// Manage the various cycling palettes throughout the stage
-	object.paletteTimer++
-	if object.paletteTimer == 8
-		object.paletteTimer = 0
+		// Manage the various cycling palettes throughout the stage
+		object.paletteTimer++
+		if object.paletteTimer == 8
+			object.paletteTimer = 0
 
-		object.bgTowerLightPalIndex++
-		object.bgTowerLightPalIndex &= 15
-		GetTableValue(temp0, object.bgTowerLightPalIndex, CPZSetup_bgTowerLightPalTable)
-		SetPaletteEntry(0, 175, temp0)
+			object.bgTowerLightPalIndex++
+			object.bgTowerLightPalIndex &= 15
+			GetTableValue(temp0, object.bgTowerLightPalIndex, CPZSetup_bgTowerLightPalTable)
+			SetPaletteEntry(0, 175, temp0)
 
-		object.rainbowLightPalIndex++
-		object.rainbowLightPalIndex %= 21
-		GetTableValue(temp0, object.rainbowLightPalIndex, CPZSetup_rainbowLightPalTable)
-		SetPaletteEntry(0, 191, temp0)
+			object.rainbowLightPalIndex++
+			object.rainbowLightPalIndex %= 21
+			GetTableValue(temp0, object.rainbowLightPalIndex, CPZSetup_rainbowLightPalTable)
+			SetPaletteEntry(0, 191, temp0)
 
-		object.chemLiquidPalIndex1 += 3
-		object.chemLiquidPalIndex1 %= 27
-		GetTableValue(temp0, object.chemLiquidPalIndex1, CPZSetup_chemLiquidPalTable)
-		SetPaletteEntry(0, 188, temp0)
+			object.chemLiquidPalIndex1 += 3
+			object.chemLiquidPalIndex1 %= 27
+			GetTableValue(temp0, object.chemLiquidPalIndex1, CPZSetup_chemLiquidPalTable)
+			SetPaletteEntry(0, 188, temp0)
 
-		object.chemLiquidPalIndex2 += 3
-		object.chemLiquidPalIndex2 %= 27
-		GetTableValue(temp0, object.chemLiquidPalIndex2, CPZSetup_chemLiquidPalTable)
-		SetPaletteEntry(0, 189, temp0)
+			object.chemLiquidPalIndex2 += 3
+			object.chemLiquidPalIndex2 %= 27
+			GetTableValue(temp0, object.chemLiquidPalIndex2, CPZSetup_chemLiquidPalTable)
+			SetPaletteEntry(0, 189, temp0)
 
-		object.chemLiquidPalIndex3 += 3
-		object.chemLiquidPalIndex3 %= 27
-		GetTableValue(temp0, object.chemLiquidPalIndex3, CPZSetup_chemLiquidPalTable)
-		SetPaletteEntry(0, 190, temp0)
-	end if
+			object.chemLiquidPalIndex3 += 3
+			object.chemLiquidPalIndex3 %= 27
+			GetTableValue(temp0, object.chemLiquidPalIndex3, CPZSetup_chemLiquidPalTable)
+			SetPaletteEntry(0, 190, temp0)
+		end if
 
-	if CPZSetup_hasAchievement == false
-		if stage.debugMode == false
-			if stage.actNum == 2
-				if object[30].type == TypeName[Act Finish]
-					CPZSetup_hasAchievement = true
-					if CPZSetup_enteredWater == false
-						// Grant the "100% Chemical Free" Achievement
-						CallNativeFunction2(SetAchievement, ACHIEVEMENT_CHEMICALFREE, 100)
+		if CPZSetup_hasAchievement == false
+			if stage.debugMode == false
+				if stage.actNum == 2
+					if object[30].type == TypeName[Act Finish]
+						CPZSetup_hasAchievement = true
+						if CPZSetup_enteredWater == false
+							// Grant the "100% Chemical Free" Achievement
+							CallNativeFunction2(SetAchievement, ACHIEVEMENT_CHEMICALFREE, 100)
+						end if
 					end if
 				end if
 			end if
 		end if
+#platform: USE_ORIGINS
 	end if
 	
-#platform: USE_ORIGINS
 	object.drawingIndex = 0
 	CPZSetup_waterTintActive = 0
 #endplatform
@@ -937,7 +1017,7 @@ end event
 event ObjectStartup
 	LoadSpriteSheet("CPZ/Objects.gif")
 
-	// Reset the boss flashing colour
+	// Reset the boss flashing color
 	SetPaletteEntry(0, 192, 0x000000)
 
 	// Set the Chemical Plant music, and set its speedup/slowndown functions too
@@ -958,7 +1038,12 @@ event ObjectStartup
 
 	// Set object 10 to be a CPZ Setup object
 	object[SLOT_ZONESETUP].type 				= TypeName[CPZ Setup]
-	object[SLOT_ZONESETUP].priority 			= 1
+#platform: USE_STANDALONE
+	object[SLOT_ZONESETUP].priority 			= PRIORITY_ACTIVE
+#endplatform
+#platform: USE_ORIGINS
+	object[SLOT_ZONESETUP].priority 			= PRIORITY_ALWAYS
+#endplatform
 	object[SLOT_ZONESETUP].drawOrder 			= 0
 	object[SLOT_ZONESETUP].scrollPos 			= 496
 	object[SLOT_ZONESETUP].chemLiquidPalIndex2 	= 1
@@ -977,6 +1062,9 @@ event ObjectStartup
 	CallFunction(CPZSetup_InitSuperSonicPal)
 	CallFunction(CPZSetup_InitSuperTailsPal)
 	CallFunction(CPZSetup_InitSuperKnuxPal)
+#platform: USE_ORIGINS
+	CallFunction(CPZSetup_InitSuperAmyPal)
+#endplatform
 
 	// Load the eletric flash palette in case the player tries to swim with a lightning shield
 	LoadPalette("ElectricFlash.act", 2, 0, 0, 256)
@@ -994,24 +1082,26 @@ event ObjectStartup
 
 	if options.attractMode == true
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
+		case PLAYER_SONIC_A
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A // Amy isn't even able to show up in demos, but check for her anyway I guess
+#endplatform
 			Player_attractTable 	= CPZSetup_replay_attract_S
-			Player_attractTableSize 	= 109
+			Player_attractTableSize = 109
 			Player_attractDuration 	= 1800
 			break
 			
-		case PLAYER_TAILS_ALONE
+		case PLAYER_TAILS_A
 			Player_attractTable 	= CPZSetup_replay_attract_T
-			Player_attractTableSize 	= 216
+			Player_attractTableSize = 216
 			Player_attractDuration 	= 1560
 			break
 			
-		case PLAYER_KNUX_ALONE
+		case PLAYER_KNUCKLES_A
 			Player_attractTable 	= CPZSetup_replay_attract_K
-			Player_attractTableSize 	= 126
+			Player_attractTableSize = 126
 			Player_attractDuration 	= 1680
 			break
-			
 		end switch
 		
 		CallFunction(Player_SetupAttractDemo)

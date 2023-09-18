@@ -13,12 +13,13 @@ private alias object.value0 : object.spinCount
 private alias object.value1 : object.timer
 private alias object.value2 : object.centerOffset	 // x center offset, set from editor
 private alias object.value3 : object.enableMoveRight // should player move right when done spinning? (set from editor too)
+private alias object.value4 : object.fallbackTimer	 // Added in Origins 2.01
 
 private alias 0 : SIGNPOST2_AWAITPLAYER
 private alias 1 : SIGNPOST2_SPINNING
 private alias 2 : SIGNPOST2_HANDLEACTFINISH
 private alias 3 : SIGNPOST2_EXITSTAGERIGHT
-private alias 4 : SIGNPOST2_TOSPECIALSTAGE
+private alias 4 : SIGNPOST2_FINISHED
 
 // Tracks
 private alias 1 : TRACK_ACTFINISH
@@ -44,9 +45,13 @@ private alias object.jumpHold 		: player.jumpHold
 private alias object.interaction 	: player.interaction
 private alias object.controlMode 	: player.controlMode
 private alias object.value7 		: player.invincibleTimer
+private alias object.animation		: player.animation
 
 // Reserved Object Slot Aliases
 private alias 30 : SLOT_ACTFINISH
+
+// Achievement Aliases
+private alias 1 : ACHIEVEMENT_BLASTPROCESSING
 
 
 // ========================
@@ -55,6 +60,14 @@ private alias 30 : SLOT_ACTFINISH
 
 reserve function SignPost2_DebugDraw
 reserve function SignPost2_DebugSpawn
+
+
+// ========================
+// Static Values
+// ========================
+
+public value SignPost2_initFallback = 0
+public value SignPost2_fallbackCheck = 0
 
 
 // ========================
@@ -81,12 +94,17 @@ end function
 event ObjectUpdate
 	switch object.state
 	case SIGNPOST2_AWAITPLAYER
+		object.fallbackTimer++
+		
 		temp0 = object.ypos
 		temp0 += 0x400000
 		if player[0].ypos < temp0
 			if object.centerOffset > 0
-				temp0 = object.ixpos
-				temp0 -= player[0].ixpos
+				// These two lines used to use ixpos, but Plus changed them to xpos
+				temp0 = object.xpos
+				temp0 -= player[0].xpos
+				temp0 >>= 16
+				
 				CheckGreater(temp0, 0)
 				temp1 = checkResult
 				CheckLower(temp0, object.centerOffset)
@@ -116,7 +134,7 @@ event ObjectUpdate
 					if stage.listPos == 0
 						if stage.minutes == 0
 							if stage.seconds < 30
-								CallNativeFunction2(SetAchievement, 1, 100)
+								CallNativeFunction2(SetAchievement, ACHIEVEMENT_BLASTPROCESSING, 100)
 							end if
 						end if
 					end if
@@ -125,6 +143,7 @@ event ObjectUpdate
 				CallNativeFunction2(NotifyCallback, NOTIFY_TOUCH_SIGNPOST, 0)
 				stage.timeEnabled = false
 				object.state = SIGNPOST2_SPINNING
+				SignPost2_initFallback = object.fallbackTimer
 				PlaySfx(SfxName[Sign Post], false)
 				if Player_superState == SUPERSTATE_SUPER
 					Player_superState = SUPERSTATE_UNTRANSFORM
@@ -154,7 +173,7 @@ event ObjectUpdate
 				object.spinCount--
 				if object.spinCount == 0
 					if player[0].type == TypeName[Blank Object]
-						object.state = SIGNPOST2_TOSPECIALSTAGE
+						object.state = SIGNPOST2_FINISHED
 						if object.propertyValue < 3
 							PlayMusic(TRACK_ACTFINISH)
 						else
@@ -223,8 +242,19 @@ event ObjectUpdate
 		break
 
 	case SIGNPOST2_HANDLEACTFINISH
+		object.fallbackTimer++
+		SignPost2_fallbackCheck = object.fallbackTimer
+		SignPost2_fallbackCheck -= SignPost2_initFallback
+		if SignPost2_fallbackCheck > 200
+			PlayMusic(TRACK_ACTFINISH)
+			object[SLOT_ACTFINISH].type = TypeName[Act Finish]
+			object[SLOT_ACTFINISH].drawOrder = 6
+			object[SLOT_ACTFINISH].priority = PRIORITY_ACTIVE
+			object.state = SIGNPOST2_FINISHED
+		end if
+		
 		if player[0].type == TypeName[Blank Object]
-			object.state = SIGNPOST2_TOSPECIALSTAGE
+			object.state = SIGNPOST2_FINISHED
 
 			if object.propertyValue < 3
 				PlayMusic(TRACK_ACTFINISH)
@@ -237,6 +267,14 @@ event ObjectUpdate
 			object[SLOT_ACTFINISH].type 		= TypeName[Act Finish]
 			object[SLOT_ACTFINISH].drawOrder 	= 6
 			object[SLOT_ACTFINISH].priority 	= PRIORITY_ACTIVE
+		else
+			if player[0].animation == ANI_PUSHING
+				PlayMusic(TRACK_ACTFINISH)
+				object.state = SIGNPOST2_FINISHED
+				object[SLOT_ACTFINISH].type = TypeName[Act Finish]
+				object[SLOT_ACTFINISH].drawOrder = 6
+				object[SLOT_ACTFINISH].priority = PRIORITY_ACTIVE
+			end if
 		end if
 
 		if object.enableMoveRight != false
@@ -307,7 +345,7 @@ event ObjectUpdate
 		end if
 		break
 
-	case SIGNPOST2_TOSPECIALSTAGE
+	case SIGNPOST2_FINISHED
 		if stage.player2Enabled == true
 			temp0 = 40
 			temp0 += screen.xcenter
@@ -345,11 +383,16 @@ end event
 
 
 event ObjectStartup
-	LoadSpriteSheet("Global/Items2.gif")
+	// It's not like Amy is used in any missions, but sure ig
+	if stage.playerListPos == PLAYER_AMY
+		LoadSpriteSheet("Global/ItemsA.gif")
+	else
+		LoadSpriteSheet("Global/Items2.gif")
+	end if
 	SpriteFrame(-24, 16, 48, 16, 34, 214)
 
 	switch stage.playerListPos
-	case PLAYER_SONIC_ALONE
+	case PLAYER_SONIC_A
 		SpriteFrame(-24, -16, 48, 32, 34, 182)
 		SpriteFrame(-16, -16, 32, 32, 1, 150)
 		SpriteFrame(-4, -16, 8, 32, 189, 131)
@@ -360,7 +403,7 @@ event ObjectStartup
 		SpriteFrame(-16, -16, 32, 32, 1, 183)
 		break
 		
-	case PLAYER_TAILS_ALONE
+	case PLAYER_TAILS_A
 		SpriteFrame(-24, -16, 48, 32, 34, 182)
 		SpriteFrame(-16, -16, 32, 32, 83, 131)
 		SpriteFrame(-4, -16, 8, 32, 189, 131)
@@ -371,7 +414,7 @@ event ObjectStartup
 		SpriteFrame(-16, -16, 32, 32, 83, 163)
 		break
 		
-	case PLAYER_KNUX_ALONE
+	case PLAYER_KNUCKLES_A
 		SpriteFrame(-24, -16, 48, 32, 34, 182)
 		SpriteFrame(-16, -16, 32, 32, 83, 131)
 		SpriteFrame(-4, -16, 8, 32, 189, 131)
@@ -380,6 +423,16 @@ event ObjectStartup
 		SpriteFrame(-16, -16, 32, 32, 83, 131)
 		SpriteFrame(-4, -16, 8, 32, 189, 131)
 		SpriteFrame(-16, -16, 32, 32, 83, 163)
+		break
+	case PLAYER_AMY_A
+		SpriteFrame(-24, -16, 48, 32, 34, 182)
+		SpriteFrame(-16, -16, 32, 32, 1, 150)
+		SpriteFrame(-4, -16, 8, 32, 189, 131)
+		SpriteFrame(-16, -16, 32, 32, 1, 183)
+		SpriteFrame(-24, -16, 48, 32, 34, 83)
+		SpriteFrame(-16, -16, 32, 32, 1, 150)
+		SpriteFrame(-4, -16, 8, 32, 189, 131)
+		SpriteFrame(-16, -16, 32, 32, 1, 183)
 		break
 		
 	end switch

@@ -33,7 +33,7 @@ private alias object.value13 : object.superSonic.x
 private alias object.value14 : object.superSonic.y
 
 private alias object.value15 : object.superBlendTimer
-private alias object.value16 : object.superBlendColour
+private alias object.value16 : object.superBlendColor
 
 private alias 0  : TORNADO_CATCHPLAYER
 private alias 1  : TORNADO_STABALIZE
@@ -54,7 +54,7 @@ private alias 2 : SUPERSONIC_FLYALONGTORNADO
 private alias 3 : SUPERSONIC_FLYINTOBG
 private alias 4 : SUPERSONIC_OFFSCREEN
 private alias 5 : SUPERSONIC_FLYINTOSCREEN
-private alias 6 : SUPERSONIC_DISPAY
+private alias 6 : SUPERSONIC_DISPLAY
 
 // Player Aliases
 private alias object.xpos : player.xpos
@@ -121,6 +121,11 @@ end table
 private table Tornado_ZoomoutSprites_Knuckles
 	35, 35, 35, 35, 36, 36, 36, 36, 36, 36, 36, 37, 37, 37, 38
 	38, 38, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39, 39
+end table
+
+private table Tornado_ZoomoutSprites_Amy
+	60, 60, 60, 60, 61, 61, 61, 61, 61, 61, 61, 62, 62, 62, 63
+	63, 63, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64
 end table
 
 private table Tornado_ZoomoutPositions
@@ -210,8 +215,12 @@ private table Tornado_EndPosePositions
 	-0x010000, -0x020000
 end table
 
+// Bug Details:
+// ..5453? it's supposed to be "54, 53" but i think they forgot a comma..
+// The flash's fade-out is just supposed to be in the fade-in but in reverse, but this typo makes the fade-out a bit more abrupt than it should be
+// (5453 isn't even a valid SpriteFrame number..)
 private table Tornado_LogoTextFlash
-	51, 53, 54, 55, 0x154D, 51
+	51, 53, 54, 55, 5453, 51
 end table
 
 private table Tornado_LogoNumberFlash
@@ -228,13 +237,13 @@ private function Tornado_HandleSuperTailsPal
 	if object.superBlendTimer >= 12
 		object.superBlendTimer = 0
 
-		object.superBlendColour += 4
-		if object.superBlendColour >= 24
-			object.superBlendColour = 0
+		object.superBlendColor += 4
+		if object.superBlendColor >= 24
+			object.superBlendColor = 0
 		end if
 	end if
 
-	temp1 = object.superBlendColour
+	temp1 = object.superBlendColor
 	GetTableValue(temp0, temp1, Player_TailsSuperPal)
 	SetPaletteEntry(0, 202, temp0)
 
@@ -260,7 +269,7 @@ private function Tornado_AnimatePilot
 	object.propellerFrame &= 3
 
 	if object.pilot.timer < 2
-		if stage.playerListPos == PLAYER_TAILS_ALONE
+		if stage.playerListPos == PLAYER_TAILS_A
 			// Sonic pilots the Tornado when Tails is being saved
 
 			// Get the sprite
@@ -297,7 +306,7 @@ end function
 event ObjectUpdate
 	object.drawOrder = 4
 
-	if stage.playerListPos == PLAYER_TAILS_ALONE
+	if stage.playerListPos == PLAYER_TAILS_A
 		if Player_superState != SUPERSTATE_NONE
 			CallFunction(Tornado_HandleSuperTailsPal)
 		end if
@@ -310,29 +319,59 @@ event ObjectUpdate
 
 		if object.xpos == 0xB40000
 			if Player_superState != SUPERSTATE_NONE
-				if stage.playerListPos == PLAYER_KNUX_ALONE
+				if stage.playerListPos == PLAYER_KNUCKLES_A (PLAYER_KNUCKLES in Origins)
 					player[0].animation = ANI_GLIDING_DROP
 				end if
+#platform: USE_ORIGINS
+				if stage.playerListPos == PLAYER_KNUCKLES_TAILS
+					player[0].animation = ANI_GLIDING_DROP
+				end if
+#endplatform
 			end if
 		end if
 
 		if object.xpos > 0xD40000
+#platform: USE_ORIGINS
+			switch stage.playerListPos
+			case PLAYER_AMY_A
+			case PLAYER_AMY_TAILS_A
+				// Move Amy down a bit more
+				player[0].ypos += 0x30000
+				break
+			end switch
+#endplatform
+			
 			if Player_superState == SUPERSTATE_NONE
 				player[0].animation = ANI_STOPPED
 			else
-				if stage.playerListPos == PLAYER_TAILS_ALONE
+#platform: USE_STANDALONE
+				if stage.playerListPos == PLAYER_TAILS_A
 					player[0].animation = ANI_STOPPED
 				end if
 
-				if stage.playerListPos == PLAYER_KNUX_ALONE
+				if stage.playerListPos == PLAYER_KNUCKLES_A
 					player[0].animation = ANI_STOPPED
 				end if
+#endplatform
+				
+#platform: USE_ORIGINS
+				// I don't understand why they don't just check if the player isn't Sonic
+				switch stage.playerListPos
+				case PLAYER_TAILS_A
+				case PLAYER_KNUCKLES_A
+				case PLAYER_KNUCKLES_TAILS_A
+				case PLAYER_AMY_A
+				case PLAYER_AMY_TAILS_A
+					player[0].animation = ANI_STOPPED
+					break
+				end switch
+#endplatform
 			end if
 
 			EndingSetup_scrollVelocity.x = -0x10000
 
 			// Create a flock of birds
-			arrayPos0 = object[34].entityPos
+			arrayPos0 = object[34].entityPos // ..aka "arrayPos0 = 34"
 			temp0 = 0
 			temp1 = 0
 			temp3 = false
@@ -355,9 +394,9 @@ event ObjectUpdate
 			loop
 
 			switch stage.playerListPos
-			case PLAYER_SONIC_ALONE
-			case PLAYER_SONIC_AND_TAILS
-				if specialStage.emeralds >= 127
+			case PLAYER_SONIC_A
+			case PLAYER_SONIC_TAILS_A
+				if specialStage.emeralds >= 0x7F
 					object.superSonic.timer = 64
 					object.superSonic.state = SUPERSONIC_MEETTORNADO
 					
@@ -369,7 +408,6 @@ event ObjectUpdate
 					stage.deathBoundary <<= 16
 				end if
 				break
-				
 			end switch
 			
 			object.state = TORNADO_STABALIZE
@@ -391,18 +429,22 @@ event ObjectUpdate
 		if object.timer >= 1102
 			object.timer = 0
 			switch stage.playerListPos
-			case PLAYER_SONIC_ALONE
-			case PLAYER_SONIC_AND_TAILS
+			case PLAYER_SONIC_A
+			case PLAYER_SONIC_TAILS_A
 				if Player_superState == SUPERSTATE_NONE
 					player[0].visible = false
 				end if
 				break
 				
-			case PLAYER_TAILS_ALONE
-			case PLAYER_KNUX_ALONE
+			case PLAYER_TAILS_A
+			case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+			case PLAYER_KNUCKLES_TAILS_A
+			case PLAYER_AMY_A
+			case PLAYER_AMY_TAILS_A
+#endplatform
 				player[0].visible = false
 				break
-				
 			end switch
 			
 			object.state = TORNADO_FLYINTOBG
@@ -412,8 +454,8 @@ event ObjectUpdate
 
 	case TORNADO_FLYINTOBG
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
-		case PLAYER_SONIC_AND_TAILS
+		case PLAYER_SONIC_A
+		case PLAYER_SONIC_TAILS_A
 			if Player_superState != SUPERSTATE_NONE
 				if object.superSonic.state != SUPERSONIC_FLYINTOBG
 					object.superSonic.timer++
@@ -425,30 +467,37 @@ event ObjectUpdate
 				end if
 			end if
 			break
-
 		end switch
 
 		object.timer--
 		if object.timer < 0
 			object.timer = 2
 			switch stage.playerListPos
-			case PLAYER_SONIC_ALONE
-			case PLAYER_SONIC_AND_TAILS
-				if specialStage.emeralds < 127
+			case PLAYER_SONIC_A
+			case PLAYER_SONIC_TAILS_A
+				if specialStage.emeralds < 0x7F
 					GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_Sonic)
 				else
 					GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_SS)
 				end if
 				break
 
-			case PLAYER_TAILS_ALONE
+			case PLAYER_TAILS_A
 				GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_Tails)
 				break
 
-			case PLAYER_KNUX_ALONE
+			case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+			case PLAYER_KNUCKLES_TAILS_A
+#endplatform
 				GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_Knuckles)
 				break
-
+				
+#platform: USE_ORIGINS
+			case PLAYER_AMY_A
+			case PLAYER_AMY_TAILS_A
+				GetTableValue(object.tornadoFrame, object.zoomoutSprIndex, Tornado_ZoomoutSprites_Amy)
+#endplatform
 			end switch
 
 			temp0 = object.zoomoutSprIndex
@@ -469,7 +518,7 @@ event ObjectUpdate
 			if object.zoomoutSprIndex >= 28
 				object.timer = 0
 				object.zoomoutSprIndex = 0
-				if stage.playerListPos == PLAYER_TAILS_ALONE
+				if stage.playerListPos == PLAYER_TAILS_A
 					object.tornadoFrame = 49
 				else
 					object.tornadoFrame = 50
@@ -483,8 +532,8 @@ event ObjectUpdate
 
 	case TORNADO_OFFSCREEN
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
-		case PLAYER_SONIC_AND_TAILS
+		case PLAYER_SONIC_A
+		case PLAYER_SONIC_TAILS_A
 			if Player_superState != SUPERSTATE_NONE
 				if object.superSonic.state != SUPERSONIC_FLYINTOBG
 					object.superSonic.timer++
@@ -496,7 +545,6 @@ event ObjectUpdate
 				end if
 			end if
 			break
-
 		end switch
 
 		object.timer++
@@ -587,6 +635,7 @@ event ObjectUpdate
 		if object.timer < 320
 			object.timer += 12
 		else
+			// Roll the credits!
 			stage.activeList = PRESENTATION_STAGE
 			stage.listPos = 2
 			LoadStage()
@@ -599,7 +648,6 @@ event ObjectUpdate
 		end if
 		SetScreenFade(0x00, 0x00, 0x00, temp0)
 		break
-
 	end switch
 
 	switch object.superSonic.state
@@ -676,15 +724,14 @@ event ObjectUpdate
 			
 			object.superSonic.index++
 			if object.superSonic.index >= 38
-				object.superSonic.state = SUPERSONIC_DISPAY
+				object.superSonic.state = SUPERSONIC_DISPLAY
 			end if
 		end if
 		break
 
-	case SUPERSONIC_DISPAY
+	case SUPERSONIC_DISPLAY
 		// Just hover in front of the screen, nothing to do here
 		break
-
 	end switch
 end event
 
@@ -715,27 +762,38 @@ event ObjectDraw
 
 		// Draw the first frame of the character posing for the screen
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
-		case PLAYER_SONIC_AND_TAILS
-			if specialStage.emeralds < 127
+		case PLAYER_SONIC_A
+		case PLAYER_SONIC_TAILS_A
+			if specialStage.emeralds < 0x7F
 				temp0 -= 0x220000
 				temp1 -= 0x2F0000
 				DrawSpriteXY(24, temp0, temp1)
 			end if
 			break
 			
-		case PLAYER_TAILS_ALONE
+		case PLAYER_TAILS_A
 			temp0 -= 0x240000
 			temp1 -= 0x2D0000
 			DrawSpriteXY(32, temp0, temp1)
 			break
 			
-		case PLAYER_KNUX_ALONE
+		case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+		case PLAYER_KNUCKLES_TAILS_A
+#endplatform
 			temp0 -= 0x220000
 			temp1 -= 0x2F0000
 			DrawSpriteXY(40, temp0, temp1)
 			break
 			
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A
+		case PLAYER_AMY_TAILS_A
+			temp0 -= 0x220000
+			temp1 -= 0x2F0000
+			DrawSpriteXY(65, temp0, temp1)
+			break
+#endplatform
 		end switch
 		break
 
@@ -747,27 +805,38 @@ event ObjectDraw
 		
 		// Draw the second frame of the character posing for the screen
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
-		case PLAYER_SONIC_AND_TAILS
-			if specialStage.emeralds < 127
+		case PLAYER_SONIC_A
+		case PLAYER_SONIC_TAILS_A
+			if specialStage.emeralds < 0x7F
 				temp0 -= 0x2A0000
 				temp1 -= 0x2F0000
 				DrawSpriteXY(25, temp0, temp1)
 			end if
 			break
 			
-		case PLAYER_TAILS_ALONE
+		case PLAYER_TAILS_A
 			temp0 -= 0x2A0000
 			temp1 -= 0x250000
 			DrawSpriteXY(33, temp0, temp1)
 			break
 			
-		case PLAYER_KNUX_ALONE
+		case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+		case PLAYER_KNUCKLES_TAILS_A
+#endplatform
 			temp0 -= 0x2A0000
 			temp1 -= 0x270000
 			DrawSpriteXY(41, temp0, temp1)
 			break
 			
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A
+		case PLAYER_AMY_TAILS_A
+			temp0 -= 0x2A0000
+			temp1 -= 0x2F0000
+			DrawSpriteXY(66, temp0, temp1)
+			break
+#endplatform
 		end switch
 		break
 
@@ -795,9 +864,9 @@ event ObjectDraw
 
 		// And then draw the character posing in front of it
 		switch stage.playerListPos
-		case PLAYER_SONIC_ALONE
-		case PLAYER_SONIC_AND_TAILS
-			if specialStage.emeralds < 127
+		case PLAYER_SONIC_A
+		case PLAYER_SONIC_TAILS_A
+			if specialStage.emeralds < 0x7F
 				// Only normal Sonic is drawn here
 				// Super Sonic has his own entire process below
 				temp0 -= 0x6E0000
@@ -806,31 +875,40 @@ event ObjectDraw
 			end if
 			break
 
-		case PLAYER_TAILS_ALONE
+		case PLAYER_TAILS_A
 			temp0 -= 0x6D0000
 			temp1 -= 0x670000
 			DrawSpriteXY(34, temp0, temp1)
 			break
 
-		case PLAYER_KNUX_ALONE
+		case PLAYER_KNUCKLES_A
+#platform: USE_ORIGINS
+		case PLAYER_KNUCKLES_TAILS_A
+#endplatform
 			temp0 -= 0x660000
 			temp1 -= 0x670000
 			DrawSpriteXY(42, temp0, temp1)
 			break
-
+			
+#platform: USE_ORIGINS
+		case PLAYER_AMY_A
+		case PLAYER_AMY_TAILS_A
+			temp0 -= 0x6E0000
+			temp1 -= 0x670000
+			DrawSpriteXY(67, temp0, temp1)
+			break
+#endplatform
 		end switch
 		break
-
 	end switch
 
 	switch object.superSonic.state
 	case SUPERSONIC_FLYINTOBG
 	case SUPERSONIC_OFFSCREEN
 	case SUPERSONIC_FLYINTOSCREEN
-	case SUPERSONIC_DISPAY
+	case SUPERSONIC_DISPLAY
 		DrawSpriteXY(object.superSonic.frame, object.superSonic.x, object.superSonic.y)
 		break
-
 	end switch
 
 	if object.state >= TORNADO_FLYINTOSCREEN
@@ -842,7 +920,6 @@ end event
 
 
 event ObjectStartup
-
 	LoadSpriteSheet("Ending/Objects.gif")
 
 	// 0-3 - Front Propeller Frames
@@ -942,9 +1019,26 @@ event ObjectStartup
 	SpriteFrame(28, -20, 32, 39, 479, 337)
 	SpriteFrame(28, -20, 32, 39, 479, 377)
 	SpriteFrame(28, -20, 32, 39, 479, 417)
-
+	
+#platform: USE_ORIGINS
+	// 60-64 - Zoomout Tornado Frames, Tails as pilot and Amy as passenger
+	SpriteFrame(-32, -32, 60, 48, 257, 1)
+	SpriteFrame(-24, -24, 44, 36, 402, 151)
+	SpriteFrame(-20, -19, 39, 31, 242, 256)
+	SpriteFrame(-20, -19, 40, 31, 282, 256)
+	SpriteFrame(-19, -15, 38, 27, 256, 50)
+	
+	// 65-67 - Amy Posing Frames
+	SpriteFrame(2, 2, 27, 35, 256, 77)
+	SpriteFrame(-1, -1, 28, 43, 256, 113)
+	SpriteFrame(6, -3, 65, 102, 325, 256)
+#endplatform
 end event
 
+
+// ========================
+// Editor Events
+// ========================
 
 event RSDKDraw
 	DrawSprite(0)
