@@ -67,9 +67,7 @@ private table Transporter_tableSizes
 	1, 1, 7, 1, 7, 1, 7, 1
 end table
 
-private table Transporter_tablePtrs
-	0, 0, 0, 0, 0, 0, 0, 0
-end table
+private table Transporter_tablePtrs[8]
 
 // World Positions of the "nodes", kinda rigid way of doin it, but whatever works I suppose...
 private table Transporter_movementTable0
@@ -276,14 +274,17 @@ event ObjectUpdate
 			temp0++
 			GetTableValue(object.nodePos.y, temp0, object.tablePtr)
 
-			if object.propertyValue == TRANSPORTER_TYPE_ULU
+			if object.propertyValue == TRANSPORTER_TYPE_ULU // (this one uses screen wrapping)
 				player[currentPlayer].ypos += 0x8000000
 				if currentPlayer == 0
 					tileLayer[2].scrollPos -= 0x1000000
 					camera[0].ypos += 0x800
 					screen.yoffset += 0x800
 				end if
-
+				
+				// Bug Details (kinda?):
+				// -> Rings are teleported in order to mask the screen wrap, but if P2 enters
+				//     a teleporter without P1 then the rings will visibly disappear in front of the camera
 				foreach (TypeName[Ring], arrayPos0, ACTIVE_ENTITIES)
 					BoxCollisionTest(C_TOUCH, object.entityPos, -128, -256, 0, 0, arrayPos0, -8, -8, 8, 8)
 					if checkResult == true
@@ -398,7 +399,7 @@ event RSDKDraw
 		
 		GetTableValue(object.tablePtr, temp0, Transporter_tablePtrs)
 		GetTableValue(object.tableSize, temp0, Transporter_tableSizes)
-		object.tableSize *= 2;
+		object.tableSize *= 2
 		
 		temp0 = 0
 		while temp0 < object.tableSize
