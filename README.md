@@ -1,4 +1,4 @@
-# Sonic 1/2 2013 Script Decompilation
+# RSDKv4 Script Decompilation
 
 A full decompilation for the scripts in Sonic 1 & 2's 2013 mobile remakes.
 
@@ -21,4 +21,4 @@ To use these scripts in mods:
 Make sure you use the appropriate Scripts folder for the game you're trying to run.
 Mods are only required to include the scripts that have been changed.
 
-For anyone curious about how Sonic 1/2's scripting language works, check out the handbook (RetroScript Handbook v4.pdf) we made to help get people into using RetroScript v4. We recommend downloading the handbook as it makes it easier to navigate.
+For anyone curious about how RSDKv4's scripting language works, check out the handbook (RetroScript Handbook v4.pdf) we made to help get people into using RetroScript v4. We recommend downloading the handbook as it makes it easier to navigate.
