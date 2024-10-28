@@ -48,6 +48,7 @@ private alias object.interaction 	: player.interaction
 private alias object.controlMode 	: player.controlMode
 private alias object.value7 		: player.invincibleTimer
 private alias object.animation		: player.animation
+private alias object.value30		: player.jumpOffset
 
 // Reserved Object Slot Aliases
 private alias 30 : SLOT_ACTFINISH
@@ -323,6 +324,54 @@ event ObjectUpdate
 	// "SIGNPOST_BLANK" doesn't have anything, it's set by Act Finish in SBZ2 for the transition
 	
 	end switch
+	
+#platform: USE_DECOMP
+	// Fix for when the screen is wide enough to extend beyond the stage width, 
+	// causing the player to die during the results screen
+	if object.state >= SIGNPOST_SPINNING
+		if object.state != SIGNPOST_BLANK
+			CheckCurrentStageFolder("Zone06")
+			temp0 = checkResult
+			CheckEqual(stage.actNum, 2)
+			temp0 &= checkResult
+			if temp0 == true
+				temp0 = object.xpos
+			else
+				temp0 = tileLayer[0].xsize
+				temp0 <<= 7
+				temp0 <<= 16
+			end if
+			
+			if player[0].xpos > temp0
+				temp1 = object.ypos
+				temp1 += 0xD0000
+				if player[0].animation == ANI_JUMPING
+					temp2 = player[0].jumpOffset
+					temp2 <<= 16
+					temp1 -= temp2
+				end if
+				if player[0].ypos > temp1
+					player[0].ypos = temp1
+					player[0].yvel = 0
+				end if
+			end if
+			
+			if player[1].xpos > temp0
+				temp1 = object.ypos
+				temp1 += 0xD0000
+				if player[1].animation == ANI_JUMPING
+					temp2 = player[1].jumpOffset
+					temp2 <<= 16
+					temp1 -= temp2
+				end if
+				if player[1].ypos > temp1
+					player[1].ypos = temp1
+					player[1].yvel = 0
+				end if
+			end if
+		end if
+	end if
+#endplatform
 
 #platform: USE_ORIGINS
 	if game.playMode == BOOT_PLAYMODE_MISSION

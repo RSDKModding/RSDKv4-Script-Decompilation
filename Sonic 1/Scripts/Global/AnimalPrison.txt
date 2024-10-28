@@ -35,6 +35,7 @@ private alias object.down		 : player.down
 private alias object.left		 : player.left
 private alias object.right		 : player.right
 private alias object.controlMode : player.controlMode
+private alias object.value30	 : player.jumpOffset
 
 // Tracks
 private alias 1 : TRACK_ACTFINISH
@@ -225,7 +226,7 @@ event ObjectUpdate
 				player[0].controlMode = CONTROLMODE_NONE
 				
 #platform: USE_ORIGINS
-				// A fallback in case the Player somehow gets to this capsule without beating the boss, for the Boss Rush
+				// A fallback in case the player somehow gets to this capsule without beating the boss, for the Boss Rush
 				// -> Every individual boss calls this function already, but it doesn't hurt to play it safe
 				CallNativeFunction2(NotifyCallback, NOTIFY_BOSS_END, true)
 #endplatform
@@ -238,6 +239,28 @@ event ObjectUpdate
 			break
 			
 		end switch
+	
+#platform: USE_DECOMP
+		// Fix for when the screen is wide enough to extend beyond the stage width, 
+		// causing the player to die during the results screen
+		temp0 = tileLayer[0].xsize
+		temp0 <<= 7
+		temp0 <<= 16
+		
+		if player[currentPlayer].xpos > temp0
+			temp1 = object.ypos
+			temp1 += 0xD0000
+			if player[currentPlayer].animation == ANI_JUMPING
+				temp2 = player[currentPlayer].jumpOffset
+				temp2 <<= 16
+				temp1 -= temp2
+			end if
+			if player[currentPlayer].ypos > temp1
+				player[currentPlayer].ypos = temp1
+				player[currentPlayer].yvel = 0
+			end if
+		end if
+#endplatform
 
 		temp0 = screen.xcenter
 		temp0 += 40
