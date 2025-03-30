@@ -212,6 +212,10 @@ event RSDKEdit
 			GetBit(checkResult, object.propertyValue, 7)
 			break
 			
+		case 2 // size
+			checkResult = object.frame
+			break
+			
 		end switch
 	else
 		switch editor.variableID
@@ -231,37 +235,44 @@ event RSDKEdit
 			SetBit(object.propertyValue, 7, checkResult)
 			break
 			
+		case 2 // size
+			object.frame = editor.variableValue
+			break
+			
 		end switch
 	end if
 end event
 
 
 event RSDKDraw
-	GetBit(object.frame, object.propertyValue, 7)
 	DrawSprite(object.frame)
 
 	if editor.showGizmos == true
 		object.inkEffect = INK_BLEND
 
-		// Top Preview
-		temp1 = object.ypos
-		temp1 += 0x40000
 		temp0 = object.propertyValue
 		temp0 &= 0x7F
 		temp0 <<= 18
+
+		// Top Preview
+		temp1 = object.ypos
+		temp1 += 0x40000
 		temp1 += temp0
 		DrawSpriteFX(object.frame, FX_INK, object.xpos, temp1)
 
 		// Bottom Preview
-		temp1 = object.ypos
-		temp1 += 0x40000
-		temp0 = object.propertyValue
-		temp0 &= 0x7F
-		temp0 <<= 18
-		temp1 -= temp0
-		DrawSpriteFX(object.frame, FX_INK, object.xpos, temp1)
-
+		temp2 = object.ypos
+		temp2 += 0x40000
+		temp2 -= temp0
+		DrawSpriteFX(object.frame, FX_INK, object.xpos, temp2)
+		
+		// Draw an arrow showing the direction this Elevator will go
 		object.inkEffect = INK_NONE
+		if object.propertyValue >= 0x80 // See what the top bit has
+			DrawArrow(object.xpos, temp2, object.xpos, temp1, 0x00, 0xFF, 0x00)
+		else
+			DrawArrow(object.xpos, temp1, object.xpos, temp2, 0x00, 0xFF, 0x00)
+		end if
 	end if
 end event
 
@@ -278,4 +289,9 @@ event RSDKLoad
 	SetActiveVariable("direction")
 	AddEnumVariable("Up", 0)
 	AddEnumVariable("Down", 1)
+
+	AddEditorVariable("size")
+	SetActiveVariable("size")
+	AddEnumVariable("Large", 0)
+	AddEnumVariable("Small", 1)
 end event
