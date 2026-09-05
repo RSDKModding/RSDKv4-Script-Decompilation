@@ -1,0 +1,189 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Flip Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.value16 : debugMode.currentSelection
+
+// Property Values
+private alias 0 : HORIZONTAL_DOOR
+private alias 1 : VERTICAL_DOOR
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function FlipDoor_DebugDraw
+reserve function FlipDoor_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+public value FlipDoor_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function FlipDoor_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= FlipDoor_startDebugID
+    temp0 <<= 1
+    DrawSprite(temp0)
+end function
+
+
+public function FlipDoor_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= FlipDoor_startDebugID
+    CreateTempObject(TypeName[Flip Door], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.timer > 0
+        object.timer--
+    end if
+
+    if object.propertyValue == HORIZONTAL_DOOR
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -4, 24, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                if player[currentPlayer].ypos > object.ypos
+                    if object.timer == 0
+                        PlaySfx(SfxName[Door], false)
+                    end if
+
+                    object.timer = 10
+                end if
+            end if
+        next
+    else
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if player[currentPlayer].xpos < object.xpos
+                BoxCollisionTest(C_TOUCH, object.entityPos, -16, -24, 0, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    if object.timer == 0
+                        PlaySfx(SfxName[Door], false)
+                    end if
+
+                    object.timer = 10
+                end if
+            else
+                if object.timer == 0
+                    BoxCollisionTest(C_SOLID, object.entityPos, -24, -24, 4, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    if object.propertyValue == HORIZONTAL_DOOR
+        if object.timer > 0
+            DrawSprite(1)
+        else
+            DrawSprite(0)
+        end if
+    else
+        if object.timer > 0
+            DrawSprite(3)
+        else
+            DrawSprite(2)
+        end if
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects.gif")
+
+    SpriteFrame(-24, -4, 48, 8, 117, 34)    // #0 - Flip Door Horizontal
+    SpriteFrame(-24, -44, 8, 48, 167, 43)   // #1 - Flip Door Horizontal Open
+    SpriteFrame(-4, -24, 8, 48, 176, 43)    // #2 - Flip Door Vertical
+    SpriteFrame(-4, -24, 48, 8, 117, 34)    // #3 - Flip Door Vertical Open
+
+    foreach (TypeName[Flip Door], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].drawOrder = 5
+    next
+
+    temp0 = 0
+    FlipDoor_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Flip Door], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(FlipDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(FlipDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // orientation
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // orientation
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects.gif")
+
+    SpriteFrame(-24, -4, 48, 8, 117, 34)    // #0 - Flip Door Horizontal
+    SpriteFrame(-4, -24, 8, 48, 176, 43)    // #1 - Flip Door Vertical
+
+    AddEditorVariable("orientation")
+    SetActiveVariable("orientation")
+    AddEnumVariable("Horizontal", HORIZONTAL_DOOR)
+    AddEnumVariable("Vertical", VERTICAL_DOOR)
+end event

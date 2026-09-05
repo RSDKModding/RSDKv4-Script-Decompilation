@@ -1,0 +1,109 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Poh Bee Shot Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : POHBEESHOT_BURST
+private alias 1 : POHBEESHOT_FIRE
+private alias 2 : POHBEESHOT_PROJECTILE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case POHBEESHOT_BURST
+        if object.timer < 4
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+            object.frame = 1
+        end if
+        break
+
+    case POHBEESHOT_FIRE
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+
+        if object.timer < 12
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+            object.frame = 2
+        end if
+        break
+
+    case POHBEESHOT_PROJECTILE
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+
+        if object.timer > 1
+            object.frame = 3
+        else
+            object.frame = 2
+        end if
+
+        object.timer++
+        object.timer &= 3
+        break
+    end switch
+
+    if object.outOfBounds == true
+        object.type = TypeName[Blank Object]
+    end if
+
+    if object.state > POHBEESHOT_BURST
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CallFunction(Player_Hit)
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 197, 68)  // #0 - Shot animation frame 0
+    SpriteFrame(-8, -8, 16, 16, 69, 117)  // #1 - Shot animation frame 1
+
+    SpriteFrame(-8, -8, 16, 16, 1, 134)   // #2 - Shot animation frame 0
+    SpriteFrame(-8, -8, 16, 16, 17, 134)  // #3 - Shot animation frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-8, -8, 16, 16, 1, 134)  // #0 - Shot animation
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

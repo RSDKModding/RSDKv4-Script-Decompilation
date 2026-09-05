@@ -1,0 +1,289 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Broken Monitor Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.powerUpPos
+private alias object.value1 : object.timer
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.value0  : player.rings
+private alias object.value6  : player.speedShoesTimer
+private alias object.value7  : player.invincibleTimer
+private alias object.value38 : player.shield
+
+// States
+private alias 0 : BROKENMONITOR_SPAWN_POWERUP
+private alias 1 : BROKENMONITOR_FADE_POWERUP
+private alias 2 : BROKENMONITOR_BLANK
+
+// Property Values
+private alias 0  : MONITOR_BLANK
+private alias 1  : MONITOR_RINGS
+private alias 2  : MONITOR_SHIELD_BLUE
+private alias 3  : MONITOR_INVINCIBILITY
+private alias 4  : MONITOR_SPEEDSHOES
+private alias 5  : MONITOR_1UP_SONIC
+private alias 6  : MONITOR_1UP_TAILS
+private alias 7  : MONITOR_TIME
+private alias 8  : MONITOR_SUPER
+private alias 9  : MONITOR_SHIELD_LIGHTNING
+private alias 10 : MONITOR_SHIELD_FIRE
+private alias 11 : MONITOR_SHIELD_BUBBLE
+private alias 12 : MONITOR_EGGMAN
+private alias 13 : MONITOR_DEBUG_SHIELD
+private alias 14 : MONITOR_DEBUG_TIMESTONES
+
+// Reserved Object Slot Aliases
+private alias 25 : SLOT_MUSICEVENT_CHANGE
+
+// Music Event States
+private alias 2 : MUSICEVENT_TRANSITION
+
+// Pan
+private alias 0 : PAN_RIGHT
+private alias 1 : PAN_LEFT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BROKENMONITOR_SPAWN_POWERUP
+		if object.timer < 0
+			object.powerUpPos += object.timer
+			object.timer += 0x1800
+		else
+			object.timer = 0
+		end if
+
+		if object.timer == 0
+			object.state     = BROKENMONITOR_FADE_POWERUP
+			object.inkEffect = INK_ALPHA
+
+			switch object.propertyValue
+			case MONITOR_RINGS
+				player[SLOT_PLAYER1].rings += 10
+
+				if ringPan == PAN_RIGHT
+					PlaySfx(SfxName[Ring L], false)
+					SetSfxAttributes(SfxName[Ring L], -1, -100)
+					ringPan = PAN_LEFT
+				else
+					PlaySfx(SfxName[Ring R], false)
+					SetSfxAttributes(SfxName[Ring R], -1, 100)
+					ringPan = PAN_RIGHT
+				end if
+
+				if player[SLOT_PLAYER1].rings > 999
+					player[SLOT_PLAYER1].rings = 999
+				end if
+
+				if player[SLOT_PLAYER1].rings >= ringExtraLife
+					if options.gameMode != MODE_TIMEATTACK
+						player.lives++
+						PlaySfx(SfxName[Jump], false)
+						PauseMusic()
+						ResetObjectEntity(SLOT_MUSICEVENT_CHANGE, TypeName[Blank Object], MUSICEVENT_TRANSITION, 0, 0)
+						object[SLOT_MUSICEVENT_CHANGE].priority = PRIORITY_ACTIVE
+					end if
+
+					ringExtraLife += 100
+					if ringExtraLife > 300
+						ringExtraLife = 1000
+					end if
+
+					if stage.debugMode == false
+						if player[SLOT_PLAYER1].rings >= 200
+						end if
+					end if
+				end if
+				break
+
+			case MONITOR_SHIELD_BLUE
+				PlaySfx(SfxName[Blue Shield], false)
+
+				arrayPos0     = playerCount
+				currentPlayer = SLOT_PLAYER1
+
+				player[currentPlayer].shield = SHIELD_NORMAL
+				if object[arrayPos0].type != invincibilityType
+					CallFunction(Player_ApplyShield)
+				end if
+				break
+
+			case MONITOR_INVINCIBILITY
+				arrayPos0     = playerCount
+				currentPlayer = SLOT_PLAYER1
+
+				ResetObjectEntity(arrayPos0, invincibilityType, 0, player[currentPlayer].xpos, player[currentPlayer].ypos)
+				object[arrayPos0].priority = PRIORITY_ACTIVE
+
+				player[currentPlayer].invincibleTimer = 1260
+				PlayMusic(2)
+				break
+
+			case MONITOR_SPEEDSHOES
+				currentPlayer = SLOT_PLAYER1
+				PlayMusic(3)
+				player[currentPlayer].speedShoesTimer = 1320
+				CallFunction(Player_UpdatePhysicsState)
+				break
+
+			case MONITOR_1UP_SONIC
+			case MONITOR_1UP_TAILS
+				player.lives++
+				if stage.playerListPos == PLAYER_SONIC_A
+					PlaySfx(SfxName[1 Up], false)
+				else
+					PlaySfx(SfxName[Achievement], false)
+				end if
+				break
+
+			case MONITOR_TIME
+				break
+
+			case MONITOR_SUPER
+				break
+
+			case MONITOR_SHIELD_LIGHTNING
+				PlaySfx(SfxName[Lightning Shield], false)
+
+				arrayPos0     = playerCount
+				currentPlayer = SLOT_PLAYER1
+
+				player[currentPlayer].shield = SHIELD_LIGHTNING
+				if object[arrayPos0].type != invincibilityType
+					CallFunction(Player_ApplyShield)
+				end if
+				break
+
+			case MONITOR_SHIELD_FIRE
+				PlaySfx(SfxName[Fire Shield], false)
+
+				arrayPos0     = playerCount
+				currentPlayer = SLOT_PLAYER1
+
+				player[currentPlayer].shield = SHIELD_FIRE
+				if object[arrayPos0].type != invincibilityType
+					CallFunction(Player_ApplyShield)
+				end if
+				break
+
+			case MONITOR_SHIELD_BUBBLE
+				PlaySfx(SfxName[Bubble Shield], false)
+
+				arrayPos0     = playerCount
+				currentPlayer = SLOT_PLAYER1
+
+				player[currentPlayer].shield = SHIELD_BUBBLE
+				if object[arrayPos0].type != invincibilityType
+					CallFunction(Player_ApplyShield)
+				end if
+				break
+
+			case MONITOR_EGGMAN
+				currentPlayer = SLOT_PLAYER1
+				CallFunction(Player_Hit)
+				break
+
+			case MONITOR_DEBUG_SHIELD
+				PlaySfx(SfxName[Blue Shield], false)
+
+				options.shieldType++
+				options.shieldType &= 1
+
+				arrayPos0     = playerCount
+				currentPlayer = SLOT_PLAYER1
+				CallFunction(Player_ApplyShield)
+				break
+
+			case MONITOR_DEBUG_TIMESTONES
+				if specialStage.timeStones != 127 // 0b1111111, each '1' bit represents an obtained time stone
+					specialStage.timeStones = 127
+				else
+					specialStage.timeStones = 0
+				end if
+				break
+			end switch
+		end if
+		break
+
+	case BROKENMONITOR_FADE_POWERUP
+		object.timer++
+		if object.timer == 30
+			object.timer = 0
+			object.state = BROKENMONITOR_BLANK
+
+			object.propertyValue = MONITOR_BLANK
+			if object.priority != PRIORITY_XBOUNDS_DESTROY
+				object.priority = PRIORITY_BOUNDS
+			end if
+		else
+			if object.timer > 14
+				object.alpha -= 16
+			end if
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+	if object.propertyValue > MONITOR_BLANK
+		DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.powerUpPos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items.gif")
+
+	// 0 - Broken Monitor Frame
+	SpriteFrame(-16, 0, 32, 16, 51, 166)
+
+	// 1-8 - Icons
+	SpriteFrame(-8, -9, 16, 14, 18, 49)  // #1 - Ring
+	SpriteFrame(-8, -9, 16, 14, 35, 49)  // #2 - Blue Shield
+	SpriteFrame(-8, -9, 16, 14, 18, 64)  // #3 - Invincibility
+	SpriteFrame(-8, -9, 16, 14, 35, 64)  // #4 - Power Sneakers
+	SpriteFrame(-8, -9, 16, 14, 18, 79)  // #5 - Sonic
+	SpriteFrame(-8, -9, 16, 14, 35, 79)  // #6 - Tails
+	SpriteFrame(-8, -9, 16, 14, 18, 94)  // #7 - Time
+	SpriteFrame(-8, -9, 16, 14, 35, 94)  // #8 - Super
+	SpriteFrame(-8, -9, 16, 14, 18, 109) // #9 - Lightning Shield
+	SpriteFrame(-8, -9, 16, 14, 35, 109) // #10 - Fire Shield
+	SpriteFrame(-8, -9, 16, 14, 18, 124) // #11 - Bubble Shield
+	SpriteFrame(-8, -9, 16, 14, 35, 124) // #12 - Eggman
+	SpriteFrame(-8, -9, 16, 14, 18, 139) // #13 - Debug Shield
+	SpriteFrame(-8, -9, 16, 14, 35, 139) // #14 - Debug Timestones
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-16, 0, 32, 16, 51, 166) // Broken Monitor
+
+	// Not to be used in-editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

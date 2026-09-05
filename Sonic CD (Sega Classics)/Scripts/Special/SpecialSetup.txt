@@ -1,0 +1,227 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Special Setup Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Universal Aliases
+private alias object.value5 : object.screenDepth
+
+// HUD Aliases
+private alias object[4].value0 : HUD.ufosCount
+private alias object[4].value1 : HUD.timeSeconds
+private alias object[4].value2 : HUD.timeFrames
+private alias object[4].value6 : HUD.bonusUFONo // "No" akin to Entity No, not as in "is there no UFO?"
+private alias object[4].value7 : HUD.waterTimer
+
+// UFO Aliases
+private alias object.ypos : object.zpos
+
+// Stage Finish State Aliases
+private alias 9 : STAGEFINISH_LOADLEVELSELECT
+
+// Soundtrack
+private alias 0 : OST_JP
+
+// Tile Layer Types
+private alias 4 : LAYER_3DSKY
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	scene3D.vertexCount = 0
+	scene3D.faceCount = 0
+
+	// Update the oscillation value
+	// Although it's normally used for synced movements throughout a stage, the Oscillation value is never actually used within the Special Stage
+	oscillation++
+	if oscillation == 512
+		oscillation = 0
+	end if
+
+	// Time is managed here
+	if HUD.ufosCount > 0
+		if stage.timeEnabled == false
+			// Progress the timer
+			HUD.timeFrames++
+			if HUD.timeFrames == 60
+				HUD.timeFrames = 0
+				if HUD.timeSeconds > 0
+					if HUD.timeSeconds < 6
+						// Time's almost up, play a jingle to alert the player
+						PlaySfx(SfxName[Drown Alert], false)
+					end if
+
+					HUD.timeSeconds--
+					if HUD.timeSeconds < 20
+						// Less than 20 seconds left, quickly, spawn a time UFO to help the player!
+						arrayPos0 = HUD.bonusUFONo
+
+						// Make sure the bonus UFO doesn't exist already
+						if object[arrayPos0].type != TypeName[UFO]
+							PlaySfx(SfxName[Time UFO], false)
+
+							arrayPos1 = arrayPos0
+							arrayPos1++
+
+							object[arrayPos0].type = TypeName[UFO]
+							object[arrayPos0].priority = PRIORITY_ACTIVE
+							object[arrayPos0].propertyValue = 2
+							object[arrayPos0].xpos = object[arrayPos1].xpos
+							object[arrayPos0].zpos = object[arrayPos1].zpos
+						end if
+					end if
+				else
+					// Time's over, so start the stage results
+					object[30].type = TypeName[Stage Finish]
+
+					if stage.actNum == 8
+						// If in the Robotnik Special Stage, then go to the Level Select
+						object[30].state = STAGEFINISH_LOADLEVELSELECT
+						object[30].drawOrder = 7
+					end if
+
+					object[2].controlMode = -1
+				end if
+			end if
+
+			if HUD.waterTimer > 0
+				if HUD.waterTimer > 1
+					if HUD.waterTimer > 20
+						temp0 = HUD.timeFrames
+						temp0 &= 1
+
+						if HUD.timeSeconds > 0
+							HUD.timeSeconds -= temp0
+						else
+							// No more time left, end the stage by spawning the results
+							object[30].type = TypeName[Stage Finish]
+
+							if stage.actNum == 8
+								// If in the Robotnik Special Stage, then go back to the Level Select rather than the normal SS results
+								object[30].state = STAGEFINISH_LOADLEVELSELECT
+								object[30].drawOrder = 7
+							end if
+
+							object[2].controlMode = -1
+						end if
+					else
+						if object[3].type != TypeName[Water Splash]
+							HUD.waterTimer = 0
+						end if
+					end if
+
+					HUD.waterTimer--
+				else
+					if object[3].type != TypeName[Water Splash]
+						HUD.waterTimer = 0
+					else
+						temp0 = HUD.timeFrames
+						temp0 &= 1
+
+						if HUD.timeSeconds > 0
+							HUD.timeSeconds -= temp0
+						else
+							// Player wasted too much time puddling around and now time's up, end the stage
+							object[30].type = TypeName[Stage Finish]
+
+							if stage.actNum == 8
+								// Player wasted too much time puddling around and now time's up, end the stage
+								object[30].state = STAGEFINISH_LOADLEVELSELECT
+								object[30].drawOrder = 7
+							end if
+
+							object[2].controlMode = -1
+						end if
+					end if
+				end if
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	// Sort the drawing orders of all entities
+	// (Things further away from the camera should be drawn first and things closest should be last, etc.)
+	temp0 = 0
+	temp1 = screen[3].drawListSize
+	while temp0 < temp1
+		temp2 = temp1
+		temp2--
+
+		while temp2 > temp0
+			temp3 = temp2
+			temp2--
+
+			// Get the object slots of the two objects
+			GetDrawListEntityRef(arrayPos0, 3, temp3)
+			GetDrawListEntityRef(arrayPos1, 3, temp2)
+
+			// Compare their sorted draw orders
+			if object[arrayPos0].screenDepth > object[arrayPos1].screenDepth
+				SetDrawListEntityRef(arrayPos0, 3, temp2)
+				SetDrawListEntityRef(arrayPos1, 3, temp3)
+			end if
+		loop
+		temp0++
+	loop
+end event
+
+
+event ObjectStartup
+	// Despite not having any SpriteFrames to draw with, go ahead and load the Special Stage objects sheet anyway
+	// (It doesn't make much of a difference but hey, may as well anyway!)
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// Set the ground to the "3D Sky" layer type
+	// -> This way, it'll render in high-quality mode if possible, as opposed to the "3D Floor" type
+	tileLayer[0].type = LAYER_3DSKY
+
+	if options.soundtrack == OST_JP
+		SetMusicTrack("JP/Specialstage.ogg", 0, true)
+		SetMusicTrack("JP/ZoneComplete.ogg", 1, false)
+	else
+		SetMusicTrack("US/Specialstage.ogg", 0, 270972)
+		SetMusicTrack("US/ZoneComplete.ogg", 1, false)
+	end if
+
+	stage.pauseEnabled = true
+	stage.timeEnabled = false
+
+	// Cycle through all Special Setup objects
+	foreach (TypeName[Special Setup], arrayPos0, ALL_ENTITIES)
+		// And if there is one, destroy it
+		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+	next
+
+	object[23].type = TypeName[Special Setup]
+	object[23].priority = PRIORITY_ACTIVE
+
+	// Give it a draw order lower right before the primary one, to make sure it can sort all the upcoming 3D entities correctly
+	object[23].drawOrder = 2
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

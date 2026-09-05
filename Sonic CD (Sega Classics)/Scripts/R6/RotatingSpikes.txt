@@ -1,0 +1,320 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Rotating Spikes Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.angle
+private alias object.value1 : object.increment
+private alias object.value2 : object.spawnedSpikes
+
+// Moving Block Aliases
+private alias object[-1].rotation : movingBlocks.rotation
+
+// Bug Details:
+// This should be aliased as object[9], because this version of the game has the HUD reserved at that slot.
+// Instead, we are incorrectly using the RSDKv3 version's reserved slot
+
+// Fix:
+// Adjust this alias to use object[9] instead of object[24]
+
+// HUD Aliases
+private alias object[24].propertyValue : HUD.currentTimePeriod
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Property Values
+private alias 0 : ROTATION_CLOCKWISE
+private alias 1 : ROTATION_COUNTERCLOCKWISE
+private alias 2 : ROTATION_CCW_LINK_MOVINGBLOCKS
+private alias 3 : ROTATION_CCW_TWO_SPIKES
+private alias 4 : ROTATION_CW_SIX_SPIKES
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.propertyValue == ROTATION_CCW_LINK_MOVINGBLOCKS
+        object.angle = movingBlocks.rotation
+    else
+        object.angle += object.increment
+    end if
+
+    if object.angle < 0
+        object.angle += 512
+    end if
+    object.angle &= 511
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        temp0 = 0
+        temp1 = 16
+        temp2 = object.xpos
+        temp3 = object.ypos
+
+        while temp0 < object.spawnedSpikes
+            Cos(object.xpos, object.angle)
+            object.xpos *= temp1
+            object.xpos <<= 7
+            object.xpos += temp2
+
+            Sin(object.ypos, object.angle)
+            object.ypos *= temp1
+            object.ypos <<= 7
+            object.ypos += temp3
+
+            BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CallFunction(Player_Hit)
+            end if
+
+            temp0++
+            temp1 += 16
+        loop
+
+        object.xpos = temp2
+        object.ypos = temp3
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+
+    temp0 = 0
+    temp1 = 16
+    while temp0 < object.spawnedSpikes
+        Cos(temp2, object.angle)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, object.angle)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += object.ypos
+
+        DrawSpriteXY(1, temp2, temp3)
+
+        temp0++
+        temp1 += 16
+    loop
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    foreach (TypeName[Rotating Spikes], arrayPos0, ALL_ENTITIES)
+        switch object[arrayPos0].propertyValue
+        case ROTATION_CLOCKWISE
+            object[arrayPos0].increment = 2
+
+            switch HUD.currentTimePeriod
+            case TIME_PRESENT
+                object[arrayPos0].spawnedSpikes = 5
+                break
+
+            case TIME_PAST
+                object[arrayPos0].spawnedSpikes = 4
+                break
+
+            case TIME_GOOD_FUTURE
+            case TIME_BAD_FUTURE
+                object[arrayPos0].spawnedSpikes = 6
+                break
+
+            end switch
+            break
+
+        case ROTATION_COUNTERCLOCKWISE
+            object[arrayPos0].increment = -2
+
+            switch HUD.currentTimePeriod
+            case TIME_PRESENT
+                object[arrayPos0].spawnedSpikes = 5
+                break
+
+            case TIME_PAST
+                object[arrayPos0].spawnedSpikes = 4
+                break
+
+            case TIME_GOOD_FUTURE
+            case TIME_BAD_FUTURE
+                object[arrayPos0].spawnedSpikes = 6
+                break
+
+            end switch
+
+            object[arrayPos0].angle = 384
+            break
+
+        case ROTATION_CCW_LINK_MOVINGBLOCKS
+            object[arrayPos0].increment = -2
+
+            switch HUD.currentTimePeriod
+            case TIME_PRESENT
+                object[arrayPos0].spawnedSpikes = 5
+                break
+
+            case TIME_PAST
+                object[arrayPos0].spawnedSpikes = 4
+                break
+
+            case TIME_GOOD_FUTURE
+            case TIME_BAD_FUTURE
+                object[arrayPos0].spawnedSpikes = 6
+                break
+
+            end switch
+            break
+
+        case ROTATION_CCW_TWO_SPIKES
+            object[arrayPos0].increment     = -2
+            object[arrayPos0].spawnedSpikes = 2
+            break
+
+        case ROTATION_CW_SIX_SPIKES
+            object[arrayPos0].increment     = 2
+            object[arrayPos0].spawnedSpikes = 6
+            break
+        end switch
+    next
+
+    SpriteFrame(-8, -8, 16, 16, 133, 199)  // #0 - Rotating Spikes Center
+    SpriteFrame(-8, -8, 16, 16, 150, 199)  // #1 - Spikes
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+
+	temp0 = 0
+
+	switch object.propertyValue
+	case ROTATION_CLOCKWISE
+	case ROTATION_COUNTERCLOCKWISE
+	case ROTATION_CCW_LINK_MOVINGBLOCKS
+		CallFunction(EditorHelpers_FindTimePeriod)
+		switch checkResult
+		case TIME_PRESENT
+			temp1 = 5
+			break
+
+		case TIME_PAST
+			temp1 = 4
+			break
+
+		case TIME_GOOD_FUTURE
+		case TIME_BAD_FUTURE
+			temp1 = 6
+			break
+
+		end switch
+		break
+
+	case ROTATION_CCW_TWO_SPIKES
+		temp1 = 2
+		break
+
+	case ROTATION_CW_SIX_SPIKES
+		temp1 = 6
+		break
+
+	end switch
+
+	temp2 = object.xpos
+	temp3 = object.ypos
+	while temp0 < temp1
+		temp2 += 0x100000
+		temp3 += 0x100000
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+	loop
+
+	if editor.showGizmos == true
+		switch object.propertyValue
+		case ROTATION_CLOCKWISE
+		case ROTATION_CW_SIX_SPIKES
+			temp0 = object.ixpos
+			temp0 += 32
+			temp0 <<= 16
+
+			temp1 = object.iypos
+			temp1 += 32
+			temp1 <<= 16
+			DrawArrow(temp0, object.ypos, object.xpos, temp1, 255, 255, 255, 0)
+			break
+
+		case ROTATION_COUNTERCLOCKWISE
+		case ROTATION_CCW_LINK_MOVINGBLOCKS
+		case ROTATION_CCW_TWO_SPIKES
+			temp0 = object.ixpos
+			temp0 += 32
+			temp0 <<= 16
+
+			temp1 = object.iypos
+			temp1 += 32
+			temp1 <<= 16
+			DrawArrow(object.xpos, temp1, temp0, object.ypos, 255, 255, 255, 0)
+			break
+
+		end switch
+
+		if object.propertyValue == ROTATION_CCW_LINK_MOVINGBLOCKS
+			DrawLine(object.xpos, object.ypos, object[-1].xpos, object[-1].ypos, 0, 255, 255)
+		end if
+	end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 181, 143)   // #0 - Spike Joint
+    SpriteFrame(-8, -8, 16, 16, 181, 160)   // #1 - Spike
+
+    CallFunction(EditorHelpers_FindTimePeriod)
+    AddEditorVariable("spikeType")
+    SetActiveVariable("spikeType")
+
+    switch checkResult
+    default
+    case TIME_PRESENT
+        AddEnumVariable("5 Spikes Clock-wise", ROTATION_CLOCKWISE)
+        AddEnumVariable("5 Spikes Counter Clock-wise", ROTATION_COUNTERCLOCKWISE)
+        AddEnumVariable("5 Spikes Clock-wise, linked to moving blocks", ROTATION_CCW_LINK_MOVINGBLOCKS)
+        break
+
+    case TIME_PAST
+        AddEnumVariable("4 Spikes Clock-wise", ROTATION_CLOCKWISE)
+        AddEnumVariable("4 Spikes Counter Clock-wise", ROTATION_COUNTERCLOCKWISE)
+        AddEnumVariable("4 Spikes Clock-wise, linked to moving blocks", ROTATION_CCW_LINK_MOVINGBLOCKS)
+        break
+
+    case TIME_GOOD_FUTURE
+    case TIME_BAD_FUTURE
+        AddEnumVariable("6 Spikes Clock-wise", ROTATION_CLOCKWISE)
+        AddEnumVariable("6 Spikes Counter Clock-wise", ROTATION_COUNTERCLOCKWISE)
+        AddEnumVariable("6 Spikes Counter Clock-wise, linked to moving blocks", ROTATION_CCW_LINK_MOVINGBLOCKS)
+        break
+
+    end switch
+
+    AddEnumVariable("2 Spikes Counter Clock-wise", ROTATION_CCW_TWO_SPIKES)
+    AddEnumVariable("6 Spikes Clock-wise", ROTATION_CW_SIX_SPIKES)
+end event

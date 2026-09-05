@@ -1,0 +1,344 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Crush Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+private alias object.value4 : object.speed
+private alias object.value5 : object.largePlatform
+private alias object.value6 : object.increaseValue
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.ypos      : player.ypos
+private alias object.yvel      : player.yvel
+private alias object.gravity   : player.gravity
+private alias object.animation : player.animation
+private alias object.value1    : player.timer
+private alias object.value9    : player.animationReserve
+
+// States
+private alias 0 : CRUSHPLATFORM_DESCEND
+private alias 1 : CRUSHPLATFORM_WAIT
+private alias 2 : CRUSHPLATFORM_ASCEND
+private alias 3 : CRUSHPLATFORM_WAIT_2
+
+// Property Values
+private alias 0 : PLATFORM_START_TOP
+private alias 1 : PLATFORM_START_BOTTOM
+
+// Property Values
+private alias 0  : NORMAL_SPEED
+private alias 5  : LARGE_NORMAL_SPEED
+private alias 69 : LARGE_FAST_SPEED
+private alias 72 : NORMAL_FAST_LAUNCH
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.largePlatform == false
+        object.angle += object.increaseValue
+        object.angle &= 511
+        if object.propertyValue == PLATFORM_START_BOTTOM
+            object.angle += 256
+        end if
+
+        Sin(object.collisionOffset.y, object.angle)
+        object.collisionOffset.y *= object.speed
+        object.collisionOffset.y += object.ypos
+        object.collisionOffset.y &= -0x10000 // Truncate the value
+        object.collisionOffset.y -= object.drawPos.y
+    else
+        switch object.state
+        case CRUSHPLATFORM_DESCEND
+            object.angle += 4
+            object.angle &= 511
+            if object.angle == 128
+                object.state++
+            end if
+            break
+
+        case CRUSHPLATFORM_WAIT
+            if object.timer < 64
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case CRUSHPLATFORM_ASCEND
+            object.angle += 4
+            object.angle &= 511
+            if object.angle == 384
+                object.state++
+            end if
+            break
+
+        case CRUSHPLATFORM_WAIT_2
+            if object.timer < 64
+                object.timer++
+            else
+                object.timer = 0
+                object.state = CRUSHPLATFORM_DESCEND
+            end if
+            break
+
+        end switch
+
+        Sin(object.collisionOffset.y, object.angle)
+        object.collisionOffset.y *= object.speed
+        object.collisionOffset.y += object.ypos
+        object.collisionOffset.y &= -0x10000 // Truncate the value
+        object.collisionOffset.y -= object.drawPos.y
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        temp0 = object.ypos
+        temp1 = player[currentPlayer].ypos
+        object.ypos = object.drawPos.y
+
+        if object.largePlatform == false
+            BoxCollisionTest(C_SOLID, object.entityPos, -32, -32, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_TOP
+                player[currentPlayer].ypos += object.collisionOffset.y
+            else
+                if checkResult == COL_BOTTOM
+                    if player[currentPlayer].gravity == GRAVITY_GROUND
+                        if object.collisionOffset.y > 0
+                            CallFunction(Player_Kill)
+                        else
+                            player[currentPlayer].ypos = temp1
+                        end if
+                    end if
+                end if
+            end if
+        else
+            BoxCollisionTest(C_SOLID, object.entityPos, -32, -96, 32, 96, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_TOP
+                player[currentPlayer].ypos += object.collisionOffset.y
+                if object.angle == 320
+                    player[currentPlayer].state = Player_State_Air
+                    player[currentPlayer].timer = 0
+                    player[currentPlayer].yvel = -0x100000
+                    player[currentPlayer].animation = ANI_BOUNCING
+                    player[currentPlayer].gravity = GRAVITY_AIR
+                    player[currentPlayer].animationReserve = ANI_WALKING
+                end if
+            else
+                if checkResult == COL_BOTTOM
+                    if player[currentPlayer].gravity == GRAVITY_GROUND
+                        if object.collisionOffset.y > 0
+                            CallFunction(Player_Kill)
+                        else
+                            player[currentPlayer].ypos = temp1
+                        end if
+                    end if
+                end if
+            end if
+        end if
+
+        object.ypos = temp0
+    next
+end event
+
+
+event ObjectDraw
+    Sin(object.drawPos.y, object.angle)
+    object.drawPos.y *= object.speed
+    object.drawPos.y += object.ypos
+    object.drawPos.y &= -0x10000 // Truncate the value
+
+    DrawSpriteXY(0, object.xpos, object.drawPos.y)
+
+    if object.largePlatform == true
+        DrawSpriteXY(1, object.xpos, object.drawPos.y)
+        DrawSpriteXY(2, object.xpos, object.drawPos.y)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects.gif")
+
+    SpriteFrame(-32, -32, 64, 64, 1, 1) // #0 - Crush Platform (also the middle of the large Crush Platform)
+    SpriteFrame(-32, -96, 64, 64, 1, 1) // #1 - Large Crush Platform Top
+    SpriteFrame(-32, 32, 64, 64, 1, 1)  // #2 - Large Crush Platform Bottom
+
+    foreach (TypeName[Crush Platform], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].increaseValue = 2
+        if object[arrayPos0].propertyValue == NORMAL_SPEED
+            object[arrayPos0].speed = 0x1000
+        else
+            object[arrayPos0].speed = 0x1800
+        end if
+
+        if object[arrayPos0].propertyValue == LARGE_NORMAL_SPEED
+            object[arrayPos0].largePlatform = true
+            object[arrayPos0].speed = 0x1000
+        end if
+
+        if object[arrayPos0].propertyValue == LARGE_FAST_SPEED
+            object[arrayPos0].largePlatform = true
+            object[arrayPos0].speed = 0x1800
+        end if
+
+        if object[arrayPos0].propertyValue == NORMAL_FAST_LAUNCH
+            object[arrayPos0].increaseValue = 6
+        end if
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+        case 0 // Property Value
+            checkResult = object.propertyValue
+            break
+
+        end switch
+
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            if editor.variableValue >= NORMAL_FAST_LAUNCH
+                object.propertyValue = NORMAL_FAST_LAUNCH
+            else
+                if editor.variableValue >= LARGE_FAST_SPEED
+                    object.propertyValue = LARGE_FAST_SPEED
+                else
+                    if editor.variableValue >= LARGE_NORMAL_SPEED
+                        object.propertyValue = LARGE_NORMAL_SPEED
+                    else
+                        if editor.variableValue >= 2
+                            object.propertyValue = 2
+                        else
+                            object.propertyValue = editor.variableValue
+                        end if
+                    end if
+                end if
+            end if
+            break
+
+        case 0 // type
+            switch Editor.variableValue
+            case 0
+                object.propertyValue = PLATFORM_START_TOP
+                break
+
+            case 1
+                object.propertyValue = PLATFORM_START_BOTTOM
+                break
+
+            case 2
+                object.propertyValue = LARGE_NORMAL_SPEED
+                break
+
+            case 3
+                object.propertyValue = LARGE_FAST_SPEED
+                break
+
+            case 4
+                object.propertyValue = NORMAL_FAST_LAUNCH
+                break
+
+            end switch
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    switch object.propertyValue
+    case NORMAL_SPEED
+    case LARGE_NORMAL_SPEED
+        temp2 = 0x1000
+        break
+
+    default
+    case LARGE_FAST_SPEED
+        temp2 = 0x1800
+        break
+
+    end switch
+
+    Sin(temp5, 0)
+    temp5 *= temp2
+    temp5 += object.ypos
+    temp5 &= 0xFFFF0000 // Truncate the value
+    DrawSpriteXY(0, object.xpos, temp5)
+
+    switch object.propertyValue
+    case LARGE_NORMAL_SPEED
+    case LARGE_FAST_SPEED
+        DrawSpriteXY(1, object.xpos, temp5)
+        DrawSpriteXY(2, object.xpos, temp5)
+        break
+
+    end switch
+
+    if editor.showGizmos == true
+        editor.drawingOverlay = true
+
+        temp0  = object.ypos
+        switch object.propertyValue
+        case NORMAL_SPEED
+        case NORMAL_FAST_LAUNCH
+            temp0 -= 0x400000
+            DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, 255, 0)
+
+            temp0 += 0x800000
+            DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, 255, 0)
+            break
+
+        case LARGE_NORMAL_SPEED
+        case LARGE_FAST_SPEED
+            temp0 -= 0x800000
+            DrawArrow(Object.xpos, object.ypos, object.xpos, temp0, 255, 255, 0)
+
+            temp0 += 0x1100000
+            DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, 255, 0)
+            break
+
+        end switch
+
+        editor.drawingOverlay = false
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects.gif")
+
+    SpriteFrame(-32, -32, 64, 64, 1, 1) // #0 - Crush Platform (also the middle of the large Crush Platform)
+    SpriteFrame(-32, -96, 64, 64, 1, 1) // #1 - Large Crush Platform Top
+    SpriteFrame(-32, 32, 64, 64, 1, 1)  // #2 - Large Crush Platform Bottom
+
+    AddEditorVariable("type")
+    SetActiveVariable("type")
+    AddEnumVariable("Normal Speed", 0)
+    AddEnumVariable("Normal Speed, Start Bottom", 1)
+    AddEnumVariable("Large, Normal Speed", 2)
+    AddEnumVariable("Large, Fast Speed", 3)
+    AddEnumVariable("Normal Speed, Fast Launch", 4)
+end event

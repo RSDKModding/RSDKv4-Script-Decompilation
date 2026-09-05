@@ -1,0 +1,447 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Bridge Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.propertyValue : object.length
+
+private alias object.value0 : object.walkedOn
+private alias object.value1 : object.depress
+private alias object.value2 : object.midPoint
+private alias object.value3 : object.midHeight
+private alias object.value4 : object.midYPos
+private alias object.value5 : object.playerNo
+private alias object.value6 : object.left
+private alias object.value7 : object.right
+
+// Player Aliases
+private alias object.xpos            : player.xpos
+private alias object.ypos            : player.ypos
+private alias object.xvel            : player.xvel
+private alias object.yvel            : player.yvel
+private alias object.gravity         : player.gravity
+private alias object.floorSensorL    : player.floorSensorL
+private alias object.floorSensorC    : player.floorSensorC
+private alias object.floorSensorR    : player.floorSensorR
+private alias object.collisionBottom : player.collisionBottom
+private alias object.value16         : debugMode.currentSelection
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Bridge_DebugDraw
+reserve function Bridge_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+public value Bridge_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function Bridge_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Bridge_startDebugID
+	temp2 = temp0
+	temp0 <<= 19
+	FlipSign(temp0)
+	temp0 += object.xpos
+	temp0 += 0x80000
+
+	temp1 = 0
+	while temp1 < temp2
+		DrawSpriteXY(0, temp0, object.ypos)
+		temp0 += 0x100000
+		temp1++
+	loop
+
+	if temp1 == 0
+		DrawSprite(0)
+	end if
+end function
+
+
+public function Bridge_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Bridge_startDebugID
+
+	CreateTempObject(TypeName[Bridge], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].left = temp0
+	object[tempObjectPos].left <<= 19
+	object[tempObjectPos].right = object[tempObjectPos].left
+
+	FlipSign(object[tempObjectPos].left)
+	object[tempObjectPos].left += object[tempObjectPos].xpos
+	object[tempObjectPos].right += object[tempObjectPos].xpos
+	object[tempObjectPos].playerNo = -1
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.walkedOn > 0
+		if object.depress < 128
+			object.depress += 8
+		end if
+	else
+		if object.depress > 0
+			object.depress -= 8
+			object.playerNo = -1
+		else
+			object.midHeight = 0
+		end if
+	end if
+
+	object.midYPos = object.midHeight
+	object.midYPos *= object.depress
+	object.midYPos >>= 7
+
+	object.walkedOn = 0
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].xpos > object.left
+			if player[currentPlayer].xpos < object.right
+				if currentPlayer == object.playerNo
+					object.midPoint = player[currentPlayer].xpos
+					object.midPoint -= object.left
+
+					temp0 = object.midPoint
+					temp0 >>= 8
+
+					temp1 = object.right
+					temp1 -= object.left
+
+					temp2 = temp1
+					temp2 >>= 16
+
+					temp0 /= temp2
+					Sin(object.midHeight, temp0)
+
+					temp1 >>= 13
+					object.midHeight *= temp1
+
+					temp0 = object.ypos
+					temp0 -= 0x300000
+					if player[currentPlayer].ypos > temp0
+						if player[currentPlayer].yvel >= 0
+							temp2 = player[currentPlayer].collisionBottom
+							FlipSign(temp2)
+							temp2 <<= 16
+							temp2 += object.midYPos
+							temp2 -= 0x80000
+
+							object.walkedOn++
+
+							player[currentPlayer].ypos = object.ypos
+							player[currentPlayer].ypos += temp2
+
+							player[currentPlayer].gravity = GRAVITY_GROUND
+							player[currentPlayer].yvel = 0
+
+							player[currentPlayer].floorSensorL = true
+							player[currentPlayer].floorSensorC = true
+							player[currentPlayer].floorSensorR = true
+						else
+							object.playerNo = -2
+						end if
+					end if
+				else
+					if player[currentPlayer].yvel >= 0
+						temp0 = player[currentPlayer].xpos
+						temp0 -= object.left
+						if temp0 > object.midPoint
+							temp0 = object.right
+							temp0 -= player[currentPlayer].xpos
+
+							temp3 = object.right
+							temp3 -= object.left
+							temp3 -= object.midPoint
+
+							temp1 = temp0
+							temp1 <<= 7
+							temp1 /= temp3
+						else
+							temp1 = temp0
+							temp1 <<= 7
+							temp1 /= object.midPoint
+						end if
+
+						Sin(temp2, temp1)
+						temp2 *= object.midYPos
+						temp2 >>= 9
+						temp2 -= 0x80000
+
+						if player[currentPlayer].yvel < 0x8000
+							temp3 = temp2
+							temp3 >>= 16
+							temp4 = temp3
+							temp3 -= 8
+						else
+							temp3 = temp2
+							temp3 >>= 16
+							temp4 = temp3
+							temp4 += 8
+						end if
+
+						BoxCollisionTest(C_TOUCH, object.entityPos, -0x400, temp3, 0x400, temp4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+						
+						if checkResult == true
+							object.walkedOn++
+							player[currentPlayer].ypos = player[currentPlayer].collisionBottom
+							FlipSign(player[currentPlayer].ypos)
+							player[currentPlayer].ypos <<= 16
+							player[currentPlayer].ypos += object.ypos
+							player[currentPlayer].ypos += temp2
+
+							player[currentPlayer].floorSensorL = true
+							player[currentPlayer].floorSensorC = true
+							player[currentPlayer].floorSensorR = true
+
+							if currentPlayer == 0
+								if object.playerNo < 4
+									if object.playerNo > 0
+										object.midPoint = player[currentPlayer].xpos
+										object.midPoint -= object.left
+
+										temp0 = object.midPoint
+										temp0 >>= 8
+
+										temp1 = object.right
+										temp1 -= object.left
+
+										temp2 = temp1
+										temp2 >>= 16
+
+										temp0 /= temp2
+										Sin(object.midHeight, temp0)
+
+										temp1 >>= 13
+										object.midHeight *= temp1
+
+										object.midYPos = object.midHeight
+										object.midYPos *= object.depress
+										object.midYPos >>= 7
+									end if
+
+									object.playerNo = 0
+									if player[currentPlayer].yvel < 256
+										object.depress = 128
+									end if
+								end if
+							else
+								if object.playerNo == -1
+									object.playerNo = currentPlayer
+									if player[currentPlayer].yvel < 256
+										object.depress = 128
+									end if
+								end if
+
+								if object.playerNo == -2
+									object.playerNo = currentPlayer
+								end if
+							end if
+
+							player[currentPlayer].gravity = GRAVITY_GROUND
+							player[currentPlayer].yvel = 0
+						end if
+					end if
+				end if
+			else
+				if currentPlayer == object.playerNo
+					object.playerNo = -2
+					object.depress = 32
+				end if
+			end if
+		else
+			if currentPlayer == object.playerNo
+				object.playerNo = -2
+				object.depress = 32
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	temp0 = 0
+
+	temp1 = object.left
+	temp1 += 0x80000
+
+	temp4 = 0x80000
+
+	temp5 = object.midPoint
+	temp5 >>= 20
+
+	while temp0 < temp5
+		temp3 = temp4
+		temp3 <<= 7
+		temp3 /= object.midPoint
+
+		Sin(temp2, temp3)
+		temp2 *= object.midYPos
+		temp2 >>= 9
+		temp2 += object.ypos
+
+		DrawSpriteXY(0, temp1, temp2)
+		temp1 += 0x100000
+		temp4 += 0x100000
+		temp0++
+	loop
+
+	temp2 = object.midYPos
+	temp2 += object.ypos
+	DrawSpriteXY(0, temp1, temp2)
+	temp1 += 0x100000
+	temp0++
+
+	temp5 = object.right
+	temp5 -= object.left
+	temp5 -= object.midPoint
+
+	temp1 = object.right
+	temp1 -= 0x80000
+
+	temp4 = 0x80000
+
+	while temp0 < object.length
+		temp3 = temp4
+		temp3 <<= 7
+		temp3 /= temp5
+
+		Sin(temp2, temp3)
+		temp2 *= object.midYPos
+		temp2 >>= 9
+		temp2 += object.ypos
+
+		DrawSpriteXY(0, temp1, temp2)
+		temp1 -= 0x100000
+		temp4 += 0x100000
+		temp0++
+	loop
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// Load different Sprite Frames for the different Time Periods
+	switch HUD.currentTimePeriod
+	case TIME_PRESENT
+		SpriteFrame(-8, -8, 16, 16, 35, 1)
+		break
+
+	case TIME_PAST
+		SpriteFrame(-8, -8, 16, 16, 67, 174)
+		break
+
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 174)
+		break
+
+	case TIME_BAD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 158)
+		break
+
+	end switch
+
+	// Setup the Bridge Sizes for all Bridge Objects in the level
+	foreach (TypeName[Bridge], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].left = object[arrayPos0].length
+		object[arrayPos0].left <<= 19
+		object[arrayPos0].right = object[arrayPos0].left
+
+		FlipSign(object[arrayPos0].left)
+		object[arrayPos0].left += object[arrayPos0].xpos
+		object[arrayPos0].right += object[arrayPos0].xpos
+
+		object[arrayPos0].playerNo = -1
+	next
+
+	temp0 = 0
+	Bridge_startDebugID = DebugMode_ObjCount
+	Bridge_startDebugID--
+	while temp0 < 16
+		SetTableValue(TypeName[Bridge], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Bridge_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Bridge_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	temp0 = object.length
+	temp2 = temp0
+	temp0 <<= 19
+	FlipSign(temp0)
+	temp0 += object.xpos
+	temp0 += 0x80000
+
+	temp1 = 0
+	while temp1 < temp2
+		DrawSpriteXY(0, temp0, object.ypos)
+		temp0 += 0x100000
+		temp1++
+	loop
+
+	if temp1 == 0
+		DrawSprite(0)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	// Load different Sprite Frames for the different Time Periods
+	switch checkResult
+	case TIME_PRESENT
+		SpriteFrame(-8, -8, 16, 16, 35, 1)
+		break
+
+	case TIME_PAST
+		SpriteFrame(-8, -8, 16, 16, 67, 174)
+		break
+
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 174)
+		break
+
+	case TIME_BAD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 158)
+		break
+
+	end switch
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "length")
+end event

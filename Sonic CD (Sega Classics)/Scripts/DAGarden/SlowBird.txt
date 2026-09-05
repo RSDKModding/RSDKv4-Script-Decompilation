@@ -1,0 +1,102 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Slow Bird Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1        : object.offset.y
+private alias object.value3        : object.timer
+private alias object.propertyValue : object.angleSpeed
+
+// States
+private alias 0 : SLOWBIRD_SETUP
+private alias 1 : SLOWBIRD_MOVEMENT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.timer++
+	object.timer %= 192
+	if object.timer > 133
+		if object.direction == FACING_RIGHT
+			object.xpos += 0x10000
+		else
+			object.xpos -= 0x10000
+		end if
+	else
+		if object.direction == FACING_RIGHT
+			object.xpos += 0x4000
+		else
+			object.xpos -= 0x4000
+		end if
+	end if
+
+	switch object.state
+	case SLOWBIRD_SETUP
+		object.offset.y = object.ypos
+		object.state++
+		break
+
+	case SLOWBIRD_MOVEMENT
+		object.angle += object.angleSpeed
+		object.angle &= 511
+		Sin(object.ypos, object.angle)
+		object.ypos <<= 10
+		object.ypos += object.offset.y
+		break
+
+	end switch
+
+	if object.outOfBounds == true
+		object.type = TypeName[Blank Object]
+	end if
+end event
+
+
+event ObjectDraw
+	temp0 = object.animationSpeed
+	temp0 >>= 4
+	DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+	if object.timer > 133
+		object.animationSpeed += 4
+	else
+		object.animationSpeed++
+	end if
+
+	object.animationSpeed &= 31
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("DAGarden/Objects.gif")
+
+	SpriteFrame(-8, -9, 16, 16, 466, 577)	// Blue Bird Frame 0
+	SpriteFrame(-8, -8, 16, 16, 483, 577)	// Blue Bird Frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("DAGarden/Objects.gif")
+	SpriteFrame(-8, -9, 16, 16, 466, 577)	// Blue Bird Frame 0
+
+	// Although used by the object, it shouldn't be set from the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,199 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: RotatingSpikes2 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.propertyValue : object.rotationDir
+
+// Property Value
+private alias 0   : CLOCKWISE_ROTATION
+private alias 128 : COUNTERCLOCKWISE_ROTATION
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.rotationDir < COUNTERCLOCKWISE_ROTATION
+        object.angle += 2
+        object.angle &= 511
+    else
+        object.angle -= 2
+        if object.angle < 0
+            object.angle += 512
+        end if
+    end if
+
+    temp0 = object.xpos
+    temp1 = object.ypos
+    temp2 = object.angle
+    temp3 = 0
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.rotationDir < COUNTERCLOCKWISE_ROTATION
+            while temp3 < 4
+                Cos(object.xpos, temp2)
+                object.xpos <<= 13
+                object.xpos += temp0
+
+                Sin(object.ypos, temp2)
+                object.ypos <<= 13
+                object.ypos += temp1
+
+                BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    CallFunction(Player_Hit)
+                end if
+
+                temp2 += 16
+                temp3++
+            loop
+        else
+            temp2 += 64
+            while temp3 < 4
+                Cos(object.xpos, temp2)
+                object.xpos <<= 13
+                object.xpos += temp0
+
+                Sin(object.ypos, temp2)
+                object.ypos <<= 13
+                object.ypos += temp1
+
+                BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    CallFunction(Player_Hit)
+                end if
+
+                temp2 -= 16
+                temp3++
+            loop
+        end if
+    next
+
+    object.xpos = temp0
+    object.ypos = temp1
+end event
+
+
+event ObjectDraw
+    temp2 = object.angle
+    temp3 = 0
+    if object.rotationDir < COUNTERCLOCKWISE_ROTATION
+        while temp3 < 4
+            Cos(temp0, temp2)
+            temp0 <<= 13
+            temp0 += object.xpos
+
+            Sin(temp1, temp2)
+            temp1 <<= 13
+            temp1 += object.ypos
+
+            DrawSpriteXY(0, temp0, temp1)
+            temp2 += 16
+            temp3++
+        loop
+    else
+        temp2 += 64
+        while temp3 < 4
+            Cos(temp0, temp2)
+            temp0 <<= 13
+            temp0 += object.xpos
+
+            Sin(temp1, temp2)
+            temp1 <<= 13
+            temp1 += object.ypos
+
+            DrawSpriteXY(0, temp0, temp1)
+            temp2 -= 16
+            temp3++
+        loop
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects.gif")
+    SpriteFrame(-16, -16, 32, 32, 221, 53)  // #0 - Spike Ball
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // rotatingDir
+            checkResult = object.propertyValue
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // rotatingDir
+            object.propertyValue = editor.variableValue
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    temp2 = object.angle
+    temp3 = 0
+    if object.rotationDir < COUNTERCLOCKWISE_ROTATION
+        while temp3 < 4
+            Cos(temp0, temp2)
+            temp0 <<= 13
+            temp0 += object.xpos
+
+            Sin(temp1, temp2)
+            temp1 <<= 13
+            temp1 += object.ypos
+
+            DrawSpriteXY(0, temp0, temp1)
+            temp2 += 16
+            temp3++
+        loop
+    else
+        temp2 += 64
+        while temp3 < 4
+            Cos(temp0, temp2)
+            temp0 <<= 13
+            temp0 += object.xpos
+
+            Sin(temp1, temp2)
+            temp1 <<= 13
+            temp1 += object.ypos
+
+            DrawSpriteXY(0, temp0, temp1)
+            temp2 -= 16
+            temp3++
+        loop
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects.gif")
+    SpriteFrame(-16, -16, 32, 32, 221, 53)  // #0 - Spike Ball
+
+    AddEditorVariable("rotationDir")
+    SetActiveVariable("rotationDir")
+    AddEnumVariable("Clockwise", CLOCKWISE_ROTATION)
+    AddEnumVariable("Counter-clockwise", COUNTERCLOCKWISE_ROTATION)
+end event

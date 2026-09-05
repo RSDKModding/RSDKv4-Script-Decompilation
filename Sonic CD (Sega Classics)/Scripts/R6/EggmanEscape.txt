@@ -1,0 +1,107 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Eggman Escape Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.xpos  : player.xpos
+private alias object.speed : player.speed
+
+// Destroyed Egg Mobile Alias
+private alias object[-1].xpos : destroyedMobile.xpos
+
+// States
+private alias 0 : EGG_ESCAPE_FADE_IN
+private alias 1 : EGG_ESCAPE_FLEE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case EGG_ESCAPE_FADE_IN
+        player[SLOT_PLAYER1].xpos = destroyedMobile.xpos
+        player[SLOT_PLAYER1].speed = 0
+        if object.timer < 120
+            object.timer++
+        else
+            player.score += 1000
+            object.timer = 0
+            object.priority = PRIORITY_ACTIVE
+            object.xvel = 0x8000
+            object.state++
+        end if
+        break
+
+    case EGG_ESCAPE_FLEE
+        object.xvel += 0xC00
+        object.xpos += object.xvel
+        if object.outOfBounds == true
+            ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    temp0 = object.frame
+    temp0 /= 6
+    DrawSprite(temp0)
+
+    object.frame++
+    object.frame %= 24
+
+    temp0 = object.animationTimer
+    temp0 /= 6
+    temp0 += 4
+
+    temp1 = object.animationTimer
+    temp1 %= 6
+    if temp1 < 3
+        DrawSprite(temp0)
+    end if
+
+    object.animationTimer++
+    object.animationTimer %= 12
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects2.gif")
+
+    SpriteFrame(-32, -25, 64, 48, 1, 170)    // #0 - Eggman Running Frame 0
+    SpriteFrame(-32, -23, 48, 56, 66, 131)   // #1 - Eggman Running Frame 1
+    SpriteFrame(-32, -21, 56, 56, 66, 199)   // #2 - Eggman Running Frame 2
+    SpriteFrame(-32, -23, 48, 56, 66, 131)   // #3 - Eggman Running Frame 3
+
+    SpriteFrame(-32, -36, 16, 16, 237, 1)    // #4 - Sweat Frame 0
+    SpriteFrame(-32, -36, 16, 16, 181, 207)  // #5 - Sweat Frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects2.gif")
+    SpriteFrame(-32, -25, 64, 48, 1, 170)  // #0 - Eggman Running Frame 0
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

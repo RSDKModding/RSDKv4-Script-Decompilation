@@ -1,0 +1,213 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Bullet Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value4 : object.bossEntity
+
+// Player Aliases
+private alias object.state : player.state
+
+// R4 Eggman aliases
+private alias object.animation : boss.animation
+private alias object.xpos      : boss.xpos
+private alias object.ypos      : boss.ypos
+private alias object.state     : boss.state
+
+// States
+private alias 0 : BOSS_BULLET_SETUP
+private alias 1 : BOSS_BULLET_CHARGE
+private alias 2 : BOSS_BULLET_SHOT
+
+// R4 Eggman states
+private alias 13 : R4_EGG_BUBBLE_MOVE_TO_L
+
+// R4 Eggman animations
+private alias 1 : EGGANI_LAUGH
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case 0
+        if object.timer < 56
+            object.timer++
+        else
+            switch object.propertyValue
+            case 0
+                object.xvel = -0x14000
+                object.yvel = 0x14000
+                break
+
+            case 1
+                object.xvel = 0
+                object.yvel = 0x1C000
+                break
+
+            case 2
+                object.xvel = 0x10000
+                object.yvel = 0x18000
+                break
+
+            case 3
+                object.xvel = 0x14000
+                object.yvel = 0x14000
+                break
+
+            case 4
+                object.xvel = 0x14000
+                object.yvel = 0x14000
+                break
+
+            case 5
+                object.xvel = 0
+                object.yvel = 0x1C000
+                break
+
+            case 6
+                object.xvel = -0x10000
+                object.yvel = 0x18000
+                break
+
+            case 7
+                object.xvel = -0x14000
+                object.yvel = 0x14000
+                break
+            end switch
+
+            object.timer = 0
+            object.state++
+        end if
+
+        arrayPos0 = object.bossEntity
+        object.xpos = boss[arrayPos0].xpos
+        object.ypos = boss[arrayPos0].ypos
+
+        switch object.propertyValue
+        case 0
+            object.xpos -= 0x1D0000
+            object.ypos += 0x170000
+            break
+
+        case 1
+            object.xpos -= 0x60000
+            object.ypos += 0x200000
+            break
+
+        case 2
+            object.xpos += 0x110000
+            object.ypos += 0x1D0000
+            break
+
+        case 3
+            object.xpos += 0x1D0000
+            object.ypos += 0x110000
+            break
+
+        case 4
+            object.xpos += 0x1D0000
+            object.ypos += 0x170000
+            break
+
+        case 5
+            object.xpos += 0x60000
+            object.ypos += 0x200000
+            break
+
+        case 6
+            object.xpos -= 0x110000
+            object.ypos += 0x1D0000
+            break
+
+        case 7
+            object.xpos -= 0x1D0000
+            object.ypos += 0x110000
+            break
+        end switch
+        break
+
+    case 1
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+        if object.timer < 60
+            object.timer++
+        else
+            object.timer = 0
+            object.drawOrder = 3
+            object.state++
+        end if
+        break
+
+    case 2
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+        break
+    end switch
+
+    if object.outOfBounds == true
+        object.type = TypeName[Blank Object]
+    end if
+
+    arrayPos0 = object.bossEntity
+    if object[arrayPos0].state > R4_EGG_BUBBLE_MOVE_TO_L
+        object.type = TypeName[Blank Object]
+    end if
+
+    if object.state > BOSS_BULLET_SETUP
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -4, -4, 4, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CallFunction(Player_Hit)
+                if player[currentPlayer].state == Player_State_GotHit
+                    arrayPos0 = object.bossEntity
+                    boss[arrayPos0].animation = EGGANI_LAUGH
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    temp0 = object.frame
+    temp0 >>= 1
+    DrawSprite(temp0)
+
+    object.frame++
+    object.frame &= 3
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects2.gif")
+
+    SpriteFrame(-4, -4, 8, 8, 52, 35)   // #0 - Boss Bullet frame 0
+    SpriteFrame(-4, -4, 8, 8, 52, 44)   // #1 - Boss Bullet frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects2.gif")
+    SpriteFrame(-4, -4, 8, 8, 52, 35)   // #0 - Boss Bullet
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

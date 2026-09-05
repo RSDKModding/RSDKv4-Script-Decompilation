@@ -1,0 +1,180 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: BGEffects Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value2 : object.prevAngle
+private alias object.value3 : object.fansTimer
+private alias object.value4 : object.crunchersTimer
+private alias object.value5 : object.fansSprite
+private alias object.value6 : object.crunchersSprite
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Animate the Fans
+	object.fansTimer++
+	if object.fansTimer > 2
+		object.fansTimer = 0
+		object.fansSprite++
+		object.fansSprite %= 3
+		switch object.fansSprite
+		case 0
+			// Fans are 4x4 tiles, with 8 unique tiles in them, so
+			// 8 tiles need to be updated to change the entire sprite
+			Copy16x16Tile(122, 428)
+			Copy16x16Tile(123, 429)
+			Copy16x16Tile(124, 430)
+			Copy16x16Tile(125, 431)
+			Copy16x16Tile(126, 432)
+			Copy16x16Tile(127, 433)
+			Copy16x16Tile(128, 434)
+			Copy16x16Tile(129, 435)
+			break
+
+		case 1
+			Copy16x16Tile(122, 436)
+			Copy16x16Tile(123, 437)
+			Copy16x16Tile(124, 438)
+			Copy16x16Tile(125, 439)
+			Copy16x16Tile(126, 440)
+			Copy16x16Tile(127, 441)
+			Copy16x16Tile(128, 442)
+			Copy16x16Tile(129, 443)
+			break
+
+		case 2
+			Copy16x16Tile(122, 444)
+			Copy16x16Tile(123, 445)
+			Copy16x16Tile(124, 446)
+			Copy16x16Tile(125, 447)
+			Copy16x16Tile(126, 448)
+			Copy16x16Tile(127, 449)
+			Copy16x16Tile(128, 450)
+			Copy16x16Tile(129, 451)
+			break
+
+		end switch
+	end if
+
+	// Animate the Crunchers
+	object.crunchersTimer++
+	if object.crunchersTimer > 5
+		object.crunchersTimer = 0
+		object.crunchersSprite++
+		object.crunchersSprite &= 3
+		switch object.crunchersSprite
+		case 0
+			Copy16x16Tile(157, 452)
+			Copy16x16Tile(158, 453)
+			Copy16x16Tile(159, 456)
+			Copy16x16Tile(160, 457)
+			break
+
+		case 1
+			Copy16x16Tile(157, 454)
+			Copy16x16Tile(158, 455)
+			Copy16x16Tile(159, 458)
+			Copy16x16Tile(160, 459)
+			break
+
+		case 2
+			Copy16x16Tile(157, 460)
+			Copy16x16Tile(158, 461)
+			Copy16x16Tile(159, 464)
+			Copy16x16Tile(160, 465)
+			break
+
+		case 3
+			Copy16x16Tile(157, 462)
+			Copy16x16Tile(158, 463)
+			Copy16x16Tile(159, 466)
+			Copy16x16Tile(160, 467)
+			break
+
+		end switch
+	end if
+
+	// Find the difference between the current scroll and last scroll pos
+	temp1 = object.prevAngle
+	temp2 = tileLayer[0].angle
+
+	if temp1 < temp2
+		temp3 = temp2
+		temp3 -= temp1
+		if temp3 > 256
+			// Account for looping
+			temp1 += 512
+		end if
+	else
+		temp3 = temp1
+		temp3 -= temp2
+		if temp3 > 256
+			// Account for looping
+			temp2 += 512
+		end if
+	end if
+
+	temp0 = temp1
+	temp0 -= temp2
+
+	// Store the current angle for use next frame
+	object.prevAngle = tileLayer[0].angle
+
+	// Move all the other BG layers in accordance with the difference from last frame
+	temp1 = 0x20000
+	temp2 = 0x10000
+
+	temp1 *= temp0
+	temp2 *= temp0
+
+	hParallax[0].scrollPos += temp1
+	hParallax[1].scrollPos += temp2
+end event
+
+
+event ObjectStartup
+	// Set the stage's bounds
+	stage.curXBoundary1 = 0x3800000 // left bounds:  896 pixels
+	stage.curXBoundary2 = 0xC800000 // right bounds: 3200 pixels
+	stage.curYBoundary1 = 0x3800000 // upper bounds: 896 pixels
+	stage.curYBoundary2 = 0xC800000 // lower bounds: 3200 pixels
+
+	// Setup all BGEffect objects present in the level
+	foreach (TypeName[BG Effects], arrayPos0, ALL_ENTITIES)
+		// Set the object to always be active
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		// Place the object among the first to be drawn
+		object[arrayPos0].drawOrder = 0
+
+		// And set its starting angle, assuming that Sonic is facing left
+		object[arrayPos0].prevAngle = 368
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

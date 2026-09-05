@@ -1,0 +1,170 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Vertical Wrap Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.waterEntityPos
+private alias object.value1 : object.minWaterHeight
+private alias object.value2 : object.moveWater
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+private alias object.yvel : player.yvel
+
+// Property Values
+private alias 0 : DISABLE_WATER
+private alias 1 : DISABLE_WATER_PLAYER
+
+// This also disables water when conditions are met
+private alias 2 : SWAP_WATER_HEIGHT
+private alias 3 : SWAP_WATER_HEIGHT_PLAYER
+
+private alias 4 : DISABLE_WATER_LOWER_MIN
+private alias 5 : DISABLE_WATER_PLAYER_LOWER_MIN
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if player[SLOT_PLAYER1].xpos > object.xpos
+        stage.curYBoundary2 = 0x800
+        if object.outOfBounds == true
+            object.priority = PRIORITY_BOUNDS
+        end if
+
+        if stage.newWaterLevel > object.minWaterHeight
+            stage.newWaterLevel = object.minWaterHeight
+
+            arrayPos0 = object.waterEntityPos
+            object[arrayPos0].ypos = screen.yoffset
+            object[arrayPos0].ypos += 256
+            object[arrayPos0].ypos <<= 16
+
+            if object.moveWater == true
+				// This gets triggered once you leave the wrap section
+                if object[arrayPos0].ypos < object.minWaterHeight
+                    object[arrayPos0].ypos = object.minWaterHeight
+                end if
+            end if
+        end if
+    else
+        if object.propertyValue == DISABLE_WATER
+			// Y - 3072 in map coords
+            if stage.newWaterLevel < 0xC000000
+                stage.newWaterLevel = 0xC000000
+
+                arrayPos0 = object.waterEntityPos
+                object[arrayPos0].ypos = 0xC000000
+            end if
+        else
+            if player[SLOT_PLAYER1].ypos > object.ypos
+				// Y - 3072 in map coords
+                if stage.newWaterLevel < 0xC000000
+                    stage.newWaterLevel = 0xC000000
+
+                    arrayPos0 = object.waterEntityPos
+                    object[arrayPos0].ypos = 0xC000000
+                end if
+            end if
+        end if
+
+        stage.curYBoundary2 = 0x900
+        object.priority = PRIORITY_ACTIVE
+
+        if player[SLOT_PLAYER1].yvel >= 0
+            if screen[0].cameraY >= 0x878
+                temp1 = player[SLOT_PLAYER1].ypos
+                foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                    temp0 = player[currentPlayer].ypos
+                    temp0 -= temp1
+                    Abs(temp0)
+                    if temp0 < 0x8C0000
+                        player[currentPlayer].ypos -= 0x8000000 // Y - 2048 in map coords
+                    end if
+                next
+
+                screen[0].cameraY -= 0x800
+                screen.yoffset -= 0x800
+            end if
+        end if
+
+        if player[SLOT_PLAYER1].yvel <= 0
+            if screen[0].cameraY <= 120
+                temp1 = player[SLOT_PLAYER1].ypos
+                foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                    temp0 = player[currentPlayer].ypos
+                    temp0 -= temp1
+                    Abs(temp0)
+                    if temp0 < 0x8C0000
+                        player[currentPlayer].ypos += 0x8000000 // Y - 2048 in map coords
+                    end if
+                next
+
+                screen[0].cameraY += 0x800
+                screen.yoffset += 0x800
+            end if
+        end if
+    end if
+end event
+
+
+event ObjectStartup
+    foreach (TypeName[Water], arrayPos0, ALL_ENTITIES)
+        temp0 = arrayPos0
+    next
+
+    foreach (TypeName[Vertical Wrap], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].waterEntityPos = temp0
+        switch object[arrayPos0].propertyValue
+        case DISABLE_WATER
+        case DISABLE_WATER_PLAYER
+            object[arrayPos0].minWaterHeight = 0x5340000
+            object[arrayPos0].moveWater = false
+            break
+
+        case SWAP_WATER_HEIGHT
+        case SWAP_WATER_HEIGHT_PLAYER
+            object[arrayPos0].propertyValue -= 2
+            object[arrayPos0].minWaterHeight = 0x5A00000
+            object[arrayPos0].moveWater = true
+            break
+
+        case DISABLE_WATER_LOWER_MIN
+        case DISABLE_WATER_PLAYER_LOWER_MIN
+            object[arrayPos0].propertyValue -= 2
+            object[arrayPos0].minWaterHeight = 0x5100000
+            object[arrayPos0].moveWater = false
+            break
+        end switch
+    next
+
+    if player[SLOT_PLAYER1].xpos > 0x3200000
+        stage.curYBoundary2 = 0x800
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-16, -16, 32, 32, 1, 143)  // #0 - "Script" Icon
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

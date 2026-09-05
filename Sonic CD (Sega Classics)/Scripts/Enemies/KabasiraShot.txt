@@ -1,0 +1,106 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Kabasira Shot Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.animation : player.animation
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.xpos += object.xvel
+	object.ypos += object.yvel
+
+	if object.outOfBounds == true
+		object.type = TypeName[Blank Object]
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			if player[currentPlayer].animation == ANI_JUMPING
+				ResetObjectEntity(object.entityPos, TypeName[Explosion], 0, object.xpos, object.ypos)
+				PlaySfx(SfxName[Explosion], false)
+			else
+				if player[currentPlayer].animation == ANI_SPINDASH
+					ResetObjectEntity(object.entityPos, TypeName[Explosion], 0, object.xpos, object.ypos)
+					PlaySfx(SfxName[Explosion], false)
+				else
+					// The player's not in an attacking animation, go ahead and hurt them
+					CallFunction(Player_Hit)
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	// Use different sprites based on the shot's direction
+	if object.propertyValue == FACING_RIGHT
+		// Going right!
+		DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+		DrawSpriteFX(1, FX_INK, object.xpos, object.ypos)
+	else
+		// Heading left!
+		DrawSpriteFX(2, FX_INK, object.xpos, object.ypos)
+		DrawSpriteFX(3, FX_INK, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// 0-1 - Going Right Frames
+	SpriteFrame(-8, -8, 16, 16, 133, 100)
+	SpriteFrame(-8, -6, 8, 8, 243, 101)
+
+	// 2-3 - Going Left Frames
+	SpriteFrame(-8, -8, 16, 16, 201, 100)
+	SpriteFrame(4, -6, 8, 8, 240, 65)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	// Use different sprites based on the shot's direction
+	if object.propertyValue == FACING_RIGHT
+		// Going right!
+		DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+		DrawSpriteFX(1, FX_INK, object.xpos, object.ypos)
+	else
+		// Heading left!
+		DrawSpriteFX(2, FX_INK, object.xpos, object.ypos)
+		DrawSpriteFX(3, FX_INK, object.xpos, object.ypos)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// 0-1 - Going Right Frames
+	SpriteFrame(-8, -8, 16, 16, 133, 100)
+	SpriteFrame(-8, -6, 8, 8, 243, 101)
+
+	// 2-3 - Going Left Frames
+	SpriteFrame(-8, -8, 16, 16, 201, 100)
+	SpriteFrame(4, -6, 8, 8, 240, 65)
+
+	// Although used by the object, this object shouldn't even be placed in the scene at all
+	// (i still set up a object preview for it anyway though :)
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

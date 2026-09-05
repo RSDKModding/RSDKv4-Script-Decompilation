@@ -1,0 +1,187 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Lamp Post Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// States
+private alias 0 : LAMPPOST_IDLE
+private alias 1 : LAMPPOST_ROTATE
+private alias 2 : LAMPPOST_USED
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function LampPost_DebugDraw
+reserve function LampPost_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function LampPost_DebugDraw
+    DrawSprite(0)
+end function
+
+
+public function LampPost_DebugSpawn
+    CreateTempObject(TypeName[Lamp Post], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state == LAMPPOST_IDLE
+            BoxCollisionTest(C_TOUCH, object.entityPos, -8, -32, 8, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                lampPostID = object.entityPos
+                if player[SLOT_PLAYER1].xpos < object.xpos
+                    lampPostSide = -0x180000
+
+                    // Code to avoid getting stuck in a wall it seems?
+                    ObjectTileCollision(CSIDE_RWALL, -24, 0, 0)
+                    if checkResult == true
+                        lampPostSide = 0
+                    end if
+                else
+                    lampPostSide = 0x180000
+
+                    // Code to avoid getting stuck in a wall it seems?
+                    ObjectTileCollision(CSIDE_LWALL, 24, 0, 0)
+                    if checkResult == true
+                        lampPostSide = 0
+                    end if
+                end if
+
+                recMilliSeconds = stage.milliSeconds
+                recSeconds      = stage.seconds
+                recMinutes      = stage.minutes
+
+                object.state = LAMPPOST_ROTATE
+                object.angle = 384
+                PlaySfx(SfxName[Lamp Post], false)
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case LAMPPOST_IDLE
+        DrawSprite(0)
+        break
+
+    case LAMPPOST_ROTATE
+        DrawSprite(1)
+
+        Cos(temp0, object.angle)
+        temp0 <<= 10
+        Sin(temp1, object.angle)
+        temp1 <<= 10
+
+        temp0 += object.xpos
+        temp1 += object.ypos
+        temp1 -= 0x180000
+        DrawSpriteXY(2, temp0, temp1)
+
+        object.angle += 16
+        if object.angle > 896
+            object.angle = 0
+            object.state = LAMPPOST_USED
+        end if
+        break
+
+    case LAMPPOST_USED
+        DrawSprite(1)
+        object.angle++
+        if object.angle == 8
+            object.angle = 0
+        end if
+
+        temp0 = object.ypos
+        temp0 -= 0x200000
+        if object.angle > 3
+            DrawSpriteXY(4, object.xpos, temp0)
+        else
+            DrawSpriteXY(3, object.xpos, temp0)
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items.gif")
+
+    SpriteFrame(-8, -40, 16, 64, 1, 137)	// #0 - Lamp Post Idle
+    SpriteFrame(-8, -24, 16, 48, 1, 153)	// #1 - Lamp Post Body
+    SpriteFrame(-8, -8, 16, 16, 1, 137)		// #2 - Lamp Post Blue Head
+    SpriteFrame(-8, -8, 16, 16, 1, 236)		// #3 - Lamp Post Yellow Head
+    SpriteFrame(-8, -8, 16, 16, 18, 236)	// #4 - Lamp Post Red Head
+
+    if warp.xpos == 0
+        if HUD.currentTimePeriod == TIME_PRESENT
+            if lampPostID > 31
+                arrayPos0 = lampPostID
+
+                // Move the first player to the Lamp Post
+                player[SLOT_PLAYER1].xpos = object[arrayPos0].xpos
+                player[SLOT_PLAYER1].xpos += lampPostSide
+                player[SLOT_PLAYER1].ypos = object[arrayPos0].ypos
+
+                screen[0].cameraX = object[arrayPos0].ixpos
+                screen[0].cameraY = object[arrayPos0].iypos
+
+                object[arrayPos0].state = LAMPPOST_USED
+
+                stage.milliSeconds = recMilliSeconds
+                stage.seconds      = recSeconds
+                stage.minutes      = recMinutes
+            end if
+        end if
+    end if
+
+    SetTableValue(TypeName[Lamp Post], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(LampPost_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(LampPost_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items.gif")
+    SpriteFrame(-8, -40, 16, 64, 1, 137)	// #0 - Lamp Post Idle
+
+    // unused, BUT there are values in the editor which suggest it's supposed to be "lampPostID"
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

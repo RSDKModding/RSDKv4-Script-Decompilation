@@ -1,0 +1,270 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Ice Block Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.type        : player.type
+private alias object.state       : player.state
+private alias object.visible     : player.visible
+private alias object.interaction : player.interaction
+private alias object.xpos        : player.xpos
+private alias object.ypos        : player.ypos
+private alias object.jumpPress   : player.jumpPress
+private alias object.value24     : player.gravityStrength
+
+// States
+private alias 0 : ICEBLOCK_FALLING
+private alias 1 : ICEBLOCK_BREAKICE
+
+// Property Values
+private alias 0 : CHARACTER_ICEBLOCK
+private alias 1 : BIG_CHUNK_ICEBLOCK
+private alias 2 : MEDIUM_CHUNK_ICEBLOCK
+private alias 3 : CENTRAL_CHUNK_ICEBLOCK // Used, but it doesn't do anything
+private alias 4 : SMALL_CHUNK_ICEBLOCK
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function IceBlock_CreateIceChunks
+
+// ========================
+// Function Definitions
+// ========================
+
+public function IceBlock_CreateIceChunks
+    CreateTempObject(TypeName[Ice Block], BIG_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+    object[tempObjectPos].drawOrder = 4
+    object[tempObjectPos].xpos -= 0x110000
+    object[tempObjectPos].ypos -= 0xD0000
+    object[tempObjectPos].xvel = -0x10000
+    object[tempObjectPos].yvel = -0x10000
+    object[tempObjectPos].direction = FLIP_NONE
+
+    CreateTempObject(TypeName[Ice Block], BIG_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+    object[tempObjectPos].drawOrder = 4
+    object[tempObjectPos].xpos += 0x110000
+    object[tempObjectPos].ypos -= 0xD0000
+    object[tempObjectPos].xvel = 0x10000
+    object[tempObjectPos].yvel = -0x10000
+    object[tempObjectPos].direction = FLIP_X
+
+    CreateTempObject(TypeName[Ice Block], BIG_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+    object[tempObjectPos].drawOrder = 4
+    object[tempObjectPos].xpos -= 0x110000
+    object[tempObjectPos].ypos += 0xD0000
+    object[tempObjectPos].xvel = -0x10000
+    object[tempObjectPos].yvel = 0x10000
+    object[tempObjectPos].direction = FLIP_Y
+
+    CreateTempObject(TypeName[Ice Block], BIG_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+    object[tempObjectPos].drawOrder = 4
+    object[tempObjectPos].xpos += 0x110000
+    object[tempObjectPos].ypos += 0xD0000
+    object[tempObjectPos].xvel = 0x10000
+    object[tempObjectPos].yvel = 0x10000
+    object[tempObjectPos].direction = FLIP_XY
+
+    CreateTempObject(TypeName[Ice Block], CENTRAL_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+    object[tempObjectPos].drawOrder = 4
+    object[tempObjectPos].direction = FLIP_NONE
+
+    CreateTempObject(TypeName[Ice Block], MEDIUM_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+    object[tempObjectPos].drawOrder = 4
+    object[tempObjectPos].ypos -= 0x110000
+    object[tempObjectPos].yvel = -0x10000
+    object[tempObjectPos].direction = FLIP_X
+
+    CreateTempObject(TypeName[Ice Block], MEDIUM_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+    object[tempObjectPos].drawOrder = 4
+    object[tempObjectPos].ypos += 0x110000
+    object[tempObjectPos].yvel = 0x10000
+    object[tempObjectPos].direction = FLIP_XY
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.propertyValue
+    case CHARACTER_ICEBLOCK
+        if object.state == ICEBLOCK_FALLING
+            object.ypos += object.yvel
+            object.yvel += player[SLOT_PLAYER1].gravityStrength
+            if object.yvel > 0x140000
+                object.yvel = 0x140000
+            end if
+
+            ObjectTileCollision(CSIDE_FLOOR, 0, 24, 0)
+            if checkResult == true
+                object.state = ICEBLOCK_BREAKICE
+                object.yvel = 0
+                PlaySfx(SfxName[Glass Smash], false)
+            end if
+
+            player[SLOT_PLAYER1].xpos = object.xpos
+            player[SLOT_PLAYER1].ypos = object.ypos
+        else
+            if object.timer < 16
+                object.timer++
+                if player[SLOT_PLAYER1].type == TypeName[Player Object]
+                    if player[SLOT_PLAYER1].jumpPress == true
+                        CallFunction(IceBlock_CreateIceChunks)
+                        object.type = TypeName[Blank Object]
+
+                        arrayPos1 = stage.entityPos
+                        stage.entityPos = SLOT_PLAYER1
+                        CallFunction(Player_Action_Jump)
+                        stage.entityPos = arrayPos1
+
+                        player[SLOT_PLAYER1].visible = true
+                        player[SLOT_PLAYER1].interaction = true
+                    end if
+                end if
+            else
+                CallFunction(IceBlock_CreateIceChunks)
+                object.type = TypeName[Blank Object]
+
+                player[SLOT_PLAYER1].state = Player_State_Air
+
+                CallFunction(Player_Hit)
+
+                player[SLOT_PLAYER1].visible = true
+                player[SLOT_PLAYER1].interaction = true
+            end if
+        end if
+        break
+
+    case BIG_CHUNK_ICEBLOCK
+        if object.timer < 10
+            object.timer++
+            object.xpos += object.xvel
+            object.ypos += object.yvel
+        else
+            object.type = TypeName[Blank Object]
+
+            CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+            object[tempObjectPos].xvel = 0
+            object[tempObjectPos].yvel = -0x10000
+
+            CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+            object[tempObjectPos].xvel = -0x10000
+            object[tempObjectPos].yvel = 0
+
+            CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+            object[tempObjectPos].xvel = 0x10000
+            object[tempObjectPos].yvel = 0
+
+            CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+            object[tempObjectPos].xvel = 0
+            object[tempObjectPos].yvel = 0x10000
+        end if
+        break
+
+    case MEDIUM_CHUNK_ICEBLOCK
+        if object.timer < 16
+            object.timer++
+            object.xpos += object.xvel
+            object.ypos += object.yvel
+        else
+            object.type = TypeName[Blank Object]
+
+            CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+            object[tempObjectPos].xvel = 0
+            object[tempObjectPos].yvel = -0x10000
+
+            CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+            object[tempObjectPos].xvel = -0x10000
+            object[tempObjectPos].yvel = 0x10000
+
+            CreateTempObject(TypeName[Ice Block], SMALL_CHUNK_ICEBLOCK, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+            object[tempObjectPos].xvel = 0x10000
+            object[tempObjectPos].yvel = 0x10000
+        end if
+        break
+
+    case CENTRAL_CHUNK_ICEBLOCK
+        if object.timer < 1
+            object.timer++
+        else
+            object.type = TypeName[Blank Object]
+        end if
+        break
+
+    case SMALL_CHUNK_ICEBLOCK
+        if object.timer < 12
+            object.timer++
+            object.xpos += object.xvel
+            object.ypos += object.yvel
+        else
+            object.type = TypeName[Blank Object]
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    DrawSpriteFX(object.propertyValue, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+    // #0 - Character Ice Block
+    // #1 - Ice Chunk (Big)
+    // #2 - Ice Chunk (Medium)
+    // #3 - Ice Chunk (Medium)
+    // #4 - Ice Chunk (Small)
+    if stage.playerListPos == PLAYER_SONIC_A
+        LoadSpriteSheet("R6/Objects.gif")
+        SpriteFrame(-24, -24, 48, 48, 34, 18)
+        SpriteFrame(-8, -12, 16, 24, 206, 1)
+        SpriteFrame(-8, -8, 16, 16, 66, 1)
+        SpriteFrame(-8, -8, 16, 16, 66, 1)
+        SpriteFrame(-4, -4, 8, 8, 34, 67)
+    else
+        LoadSpriteSheet("R6/Objects3.gif")
+        SpriteFrame(-24, -24, 48, 48, 1, 101)
+        SpriteFrame(-8, -12, 16, 24, 50, 86)
+        SpriteFrame(-8, -8, 16, 16, 50, 111)
+        SpriteFrame(-8, -8, 16, 16, 50, 111)
+        SpriteFrame(-4, -4, 8, 8, 50, 128)
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-24, -24, 48, 48, 34, 18)   // #0 - Sonic Ice Block
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

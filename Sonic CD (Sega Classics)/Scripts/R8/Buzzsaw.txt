@@ -1,0 +1,350 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Buzzsaw Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value3 : object.frameTimer
+private alias object.value4 : object.sfxTimer
+
+// States
+private alias 0 : BUZZSAW_STOPPED
+private alias 1 : BUZZSAW_DROP
+private alias 2 : BUZZSAW_LOW_STOPPED
+private alias 3 : BUZZSAW_LIFT
+
+// Property Values
+// technically direction is used, but it's set according to the property value so
+private alias 0 : DIR_FACING_RIGHT
+private alias 1 : DIR_FACING_LEFT
+private alias 2 : DIR_FACING_UPEND_RIGHT
+private alias 3 : DIR_FACING_UPEND_LEFT
+
+// These prop vals are going to switch the first state to 2
+// then behave the same as the ones above it
+private alias 128 : LOW_FACING_RIGHT
+private alias 129 : LOW_FACING_LEFT
+private alias 130 : LOW_FACING_UPEND_RIGHT
+private alias 131 : LOW_FACING_UPEND_LEFT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BUZZSAW_STOPPED
+        if object.timer < 60
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+        end if
+        break
+
+    case BUZZSAW_DROP
+        if object.timer < 74
+            object.timer++
+            object.frameTimer++
+            object.xpos += object.xvel
+            object.ypos += object.yvel
+        else
+            object.timer = 0
+            object.state++
+        end if
+        break
+
+    case BUZZSAW_LOW_STOPPED
+        if object.timer < 60
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+        end if
+        break
+
+    case BUZZSAW_LIFT
+        if object.timer < 74
+            object.timer++
+            object.frameTimer--
+            object.xpos -= object.xvel
+            object.ypos -= object.yvel
+        else
+            object.timer = 0
+            object.state = BUZZSAW_STOPPED
+        end if
+        break
+
+    end switch
+
+    if object.sfxTimer > 0
+        object.sfxTimer--
+    else
+        PlaySfx(SfxName[Buzzsaw], false)
+        object.sfxTimer += 48
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            CallFunction(Player_Hit)
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    temp0 = object.frame
+    temp0 >>= 1
+    DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+    object.frame++
+    object.frame &= 3
+
+    temp0 = object.frameTimer
+    temp0 /= 20
+    switch temp0
+    case 0
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case 1
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case 2
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case 3
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects2.gif")
+
+    SpriteFrame(-33, -36, 66, 68, 67, 127)      // #0 - Buzzsaw frame 0
+    SpriteFrame(-33, -36, 66, 68, 190, 154)     // #1 - Buzzsaw frame 1
+
+    SpriteFrame(-53, -53, 26, 26, 158, 43)      // #2 - Buzzsaw Extension frame 0
+    SpriteFrame(-73, -73, 26, 26, 158, 43)      // #3 - Buzzsaw Extension frame 1
+    SpriteFrame(-93, -93, 26, 26, 158, 43)      // #4 - Buzzsaw Extension frame 2
+    SpriteFrame(-113, -113, 26, 26, 158, 43)    // #5 - Buzzsaw Extension frame 3
+
+    foreach (TypeName[Buzzsaw], arrayPos0, ALL_ENTITIES)
+        if object[arrayPos0].propertyValue > 127
+            object[arrayPos0].propertyValue -= 128
+            object[arrayPos0].direction = object[arrayPos0].propertyValue
+            object[arrayPos0].frameTimer = 74
+            object[arrayPos0].state = BUZZSAW_LOW_STOPPED
+        else
+            object[arrayPos0].direction = object[arrayPos0].propertyValue
+        end if
+
+        switch object[arrayPos0].direction
+        case DIR_FACING_RIGHT
+            object[arrayPos0].xvel = 0x10000
+            object[arrayPos0].yvel = 0x10000
+            break
+
+        case DIR_FACING_LEFT
+            object[arrayPos0].xvel = -0x10000
+            object[arrayPos0].yvel = 0x10000
+            break
+
+        case DIR_FACING_UPEND_RIGHT
+            object[arrayPos0].xvel = 0x10000
+            object[arrayPos0].yvel = -0x10000
+            break
+
+        case DIR_FACING_UPEND_LEFT
+            object[arrayPos0].xvel = -0x10000
+            object[arrayPos0].yvel = -0x10000
+            break
+
+        end switch
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // startStreched
+            GetBit(checkResult, object.propertyValue, 7)
+            break
+
+        case 1 // direction
+            checkResult = object.propertyValue
+            checkResult &= 3
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // startStreched
+            object.propertyValue &= 127
+            SetBit(object.propertyValue, 7, editor.variableValue)
+            break
+
+        case 1 // direction
+            object.propertyValue &= 128
+            object.propertyValue |= editor.variableValue
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    object.direction = object.propertyValue
+    object.direction &= 3
+
+    if object.propertyValue > 127
+        temp1 = 74
+    else
+        temp1 = 0
+    end if
+
+    temp0 = temp1
+    temp0 /= 20
+    DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+
+    switch temp0
+    case 0
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case 1
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case 2
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case 3
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    end switch
+
+    if editor.showGizmos == true
+        editor.drawingOverlay = true
+        temp0 = object.xpos
+        temp1 = object.ypos
+        temp2 = 0x10000
+        temp2 *= 74
+
+        if object.propertyValue < 127
+            switch object.direction
+            case DIR_FACING_RIGHT
+                temp0 += temp2
+                temp1 += temp2
+                break
+
+            case DIR_FACING_LEFT
+                temp0 -= temp2
+                temp1 += temp2
+                break
+
+            case DIR_FACING_UPEND_RIGHT
+                temp0 += temp2
+                temp1 -= temp2
+                break
+
+            case DIR_FACING_UPEND_LEFT
+                temp0 -= temp2
+                temp1 -= temp2
+                break
+
+            end switch
+        else
+            switch object.direction
+            case DIR_FACING_RIGHT
+                temp0 -= temp2
+                temp1 -= temp2
+                break
+
+            case DIR_FACING_LEFT
+                temp0 += temp2
+                temp1 -= temp2
+                break
+
+            case DIR_FACING_UPEND_RIGHT
+                temp0 -= temp2
+                temp1 += temp2
+                break
+
+            case DIR_FACING_UPEND_LEFT
+                temp0 += temp2
+                temp1 += temp2
+                break
+
+            end switch
+        end if
+
+        DrawArrow(object.xpos, object.ypos, temp0, temp1, 255, 255, 0)
+        editor.drawingOverlay = false
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects2.gif")
+
+    SpriteFrame(-33, -36, 66, 68, 67, 127)      // #0 - Buzzsaw frame 0
+    SpriteFrame(-33, -36, 66, 68, 190, 154)     // #1 - Buzzsaw frame 1
+
+    SpriteFrame(-53, -53, 26, 26, 158, 43)      // #2 - Buzzsaw Extension frame 0
+    SpriteFrame(-73, -73, 26, 26, 158, 43)      // #3 - Buzzsaw Extension frame 1
+    SpriteFrame(-93, -93, 26, 26, 158, 43)      // #4 - Buzzsaw Extension frame 2
+    SpriteFrame(-113, -113, 26, 26, 158, 43)    // #5 - Buzzsaw Extension frame 3
+
+    AddEditorVariable("startStreched")
+    SetActiveVariable("startStreched")
+    AddEnumVariable("false", false)
+    AddEnumVariable("true", true)
+
+    AddEditorVariable("direction")
+    SetActiveVariable("direction")
+    AddEnumVariable("Right", DIR_FACING_RIGHT)
+    AddEnumVariable("Left", DIR_FACING_LEFT)
+    AddEnumVariable("Upside-Down Right", DIR_FACING_UPEND_RIGHT)
+    AddEnumVariable("Upside-Down Left", DIR_FACING_UPEND_LEFT)
+end event

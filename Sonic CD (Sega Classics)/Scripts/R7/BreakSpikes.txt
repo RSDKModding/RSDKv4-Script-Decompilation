@@ -1,0 +1,172 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Break Spikes Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value3 : object.yaccel
+
+// Player Aliases
+private alias object.state  : player.state
+private alias object.xpos   : player.xpos
+private alias object.yvel   : player.yvel
+private alias object.speed  : player.speed
+private alias object.value7 : player.invincibleTimer
+
+// Property Values
+// All non-zero property values are for individual spike pieces
+private alias 0 : BREAKSPIKES_MAIN
+private alias 1 : BREAKSPIKES_DEBRIS_1
+private alias 2 : BREAKSPIKES_DEBRIS_2
+private alias 3 : BREAKSPIKES_DEBRIS_3
+private alias 4 : BREAKSPIKES_DEBRIS_4
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.propertyValue == BREAKSPIKES_MAIN
+		// Compare Metal Sonic's position with that of the spikes' to see if they should be broken
+
+		// Take the spike's position and subtract 20 pixels from it
+		temp0 = object.xpos
+		temp0 -= 0x140000
+
+		arrayPos0 = metalSonic.entityPos
+		if object[arrayPos0].xpos > temp0
+			// Metal Sonic has passed these spikes, destroy them
+
+			// Play the Crumble SFX
+			PlaySfx(SfxName[Crumble], false)
+
+			// Create a bunch of spike fragments
+			// Their property value is what frame they should use
+
+			CreateTempObject(TypeName[Break Spikes], BREAKSPIKES_DEBRIS_1, object.xpos, object.ypos)
+			object[tempObjectPos].xvel = 0x8000
+			object[tempObjectPos].yvel = -0x20000
+			object[tempObjectPos].yaccel = 0x3000
+			object[tempObjectPos].inkEffect = INK_ALPHA
+			object[tempObjectPos].alpha = 254
+
+			CreateTempObject(TypeName[Break Spikes], BREAKSPIKES_DEBRIS_2, object.xpos, object.ypos)
+			object[tempObjectPos].xvel = 0x10000
+			object[tempObjectPos].yvel = -0x40000
+			object[tempObjectPos].yaccel = 0x3000
+			object[tempObjectPos].inkEffect = INK_ALPHA
+			object[tempObjectPos].alpha = 254
+
+			CreateTempObject(TypeName[Break Spikes], BREAKSPIKES_DEBRIS_3, object.xpos, object.ypos)
+			object[tempObjectPos].xvel = 0x18000
+			object[tempObjectPos].yvel = -0x20000
+			object[tempObjectPos].yaccel = 0x2000
+			object[tempObjectPos].inkEffect = INK_ALPHA
+			object[tempObjectPos].alpha = 254
+
+			CreateTempObject(TypeName[Break Spikes], BREAKSPIKES_DEBRIS_4, object.xpos, object.ypos)
+			object[tempObjectPos].xvel = 0x20000
+			object[tempObjectPos].yvel = -0x40000
+			object[tempObjectPos].yaccel = 0x4000
+			object[tempObjectPos].inkEffect = INK_ALPHA
+			object[tempObjectPos].alpha = 254
+
+			// Clear the main spikes object
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+		end if
+
+		arrayPos0 = 0
+	else
+		// Spike fragment
+
+		// Fade out
+		if object.alpha > 0
+			object.alpha -= 2
+		end if
+
+		// Update movement
+		object.xpos += object.xvel
+		object.ypos += object.yvel
+
+		// The top and bottom spikes get different gravities, which is why gravity is just stored as an Object Value in this case
+		object.yvel += object.yaccel
+
+		// Unload as soon as out of view, as at that point the Object's no longer needed
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// If the Spikes are all still together, then they can still damage Sonic
+		if object.propertyValue == BREAKSPIKES_MAIN
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -15, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+			// And now check for actual touching of the sharp spikes
+			if player[currentPlayer].yvel > -1
+				if player[currentPlayer].invincibleTimer == 0
+					BoxCollisionTest(C_TOUCH, object.entityPos, -15, -16, 15, -12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						// Damage the player
+						player[currentPlayer].state = Player_State_GotHit
+
+						// Since the Player's been hit, they can no longer get the Heavy Metal Achievement
+						// (For refrence, the Heavy Metal Achievement has you get through the entire Metal Sonic race without getting hit)
+						MetalSonic_heavyFlag = 0
+
+						// Decide knockback direction based on if the player's behind or in front of this object
+						// The X Positions used are based on the centers of both entities
+						if player[currentPlayer].xpos > object.xpos
+							player[currentPlayer].speed = 0x20000
+						else
+							player[currentPlayer].speed = -0x20000
+						end if
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.propertyValue, FX_INK, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items3.gif")
+
+	// 0 - Main Spikes frame
+	SpriteFrame(-16, -16, 32, 32, 50, 1)
+
+	// 1-3 - Individual Spike Frames
+	SpriteFrame(-16, -16, 8, 32, 50, 1)
+	SpriteFrame(-8, -16, 8, 32, 50, 1)
+	SpriteFrame(0, -16, 8, 32, 50, 1)
+	SpriteFrame(8, -16, 8, 32, 50, 1)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-16, -16, 32, 32, 50, 1)
+
+	// Although used by the object for its broken variants, it shouldn't be set by the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

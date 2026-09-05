@@ -1,0 +1,146 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Barrier Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.barrierHeight
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// Boss Camera Aliases
+private alias object[+1].type     : bossCamera.type
+private alias object[+1].priority : bossCamera.priority
+private alias object[+1].value0   : bossCamera.cameraHeight
+
+// Eggman Mobile Aliases
+private alias object[+7].type     : eggMobile.type
+private alias object[+7].priority : eggMobile.priority
+private alias object[+7].state    : eggMobile.state
+
+// Floor Control Aliases
+private alias object[+8].type     : floorControl.type
+private alias object[+8].priority : floorControl.priority
+private alias object[+8].value6   : floorControl.currentFloor
+
+// States
+private alias 0 : BOSSBARRIER_IDLE
+private alias 1 : BOSSBARRIER_SETUP_BOSS
+private alias 2 : BOSSBARRIER_CLOSE_DOOR
+private alias 3 : BOSSBARRIER_CLOSED
+
+// Eggman Mobile States
+private alias 1 : R6_EGG_START
+
+// Fade Music Property Values
+private alias 0 : FADEMUSIC_TO_BOSS
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSBARRIER_IDLE
+        temp0 = player[SLOT_PLAYER1].xpos
+        temp0 -= object.xpos
+        if temp0 > 0x600000
+            object.state = BOSSBARRIER_SETUP_BOSS
+        end if
+        break
+
+    case BOSSBARRIER_SETUP_BOSS
+        if object.barrierHeight < 0x400000
+            object.barrierHeight += 0x20000
+            object.ypos += 0x20000
+        end if
+
+        temp0 = player[SLOT_PLAYER1].xpos
+        temp0 -= object.xpos
+        if temp0 > 0x800000
+            object.state = BOSSBARRIER_CLOSE_DOOR
+
+            CreateTempObject(TypeName[Fade Music], FADEMUSIC_TO_BOSS, object.xpos, object.ypos)
+            
+            stage.newXBoundary1 = object.ixpos
+            stage.newXBoundary1 -= 16
+
+            stage.newXBoundary2 = stage.newXBoundary1
+            stage.newXBoundary2 += 448
+
+            bossCamera.type = TypeName[Boss Camera]
+            bossCamera.priority = PRIORITY_ACTIVE
+            bossCamera.cameraHeight = -1
+
+            eggMobile.state = R6_EGG_START
+            eggMobile.priority = PRIORITY_ACTIVE
+
+            floorControl.type = TypeName[Floor Control]
+            floorControl.priority = PRIORITY_ACTIVE
+            floorControl.currentFloor = -1
+        end if
+        break
+
+    case BOSSBARRIER_CLOSE_DOOR
+        if object.barrierHeight < 0x400000
+            object.barrierHeight += 0x20000
+            object.ypos += 0x20000
+        else
+            object.state = BOSSBARRIER_CLOSED
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.barrierHeight < 0x400000
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        else
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+    DrawSprite(1)
+    DrawSprite(2)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects2.gif")
+
+    SpriteFrame(-16, -32, 32, 32, 173, 223) // #0 - Barrier Top
+    SpriteFrame(-16, 0, 32, 32, 173, 223)   // #1 - Barrier Bottom
+    SpriteFrame(16, -6, 16, 32, 239, 183)   // #2 - Boss Electrode
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(1)
+    DrawSprite(2)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects2.gif")
+    
+    SpriteFrame(-16, -32, 32, 32, 173, 223) // #0 - Barrier Top
+    SpriteFrame(-16, 0, 32, 32, 173, 223)   // #1 - Barrier Bottom
+    SpriteFrame(16, -6, 16, 32, 239, 183)   // #2 - Boss Electrode
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

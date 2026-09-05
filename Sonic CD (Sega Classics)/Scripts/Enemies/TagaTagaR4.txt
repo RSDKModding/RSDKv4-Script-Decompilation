@@ -1,0 +1,388 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Taga Taga Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0         : object.timer
+private alias object.value1         : object.originPos.x
+private alias object.propertyValue  : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : TAGATAGA_MOVE_LEFT
+private alias 1 : TAGATAGA_MOVE_RIGHT
+private alias 2 : TAGATAGA_SHOOT_LEFT
+private alias 3 : TAGATAGA_SHOOT_RIGHT
+private alias 4 : TAGATAGA_RESTORE
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TagaTaga_DebugDraw
+reserve function TagaTaga_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value TagaTaga_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function TagaTaga_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= TagaTaga_startDebugID
+    DrawSprite(0)
+    if temp0 == 0
+        DrawSprite(2)
+        DrawSprite(3)
+        DrawSprite(4)
+    end if
+end function
+
+
+private function TagaTaga_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= TagaTaga_startDebugID
+    CreateTempObject(TypeName[Taga Taga], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].originPos.x = object.xpos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.quality == 0
+        switch object.state
+        case TAGATAGA_MOVE_LEFT
+            if object.timer == 0
+                object.state = TAGATAGA_MOVE_RIGHT
+                object.direction = FACING_LEFT
+                object.timer = 192
+            else
+                object.timer--
+                object.xpos -= 0x10000
+            end if
+
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                BoxCollisionTest(C_TOUCH, object.entityPos, -128, -32, 0, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.state = TAGATAGA_SHOOT_LEFT
+                    object.timer = 0
+                    object.priority = PRIORITY_ACTIVE
+                end if
+            next
+            break
+
+        case TAGATAGA_MOVE_RIGHT
+            if object.timer == 0
+                object.state = TAGATAGA_MOVE_LEFT
+                object.direction = FACING_RIGHT
+                object.timer = 192
+            else
+                object.timer--
+                object.xpos += 0x10000
+            end if
+
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                BoxCollisionTest(C_TOUCH, object.entityPos, 0, -32, 128, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.state = TAGATAGA_SHOOT_RIGHT
+                    object.timer = 0
+                    object.priority = PRIORITY_ACTIVE
+                end if
+            next
+            break
+
+        case TAGATAGA_SHOOT_LEFT
+            if object.timer < 120
+                object.timer++
+                if object.timer == 60
+                    CreateTempObject(TypeName[Taga Spike], 0, object.xpos, object.ypos)
+                    object[tempObjectPos].xpos -= 0x10000
+                    object[tempObjectPos].ypos -= 0xA0000
+                    object[tempObjectPos].xvel = -0x20000
+                    object[tempObjectPos].yvel = -0x30000
+
+                    CreateTempObject(TypeName[Taga Spike], 0, object.xpos, object.ypos)
+                    object[tempObjectPos].xpos += 0x30000
+                    object[tempObjectPos].ypos -= 0xA0000
+                    object[tempObjectPos].xvel = 0x10000
+                    object[tempObjectPos].yvel = -0x30000
+
+                    CreateTempObject(TypeName[Taga Spike], 0, object.xpos, object.ypos)
+                    object[tempObjectPos].xpos += 0x70000
+                    object[tempObjectPos].ypos -= 0x90000
+                    object[tempObjectPos].xvel += 0x20000
+                    object[tempObjectPos].yvel = -0x30000
+
+                    PlaySfx(SfxName[Shot 2], false)
+                end if
+            else
+                object.xpos -= 0x40000
+                if object.outOfBounds == true
+                    object.state = TAGATAGA_RESTORE
+                    object.xpos = object.originPos.x
+                end if
+            end if
+            break
+
+        case TAGATAGA_SHOOT_RIGHT
+            if object.timer < 120
+                object.timer++
+                if object.timer == 60
+                    CreateTempObject(TypeName[Taga Spike], 0, object.xpos, object.ypos)
+                    object[tempObjectPos].xpos += 0x10000
+                    object[tempObjectPos].ypos -= 0xA0000
+                    object[tempObjectPos].xvel = 0x20000
+                    object[tempObjectPos].yvel = -0x30000
+
+                    CreateTempObject(TypeName[Taga Spike], 0, object.xpos, object.ypos)
+                    object[tempObjectPos].xpos -= 0x30000
+                    object[tempObjectPos].ypos -= 0xA0000
+                    object[tempObjectPos].xvel = -0x10000
+                    object[tempObjectPos].yvel = -0x30000
+
+                    CreateTempObject(TypeName[Taga Spike], 0, object.xpos, object.ypos)
+                    object[tempObjectPos].xpos -= 0x70000
+                    object[tempObjectPos].ypos -= 0x90000
+                    object[tempObjectPos].xvel = -0x20000
+                    object[tempObjectPos].yvel = -0x30000
+
+                    PlaySfx(SfxName[Shot 2], false)
+                end if
+            else
+                object.xpos += 0x40000
+                if object.outOfBounds == true
+                    object.state = TAGATAGA_RESTORE
+                    object.xpos = object.originPos.x
+                end if
+            end if
+            break
+
+        case TAGATAGA_RESTORE
+            if object.outOfBounds == true
+                object.state = TAGATAGA_MOVE_LEFT
+                object.timer = 0
+                object.direction = FACING_RIGHT
+                object.xpos = object.originPos.x
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case TAGATAGA_MOVE_LEFT
+            if object.timer == 0
+                object.state = TAGATAGA_MOVE_RIGHT
+                object.direction = FACING_LEFT
+                object.timer = 384
+            else
+                object.timer--
+                object.xpos -= 0x8000
+            end if
+            break
+
+        case TAGATAGA_MOVE_RIGHT
+            if object.timer == 0
+                object.state = TAGATAGA_MOVE_LEFT
+                object.direction = FACING_RIGHT
+                object.timer = 384
+            else
+                object.timer--
+                object.xpos += 0x8000
+            end if
+            break
+
+        case TAGATAGA_SHOOT_LEFT
+            if object.timer < 120
+                object.timer++
+            else
+                object.xpos -= 0x18000
+                if object.outOfBounds == true
+                    object.state = TAGATAGA_RESTORE
+                    object.xpos = object.originPos.x
+                end if
+            end if
+            break
+
+        case TAGATAGA_SHOOT_RIGHT
+            if object.timer < 120
+                object.timer++
+            else
+                object.xpos += 0x18000
+                if object.outOfBounds == true
+                    object.state = TAGATAGA_RESTORE
+                    object.xpos = object.originPos.x
+                end if
+            end if
+            break
+
+        case TAGATAGA_RESTORE
+            if object.outOfBounds == true
+                object.state = TAGATAGA_MOVE_LEFT
+                object.timer = 0
+                object.direction = FACING_RIGHT
+                object.xpos = object.originPos.x
+            end if
+            break
+        end switch
+    end if
+
+    if object.state < TAGATAGA_RESTORE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -12, -8, 12, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+        next
+    end if
+
+	// Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    if object.quality == QUALITY_GOOD
+        if object.state < TAGATAGA_RESTORE
+            temp0 = object.frame
+            temp0 >>= 5
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        end if
+
+        if object.state < TAGATAGA_SHOOT_LEFT
+            DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+            DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+            DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+            object.frame++
+            object.frame &= 63
+        else
+            if object.timer < 60
+                DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+                DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+                DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+            end if
+        end if
+    else
+        if object.state < TAGATAGA_RESTORE
+            temp0 = object.frame
+            temp0 >>= 5
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        end if
+
+        if object.state < TAGATAGA_SHOOT_LEFT
+            object.frame++
+            object.frame &= 63
+        end if
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects.gif")
+
+    foreach (TypeName[Taga Taga], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+    next
+
+    SpriteFrame(-20, -12, 40, 24, 215, 86)  // #0 - Taga Taga Frame 0
+    SpriteFrame(-20, -12, 40, 24, 215, 111) // #1 - Taga Taga Frame 1
+
+    SpriteFrame(-1, -10, 8, 8, 206, 52)     // #2 - Taga Taga Top Spike 1
+    SpriteFrame(3, -10, 8, 8, 206, 52)      // #3 - Taga Taga Top Spike 2
+    SpriteFrame(7, -9, 8, 8, 206, 52)       // #4 - Taga Taga Top Spike 3
+
+    temp0 = 0
+    TagaTaga_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Taga Taga], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(TagaTaga_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(TagaTaga_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    if object.propertyValue == QUALITY_GOOD
+        DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+    else
+        DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects.gif")
+
+    SpriteFrame(-20, -12, 40, 24, 215, 86)  // #0 - Taga Taga Frame 0
+    SpriteFrame(-20, -12, 40, 24, 215, 111) // #1 - Taga Taga Frame 1
+
+    SpriteFrame(-1, -10, 8, 8, 206, 52)     // #2 - Taga Taga Top Spike 1
+    SpriteFrame(3, -10, 8, 8, 206, 52)      // #3 - Taga Taga Top Spike 2
+    SpriteFrame(7, -9, 8, 8, 206, 52)       // #4 - Taga Taga Top Spike 3
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

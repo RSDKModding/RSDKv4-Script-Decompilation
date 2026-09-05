@@ -1,0 +1,135 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Sonic Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0	: object.timer
+
+// States
+private alias 0	: SONIC_SETUP
+private alias 1	: SONIC_TURNING
+
+// Control Mode
+private alias 0	: CONTROLMODE_NORMAL
+
+// Players
+private alias 0	: PLAYER_SONIC_A
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Fill the screen with the blue background color
+	DrawRect(0, 0, screen.xsize, screen.ysize, 0, 0, 96, 255)
+
+	switch object.state
+	case SONIC_SETUP
+		if object.alpha > 8
+			// Fade him in
+			DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+		end if
+
+		// object.alpha is a byte so it's prone to overflow, which is why we're doing this
+		if object.timer < 256
+			object.timer += 8
+			if object.timer < 256
+				object.alpha = object.timer
+			else
+				object.alpha = 255
+			end if
+		else
+			if object.timer < 272
+				object.timer++
+			else
+				// Reset some stuff
+				object.timer = 0
+				object.state = SONIC_TURNING
+				lampPostID = 0
+
+				// Play the Music based on the soundtrack... even though the soundtrack toggle doesn't work here.
+				PlayMusic(options.soundtrack)
+			end if
+		end if
+		break
+
+	case SONIC_TURNING
+		temp0 = object.timer
+		temp0 >>= 2
+		DrawSprite(temp0)
+
+		// Get Sonic's Arm Position
+		temp0 = 11
+		temp0 += screen.xcenter
+
+		// If at a point where Sonic's sprite is armless, then give him his arm back
+		if object.timer > 15
+			DrawSpriteScreenXY(5, temp0, 72)
+		end if
+
+		object.timer++
+		if object.timer > 19
+			ResetObjectEntity(object.entityPos, TypeName[Logo], 0, object.xpos, object.ypos)
+			object.timer = 256
+
+			// Place some other Title Screen elements into the scene now
+			arrayPos0 = object.entityPos
+			arrayPos0 -= 2
+
+			// First, add the Background into the scene, at Object[-2]
+			object[arrayPos0].type = TypeName[Background]
+			object[arrayPos0].drawOrder = 0
+
+			// There's nothing on this layer anyway, but may as well I guess?
+			stage[2].activeLayer = 9
+
+			arrayPos0++
+
+			// And then add the 3d Clouds into Object[-1]
+			object[arrayPos0].type = TypeName[Clouds]
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	// Set both of the Title Screen tracks here, both of them set to not loop
+	// Only JP gets used... because you can't toggle the soundtrack here.
+	SetMusicTrack("JP/Titlescreen.ogg", 0, 0)
+	SetMusicTrack("US/Titlescreen.ogg", 1, 0)
+
+	LoadSpriteSheet("Title/Title.gif")
+
+	SpriteFrame(-47, -89, 96, 112, 1, 203)		// #0 - Sonic Turning Frame 0
+	SpriteFrame(-47, -89, 104, 120, 98, 203)	// #1 - Sonic Turning Frame 1
+	SpriteFrame(-47, -96, 96, 120, 1, 316)		// #2 - Sonic Turning Frame 2
+	SpriteFrame(-47, -96, 104, 120, 98, 324)	// #3 - Sonic Turning Frame 3
+	SpriteFrame(-47, -96, 104, 120, 1, 1)		// #4 - Sonic Base Frame
+	SpriteFrame(0, 0, 45, 55, 210, 203)			// #5 - Sonic Base Arm Frame
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

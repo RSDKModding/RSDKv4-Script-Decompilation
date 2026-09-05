@@ -1,0 +1,126 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Bumper Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.xvel   : object.offset.x
+private alias object.yvel   : object.offset.y
+private alias object.value0 : object.armEntity
+
+// Arm Aliases
+private alias object.frame : arm.frame
+private alias object.xpos  : arm.xpos
+private alias object.ypos  : arm.ypos
+
+// Player Aliases
+private alias object.animation : player.animation
+private alias object.xvel      : player.xvel
+private alias object.speed     : player.speed
+
+// States
+private alias 0 : BOSSBUMPER_SETUP
+private alias 1 : BOSSBUMPER_IDLE
+private alias 2 : BOSSBUMPER_DESTROYED
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSBUMPER_SETUP
+        object.state = BOSSBUMPER_IDLE
+        // [Fallthrough]
+
+    case BOSSBUMPER_IDLE
+        arrayPos0 = object.armEntity
+
+        object.xpos = arm[arrayPos0].xpos
+        object.xpos -= 0x130000
+        object.ypos = arm[arrayPos0].ypos
+
+        if arm[arrayPos0].frame != 0
+            if arm[arrayPos0].frame == 1
+                object.xpos += 0x80000
+            else
+                object.xpos += 0x100000
+            end if
+        end if
+        break
+
+    case BOSSBUMPER_DESTROYED
+        object.offset.x -= 0x500
+        object.offset.y += 0x1800
+
+        object.xpos += object.offset.x
+        object.ypos += object.offset.y
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+
+    if object.state < BOSSBUMPER_DESTROYED
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if player[currentPlayer].animation != ANI_HURT
+                arrayPos0 = object.armEntity
+                if arm[arrayPos0].frame == 0
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -10, -16, 14, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        player[currentPlayer].speed = -0x40000
+                        player[currentPlayer].xvel = -0x40000
+                        
+                        if object.frame == 0
+                            PlaySfx(SfxName[Spring], false)
+                        end if
+
+                        object.frame = 2
+                    end if
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(object.frame)
+    if object.frame > 0
+        object.frame--
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects3.gif")
+
+    SpriteFrame(-14, -16, 24, 32, 99, 26) // #0 - EGG-HVC-001 Bumper
+    SpriteFrame(-18, -16, 24, 32, 99, 26) // #1 - EGG-HVC-001 Bumper (different offset)
+    SpriteFrame(-18, -16, 24, 32, 99, 26) // #2 - EGG-HVC-001 Bumper (same offset as frame 1, here to pad out animation length)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-14, -16, 24, 32, 99, 26)   // #0 - EGG-HVC-001 Bumper
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

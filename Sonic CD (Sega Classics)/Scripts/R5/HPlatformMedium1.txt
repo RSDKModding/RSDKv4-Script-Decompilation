@@ -1,0 +1,513 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: HPlatform Med1 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.stood
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.drawPos.x
+private alias object.value4 : object.collisionOffset.x
+private alias object.value5 : object.cooldown
+
+// Player Aliases
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.animation : player.animation
+private alias object.value16   : debugMode.currentSelection
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Property Values
+private alias 0 : START_MOVING_RIGHT
+private alias 1 : START_MOVING_RIGHT_W/SPRING
+private alias 2 : START_MOVING_RIGHT_W/CONV
+private alias 3 : START_MOVING_LEFT
+private alias 4 : START_MOVING_LEFT_W/SPRING
+private alias 5 : START_MOVING_LEFT_W/CONV
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HPlatformMed1_DebugDraw
+reserve function HPlatformMed1_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+public value HPlatformMed1_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function HPlatformMed1_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= HPlatformMed1_startDebugID
+
+	switch temp0
+	case 0 // Right Platform
+		DrawSprite(0)
+		break
+
+	case 1 // Right Platform (Conveyor)
+		DrawSprite(0)
+		DrawSprite(1)
+		break
+
+	end switch
+end function
+
+
+public function HPlatformMed1_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= HPlatformMed1_startDebugID
+
+	switch temp0
+	case 0 // Right Platform
+		temp1 = START_MOVING_RIGHT
+		break
+
+	case 1 // Right Platform (Conveyor)
+		temp1 = START_MOVING_RIGHT_W/CONV
+		break
+
+	end switch
+
+	// Spawn the platform
+	CreateTempObject(TypeName[HPlatform Med1], temp1, object.xpos, object.ypos)
+
+	// Truncate the position
+	object[tempObjectPos].xpos &= -0x10000
+	object[tempObjectPos].ypos &= -0x10000
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle += 2
+	object.angle &= 511
+	Sin(object.collisionOffset.x, object.angle)
+	
+	switch object.propertyValue
+	case START_MOVING_RIGHT
+	case START_MOVING_RIGHT_W/CONV
+		// Right-moving Platform
+		object.collisionOffset.x *= 0x1000
+		object.collisionOffset.x += 0x200000
+		object.collisionOffset.x += object.xpos
+		object.collisionOffset.x &= -0x10000 // Truncate the value
+		object.collisionOffset.x -= object.drawPos.x
+		break
+
+	case START_MOVING_LEFT
+	case START_MOVING_LEFT_W/CONV
+		// Left-moving Platform
+		object.collisionOffset.x *= -0x1000
+		object.collisionOffset.x -= 0x200000
+		object.collisionOffset.x += object.xpos
+		object.collisionOffset.x &= -0x10000 // Truncate the value
+		object.collisionOffset.x -= object.drawPos.x
+		break
+
+	case START_MOVING_RIGHT_W/SPRING
+		// Right-moving Carrier Object
+		object.collisionOffset.x *= 0x1000
+		object.collisionOffset.x += 0x200000
+		object.collisionOffset.x += object.xpos
+		object.collisionOffset.x &= -0x10000 // Truncate the value
+
+		// Move the first Following Object
+
+		// Make it 16 Pixels to the left
+		object[+1].xpos = object.collisionOffset.x
+		object[+1].xpos -= 0x100000
+
+		// And 24 pixels above
+		object[+1].ypos = object.ypos
+		object[+1].ypos -= 0x180000
+
+		// And then move the next Follower Object
+
+		// Make this one 16 pixels to the right
+		object[+2].xpos = object.collisionOffset.x
+		object[+2].xpos += 0x100000
+
+		// And also 24 pixels above
+		object[+2].ypos = object.ypos
+		object[+2].ypos -= 0x180000
+
+		object.collisionOffset.x -= object.drawPos.x
+		break
+
+	case START_MOVING_LEFT_W/SPRING
+		// Left-moving Carrier Object
+		object.collisionOffset.x *= -0x1000
+		object.collisionOffset.x -= 0x200000
+		object.collisionOffset.x += object.xpos
+		object.collisionOffset.x &= -0x10000 // Truncate the value
+
+		// Moving the first Follower Object
+
+		// Move it 16 pixels to the left from this Object
+		object[+1].xpos = object.collisionOffset.x
+		object[+1].xpos -= 0x100000
+
+		// And 24 pixels above
+		object[+1].ypos = object.ypos
+		object[+1].ypos -= 0x180000
+
+		// And then the second Following Object
+
+		// 16 pixels, but this time to the right!
+		object[+2].xpos = object.collisionOffset.x
+		object[+2].xpos += 0x100000
+
+		// But this part's still 24 pixels up, yeah
+		object[+2].ypos = object.ypos
+		object[+2].ypos -= 0x180000
+
+		object.collisionOffset.x -= object.drawPos.x
+		break
+	end switch
+
+	if object.stood == true
+		if object.drawPos.y < 16
+			object.drawPos.y++
+			temp0 = object.drawPos.y
+			temp0 &= 3
+			if temp0 == 3
+				// Dip the Platform down by a pixel
+				object.collisionOffset.y = 0x10000
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			object.collisionOffset.y = 0
+		end if
+	else
+		if object.drawPos.y > 0
+			object.drawPos.y--
+			temp0 = object.drawPos.y
+			temp0 &= 3
+			if temp0 == 3
+				// Restore the Platform upwards a little
+				object.collisionOffset.y = -0x10000
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			object.collisionOffset.y = 0
+		end if
+	end if
+
+	object.stood = false
+
+	// First, back up the Object's base Position
+	temp0 = object.xpos
+
+	// Now, move the Object to where its Platform is
+	object.xpos = object.drawPos.x
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// From here, jump to the further handling type needed
+		switch object.propertyValue
+		case START_MOVING_RIGHT
+		case START_MOVING_LEFT
+			// Standard Platform type
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				// Since the Player's on the Platform, let the Platform Object know so that it can dip if needed
+				object.stood = true
+
+				// And move the Player along with the Platform
+				player[currentPlayer].xpos += object.collisionOffset.x
+				player[currentPlayer].ypos += object.collisionOffset.y
+			end if
+			break
+
+		case START_MOVING_RIGHT_W/CONV
+		case START_MOVING_LEFT_W/CONV
+			// Conveyor Platform
+			if object.cooldown == 0
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					// The Player's on the Platform, let the Platform Object know so that it can dip as needed
+					object.stood = true
+
+					// Carry the Player along with the Platform in order to keep them on
+					player[currentPlayer].xpos += object.collisionOffset.x
+					player[currentPlayer].ypos += object.collisionOffset.y
+
+					// And then push the Player as needed for the Conveyor
+					if conveyorBelt.flag == 0
+						player[currentPlayer].xpos += conveyorBelt.speed
+					else
+						player[currentPlayer].xpos -= conveyorBelt.speed
+					end if
+
+					// If the Player is in a Flailing animation, then they're on the edge of the Platform
+					// However! This is a Conveyor Platform!
+					
+					// So to prevent an issue where the Player gets pushed off, regrabbed the next frame, then pushed off, then [...]
+					// There's a cooldown if the Player is detected to be on the edge
+					
+					// Perhaps half a second may be a bit long for the cooldown, but it serves its use nonetheless
+
+					if player[currentPlayer].animation == ANI_FLAILING1
+						object.cooldown = 30
+					end if
+
+					if player[currentPlayer].animation == ANI_FLAILING2
+						object.cooldown = 30
+					end if
+				end if
+			else
+				object.cooldown--
+			end if
+			break
+
+		// cases 1/4 don't have anything
+		// They shouldn't interact with the Player, since they have Springs riding atop them
+		// so the Player shouldn't be able to land on the Platform itself
+
+		end switch
+	next
+
+	// And now restore the Object's Position
+	object.xpos = temp0
+end event
+
+
+event ObjectDraw
+	// Move the Object to where its new Y position should be
+	object.ypos += object.collisionOffset.y
+
+	switch object.propertyValue
+	case START_MOVING_RIGHT
+	case START_MOVING_RIGHT_W/SPRING
+		// Right-moving Platform
+		Sin(object.drawPos.x, object.angle)
+		object.drawPos.x *= 0x1000
+		object.drawPos.x += 0x200000
+		object.drawPos.x += object.xpos
+		object.drawPos.x &= -0x10000 // Truncate the value
+		DrawSpriteXY(0, object.drawPos.x, object.ypos)
+		break
+
+	case START_MOVING_RIGHT_W/CONV
+		// Right-moving Conveyor Platform
+		Sin(object.drawPos.x, object.angle)
+		object.drawPos.x *= 0x1000
+		object.drawPos.x += 0x200000
+		object.drawPos.x += object.xpos
+		object.drawPos.x &= -0x10000 // Truncate the value
+		DrawSpriteXY(0, object.drawPos.x, object.ypos)
+		DrawSpriteXY(1, object.drawPos.x, object.ypos)
+		break
+
+	case START_MOVING_LEFT
+	case START_MOVING_LEFT_W/SPRING
+		// Left-moving Platform
+		Sin(object.drawPos.x, object.angle)
+		object.drawPos.x *= -0x1000
+		object.drawPos.x -= 0x200000
+		object.drawPos.x += object.xpos
+		object.drawPos.x &= -0x10000 // Truncate the value
+		DrawSpriteXY(0, object.drawPos.x, object.ypos)
+		break
+
+	case START_MOVING_LEFT_W/CONV
+		// Left-moving Conveyor Platform
+		Sin(object.drawPos.x, object.angle)
+		object.drawPos.x *= -0x1000
+		object.drawPos.x -= 0x200000
+		object.drawPos.x += object.xpos
+		object.drawPos.x &= -0x10000 // Truncate the value
+		DrawSpriteXY(0, object.drawPos.x, object.ypos)
+		DrawSpriteXY(1, object.drawPos.x, object.ypos)
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	// Use different Sprites for the different Time Periods
+	switch HUD.currentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 51)
+		SpriteFrame(-32, -16, 64, 16, 1, 208)
+		break
+
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 148)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 182)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 216)
+		break
+
+	end switch
+
+	temp0 = 0
+	HPlatformMed1_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[HPlatform Med1], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(HPlatformMed1_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(HPlatformMed1_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Direction
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Direction
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp2 = 0
+	
+	switch object.propertyValue
+	case START_MOVING_RIGHT_W/CONV
+		temp2 = 1
+		// [Fallthrough]
+
+	case START_MOVING_RIGHT
+	case START_MOVING_RIGHT_W/SPRING
+		temp0 = 0x1000
+		temp1 = 0x200000
+		break
+	
+	case START_MOVING_LEFT_W/CONV
+		temp2 = 1
+		// [Fallthrough]
+
+	case START_MOVING_LEFT
+	case START_MOVING_LEFT_W/SPRING
+		temp0 = -0x1000
+		temp1 = -0x200000
+		break
+		
+	end switch
+	
+	DrawSpriteXY(0, temp3, object.ypos)
+	DrawSprite(temp2)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Show the Platform's path
+		temp3 = object.xpos
+		temp3 &= 0xFFFF0000 // Truncate the value
+		
+		Sin(temp4, 128)
+		temp4 *= temp0
+		temp4 += temp1
+		temp4 += object.xpos
+		temp4 &= 0xFFFF0000 // Truncate the value
+		DrawLine(temp3, object.ypos, temp4, object.ypos, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	// Use different graphics for the different Time Periods
+	switch checkResult
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 51)
+		SpriteFrame(-32, -16, 64, 16, 1, 208)
+		break
+
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 148)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 182)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-32, -16, 64, 16, 159, 216)
+		break
+
+	end switch
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Right", 0)
+	AddEnumVariable("Right (Spring)", 1)
+	AddEnumVariable("Right (Conveyor)", 2)
+	AddEnumVariable("Left", 3)
+	AddEnumVariable("Left (Spring)", 4)
+	AddEnumVariable("Left (Conveyor)", 5)
+end event

@@ -1,0 +1,256 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Falling Blocks Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.originPos.y
+private alias object.value2 : object.targetHeight
+private alias object.value3 : object.blockSheet
+private alias object.value4 : object.spikeSheet
+
+// Player Aliases
+private alias object.gravity : player.gravity
+
+// Bug Details:
+// This should be aliased as object[9], because this version of the game has the HUD reserved at that slot.
+// Instead, we are incorrectly using the RSDKv3 version's reserved slot
+
+// Fix:
+// Adjust this alias to use object[9] instead of object[24]
+
+// HUD Aliases
+private alias object[24].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : FALLINGBLOCKS_SETUP
+private alias 1 : FALLINGBLOCKS_CRUMBLE
+private alias 2 : FALLINGBLOCKS_DELAY
+private alias 3 : FALLINGBLOCKS_FALL
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case FALLINGBLOCKS_SETUP
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if object.state == FALLINGBLOCKS_SETUP
+                BoxCollisionTest(C_TOUCH, object.entityPos, -16, -64, 16, 192, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.priority = PRIORITY_ACTIVE
+                    object.yvel = 0
+
+                    object.targetHeight = object.ypos
+                    object.targetHeight += 0x200000
+                    object.state++
+                end if
+            end if
+        next
+        break
+
+    case FALLINGBLOCKS_CRUMBLE
+        object.yvel += 0x2000
+        object.ypos += object.yvel
+        if object.ypos >= object.targetHeight
+            object.ypos = object.targetHeight
+            object.yvel = 0
+            object.state++
+        end if
+        break
+
+    case FALLINGBLOCKS_DELAY
+        if object.timer < 30
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+        end if
+        break
+
+    case FALLINGBLOCKS_FALL
+        object.yvel += 0x2000
+        object.ypos += object.yvel
+
+        ObjectTileCollision(CSIDE_FLOOR, 0, 32, 0)
+        if checkResult == true
+            object.state++
+        end if
+        break
+    end switch
+
+    if object.outOfBounds == true
+        object.ypos = object.originPos.y
+        object.priority = PRIORITY_BOUNDS
+        object.state = FALLINGBLOCKS_SETUP
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_SOLID2, object.entityPos, -16, -64, 16, 62, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == COL_BOTTOM
+            if player[currentPlayer].gravity == GRAVITY_AIR
+                CallFunction(Player_Hit)
+            else
+                CallFunction(Player_Kill)
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    object.spriteSheet = object.blockSheet
+    DrawSpriteXY(0, object.xpos, object.ypos)
+    DrawSpriteXY(1, object.xpos, object.ypos)
+    DrawSpriteXY(2, object.xpos, object.ypos)
+
+    object.spriteSheet = object.spikeSheet
+    DrawSpriteXY(3, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        SpriteFrame(-16, -64, 32, 32, temp0, temp1)  // #0 - R4 Block 1
+        SpriteFrame(-16, -32, 32, 32, temp0, temp1)  // #1 - R4 Block 2
+        SpriteFrame(-16, 0, 32, 32, temp0, temp1)    // #2 - R4 Block 3
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        SpriteFrame(-16, -64, 32, 32, temp0, temp1)  // #0 - R4 Block 1
+        SpriteFrame(-16, -32, 32, 32, temp0, temp1)  // #1 - R4 Block 2
+        SpriteFrame(-16, 0, 32, 32, temp2, temp1)    // #2 - R4 Block 3
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        SpriteFrame(-16, -64, 32, 32, temp0, temp1)  // #0 - R4 Block 1
+        SpriteFrame(-16, -32, 32, 32, temp0, temp1)  // #1 - R4 Block 2
+        SpriteFrame(-16, 0, 32, 32, temp0, temp1)    // #2 - R4 Block 3
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        SpriteFrame(-16, -64, 32, 32, temp0, temp1)  // #0 - R4 Block 1
+        SpriteFrame(-16, -32, 32, 32, temp0, temp1)  // #1 - R4 Block 2
+        SpriteFrame(-16, 0, 32, 32, temp0, temp1)    // #2 - R4 Block 3
+        break
+    end switch
+
+    temp0 = object.spriteSheet
+
+    LoadSpriteSheet("Global/Items3.gif")
+    temp1 = object.spriteSheet
+    SpriteFrame(-16, 32, 32, 32, 50, 100)  // #3 - Spikes
+
+    foreach (TypeName[Falling Blocks], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].blockSheet  = temp0
+        object[arrayPos0].spikeSheet  = temp1
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    LoadSpriteSheet("R4/Objects.gif")
+    temp0 = object.spriteSheet
+
+    LoadSpriteSheet("Global/Items3.gif")
+    temp1 = object.spriteSheet
+
+    object.spriteSheet = temp0
+    DrawSpriteXY(0, object.xpos, object.ypos)
+    DrawSpriteXY(1, object.xpos, object.ypos)
+    DrawSpriteXY(2, object.xpos, object.ypos)
+
+    object.spriteSheet = temp1
+    DrawSpriteXY(3, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+
+    switch checkResult
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        SpriteFrame(-16, -64, 32, 32, temp0, temp1)  // #0 - R4 Block 1
+        SpriteFrame(-16, -32, 32, 32, temp0, temp1)  // #1 - R4 Block 2
+        SpriteFrame(-16, 0, 32, 32, temp0, temp1)    // #2 - R4 Block 3
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        SpriteFrame(-16, -64, 32, 32, temp0, temp1)  // #0 - R4 Block 1
+        SpriteFrame(-16, -32, 32, 32, temp0, temp1)  // #1 - R4 Block 2
+        SpriteFrame(-16, 0, 32, 32, temp2, temp1)    // #2 - R4 Block 3
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        SpriteFrame(-16, -64, 32, 32, temp0, temp1)  // #0 - R4 Block 1
+        SpriteFrame(-16, -32, 32, 32, temp0, temp1)  // #1 - R4 Block 2
+        SpriteFrame(-16, 0, 32, 32, temp0, temp1)    // #2 - R4 Block 3
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        SpriteFrame(-16, -64, 32, 32, temp0, temp1)  // #0 - R4 Block 1
+        SpriteFrame(-16, -32, 32, 32, temp0, temp1)  // #1 - R4 Block 2
+        SpriteFrame(-16, 0, 32, 32, temp0, temp1)    // #2 - R4 Block 3
+        break
+    end switch
+
+    temp0 = object.spriteSheet
+
+    LoadSpriteSheet("Global/Items3.gif")
+    temp1 = object.spriteSheet
+    SpriteFrame(-16, 32, 32, 32, 50, 100)   // #3 - Spikes
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

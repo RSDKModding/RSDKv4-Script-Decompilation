@@ -1,0 +1,254 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Little Planet Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.zoomDepth
+private alias object.angle  : object.rotationLimit
+private alias object.value3 : object.rotationSpeed
+private alias object.value4 : object.rotationDirection
+private alias object.value5 : object.zoomIn
+private alias object.value6 : object.drag
+private alias object.value7 : object.touchInput
+
+// MenuControl Aliases
+private alias object[0].state : menuControl.state
+
+// MenuControl States
+private alias 2 : MENUCONTROL_IDLE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Update Little Planet control
+	if menuControl.state == MENUCONTROL_IDLE
+		// Planet Movement
+		if keyDown[0].left == true
+			if object.xpos > -0x400
+				object.xpos--
+			end if
+		end if
+
+		if keyDown[0].right == true
+			if object.xpos < 0x400
+				object.xpos++
+			end if
+		end if
+
+		if keyDown[0].up == true
+			object.ypos--
+		end if
+
+		if keyDown[0].down == true
+			object.ypos++
+		end if
+
+		// Increase rotation speed
+		if keyDown[0].start == true
+			if object.rotationDirection == FACING_LEFT
+				if object.rotationSpeed > -256
+					object.rotationSpeed -= 2
+				end if
+			else
+				if object.rotationSpeed < 256
+					object.rotationSpeed += 2
+				end if
+			end if
+		end if
+
+		// Flip Rotation
+		if keyPress[0].start == true
+			object.rotationDirection++
+			object.rotationDirection &= 1
+			object.rotationSpeed = 0
+		end if
+
+		// Switch Zoom In / Zoom Out
+		if keyPress[0].buttonC == true
+			object.zoomIn++
+			object.zoomIn &= 1
+		end if
+
+		// Zoom In/Out
+		if keyDown[0].buttonC == true
+			if object.zoomIn == false
+				if object.zoomDepth > 48
+					object.zoomDepth -= 8
+				end if
+			else
+				if object.zoomDepth < 0x4000
+					object.zoomDepth += 8
+				end if
+			end if
+		end if
+
+		// No touch input :(
+	end if
+
+	object.rotationLimit += object.rotationSpeed
+	if object.rotationLimit < 0
+		object.rotationLimit += 0x2000
+	end if
+
+	object.rotationLimit &= 0x1FFF
+	object.rotation = object.rotationLimit
+	object.rotation >>= 4
+end event
+
+
+event ObjectDraw
+	if object.frame == 22
+		DrawRect(0, 32, screen.xsize, 176, 64, 64, 32, 176)
+	end if
+
+	if object.zoomDepth > 0
+		temp0 = object.xpos
+		temp0 <<= 11
+		temp0 /= object.zoomDepth
+		temp0 += screen.xcenter
+
+		temp1 = object.ypos
+		temp1 <<= 11
+		temp1 /= object.zoomDepth
+		temp1 += 120
+
+		object.scale = 0x20000
+		object.scale /= object.zoomDepth
+		DrawSpriteScreenFX(object.frame, FX_ROTOZOOM, temp0, temp1)
+
+		temp2 = object.animationTimer
+		temp2 >>= 3
+		temp3 = object.frame
+		switch temp2
+		case 0
+			temp3++
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 1
+			temp3 += 2
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 2
+			temp3 += 3
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 3
+			temp3 += 4
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 4
+			temp3 += 5
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 24
+			temp3 += 6
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 25
+			temp3 += 7
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 26
+			temp3 += 8
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 27
+			temp3 += 9
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		case 28
+			temp3 += 10
+			DrawSpriteScreenFX(temp3, FX_ROTOZOOM, temp0, temp1)
+			break
+
+		end switch
+
+		object.animationTimer++
+		object.animationTimer &= 511
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("DAGarden/LittlePlanet.gif")
+
+	arrayPos0 = 32
+	while arrayPos0 < 1056
+		if object[arrayPos0].type == TypeName[Little Planet]
+			object[arrayPos0].xpos = 0
+			object[arrayPos0].ypos = 0
+			object[arrayPos0].zoomDepth     = 384
+			object[arrayPos0].rotationSpeed = -8
+		end if
+		arrayPos0++
+	loop
+
+	SpriteFrame(-126, -126, 252, 252, 0, 0)		// #0  - Little Planet
+	SpriteFrame(95, -70, 16, 16, 256, 257)		// #1  - Vulkan Smoke Frame 0
+	SpriteFrame(91, -75, 24, 24, 256, 274)		// #2  - Vulkan Smoke Frame 1
+	SpriteFrame(92, -88, 32, 32, 256, 299)		// #3  - Vulkan Smoke Frame 2
+	SpriteFrame(86, -92, 40, 40, 256, 332)		// #4  - Vulkan Smoke Frame 3
+	SpriteFrame(85, -94, 40, 40, 256, 373)		// #5  - Vulkan Smoke Frame 4
+	SpriteFrame(76, -90, 16, 16, 273, 257)		// #6  - Vulkan Smoke Frame 5
+	SpriteFrame(75, -97, 24, 24, 281, 274)		// #7  - Vulkan Smoke Frame 6
+	SpriteFrame(73, -104, 32, 32, 289, 299)		// #8  - Vulkan Smoke Frame 7
+	SpriteFrame(76, -107, 32, 32, 297, 332)		// #9  - Vulkan Smoke Frame 8
+	SpriteFrame(75, -110, 32, 32, 297, 365)		// #10 - Vulkan Smoke Frame 9
+	SpriteFrame(-126, -126, 252, 252, 256, 0)	// #11 - Little Planet Good Future
+	SpriteFrame(95, -70, 16, 16, 330, 257)		// #12 - GF Vulkan Smoke Frame 0
+	SpriteFrame(91, -75, 24, 24, 330, 274)		// #13 - GF Vulkan Smoke Frame 1
+	SpriteFrame(92, -88, 32, 32, 330, 299)		// #14 - GF Vulkan Smoke Frame 2
+	SpriteFrame(86, -92, 40, 40, 330, 332)		// #15 - GF Vulkan Smoke Frame 3
+	SpriteFrame(85, -94, 40, 40, 330, 373)		// #16 - GF Vulkan Smoke Frame 4
+	SpriteFrame(76, -90, 16, 16, 347, 257)		// #17 - GF Vulkan Smoke Frame 5
+	SpriteFrame(75, -97, 24, 24, 355, 274)		// #18 - GF Vulkan Smoke Frame 6
+	SpriteFrame(73, -104, 32, 32, 363, 299)		// #19 - GF Vulkan Smoke Frame 7
+	SpriteFrame(76, -107, 32, 32, 371, 332)		// #20 - GF Vulkan Smoke Frame 8
+	SpriteFrame(75, -110, 32, 32, 371, 365)		// #21 - GF Vulkan Smoke Frame 9
+	SpriteFrame(-126, -126, 252, 252, 0, 256)	// #22 - Little Planet Bad Future
+	SpriteFrame(95, -70, 16, 16, 404, 257)		// #23 - BF Vulkan Smoke Frame 0
+	SpriteFrame(91, -75, 24, 24, 404, 274)		// #24 - BF Vulkan Smoke Frame 1
+	SpriteFrame(92, -88, 32, 32, 404, 299)		// #25 - BF Vulkan Smoke Frame 2
+	SpriteFrame(86, -92, 40, 40, 404, 332)		// #26 - BF Vulkan Smoke Frame 3
+	SpriteFrame(85, -94, 40, 40, 404, 373)		// #27 - BF Vulkan Smoke Frame 4
+	SpriteFrame(76, -90, 16, 16, 421, 257)		// #28 - BF Vulkan Smoke Frame 5
+	SpriteFrame(75, -97, 24, 24, 429, 274)		// #29 - BF Vulkan Smoke Frame 6
+	SpriteFrame(73, -104, 32, 32, 437, 299)		// #30 - BF Vulkan Smoke Frame 7
+	SpriteFrame(76, -107, 32, 32, 445, 332)		// #31 - BF Vulkan Smoke Frame 8
+	SpriteFrame(75, -110, 32, 32, 445, 365)		// #32 - BF Vulkan Smoke Frame 9
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("DAGarden/LittlePlanet.gif")
+	SpriteFrame(-126, -126, 252, 252, 0, 0)		// #0  - Little Planet
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

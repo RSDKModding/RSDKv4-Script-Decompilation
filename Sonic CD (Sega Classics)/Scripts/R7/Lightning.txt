@@ -1,0 +1,170 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Lightning Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.flash
+
+// Note - object.alpha is used for the actual lightning sprites, while object.flash is used for the screen-wide lightning flash
+
+// States
+private alias 0 : LIGHTNING_WAIT
+private alias 1 : LIGHTNING_FALL
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case LIGHTNING_WAIT
+		if object.timer < 256
+			object.timer++
+		else
+			object.timer = 0
+			object.alpha = 254
+			object.flash = 128
+			object.state++
+		end if
+		break
+
+	case LIGHTNING_FALL
+		if object.alpha > 0
+			object.alpha -= 2
+		else
+			object.state = LIGHTNING_WAIT
+			object.frame++
+			object.frame &= 3
+		end if
+
+		if object.flash > 0
+			object.flash -= 4
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.state > LIGHTNING_WAIT
+		if object.drawOrder == 1
+			// In this Draw Order, we're in the BG
+			object.ypos = screen.yoffset
+			object.ypos *= object.propertyValue
+			object.ypos >>= 7
+			FlipSign(object.ypos)
+			object.ypos += 312
+
+			temp0 = object.flash
+			temp0 >>= 1
+			DrawRect(0, 0, screen.xsize, screen.ysize, 224, 192, 128, temp0)
+
+			temp0 = screen.xoffset
+			temp0 >>= 3
+			temp0 &= 511
+			FlipSign(temp0)
+
+			temp1 = object.frame
+			temp0 += 64
+			if temp0 < -64
+				temp0 += 512
+				DrawSpriteScreenFX(temp1, FX_INK, temp0, object.ypos)
+				temp0 -= 512
+			else
+				DrawSpriteScreenFX(temp1, FX_INK, temp0, object.ypos)
+			end if
+
+			temp1++
+			temp1 &= 3
+			temp0 += 128
+			if temp0 < -64
+				temp0 += 512
+				DrawSpriteScreenFX(temp1, FX_INK, temp0, object.ypos)
+				temp0 -= 512
+			else
+				DrawSpriteScreenFX(temp1, FX_INK, temp0, object.ypos)
+			end if
+
+			temp1++
+			temp1 &= 3
+			temp0 += 128
+			if temp0 < -64
+				temp0 += 512
+				DrawSpriteScreenFX(temp1, FX_INK, temp0, object.ypos)
+				temp0 -= 512
+			else
+				DrawSpriteScreenFX(temp1, FX_INK, temp0, object.ypos)
+			end if
+
+			temp1++
+			temp1 &= 3
+			temp0 += 96
+			if temp0 < -64
+				temp0 += 512
+				DrawSpriteScreenFX(temp1, FX_INK, temp0, object.ypos)
+				temp0 -= 512
+			else
+				DrawSpriteScreenFX(temp1, FX_INK, temp0, object.ypos)
+			end if
+
+			// For the flash, add this Object to a higher draw list
+			SetDrawListEntityRef(object.entityPos, 5, screen[5].drawListSize)
+			screen[5].drawListSize++
+			object.drawOrder = 5
+		else
+			// On this Draw Order, we're between the game objects and the HUD
+			DrawRect(0, 0, screen.xsize, screen.ysize, 224, 224, 192, object.flash)
+			object.drawOrder = 1
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects3.gif")
+
+	// Lightning Frames
+	SpriteFrame(-8, 0, 16, 40, 43, 140)
+	SpriteFrame(-8, 0, 16, 24, 60, 140)
+	SpriteFrame(-16, 0, 32, 40, 77, 132)
+	SpriteFrame(-8, 0, 16, 24, 60, 140)
+
+	// Go through the level to find and setup the Lightning object
+	foreach (TypeName[Lightning], arrayPos0, ALL_ENTITIES)
+		// Lightning never stops, make it always active
+		// (In terms of the actual object layout, normally this object is far out of bounds!)
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		// The lightning should be in the BG, so give it a low draw order
+		object[arrayPos0].drawOrder = 1
+
+		// Lightning flashes and pulses, so give it the INK_ALPHA effect
+		object[arrayPos0].inkEffect = INK_ALPHA
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects3.gif")
+	SpriteFrame(-16, 0, 32, 40, 77, 132)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,639 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: 3D Ramp Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1     : player.originPos.x
+private alias object[+3].value0 : starBush1.originPos.x
+private alias object[+3].xpos   : starBush1.xpos
+private alias object[+4].value0 : starBush2.originPos.x
+private alias object[+4].xpos   : starBush2.xpos
+private alias object[+5].value0 : boostSpinner.originPos.x
+private alias object[+5].xpos   : boostSpinner.xpos
+
+// Player Aliases
+private alias object.state           : player.state
+private alias object.xpos            : player.xpos
+private alias object.ypos            : player.ypos
+private alias object.xvel            : player.xvel
+private alias object.yvel            : player.yvel
+private alias object.speed           : player.speed
+private alias object.rotation        : player.rotation
+private alias object.angle           : player.angle
+private alias object.direction       : player.direction
+private alias object.gravity         : player.gravity
+private alias object.animation       : player.animation
+private alias object.animationSpeed  : player.animationSpeed
+private alias object.controlLock     : player.controlLock
+private alias object.controlMode     : player.controlMode
+private alias object.scrollTracking  : player.scrollTracking
+private alias object.tileCollisions  : player.tileCollisions
+private alias object.jumpPress       : player.jumpPress
+private alias object.up              : player.up
+private alias object.down            : player.down
+private alias object.left            : player.left
+private alias object.right           : player.right
+private alias object.value1          : player.timer
+
+// States
+private alias 0 : RAMP3D_RUN
+private alias 1 : RAMP3D_EXIT_UNUSED    // a copy of Exit Boost
+private alias 2 : RAMP3D_EXIT
+private alias 3 : RAMP3D_SET_YBOUND // this doesn't really have anything to do with this object
+private alias 4 : RAMP3D_ENTER
+private alias 5 : RAMP3D_DROP
+private alias 6 : RAMP3D_SET_YBOUND2    // this doesn't really have anything to do with this object
+private alias 7 : RAMP3D_RUN_FROM_TOP
+private alias 8 : RAMP3D_EXIT_BOOST
+
+
+// ========================
+// Function Definitions
+// ========================
+
+public function Player_State_Ramp3D
+    CallFunction(Player_HandleGroundMovement)
+    if player.gravity == GRAVITY_AIR
+        player.state = Player_State_Air
+
+        player.timer = 0
+        CallFunction(Player_HandleAirMovement)
+
+        // Set the equivalent animation for looking to the left
+        if player.direction == FACING_LEFT
+            if player.animation == ANI_RAMP_RUNNING3
+                player.animation = ANI_RAMP_RUNNING5
+            end if
+
+            if player.animation == ANI_RAMP_RUNNING2
+                player.animation = ANI_RAMP_RUNNING6
+            end if
+        end if
+    else
+        CallFunction(Player_HandleOnGround)
+        if player.speed == 0
+            // Warp Star erase check
+            if warp.destination > WARPDEST_NONE
+                if warp.timer > 99
+                    if warp.timer < 204
+                        warp.destination = WARPDEST_NONE
+                    end if
+                end if
+
+                warp.timer = 0
+            end if
+
+            // Waiting timer while in the ramp
+            if player.timer < 240
+                player.animation = ANI_STOPPED
+                player.timer++
+            else
+                player.animation = ANI_WAITING
+            end if
+        else
+            // Set animation based on angle
+            if player.angle == 0
+                player.animation = ANI_RAMP_RUNNING1
+            end if
+
+            if player.angle > 200
+                if player.direction == FACING_RIGHT
+                    player.animation = ANI_RAMP_RUNNING3
+                else
+                    player.animation = ANI_RAMP_RUNNING5
+                end if
+            end if
+
+            if player.angle > 216
+                if player.direction == FACING_RIGHT
+                    player.animation = ANI_RAMP_RUNNING2
+                else
+                    player.animation = ANI_RAMP_RUNNING6
+                end if
+            end if
+
+            if player.angle > 232
+                player.animation = ANI_RAMP_RUNNING1
+            end if
+
+            if player.angle == 192
+                player.animation = ANI_RAMP_RUNNING4
+            end if
+        end if
+
+        if player.jumpPress == true
+            CallFunction(Player_Action_Jump)
+        else
+            if player.up == true
+                if player.speed == 0
+                    player.state = Player_State_LookUp
+                    player.animation = ANI_LOOKINGUP
+                    player.timer = 0
+                end if
+            end if
+
+            if player.down == true
+                if player.speed == 0
+                    player.state = Player_State_Crouch
+                    player.animation = ANI_LOOKINGDOWN
+                    player.timer = 0
+                else
+                    if player.speed > 0x199A
+                        player.controlLock = 0
+                        player.state = Player_State_Roll
+                        player.animation = ANI_JUMPING
+                    end if
+
+                    if player.speed < -0x199A
+                        player.controlLock = 0
+                        player.state = Player_State_Roll
+                        player.animation = ANI_JUMPING
+                    end if
+                end if
+            end if
+        end if
+    end if
+
+    if player.animation != ANI_STOPPED
+        player.animationSpeed = player.speed
+        if player.animationSpeed < 0
+            FlipSign(player.animationSpeed)
+        end if
+        player.animationSpeed *= 60
+        player.animationSpeed /= 0x60000
+        player.animationSpeed += 20
+    else
+        player.animationSpeed = 0
+    end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.propertyValue
+    case RAMP3D_RUN
+        if player[SLOT_PLAYER1].gravity == GRAVITY_GROUND
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                if player[SLOT_PLAYER1].state != Player_State_Static
+                    player[SLOT_PLAYER1].speed = 0
+                    player[SLOT_PLAYER1].xvel = 0
+                    player[SLOT_PLAYER1].animationSpeed = 0
+                    player[SLOT_PLAYER1].scrollTracking = true
+                    player[SLOT_PLAYER1].yvel = -0xC0000
+                    player[SLOT_PLAYER1].state = Player_State_Static
+                    player[SLOT_PLAYER1].tileCollisions = false
+                end if
+            end if
+        end if
+        break
+
+    case RAMP3D_EXIT_UNUSED
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[SLOT_PLAYER1].state = Player_State_Air
+            player[SLOT_PLAYER1].tileCollisions = true
+            player[SLOT_PLAYER1].speed = 0x80000
+            player[SLOT_PLAYER1].gravity = GRAVITY_AIR
+            player[SLOT_PLAYER1].xvel = 0x80000
+            player[SLOT_PLAYER1].yvel = -0xE0000
+            player[SLOT_PLAYER1].rotation = 384
+
+            stage.newYBoundary2 = 0x500
+            stage.newXBoundary1 = 0x820
+
+            if player[SLOT_PLAYER1].animation == ANI_ROLL3D
+                player[SLOT_PLAYER1].animation = ANI_JUMPING
+            else
+                if player[SLOT_PLAYER1].animation != ANI_JUMPING
+                    player[SLOT_PLAYER1].animation = ANI_WALKING
+                end if
+            end if
+
+            object[15].type = TypeName[Background FX]
+            object[15].priority = PRIORITY_ACTIVE
+            object[15].drawOrder = 0
+
+            arrayPos0 = 0
+            while arrayPos0 < 2
+                hParallax[arrayPos0].scrollPos = 0
+                arrayPos0++
+            loop
+        end if
+        break
+
+    case RAMP3D_EXIT
+        if player[SLOT_PLAYER1].state == Player_State_Static
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                player[SLOT_PLAYER1].state = Player_State_Air
+                player[SLOT_PLAYER1].tileCollisions = true
+                player[SLOT_PLAYER1].speed = 0x40000
+                player[SLOT_PLAYER1].gravity = GRAVITY_AIR
+                player[SLOT_PLAYER1].xvel = 0x40000
+                player[SLOT_PLAYER1].yvel = -0xC0000
+                player[SLOT_PLAYER1].rotation = 384
+
+                stage.newYBoundary2 = 0x500
+                stage.deathBoundary = 0x5000000
+
+                if player[SLOT_PLAYER1].animation == ANI_ROLL3D
+                    player[SLOT_PLAYER1].animation = ANI_JUMPING
+                else
+                    if player[SLOT_PLAYER1].animation != ANI_JUMPING
+                        player[SLOT_PLAYER1].animation = ANI_WALKING
+                    end if
+                end if
+            end if
+        end if
+        break
+
+    case RAMP3D_SET_YBOUND
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            stage.curYBoundary2 = 0x400
+            stage.deathBoundary = 0x4000000
+        else
+            stage.curYBoundary2 = 0x500
+            stage.deathBoundary = 0x5000000
+        end if
+        break
+
+    case RAMP3D_ENTER
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            if player[SLOT_PLAYER1].gravity == GRAVITY_GROUND
+                if player[SLOT_PLAYER1].state != Player_State_Static
+                    if player[SLOT_PLAYER1].state == Player_State_Roll
+                        if player[SLOT_PLAYER1].angle > 216
+                            player[SLOT_PLAYER1].animation = ANI_JUMPING
+                        else
+                            if player[SLOT_PLAYER1].angle == 0
+                                player[SLOT_PLAYER1].animation = ANI_JUMPING
+                            else
+                                player[SLOT_PLAYER1].animation = ANI_ROLL3D
+                            end if
+                        end if
+                    else
+                        if player[SLOT_PLAYER1].speed != 0
+                            player[SLOT_PLAYER1].state = Player_State_Ramp3D
+                        end if
+                    end if
+                end if
+            end if
+
+            starBush1.originPos.x = player[SLOT_PLAYER1].xpos
+            starBush1.originPos.x -= object.xpos
+
+            boostSpinner.originPos.x = starBush1.originPos.x
+            boostSpinner.originPos.x /= 3
+
+            starBush1.originPos.x >>= 1
+            starBush2.originPos.x = starBush1.originPos.x
+            starBush1.originPos.x += starBush1.xpos
+            starBush2.originPos.x += starBush2.xpos
+
+            boostSpinner.originPos.x += boostSpinner.xpos
+
+            temp0 = object.ypos
+            temp0 -= player[SLOT_PLAYER1].ypos
+            if temp0 < 0xE00000
+                temp0 = player[SLOT_PLAYER1].xpos
+                temp0 -= player.originPos.x
+                hParallax[0].scrollPos += temp0
+                arrayPos0 = 13
+                temp2 = 128
+                while arrayPos0 < 141
+                    temp1 = temp0
+                    temp1 *= temp2
+                    temp1 >>= 7
+                    hParallax[arrayPos0].scrollPos += temp1
+                    arrayPos0++
+                    temp2--
+                loop
+                temp0 <<= 1
+                hParallax[1].scrollPos += temp0
+            end if
+        else
+            starBush1.originPos.x = starBush1.xpos
+            starBush2.originPos.x = starBush2.xpos
+            boostSpinner.originPos.x = boostSpinner.xpos
+            if player[SLOT_PLAYER1].gravity == GRAVITY_GROUND
+                if player[SLOT_PLAYER1].state == Player_State_Ramp3D
+                    player[SLOT_PLAYER1].state = Player_State_Ground
+                end if
+            end if
+        end if
+
+        player.originPos.x = player[SLOT_PLAYER1].xpos
+        break
+
+    case RAMP3D_DROP
+        if player[SLOT_PLAYER1].state == Player_State_Air
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                player[SLOT_PLAYER1].animation = ANI_DROPPING
+                player.originPos.x = player[SLOT_PLAYER1].xpos
+            end if
+
+            if player[SLOT_PLAYER1].animation == ANI_DROPPING
+                player[SLOT_PLAYER1].speed = 0
+                player[SLOT_PLAYER1].xvel = 0
+                player[SLOT_PLAYER1].xpos = player.originPos.x
+            end if
+        end if
+        break
+
+    case RAMP3D_SET_YBOUND2
+        if player[SLOT_PLAYER1].ypos < object.ypos
+            if player[SLOT_PLAYER1].xpos > object.xpos
+                stage.curYBoundary2 = 792
+                stage.deathBoundary = 0x3180000
+            else
+                stage.curYBoundary2 = 0x400
+                stage.deathBoundary = 0x4000000
+            end if
+        end if
+        break
+
+    case RAMP3D_RUN_FROM_TOP // Technically speaking another YBound-like object
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            stage.curYBoundary2 = 0x400
+            if player[SLOT_PLAYER1].gravity == GRAVITY_GROUND
+                if player[SLOT_PLAYER1].state == Player_State_Ramp3D
+                    player[SLOT_PLAYER1].state = Player_State_Ground
+                end if
+            end if
+        else
+            stage.curYBoundary2 = 0x318
+            stage.deathBoundary = 0x3180000
+        end if
+        break
+
+    case RAMP3D_EXIT_BOOST
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[SLOT_PLAYER1].timer = 0
+            player[SLOT_PLAYER1].state = Player_State_Air
+            player[SLOT_PLAYER1].tileCollisions = true
+            player[SLOT_PLAYER1].speed = 0x80000
+            player[SLOT_PLAYER1].gravity = GRAVITY_AIR
+            player[SLOT_PLAYER1].xvel = 0x80000
+            player[SLOT_PLAYER1].yvel = -0xE0000
+            player[SLOT_PLAYER1].rotation = 384
+
+            stage.newYBoundary2 = 0x500
+            stage.deathBoundary = 0x5000000
+            stage.newXBoundary1 = 0x820
+
+            if player[SLOT_PLAYER1].animation == ANI_ROLL3D
+                player[SLOT_PLAYER1].animation = ANI_JUMPING
+            else
+                if player[SLOT_PLAYER1].animation != ANI_JUMPING
+                    player[SLOT_PLAYER1].animation = ANI_WALKING
+                end if
+            end if
+
+            object[15].type = TypeName[Background FX]
+            object[15].priority = PRIORITY_ACTIVE
+            object[15].drawOrder = 0
+
+            arrayPos0 = 0
+            while arrayPos0 < 2
+                hParallax[arrayPos0].scrollPos = 0
+                arrayPos0++
+            loop
+        end if
+
+        if player[SLOT_PLAYER1].yvel < 0
+            player[SLOT_PLAYER1].controlMode = CONTROLMODE_NONE
+            player[SLOT_PLAYER1].left = false
+            player[SLOT_PLAYER1].right = false
+            object.priority = PRIORITY_ACTIVE
+        else
+            player[SLOT_PLAYER1].controlMode = CONTROLMODE_P1
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    if player[SLOT_PLAYER1].xpos > 0x7D00000
+        stage.curYBoundary2 = 0x500
+        object[15].type = TypeName[Background FX]
+        object[15].priority = PRIORITY_ACTIVE
+        object[15].drawOrder = 0
+    end if
+
+    if player[SLOT_PLAYER1].xpos > 0xFA00000
+        stage.curYBoundary2 = 0x400
+        stage.deathBoundary = 0x4000000
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+        case 0 // type
+            checkResult = object.propertyValue
+            checkResult %= 9
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+        case 0 // type
+            object.propertyValue = editor.variableValue
+            checkResult %= 9
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    LoadSpriteSheet("Global/Display.gif")
+    temp5 = object.spriteSheet
+
+    LoadSpriteSheet("Players/Sonic2.gif")
+    temp6 = object.spriteSheet
+
+    LoadSpriteSheet("Players/Sonic3.gif")
+    temp7 = object.spriteSheet
+
+    switch object.propertyValue
+    case RAMP3D_RUN
+        object.spriteSheet = temp6
+        object.inkEffect = INK_BLEND
+        DrawSpriteFX(3, FX_INK, object.xpos, object.ypos)
+
+        object.inkEffect = INK_NONE
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp1 = object.ypos
+            temp1 -= 0xC00000
+            DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 255, 0)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    case RAMP3D_EXIT_UNUSED
+    case RAMP3D_EXIT_BOOST
+        object.spriteSheet = temp6
+        object.inkEffect = INK_BLEND
+        DrawSpriteFX(3, FX_INK, object.xpos, object.ypos)
+
+        object.inkEffect = INK_NONE
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp0 = object.xpos
+            temp0 += 0x800000
+            temp1 = object.ypos
+            temp1 -= 0xE00000
+            DrawArrow(object.xpos, object.ypos, temp0, temp1, 255, 255, 0)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    case RAMP3D_EXIT
+        object.spriteSheet = temp6
+        object.inkEffect = INK_BLEND
+        DrawSpriteFX(3, FX_INK, object.xpos, object.ypos)
+
+        object.inkEffect = INK_NONE
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp0 = object.xpos
+            temp0 += 0x400000
+            temp1 = object.ypos
+            temp1 -= 0xC00000
+            DrawArrow(object.xpos, object.ypos, temp0, temp1, 255, 255, 0)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    case RAMP3D_SET_YBOUND
+    case RAMP3D_SET_YBOUND2
+        object.spriteSheet = temp5
+        temp0 = object.xpos
+        temp0 -= 0x100000
+        temp1 = object.ypos
+        temp1 -= 0x100000
+        DrawRectWorld(temp0, temp1, 32, 32, 96, 96, 192,255)
+
+        temp0 = object.xpos
+        temp0 -= 0x80000
+        temp1 = object.ypos
+        temp1 -= 0x80000
+        DrawSpriteXY(1, temp0, temp1)
+
+        temp0 += 0x100000
+        DrawSpriteXY(1, temp0, temp1)
+
+        temp1 += 0x100000
+        DrawSpriteXY(1, temp0, temp1)
+
+        temp0 -= 0x100000
+        DrawSpriteXY(1, temp0, temp1)
+        break
+
+    case RAMP3D_RUN_FROM_TOP
+        object.spriteSheet = temp5
+        temp0 = object.xpos
+        temp0 -= 0x100000
+        temp1 = object.ypos
+        temp1 -= 0xC0000
+        DrawSpriteXY(1, temp0, temp1)
+
+        object.spriteSheet = temp6
+        object.inkEffect = INK_BLEND
+        DrawSpriteFX(2, FX_INK, object.xpos, object.ypos)
+
+        object.inkEffect = INK_NONE
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp0 = object.xpos
+            temp0 -= 0x200000
+            DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, 255, 0)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    case RAMP3D_ENTER
+        object.spriteSheet = temp6
+        object.inkEffect = INK_BLEND
+        DrawSpriteFX(2, FX_INK, object.xpos, object.ypos)
+
+        object.inkEffect = INK_NONE
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp0 = object.xpos
+            temp0 += 0x200000
+            DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, 255, 0)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    case RAMP3D_DROP
+        object.spriteSheet = temp7
+        object.inkEffect = INK_BLEND
+        DrawSpriteFX(4, FX_INK, object.xpos, object.ypos)
+
+        object.inkEffect = INK_NONE
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp0 = object.ypos
+            temp0 += 0x200000
+            DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, 255, 0)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    default
+        object.spriteSheet = temp5
+        DrawSprite(0)
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-16, -16, 32, 32, 1, 143)   // #0 - "Script" Icon
+    SpriteFrame(-4, -4, 8, 8, 10, 98)       // #1 - "Y"
+
+    LoadSpriteSheet("Players/Sonic2.gif")
+    SpriteFrame(-20, -20, 40, 40, 133, 171) // #2 - Sonic 3D Ramp Enter
+    SpriteFrame(-16, -20, 32, 40, 1, 169)   // #3 - Sonic 3D Ramp Exit
+
+    LoadSpriteSheet("Players/Sonic3.gif")
+    SpriteFrame(-20, -24, 40, 48, 1, 83)    // #4 - Sonic 3D Ramp Drop
+
+
+    AddEditorVariable("type")
+    SetActiveVariable("type")
+    AddEnumVariable("3D Ramp Run", RAMP3D_RUN)
+    AddEnumVariable("3D Ramp Exit Boost (Unused)", RAMP3D_EXIT_UNUSED)
+    AddEnumVariable("3D Ramp Exit ", RAMP3D_EXIT)
+    AddEnumVariable("3D Ramp (Set YBound)", RAMP3D_SET_YBOUND)
+    AddEnumVariable("3D Ramp Start", RAMP3D_ENTER)
+    AddEnumVariable("3D Ramp Drop", RAMP3D_DROP)
+    AddEnumVariable("3D Ramp (Set YBound 2)", RAMP3D_SET_YBOUND2)
+    AddEnumVariable("3D Ramp Top Run", RAMP3D_RUN_FROM_TOP)
+    AddEnumVariable("3D Ramp Exit Boost", RAMP3D_EXIT_BOOST)
+end event

@@ -1,0 +1,232 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: HUD Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.flashTimer
+private alias object.propertyValue : object.currentTimePeriod
+
+// Player Aliases
+private alias object.xpos   : player.xpos
+private alias object.ypos   : player.ypos
+private alias object.value0 : player.rings
+
+// Warp Destination
+private alias 1 : WARPDEST_PAST
+private alias 2 : WARPDEST_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	if player[SLOT_PLAYER1].rings == 0
+		object.flashTimer++
+		if object.flashTimer == 16
+			object.flashTimer = 0
+		end if
+	else
+		if stage.minutes == 9
+			object.flashTimer++
+			if object.flashTimer == 16
+				object.flashTimer = 0
+			end if
+		end if
+	end if
+
+	// First, draw the Score/Time/Rings text
+	DrawSpriteScreenXY(10, 17, 13)
+
+	// Start flashing Time at minute 9
+	if stage.minutes == 9
+		if object.flashTimer > 7
+			DrawSpriteScreenXY(11, 17, 29)
+		end if
+	end if
+
+	// Flash the Rings text if the player doesn't have rings
+	if player[SLOT_PLAYER1].rings == 0
+		if object.flashTimer > 7
+			DrawSpriteScreenXY(12, 17, 45)
+		end if
+	end if
+
+	// Draw the timer's tick marks
+	DrawSpriteScreenXY(13, 67, 29)
+
+	// Now, draw all the numbers
+	DrawNumbers(0, 104, 13, player.score, 6, 8, 0)               // Score
+	DrawNumbers(0, 104, 29, stage.milliSeconds, 2, 8, 1)         // Milliseconds
+	DrawNumbers(0, 80, 29, stage.seconds, 2, 8, 1)               // Seconds
+	DrawNumbers(0, 56, 29, stage.minutes, 1, 8, 1)               // Minutes
+	DrawNumbers(0, 80, 45, player[SLOT_PLAYER1].rings, 3, 8, 0)  // Rings
+
+	// In Debug Mode, draw the position of the Player
+	if stage.debugMode == true
+		// Get the truncated X Position of the Player
+		temp0 = player[SLOT_PLAYER1].xpos
+		temp0 >>= 16
+
+		// Set screen XPos for this value
+		temp1 = screen.xsize
+		temp1 -= 24
+
+		// Draw the X Position numbers
+		DrawNumbers(0, temp1, 13, temp0, 5, 8, 1)
+
+		// Get the truncated Y Position of the Player
+		temp0 = player[SLOT_PLAYER1].ypos
+		temp0 >>= 16
+
+		if temp0 < 0
+			// YPos is always drawn as positive
+			FlipSign(temp0)
+		end if
+
+		// Draw the Y Position
+		DrawNumbers(0, temp1, 29, temp0, 5, 8, 1)
+
+		// Draw the X/Y icons
+		temp1 -= 42
+		DrawSpriteScreenXY(14, temp1, 15)
+		DrawSpriteScreenXY(21, temp1, 31)
+	end if
+
+	// Get the current Time Period, then add it's equivalent sprite id
+	temp0 = object.currentTimePeriod
+	temp0 += 17
+
+	// Now, draw the corresponding life icon for the time period
+	DrawSpriteScreenXY(temp0, 16, 212)
+
+	// Draw the X/times icon
+	DrawSpriteScreenXY(14, 32, 220)
+
+	// Only draw as many digits as the Lives has
+	if player.lives < 10
+		DrawNumbers(0, 40, 217, player.lives, 1, 8, 1)
+		temp1 = 52
+	else
+		DrawNumbers(0, 48, 217, player.lives, 2, 8, 1)
+		temp1 = 60
+	end if
+
+	switch warp.destination
+	case WARPDEST_PAST
+		// // Draw the past sign, flicker it while trying to warp
+		if warp.timer < 100
+			DrawSpriteScreenXY(15, temp1, 214)
+		else
+			temp0 = warp.timer
+			temp0 &= 1
+			if temp0 == 0
+				DrawSpriteScreenXY(15, temp1, 214)
+			end if
+		end if
+		break
+
+	case WARPDEST_FUTURE
+		// Draw the future sign, flicker it while trying to warp
+		if warp.timer < 100
+			DrawSpriteScreenXY(16, temp1, 214)
+		else
+			temp0 = warp.timer
+			temp0 &= 1
+			if temp0 == 0
+				DrawSpriteScreenXY(16, temp1, 214)
+			end if
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	if stage.playerListPos == PLAYER_SONIC_A
+		LoadSpriteSheet("Global/Display.gif")
+	else
+		LoadSpriteSheet("Global/Display_t.gif")
+	end if
+
+	// 0-9 - Number Digits
+	SpriteFrame(0, 0, 8, 11, 1, 50)
+	SpriteFrame(0, 0, 8, 11, 10, 50)
+	SpriteFrame(0, 0, 8, 11, 19, 50)
+	SpriteFrame(0, 0, 8, 11, 28, 50)
+	SpriteFrame(0, 0, 8, 11, 1, 62)
+	SpriteFrame(0, 0, 8, 11, 10, 62)
+	SpriteFrame(0, 0, 8, 11, 19, 62)
+	SpriteFrame(0, 0, 8, 11, 28, 62)
+	SpriteFrame(0, 0, 8, 11, 1, 74)
+	SpriteFrame(0, 0, 8, 11, 10, 74)
+
+	SpriteFrame(0, 0, 39, 43, 1, 1)     // 10 - Score, Time, Rings text
+	SpriteFrame(0, 0, 31, 11, 1, 119)   // 11 - Red Time text
+	SpriteFrame(0, 0, 39, 11, 1, 131)   // 12 - Red Rings text
+	SpriteFrame(0, 0, 29, 4, 1, 45)     // 13 - Tick marks
+	SpriteFrame(0, 0, 8, 8, 1, 98)      // 14 - Yellow X (used for debug & lives count)
+	SpriteFrame(0, 0, 32, 16, 90, 67)   // 15 -Past Sign
+	SpriteFrame(0, 0, 32, 16, 123, 67)  // 16 - Future Sign
+	SpriteFrame(0, 0, 16, 16, 187, 189) // 17 - Present Life Icon
+	SpriteFrame(0, 0, 16, 16, 204, 189) // 18 - Past Life Icon
+	SpriteFrame(0, 0, 16, 16, 237, 223) // 19 - Future Life Icon
+	SpriteFrame(0, 0, 16, 16, 237, 223) // 20 - Future Life Icon (duplicate)
+	SpriteFrame(0, 0, 8, 8, 10, 98)     // 21 - Debug Y
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // timePeriod
+            checkResult = object.propertyValue
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // timePeriod
+            object.propertyValue = editor.variableValue
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(0, 0, 39, 43, 1, 1)
+
+	AddEditorVariable("timePeriod")
+	SetActiveVariable("timePeriod")
+	AddEnumVariable("Present", 0)
+	AddEnumVariable("Past", 1)
+	AddEnumVariable("Good Future", 2)
+	AddEnumVariable("Bad Future", 3)
+end event

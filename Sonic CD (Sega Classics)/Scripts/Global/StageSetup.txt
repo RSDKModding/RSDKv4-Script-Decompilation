@@ -1,0 +1,543 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Stage Setup Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Not all these aliases are actually used in this script necessarily, a good amount of them are just for general reference as well
+
+// Aliases
+private alias object[8].type          : stageSetup.type
+private alias object[8].priority      : stageSetup.priority
+
+// HUD Aliases
+private alias object[9].type          : HUD.type
+private alias object[9].priority      : HUD.priority
+private alias object[9].drawOrder     : HUD.drawOrder
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Player Aliases
+private alias object.xpos          : player.xpos
+private alias object.ypos          : player.ypos
+private alias object.xvel          : player.xvel
+private alias object.yvel          : player.yvel
+private alias object.speed         : player.speed
+private alias object.collisionMode : player.collisionMode
+private alias object.collisionLeft : player.collisionLeft
+private alias object.gravity       : player.gravity
+private alias object.state         : player.state
+private alias object.animation     : player.animation
+private alias object.frame         : player.frame
+private alias object.angle         : player.angle
+private alias object.right         : player.right
+private alias object.value0        : player.rings
+private alias object.value7        : player.invincibleTimer
+private alias object.value8        : player.blinkTimer
+private alias object.value17       : player.minRollSpeed
+
+// Tracks
+private alias 0 : TRACK_STAGE
+private alias 1 : TRACK_ACTFINISH
+private alias 2 : TRACK_INVINCIBLE
+private alias 3 : TRACK_SPEEDSHOES
+private alias 4 : TRACK_BOSS
+private alias 5 : TRACK_GAMEOVER
+
+// Shield Type Aliases
+private alias 0 : SHIELDTYPE_S1
+private alias 1 : SHIELDTYPE_S2
+private alias 2 : SHIELDTYPE_S3_S1
+private alias 3 : SHIELDTYPE_S3_S2
+
+// Flower States
+private alias 1 : FLOWER_SEED_FALL
+
+// Future post State
+private alias 2 : FUTUREPOST_USED
+
+// Past post State
+private alias 2 : PASTPOST_USED
+
+// Monitor States
+private alias 2 : BROKENMONITOR_BLANK
+
+// Warp Destination
+private alias 0 : WARP_NONE
+
+// Soundtrack
+private alias 0 : OST_JP
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function StageSetup_CheckGoodFuture
+reserve function StageSetup_SaveStageState
+reserve function StageSetup_LoadStageState
+
+// ========================
+// Function Definitions
+// ========================
+
+public function StageSetup_CheckGoodFuture
+	if goodFuture.enabled == true
+		// Destroying the transporters in the past will get rid of any badnik with bad condition in the present
+		if object.propertyValue > 0
+			ResetObjectEntity(object.entityPos, flowerType, 0, object.xpos, object.ypos)
+			object.drawOrder = 4
+			object.state     = FLOWER_SEED_FALL
+		else
+			// And get rid entirely of them in the past and good future
+			if HUD.currentTimePeriod > 0
+				ResetObjectEntity(object.entityPos, flowerType, 0, object.xpos, object.ypos)
+				object.drawOrder = 4
+				object.state     = FLOWER_SEED_FALL
+			end if
+		end if
+	end if
+end function
+
+
+public function StageSetup_SaveStageState
+	arrayPos0 = 32
+	arrayPos1 = 7168
+
+	temp1 = HUD.currentTimePeriod
+	temp1 += 4
+
+	// Checks and saves:
+	// Anything that doesn't exist anymore
+	// Broken Monitors
+	// Used Warp Signs
+	// Anything that transformed into a flower
+
+	while arrayPos0 < 1056
+		if object[arrayPos0].type == TypeName[Blank Object]
+			SetBit(saveRAM[arrayPos1], HUD.currentTimePeriod, true)
+		else
+			if object[arrayPos0].type == TypeName[Broken Monitor]
+				SetBit(saveRAM[arrayPos1], HUD.currentTimePeriod, true)
+			else
+				if object[arrayPos0].type == TypeName[Future Post]
+					if object[arrayPos0].state == FUTUREPOST_USED
+						SetBit(saveRAM[arrayPos1], HUD.currentTimePeriod, true)
+					else
+						SetBit(saveRAM[arrayPos1], HUD.currentTimePeriod, false)
+					end if
+				else
+					if object[arrayPos0].type == TypeName[Past Post]
+						if object[arrayPos0].state == PASTPOST_USED
+							SetBit(saveRAM[arrayPos1], HUD.currentTimePeriod, true)
+						else
+							SetBit(saveRAM[arrayPos1], HUD.currentTimePeriod, false)
+						end if
+					else
+						SetBit(saveRAM[arrayPos1], HUD.currentTimePeriod, false)
+						if object[arrayPos0].type == flowerType
+							SetBit(saveRAM[arrayPos1], temp1, true)
+						else
+							SetBit(saveRAM[arrayPos1], temp1, false)
+						end if
+					end if
+				end if
+			end if
+		end if
+		arrayPos0++
+		arrayPos1++
+	loop
+end function
+
+
+public function StageSetup_LoadStageState
+	arrayPos0 = 32
+	arrayPos1 = 7168
+
+	temp1 = HUD.currentTimePeriod
+	temp1 += 4
+
+	// Checks and loads:
+	// Anything that doesn't exist anymore
+	// Broken Monitors
+	// Used Warp Signs
+	// Anything that transformed into a flower
+
+	while arrayPos0 < 1056
+		if object[arrayPos0].type == TypeName[Ring]
+			GetBit(temp0, saveRAM[arrayPos1], HUD.currentTimePeriod)
+			if temp0 == true
+				object[arrayPos0].type = TypeName[Blank Object]
+			end if
+		else
+			if object[arrayPos0].type == TypeName[Monitor]
+				GetBit(temp0, saveRAM[arrayPos1], HUD.currentTimePeriod)
+				if temp0 == true
+					object[arrayPos0].type = TypeName[Broken Monitor]
+					object[arrayPos0].state = BROKENMONITOR_BLANK
+				end if
+			else
+				if object[arrayPos0].type == TypeName[Future Post]
+					GetBit(temp0, saveRAM[arrayPos1], HUD.currentTimePeriod)
+					if temp0 == true
+						object[arrayPos0].state = FUTUREPOST_USED
+					end if
+				else
+					if object[arrayPos0].type == TypeName[Past Post]
+						GetBit(temp0, saveRAM[arrayPos1], HUD.currentTimePeriod)
+						if temp0 == true
+							object[arrayPos0].state = PASTPOST_USED
+						end if
+					else
+						GetBit(temp0, saveRAM[arrayPos1], temp1)
+						if temp0 == true
+							object[arrayPos0].type = TypeName[Blank Object]
+						end if
+					end if
+				end if
+			end if
+		end if
+		arrayPos0++
+		arrayPos1++
+	loop
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Only do these actions if the stage is active
+	switch stage.state
+	case STAGE_PAUSED
+	case STAGE_FROZEN
+		break
+
+	default
+		// Do ring animation here
+		// -> Not done in the ring object itself because all rings should share the same frame
+		ringTimer++
+		if ringTimer == 4
+			ringTimer = 0
+			ringFrame++
+			ringFrame &= 7
+		end if
+
+		// Not for time attack
+		if options.gameMode != MODE_TIMEATTACK
+			if player.score >= player.scoreBonus
+				player.lives++
+				player.scoreBonus += 50000
+
+				if stage.playerListPos == PLAYER_SONIC_A
+					PlaySfx(SfxName[1 Up], false)
+				else
+					PlaySfx(SfxName[Achievement], false)
+				end if
+			end if
+		end if
+
+		// Handle Oscillations
+		oscillation++
+		oscillation &= 511
+
+		// Check for Time Over
+		if stage.timeEnabled == true
+			if stage.minutes == 10
+				CheckEqual(stage.debugMode, true)
+				temp0 = checkResult
+
+				CheckEqual(options.gameMode, MODE_TIMEATTACK)
+				temp0 |= checkResult
+
+				if temp0 == false
+					currentPlayer = SLOT_PLAYER1
+					object[SLOT_PLAYER1].type = TypeName[Player Object]
+					CallFunction(Player_Kill)
+				end if
+
+				// Reset time to 9:59:99 and disable time progression so that it stays that way
+				stage.minutes      = 9
+				stage.seconds      = 59
+				stage.milliSeconds = 99
+				stage.timeEnabled  = false
+			end if
+		end if
+
+		// Check for death bounds
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			temp0 = player[currentPlayer].collisionLeft
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = stage.curXBoundary1
+			temp1 <<= 16
+
+			if temp0 < temp1
+				if player[currentPlayer].right == true
+					player[currentPlayer].xvel  = 0x10000
+					player[currentPlayer].speed = 0x10000
+				else
+					player[currentPlayer].xvel  = 0x00000
+					player[currentPlayer].speed = 0x00000
+				end if
+
+				player[currentPlayer].xpos = temp1
+
+				temp0 = player[currentPlayer].collisionLeft
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+
+			temp1 = stage.curYBoundary2
+			temp1 <<= 16
+
+			if temp1 < stage.deathBoundary
+				if player[currentPlayer].ypos > stage.deathBoundary
+					CallFunction(Player_Kill)
+				end if
+			else
+				if player[currentPlayer].ypos > temp1
+					CallFunction(Player_Kill)
+				end if
+			end if
+		next
+	end switch
+end event
+
+
+event ObjectStartup
+	// Setup the common music tracks used in every level
+	if options.soundtrack == OST_JP
+		SetMusicTrack("JP/ZoneComplete.ogg", TRACK_ACTFINISH, false)
+		SetMusicTrack("JP/Invincibility.ogg", TRACK_INVINCIBLE, false)
+		SetMusicTrack("JP/SpeedShoes.ogg", TRACK_SPEEDSHOES, false)
+		SetMusicTrack("JP/Boss.ogg", TRACK_BOSS, true)
+		SetMusicTrack("JP/GameOver.ogg", TRACK_GAMEOVER, false)
+	else
+		SetMusicTrack("US/ZoneComplete.ogg", TRACK_ACTFINISH, false)
+		SetMusicTrack("US/Invincibility.ogg", TRACK_INVINCIBLE, false)
+		SetMusicTrack("US/SpeedShoes.ogg", TRACK_SPEEDSHOES, false)
+		SetMusicTrack("US/Boss.ogg", TRACK_BOSS, 196526)
+		SetMusicTrack("US/GameOver.ogg", TRACK_GAMEOVER, false)
+	end if
+
+	// Setup object range
+	if options.attractMode == false
+		stage.pauseEnabled = true
+	else
+		// Set Object Range, changes internal bounds to a set value so that demos always looks the same and don't desync
+		SetObjectRange(424)
+	end if
+
+	stage.deathBoundary = stage.curYBoundary2
+	stage.deathBoundary <<= 16
+
+	// Remove all instances of this object in case one is accidentally placed in the scene
+	foreach (TypeName[Stage Setup], arrayPos0, ALL_ENTITIES)
+		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+	next
+
+	stageSetup.type = TypeName[Stage Setup]
+	stageSetup.priority = PRIORITY_ALWAYS
+
+	foreach (TypeName[HUD], arrayPos0, ALL_ENTITIES)
+		// Remove all HUD objects in case one is placed in the scene
+		object[arrayPos0].type = TypeName[Blank Object]
+
+		// Place the HUD object in its dedicated slot
+		HUD.type      = TypeName[HUD]
+		HUD.priority  = PRIORITY_ACTIVE
+		HUD.drawOrder = 6
+
+		// Store the current time period in the HUD object
+		HUD.currentTimePeriod = object[arrayPos0].propertyValue
+	next
+
+	ringExtraLife = 100
+	oscillation   = 0
+
+	// Bonus options can only be used in no save mode
+	// Note this is actually bugged as this only checks for the last three save slots, ignoring the first one
+	if options.saveSlot > 0
+		options.shieldType = SHIELDTYPE_S1
+	end if
+
+	blueShieldType    = TypeName[Blue Shield]
+	invincibilityType = TypeName[Invincibility]
+
+	warp.timer = 0
+	if warp.xpos > 0
+		player[SLOT_PLAYER1].xpos          = warp.xpos
+		player[SLOT_PLAYER1].ypos          = warp.ypos
+		player[SLOT_PLAYER1].xvel          = warp.xvel
+		player[SLOT_PLAYER1].yvel          = warp.yvel
+		player[SLOT_PLAYER1].speed 		   = warp.speed
+		player[SLOT_PLAYER1].collisionMode = warp.collisionMode
+		player[SLOT_PLAYER1].gravity       = warp.gravity
+		player[SLOT_PLAYER1].state         = warp.state
+		player[SLOT_PLAYER1].animation     = warp.animation
+		player[SLOT_PLAYER1].frame         = warp.playerFrame
+		player[SLOT_PLAYER1].angle         = warp.angle
+		player[SLOT_PLAYER1].rings         = warp.rings
+		player[SLOT_PLAYER1].minRollSpeed  = warp.minRollSpeed
+
+		player[SLOT_PLAYER1].blinkTimer      = 120
+		player[SLOT_PLAYER1].invincibleTimer = 120
+
+		temp0 = warp.xpos
+		temp0 >>= 16
+		screen[0].cameraX = temp0
+
+		temp0 = warp.ypos
+		temp0 >>= 16
+		screen[0].cameraY = temp0
+
+		// Reload the previous stage time
+		stage.milliSeconds = recMilliSeconds
+		stage.seconds      = recSeconds
+		stage.minutes      = recMinutes
+
+		CallFunction(StageSetup_LoadStageState)
+	end if
+
+	if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+		goodFuture.enabled  = true
+		generator.destroyed = true
+	end if
+
+	if specialStage.timeStones == 127 // 0b1111111, each '1' bit represents an obtained time stone
+		goodFuture.enabled  = true
+		generator.destroyed = true
+	end if
+
+	warp.destination = WARP_NONE
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event
+
+// ========================
+// Editor Helpers
+// ========================
+
+// All the following is only to be used from Editor subs, using these in the game itself won't give desired results
+// None of these exist in the original game, these are all custom to the decomp
+
+reserve function EditorHelpers_DrawHitbox
+reserve function EditorHelpers_DrawX
+reserve function EditorHelpers_FindTimePeriod
+
+public function EditorHelpers_DrawHitbox
+#platform: EDITOR
+	// This function is called in order to draw an object's hitbox, as a yellow rectangle
+	// editor.drawingOverlay isn't set here, that's to be determined by the object calling this function
+
+	// Preconditions:
+	// - object.xpos and object.ypos are the position for the hitbox to be centered around
+	// - temp0 is the left hitbox size
+	// - temp1 is the top hitbox size
+	// - temp2 is the right hitbox size
+	// - temp3 is the bottom hitbox size
+	//  - Hitboxes are in screen-space instead of world-space (ie just a basic "-15" instead of "-0xF0000")
+
+	// Get the base 1:1 position of the object
+	temp4 = object.ixpos
+	temp5 = object.iypos
+
+	// Move to its top left corner
+	temp4 -= temp0
+	temp5 -= temp1
+
+	// Get the hitbox's total width and height
+	temp2 += temp0
+	temp3 += temp1
+
+	// Turning iPos into normal Pos
+	temp4 <<= 16
+	temp5 <<= 16
+
+	DrawRectOutline(temp4, temp5, temp2, temp3, 255, 255, 0, 255)
+#endplatform
+end function
+
+public function EditorHelpers_DrawX
+#platform: EDITOR
+	// This function is called to draw a red X, just for when you wanna show something's *really* wrong
+	// editor.drawingOverlay isn't set here, that's for the object calling this function to decide
+
+	// Preconditions:
+	// - temp0 and temp1 are the position for the X to be centered around, in world-space
+
+	// Left
+	temp2 = temp0
+	temp2 -= 0x100000
+
+	// Right
+	temp3 = temp0
+	temp3 += 0x100000
+
+	// Top
+	temp4 = temp1
+	temp4 -= 0x100000
+
+	// Bottom
+	temp5 = temp1
+	temp5 += 0x100000
+
+	// TL-BR
+	DrawLine(temp2, temp4, temp3, temp5, 255, 0, 0)
+
+	// TR-BL
+	DrawLine(temp3, temp4, temp2, temp5, 255, 0, 0)
+#endplatform
+end function
+
+public function EditorHelpers_FindTimePeriod
+#platform: EDITOR
+	// This function is called in order to get the current Time Period
+	// Do note that this is inaccurate to how the game actually handles it, but since
+	//  we can't look at the HUD's property value instead we have to estimate based on the current stage's folder
+
+	// Postconditions:
+	// - checkResult holds the current time period
+	//   - If the current folder's name doesn't end in ABCD then Present time period will be assumed
+
+	temp0 = TIME_PRESENT
+
+	CheckCurrentStageFolder("B")
+	SetBit(temp0, 0, checkResult)
+
+	CheckCurrentStageFolder("C")
+	SetBit(temp0, 1, checkResult)
+
+	CheckCurrentStageFolder("D")
+	checkResult *= TIME_BAD_FUTURE
+	temp0 += checkResult
+
+	checkResult = temp0
+#endplatform
+end function

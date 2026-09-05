@@ -1,0 +1,102 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Eggman Jetpack Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.originPos.y
+
+// Boss Face Aliases
+private alias object[-1].state   : bossFace.state
+private alias object[-1].value10 : bossFace.timer
+
+// States
+private alias 0 : R1_EGGMAN_FLY_UP
+private alias 2 : R1_EGGMAN_ESCAPE
+
+// Boss Face States
+private alias 5 : R1_EGGMAN_RESTORE_BOUNDS
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case R1_EGGMAN_FLY_UP
+        if object.timer < 64
+            object.timer++
+            if object.timer > 27
+                object.xpos += 0x8000
+                object.ypos -= 0x20000
+            end if
+        else
+            object.timer = 0
+            object.state = R1_EGGMAN_ESCAPE
+            object.originPos.y = object.ypos
+        end if
+        break
+
+    case R1_EGGMAN_ESCAPE
+        object.angle += 3
+        object.angle &= 255
+        Sin256(temp0, object.angle)
+        temp0 <<= 11
+
+        object.xpos += 0x28000
+        object.ypos = object.originPos.y
+        object.ypos -= temp0
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+            bossFace.state = R1_EGGMAN_RESTORE_BOUNDS
+            bossFace.timer = 0
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    temp0 = object.frame
+    temp0 >>= 2
+    temp0 += object.state
+    DrawSprite(temp0)
+
+    object.frame++
+    object.frame &= 7
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects3.gif")
+
+    SpriteFrame(-28, -24, 56, 56, 1, 107)   // #0 - Eggman Jetpack Frame 0
+    SpriteFrame(-28, -24, 56, 56, 1, 164)   // #1 - Eggman Jetpack Frame 1
+    SpriteFrame(-28, -24, 56, 56, 58, 107)  // #2 - Eggman Jetpack Frame 2
+    SpriteFrame(-28, -24, 56, 56, 58, 164)  // #3 - Eggman Jetpack Frame 3
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-28, -24, 56, 56, 1, 107)   // #0 - Eggman Jetpack Frame 0
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

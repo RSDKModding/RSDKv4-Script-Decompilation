@@ -1,0 +1,217 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Freeze Jet Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.timerResetFreq
+
+// Player Aliases
+private alias object.state       : player.state
+private alias object.visible     : player.visible
+private alias object.interaction : player.interaction
+private alias object.xpos        : player.xpos
+private alias object.ypos        : player.ypos
+private alias object.xvel        : player.xvel
+private alias object.yvel        : player.yvel
+private alias object.speed       : player.speed
+private alias object.value7      : player.invincibleTimer
+
+// States
+private alias 0 : FREEZEJET_STARTUP
+private alias 1 : FREEZEJET_SHOT_BEAM
+private alias 2 : FREEZEJET_STOPPING_BEAM
+private alias 3 : FREEZEJET_COOLDOWN
+
+// Warp Destination
+private alias 0 : WARPDEST_NONE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case FREEZEJET_STARTUP
+        if object.timer < 120
+            object.timer++
+            object.frame = 2
+        else
+            object.timer = 0
+            object.state++
+            object.frame = 1
+        end if
+        break
+
+    	// i have no clue what this is
+        if object.timer < 8
+            temp0 = object.timer
+            temp0 &= 1
+            if temp0 == 0
+                object.frame++
+            end if
+
+            if object.frame > 2
+                object.frame = 1
+                object.direction++
+                object.direction &= FACING_LEFT
+            end if
+
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+            object.frame = 3
+        end if
+        break
+
+    case FREEZEJET_SHOT_BEAM
+        if object.timer < 160
+            temp0 = object.timer
+            temp0 &= 1
+            if temp0 == 0
+                object.frame++
+            end if
+
+            if object.frame > 6
+                object.frame = 3
+                object.direction++
+                object.direction &= FACING_LEFT
+            end if
+
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+            object.frame = 7
+        end if
+        break
+
+    case FREEZEJET_STOPPING_BEAM
+        if object.timer < 24
+            temp0 = object.timer
+            temp0 &= 3
+            if temp0 == 0
+                object.frame++
+            end if
+
+            if object.frame > 12
+                object.frame = 7
+                object.direction++
+                object.direction &= FACING_LEFT
+            end if
+
+            object.timer++
+        else
+            object.timer = 0
+            object.timerResetFreq = 7
+            object.state++
+        end if
+        break
+
+    case FREEZEJET_COOLDOWN
+        if object.timer < 120
+            temp0 = object.timer
+            temp0 &= object.timerResetFreq
+            if temp0 == 0
+                object.frame++
+                object.timerResetFreq++
+                object.timerResetFreq <<= 1
+                object.timerResetFreq--
+            end if
+
+            if object.frame > 12
+                object.frame = 7
+                object.direction++
+                object.direction &= FACING_LEFT
+            end if
+
+            object.timer++
+        else
+            object.timer = 0
+            object.state = FREEZEJET_SHOT_BEAM
+            object.frame = 1
+        end if
+        break
+    end switch
+
+    if object.state == FREEZEJET_SHOT_BEAM
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, 0, 16, 60, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                if player[currentPlayer].invincibleTimer == 0
+                    if warp.destination > WARPDEST_NONE
+                        if warp.timer > 99
+                            if warp.timer < 220
+                                warp.destination = WARPDEST_NONE
+                            end if
+                        end if
+
+                        warp.timer = 0
+                    end if
+
+                    player[currentPlayer].state = Player_State_Static
+
+                    player[currentPlayer].visible     = false
+                    player[currentPlayer].interaction = false
+
+					player[currentPlayer].speed = 0
+                    player[currentPlayer].xvel  = 0
+                    player[currentPlayer].yvel  = 0
+
+                    CreateTempObject(TypeName[Ice Block], 0, player[currentPlayer].xpos, player[currentPlayer].ypos)
+                    object[tempObjectPos].drawOrder = 4
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-32, -8, 64, 16, 1, 1)  // #0  - Freeze Jet Machine
+    SpriteFrame(-16, 0, 32, 36, 1, 46)  // #1  - Freeze Beam frame 0
+    SpriteFrame(-16, 0, 0, 0, 1, 46)    // #2  - Freeze Beam frame 1
+    SpriteFrame(-16, 0, 0, 0, 1, 46)    // #3  - Freeze Beam frame 2
+    SpriteFrame(-16, 0, 32, 60, 1, 22)  // #4  - Freeze Beam frame 3
+    SpriteFrame(-16, 0, 0, 0, 1, 46)    // #5  - Freeze Beam frame 4
+    SpriteFrame(-16, 4, 32, 64, 1, 18)  // #6  - Freeze Beam frame 5
+    SpriteFrame(-16, 0, 0, 0, 1, 46)    // #7  - Freeze Beam frame 6
+    SpriteFrame(-16, 0, 0, 0, 1, 46)    // #8  - Freeze Beam frame 7
+    SpriteFrame(-16, 0, 32, 60, 1, 22)  // #9  - Freeze Beam frame 8
+    SpriteFrame(-16, 0, 0, 0, 1, 46)    // #10 - Freeze Beam frame 9
+    SpriteFrame(-16, 0, 0, 0, 1, 46)    // #11 - Freeze Beam frame 10
+    SpriteFrame(-16, 4, 32, 64, 1, 18)  // #12 - Freeze Beam frame 11
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-32, -8, 64, 16, 1, 1)  // #0  - Freeze Jet Machine
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

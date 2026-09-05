@@ -1,0 +1,181 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: BGEffects Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value2 : object.prevAngle
+private alias object.value3 : object.fansTimer
+private alias object.value4 : object.crunchersTimer
+private alias object.value5 : object.fansSprite
+private alias object.value6 : object.crunchersSprite
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Animate the fans in the level
+	object.fansTimer++
+	if object.fansTimer > 2
+		object.fansTimer = 0
+		object.fansSprite++
+		object.fansSprite %= 3
+		switch object.fansSprite
+		case 0
+			Copy16x16Tile(269, 484)
+			Copy16x16Tile(270, 485)
+			Copy16x16Tile(271, 486)
+			Copy16x16Tile(272, 487)
+			Copy16x16Tile(273, 488)
+			Copy16x16Tile(274, 489)
+			Copy16x16Tile(275, 490)
+			Copy16x16Tile(276, 491)
+			break
+
+		case 1
+			Copy16x16Tile(269, 492)
+			Copy16x16Tile(270, 493)
+			Copy16x16Tile(271, 494)
+			Copy16x16Tile(272, 495)
+			Copy16x16Tile(273, 496)
+			Copy16x16Tile(274, 497)
+			Copy16x16Tile(275, 498)
+			Copy16x16Tile(276, 499)
+			break
+
+		case 2
+			Copy16x16Tile(269, 500)
+			Copy16x16Tile(270, 501)
+			Copy16x16Tile(271, 502)
+			Copy16x16Tile(272, 503)
+			Copy16x16Tile(273, 504)
+			Copy16x16Tile(274, 505)
+			Copy16x16Tile(275, 506)
+			Copy16x16Tile(276, 507)
+			break
+
+		end switch
+	end if
+
+	// Animate the crunchers in the level
+	object.crunchersTimer++
+	if object.crunchersTimer > 5
+		object.crunchersTimer = 0
+		object.crunchersSprite++
+		object.crunchersSprite &= 3
+		switch object.crunchersSprite
+		case 0
+			Copy16x16Tile(129, 508)
+			Copy16x16Tile(130, 509)
+			Copy16x16Tile(134, 512)
+			Copy16x16Tile(135, 513)
+			break
+
+		case 1
+			Copy16x16Tile(129, 510)
+			Copy16x16Tile(130, 511)
+			Copy16x16Tile(134, 514)
+			Copy16x16Tile(135, 515)
+			break
+
+		case 2
+			Copy16x16Tile(129, 516)
+			Copy16x16Tile(130, 517)
+			Copy16x16Tile(134, 520)
+			Copy16x16Tile(135, 521)
+			break
+
+		case 3
+			Copy16x16Tile(129, 518)
+			Copy16x16Tile(130, 519)
+			Copy16x16Tile(134, 522)
+			Copy16x16Tile(135, 523)
+			break
+
+		end switch
+	end if
+
+	// Move all the BG layers based on the scroll difference from last frame
+	temp1 = object.prevAngle
+	temp2 = tileLayer[0].angle
+	if temp1 < temp2
+		temp3 = temp2
+		temp3 -= temp1
+		if temp3 > 256
+			temp1 += 512
+		end if
+	else
+		temp3 = temp1
+		temp3 -= temp2
+		if temp3 > 256
+			temp2 += 512
+		end if
+	end if
+
+	temp0 = temp1
+	temp0 -= temp2
+
+	// Store the current angle so that the same thing can be done next frame
+	object.prevAngle = tileLayer[0].angle
+
+	temp1 = 0x10000
+	temp2 = 0x20000
+	temp3 = 0x30000
+
+	temp1 *= temp0
+	temp2 *= temp0
+	temp3 *= temp0
+
+	hParallax[0].scrollPos += temp1
+	hParallax[1].scrollPos += temp2
+	hParallax[2].scrollPos += temp3
+end event
+
+
+event ObjectStartup
+	// Set the stage's bounds
+	stage.curXBoundary1 = 0x2800000 // left bounds:  640 pixels
+	stage.curXBoundary2 = 0xD800000 // right bounds: 3456 pixels
+	stage.curYBoundary1 = 0x2800000 // upper bounds: 640 pixels
+	stage.curYBoundary2 = 0xD800000 // lower bounds: 3456 pixels
+
+	// Set the initial BG positions, offset by 128 pixels
+	hParallax[0].scrollPos += 0x800000
+	hParallax[2].scrollPos -= 0x800000
+
+	foreach (TypeName[BG Effects], arrayPos0, ALL_ENTITIES)
+		// Set the object to always active
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		// Give it a low draw order
+		object[arrayPos0].drawOrder = 0
+
+		// And set its starting angle
+		// But all other stages use 368... why is this one different?
+		object[arrayPos0].prevAngle = 256
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

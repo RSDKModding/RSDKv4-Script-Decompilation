@@ -1,0 +1,213 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Past Post Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.collisionPlane : player.collisionPlane
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : PASTPOST_IDLE
+private alias 1 : PASTPOST_ROTATE
+private alias 2 : PASTPOST_USED
+
+// Warp Destination
+private alias 1 : WARPDEST_PAST
+
+// Collision Plane
+private alias 1 : COLLISION_PLANE_B
+
+// Property Values
+private alias 0 : DRAWING_PLANE_A
+private alias 1 : DRAWING_PLANE_B
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function PastPost_DebugDraw
+reserve function PastPost_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function PastPost_DebugDraw
+    DrawSprite(0)
+    DrawSprite(1)
+end function
+
+
+public function PastPost_DebugSpawn
+    CreateTempObject(TypeName[Past Post], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case PASTPOST_IDLE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if player[currentPlayer].collisionPlane == object.collisionPlane
+                BoxCollisionTest(C_TOUCH, object.entityPos, -8, -24, 8, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    warp.destination = WARPDEST_PAST
+
+                    object.state = PASTPOST_ROTATE
+                    if object.priority != PRIORITY_XBOUNDS_DESTROY
+                        object.priority = PRIORITY_ACTIVE
+                    end if
+
+                    object.frame = 1
+                    PlaySfx(SfxName[Past], false)
+                end if
+            end if
+        next
+        break
+
+    case PASTPOST_ROTATE
+        object.timer++
+        if object.timer == 56
+            object.timer = 0
+            object.state = PASTPOST_USED
+            if object.priority != PRIORITY_XBOUNDS_DESTROY
+                object.priority = PRIORITY_BOUNDS
+            end if
+        end if
+
+        temp0 = object.timer
+        temp0 &= 1
+        object.frame += temp0
+        if object.frame > 8
+            object.frame = 1
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case PASTPOST_IDLE
+        DrawSprite(0)
+        DrawSprite(1)
+        break
+
+    case PASTPOST_ROTATE
+        DrawSprite(0)
+        DrawSprite(object.frame)
+        break
+
+    case PASTPOST_USED
+        DrawSprite(0)
+        DrawSprite(5)
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items.gif")
+
+    SpriteFrame(-8, -24, 16, 48, 35, 204)		// #0 - Post Body
+    SpriteFrame(-16, -40, 32, 16, 118, 239)		// #1 - Post Head
+    SpriteFrame(-8, -40, 16, 16, 51, 183)		// #2 - Post Head Flip 1
+    SpriteFrame(-3, -40, 8, 16, 68, 183)		// #3 - Post Head Flip 2
+    SpriteFrame(-8, -40, 16, 16, 52, 200)		// #4 - Post Head Flip 3
+    SpriteFrame(-16, -40, 32, 16, 151, 239)		// #5 - Post Head Backwards
+    SpriteFrame(-8, -40, 16, 16, 51, 183)		// #6 - Post Head Flip 1
+    SpriteFrame(-3, -40, 8, 16, 68, 183)		// #7 - Post Head Flip 2
+    SpriteFrame(-8, -40, 16, 16, 52, 200)		// #8 - Post Head Flip 3
+
+    foreach (TypeName[Past Post], arrayPos0, ALL_ENTITIES)
+        if object[arrayPos0].propertyValue == DRAWING_PLANE_B
+            object[arrayPos0].drawOrder      = 1
+            object[arrayPos0].collisionPlane = COLLISION_PLANE_B
+        end if
+
+        if options.gameMode == MODE_TIMEATTACK
+            object[arrayPos0].type = TypeName[Blank Object]
+        end if
+    next
+
+    if stage.actNum < 3
+        switch HUD.currentTimePeriod
+        case TIME_PRESENT
+        case TIME_GOOD_FUTURE
+        case TIME_BAD_FUTURE
+            SetTableValue(TypeName[Past Post], DebugMode_ObjCount, DebugMode_TypesTable)
+            SetTableValue(PastPost_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+            SetTableValue(PastPost_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+            DebugMode_ObjCount++
+        end switch
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // collisionPlane
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // CollisionPlane
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(1)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items.gif")
+	SpriteFrame(-8, -24, 16, 48, 35, 204)		// #0 - Post Body
+	SpriteFrame(-16, -40, 32, 16, 118, 239)		// #1 - Post Head
+
+	AddEditorVariable("collisionPlane")
+	SetActiveVariable("collisionPlane")
+	AddEnumVariable("Plane A", 0)
+	AddEnumVariable("Plane B", 1)
+end event

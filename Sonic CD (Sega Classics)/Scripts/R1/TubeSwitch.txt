@@ -1,0 +1,216 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tube Switch Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.inTube
+
+// Player Aliases
+private alias object.state          : player.state
+private alias object.xpos           : player.xpos
+private alias object.ypos           : player.ypos
+private alias object.xvel           : player.xvel
+private alias object.yvel           : player.yvel
+private alias object.speed          : player.speed
+private alias object.angle          : player.angle
+private alias object.gravity        : player.gravity
+private alias object.direction      : player.direction
+private alias object.animation      : player.animation
+private alias object.collisionMode  : player.collisionMode
+private alias object.value17        : player.minRollSpeed
+private alias object.value43        : player.prevGravity
+
+// Property Values
+private alias 0 : HORIZONTAL_TUBE
+private alias 1 : VERTICAL_TUBE
+private alias 2 : BOOST_ANGLE_TUBE
+private alias 3 : BOOST_VERTICAL_TUBE
+private alias 4 : HORIZONTAL_EXIT_TUBE
+private alias 5 : VERTICAL_EXIT_TUBE
+private alias 6 : SPEED_LIMITED_TUBE
+private alias 7 : EXIT_ANGLE_TUBE
+private alias 8 : EXIT_BOOST_TUBE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            switch object.propertyValue
+            case HORIZONTAL_TUBE
+                if player[currentPlayer].speed > 0
+                    if player[currentPlayer].state != Player_State_TubeRoll
+                        PlaySfx(SfxName[Release], false)
+                    end if
+
+                    player[currentPlayer].direction = FACING_RIGHT
+                    player[currentPlayer].state = Player_State_TubeRoll
+                    player[currentPlayer].animation = ANI_JUMPING
+                    player[currentPlayer].minRollSpeed = 0xA0000
+                    if player[currentPlayer].speed < 0xA0000
+                        player[currentPlayer].speed = 0xA0000
+                    end if
+                else
+                    if player[currentPlayer].gravity == GRAVITY_GROUND
+                        if player[currentPlayer].speed > -0x20000
+                            player[currentPlayer].speed = -0x20000
+                        end if
+                    end if
+
+                    player[currentPlayer].state = Player_State_Roll
+                    player[currentPlayer].animation = ANI_JUMPING
+                end if
+                break
+
+            case VERTICAL_TUBE
+                if player[currentPlayer].state != Player_State_TubeRoll
+                    PlaySfx(SfxName[Release], false)
+                end if
+
+                player[currentPlayer].gravity = GRAVITY_GROUND
+                player[currentPlayer].prevGravity = GRAVITY_GROUND
+                player[currentPlayer].state = Player_State_TubeRoll
+                player[currentPlayer].animation = ANI_JUMPING
+                player[currentPlayer].collisionMode = CMODE_RWALL
+                player[currentPlayer].angle = 64
+                player[currentPlayer].speed = 0x100000
+                player[currentPlayer].minRollSpeed = 0x100000
+                break
+
+            case BOOST_ANGLE_TUBE
+                if object.inTube == false
+                    if player[currentPlayer].collisionMode == CMODE_FLOOR
+                        player[currentPlayer].collisionMode = CMODE_ROOF
+                        FlipSign(player[currentPlayer].speed)
+                        player[currentPlayer].angle = 128
+                    else
+                        player[currentPlayer].collisionMode = CMODE_FLOOR
+                        FlipSign(player[currentPlayer].speed)
+                        player[currentPlayer].angle = 0
+                        player[currentPlayer].ypos += 0x40000
+                    end if
+
+                    player[currentPlayer].state = Player_State_TubeRoll
+                    player[currentPlayer].animation = ANI_JUMPING
+                end if
+                break
+
+            case BOOST_VERTICAL_TUBE
+                if player[currentPlayer].yvel < 0
+                    player[currentPlayer].gravity = GRAVITY_GROUND
+                    player[currentPlayer].prevGravity = GRAVITY_GROUND
+                    player[currentPlayer].state = Player_State_TubeRoll
+                    player[currentPlayer].animation = ANI_JUMPING
+                    player[currentPlayer].collisionMode = CMODE_LWALL
+                    player[currentPlayer].angle = 192
+                    player[currentPlayer].minRollSpeed = 0xA0000
+                    player[currentPlayer].speed = player[currentPlayer].yvel
+                    FlipSign(player[currentPlayer].speed)
+                end if
+                break
+
+            case HORIZONTAL_EXIT_TUBE
+                if player[currentPlayer].speed < 0
+                    if player[currentPlayer].state != Player_State_TubeRoll
+                        PlaySfx(SfxName[Release], false)
+                    end if
+
+                    player[currentPlayer].state = Player_State_TubeRoll
+                    player[currentPlayer].animation = ANI_JUMPING
+                    player[currentPlayer].minRollSpeed = 0xA0000
+                else
+                    player[currentPlayer].state = Player_State_Roll
+                    player[currentPlayer].animation = ANI_JUMPING
+                end if
+                break
+
+            case VERTICAL_EXIT_TUBE
+                if player[currentPlayer].gravity == GRAVITY_AIR
+                    player[currentPlayer].xvel = object.xvel
+                    player[currentPlayer].speed = object.xvel
+                    if player[currentPlayer].yvel < -0xE8000
+                        player[currentPlayer].yvel = -0xE8000
+                    end if
+                else
+                    if player[currentPlayer].collisionMode == CMODE_LWALL
+                        player[currentPlayer].angle = 196
+                        Cos256(temp0, player[currentPlayer].angle)
+                        temp0 *= player[currentPlayer].speed
+                        temp0 >>= 8
+                        if temp0 != 0
+                            object.xvel = temp0
+                        end if
+                    end if
+                end if
+                break
+
+            case SPEED_LIMITED_TUBE
+                if player[currentPlayer].state == Player_State_TubeRoll
+                    if player[currentPlayer].yvel < -0x60000
+                        player[currentPlayer].yvel = -0x60000
+                    end if
+                else
+                    player[currentPlayer].animation = ANI_JUMPING
+                end if
+                break
+
+            case EXIT_ANGLE_TUBE
+                if player[currentPlayer].state == Player_State_TubeRoll
+                    object.propertyValue = EXIT_BOOST_TUBE
+                end if
+                break
+
+            case EXIT_BOOST_TUBE
+                if player[currentPlayer].gravity == GRAVITY_AIR
+                    player[currentPlayer].yvel = -0xA8000
+                    object.propertyValue = EXIT_ANGLE_TUBE
+                end if
+                break
+            end switch
+
+            object.inTube = true
+        else
+            object.inTube = false
+        end if
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	temp0 = object.xpos
+	temp0 -= 0x80000
+	temp1 = object.ypos
+	temp1 -= 0x80000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp1 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 -= 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-8, -8, 16, 16, 173, 67) // #0 - "T" Icon
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

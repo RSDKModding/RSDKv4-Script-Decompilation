@@ -1,0 +1,671 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Act Finish Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.xpos   : object.lineXPos0
+private alias object.value1 : object.lineXPos1
+private alias object.value2 : object.lineXPos2
+private alias object.value3 : object.lineXPos3
+private alias object.value4 : object.lineXPos4
+private alias object.value5 : object.timeBonus
+private alias object.value6 : object.ringBonus
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Player Aliases
+private alias object.type   : player.type
+private alias object.value0 : player.rings
+
+// States
+private alias 0 : ACTFINISH_INIT
+private alias 1 : ACTFINISH_SLIDEIN
+private alias 2 : ACTFINISH_DISPLAYTALLY
+private alias 3 : ACTFINISH_TALLYUP
+private alias 4 : ACTFINISH_DISPLAYFINAL
+private alias 5 : ACTFINISH_FADEOUT
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Soundtrack
+private alias 0 : OST_JP
+
+// How long the Zone Complete jingle for each soundtrack is
+private alias 299 : JP_ZONECOMPLETE_LENGTH
+private alias 429 : US_ZONECOMPLETE_LENGTH
+
+// Presentation List Stages
+private alias 2 : STAGE_P_TATTACK
+
+// Engine States
+private alias 8 : ENGINE_RESETGAME
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case ACTFINISH_INIT
+		// Setup initial values such as text positions
+
+		// "SONIC GOT" is gonna come from the left, while all the other text slides in from the right
+		object.lineXPos0 = -799
+		object.lineXPos1 = 1168
+		object.lineXPos2 = 1255
+		object.lineXPos3 = 1319
+		object.lineXPos4 = 1402
+
+		object.state = ACTFINISH_SLIDEIN
+
+		// Calculate Time Bonus
+		switch stage.minutes
+		case 0
+			if stage.seconds < 30
+				// 0:00 - 0:29 - Wow that's fast, get a Mega Bonus!
+				object.timeBonus = 50000
+			else
+				if stage.seconds < 45
+					// 0:30 - 0:44
+					object.timeBonus = 10000
+				else
+					// 0:45 - 0:59
+					object.timeBonus = 5000
+				end if
+			end if
+			break
+
+		case 1
+			if stage.seconds < 30
+				// 1:00 - 1:29
+				object.timeBonus = 4000
+			else
+				// 1:30 - 1:59
+				object.timeBonus = 3000
+			end if
+			break
+
+		case 2
+			// 2:00 - 2:59
+			object.timeBonus = 2000
+			break
+
+		case 3
+			// 3:00 - 3:59
+			object.timeBonus = 1000
+			break
+
+		case 4
+			// 4:00 - 4:59
+			object.timeBonus = 500
+			break
+
+		case 5
+			// 5:00 - 5:59
+			object.timeBonus = 100
+			break
+
+		// Anything after that, you get nothing, you lose!
+
+		end switch
+
+		// Ring Bonus calculation is far easier - just take the Player's ring count and multiply that by 100
+		object.ringBonus = player[SLOT_PLAYER1].rings
+		object.ringBonus *= 100
+		break
+
+	case ACTFINISH_SLIDEIN
+		// Get a base Position of 60 pixels off centre screen
+		temp0 = screen.xcenter
+		temp0 -= 68
+
+		// Update position of the "SONIC GOT" line
+		if object.lineXPos0 < temp0
+			object.lineXPos0 += 16
+			if object.lineXPos0 > temp0
+				// Past the max, enforce it
+				object.lineXPos0 = temp0
+			end if
+		else
+			// Just stay put for now
+			object.lineXPos0 = temp0
+		end if
+
+		// Update Position of the "THROUGH Zone" line
+		temp0 -= 32
+		if object.lineXPos1 > temp0
+			object.lineXPos1 -= 16
+			if object.lineXPos1 < temp0
+				// Enforce a minimum
+				object.lineXPos1 = temp0
+			end if
+		else
+			// Hold!
+			object.lineXPos1 = temp0
+		end if
+
+		// The Score, Ring, and Time bonuses are all around the same X Position
+		temp0 += 9
+
+		// Score Line
+		if object.lineXPos2 > temp0
+			object.lineXPos2 -= 16
+			if object.lineXPos2 < temp0
+				object.lineXPos2 = temp0
+			end if
+		else
+			object.lineXPos2 = temp0
+		end if
+
+		// Ring Bonus Line
+		if object.lineXPos3 > temp0
+			object.lineXPos3 -= 16
+			if object.lineXPos3 < temp0
+				object.lineXPos3 = temp0
+			end if
+		else
+			object.lineXPos3 = temp0
+		end if
+
+		// Time Bonus line
+		if object.lineXPos4 > temp0
+			object.lineXPos4 -= 16
+			if object.lineXPos4 < temp0
+				object.lineXPos4 = temp0
+			end if
+		else
+			object.lineXPos4 = temp0
+
+			// Proceed with the Act Results, now that everything's in position
+			object.state = ACTFINISH_DISPLAYTALLY
+			object.timer = 0
+		end if
+		break
+
+	case ACTFINISH_DISPLAYTALLY
+		object.timer++
+
+		// The two soundtracks have different Zone Complete lengths
+		if options.soundtrack == OST_JP
+			if object.timer > JP_ZONECOMPLETE_LENGTH
+				// Proceed, now that the Jingle's over
+				object.timer = 0
+				object.state = ACTFINISH_TALLYUP
+
+				// See if the Paradise Found achievement should be unlocked
+				if stage.playerListPos == PLAYER_SONIC_A
+					if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+						if stage.debugMode == false
+							// But do nothing
+						end if
+					end if
+				end if
+			end if
+		else
+			if object.timer > US_ZONECOMPLETE_LENGTH
+				// It's now over, proceed with the Results
+				object.timer = 0
+				object.state = ACTFINISH_TALLYUP
+
+				// See if the Paradise Found achievement should be unlocked
+				if stage.playerListPos == PLAYER_SONIC_A
+					if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+						if stage.debugMode == false
+							// But do nothing
+						end if
+					end if
+				end if
+			end if
+		end if
+		break
+
+	case ACTFINISH_TALLYUP
+		// Tally up the Ring Bonus and Time Bonus simultaneously
+		if object.ringBonus > 0
+			object.ringBonus -= 100
+			player.score += 100
+		end if
+
+		if object.timeBonus > 0
+			object.timeBonus -= 100
+			player.score += 100
+		end if
+
+		// See if they're both over
+		CheckGreater(object.ringBonus, false)
+		temp0 = checkResult
+
+		CheckGreater(object.timeBonus, false)
+		temp0 |= checkResult
+
+		if temp0 == true
+			// If they're not done yet, then play the Tally SFX
+			object.timer++
+			if object.timer == 2
+				PlaySfx(SfxName[Score Add], false)
+				object.timer = 0
+			end if
+		else
+			// They're both over now, go over now
+			object.state = ACTFINISH_DISPLAYFINAL
+			object.timer = 0
+
+			// Ka-ching!
+			PlaySfx(SfxName[Score Total], false)
+		end if
+		break
+
+	case ACTFINISH_DISPLAYFINAL
+		// Pause for a moment, to let the Player see what they got
+		object.timer++
+		if object.timer == 160
+			object.timer = 0
+			object.state = ACTFINISH_FADEOUT
+
+			// If the Player's a Blank Object, then that means they entered a Special Ring
+			if player[SLOT_PLAYER1].type == TypeName[Blank Object]
+				PlaySfx(SfxName[Special Warp], false)
+			end if
+		end if
+		break
+
+	case ACTFINISH_FADEOUT
+		if player[SLOT_PLAYER1].type == TypeName[Blank Object]
+			// Special Stage!
+			object.timer += 8
+
+			// Use kinda-white to fade out, rather than black
+			SetScreenFade(208, 255, 224, object.timer)
+
+			if object.timer == 1024
+				// Set Fade_Colour to be off-white (0xD0FFE0)
+				fadeColor = 208
+				fadeColor <<= 16
+				temp0 = 255
+				temp0 <<= 8
+				fadeColor += temp0
+				fadeColor += 224
+
+				// Reset more stuff
+				object.direction = FACING_RIGHT
+				object.timer     = 0
+				lampPostID       = 0
+
+				goodFuture.count += goodFuture.enabled
+				goodFuture.enabled = false
+
+				generator.destroyed  = false
+				metalSonic.destroyed = false
+
+				if stage.actNum == 2
+					if goodFuture.count < 2
+						stage.listPos++
+					end if
+				end if
+
+				if stage.actNum == 3
+					goodFuture.count = 0
+				end if
+
+				// Get the Stage List Pos of the next stage's Present version
+				switch HUD.currentTimePeriod
+				case TIME_PRESENT
+					stage.listPos += 4
+					break
+
+				case TIME_PAST
+					stage.listPos += 3
+					break
+
+				case TIME_GOOD_FUTURE
+					stage.listPos += 2
+					break
+
+				case TIME_BAD_FUTURE
+					stage.listPos++
+					break
+
+				end switch
+
+				if options.gameMode == MODE_TRIAL
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					saveRAM[arrayPos1] = stage.playerListPos
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+					arrayPos1++
+					saveRAM[arrayPos1] = player.score
+					arrayPos1++
+					saveRAM[arrayPos1] = stage.listPos
+					// Add 81 to the Stage List Pos to signify that it's a Special Stage save
+					saveRAM[arrayPos1] += 81
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.timeStones
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.listPos
+					arrayPos1++
+					saveRAM[arrayPos1] = player.scoreBonus
+					arrayPos1++
+					saveRAM[arrayPos1] = metalSonic.list
+					saveRAM[arrayPos1] <<= 16
+					saveRAM[arrayPos1] += goodFuture.list
+					WriteSaveRAM()
+				end if
+
+				specialStage.nextZone = stage.listPos
+				stage.listPos         = specialStage.listPos
+				stage.activeList      = BONUS_STAGE
+
+				temp0 = engine.trialMode
+				if stage.listPos >= stage.listSize
+					temp0 = true
+				end if
+
+				if temp0 == false
+					LoadStage()
+				else
+					engine.state = ENGINE_RESETGAME
+				end if
+			end if
+		else
+			// We didn't enter a Special Ring, we're staying in normal stages
+			object.timer += 4
+			SetScreenFade(0, 0, 0, object.timer)
+
+			if object.timer == 384
+				// Set Fade_Colour to be black
+				fadeColor = 0
+
+				// Reset some cool values
+				object.timer = 0
+				lampPostID   = 0
+
+				object.direction = FACING_RIGHT
+
+				goodFuture.count += goodFuture.enabled
+				goodFuture.enabled = false
+
+				generator.destroyed  = false
+				metalSonic.destroyed = false
+
+				if stage.actNum == 2
+					if goodFuture.count < 2
+						stage.listPos++
+					end if
+				end if
+
+				if stage.actNum == 3
+					goodFuture.count = 0
+				end if
+
+				// Get the Stage ID of the next stage's starting version
+				switch HUD.currentTimePeriod
+				case TIME_PRESENT
+					stage.listPos += 4
+					break
+
+				case TIME_PAST
+					stage.listPos += 3
+					break
+
+				case TIME_GOOD_FUTURE
+					stage.listPos += 2
+					break
+
+				case TIME_BAD_FUTURE
+					stage.listPos++
+					break
+
+				end switch
+
+				if options.gameMode == MODE_SAVEGAME
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					saveRAM[arrayPos1] = stage.playerListPos
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+					arrayPos1++
+					saveRAM[arrayPos1] = player.score
+					arrayPos1++
+					saveRAM[arrayPos1] = stage.listPos
+					saveRAM[arrayPos1]++
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.timeStones
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.listPos
+					arrayPos1++
+					saveRAM[arrayPos1] = player.scoreBonus
+					arrayPos1++
+					saveRAM[arrayPos1] = metalSonic.list
+					saveRAM[arrayPos1] <<= 16
+					saveRAM[arrayPos1] += goodFuture.list
+					WriteSaveRAM()
+				end if
+
+				if options.gameMode == MODE_TIMEATTACK
+					if stage.playerListPos == PLAYER_SONIC_A
+						// Get the act number
+						temp0 = stage.listPos
+						temp0 %= 10
+						temp0 >>= 2
+
+						// Get the current Round
+						temp1 = stage.listPos
+						temp1 /= 10
+						temp1 *= 3
+
+						// Add them together to get the stage ID
+						temp0 += temp1
+						temp0++
+
+						// And now, tally up all the time
+						temp1 = stage.seconds
+						temp1 *= 100
+
+						temp2 = stage.minutes
+						temp2 *= 6000
+
+						temp1 += temp2
+						temp1 += stage.milliSeconds
+					end if
+
+					// Tally up all the results, into one single large number
+					timeAttack.result = stage.seconds
+					timeAttack.result *= 100
+
+					temp0 = stage.minutes
+					temp0 *= 6000
+
+					timeAttack.result += temp0
+					timeAttack.result += stage.milliSeconds
+
+					stage.activeList = PRESENTATION_STAGE
+					stage.listPos    = STAGE_P_TATTACK
+					LoadStage()
+				else
+					if options.gameMode < MODE_TRIAL
+						temp0 = engine.trialMode
+					else
+						temp0 = false
+					end if
+
+					if stage.listPos >= stage.listSize // tldr - check if you are playing a trial
+						temp0 = true
+					end if
+
+					if temp0 == false
+						LoadStage()
+					else
+						if engine.trialMode == true
+							stage.activeList = PRESENTATION_STAGE
+							stage.listPos = 11
+						else
+							engine.state = ENGINE_RESETGAME
+						end if
+
+						LoadStage()
+					end if
+				end if
+			end if
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	// First two lines are dependant on if Sonic made a Good Future or not
+	// Regardless of the path taken here, TempValue0 afterwards should be where the "Zone" text is drawn,
+	// in order for the following code to be done correctly
+	if goodFuture.enabled == false
+		// No Good Future here, just do the normal results
+
+		// First line - "Sonic GOT"
+		DrawSpriteScreenXY(0, object.lineXPos0, 65)
+
+		// Second line - "THROUGH"
+		DrawSpriteScreenXY(4, object.lineXPos1, 89)
+
+		// To the right of that, draw "Zone"
+		temp0 = object.lineXPos1
+		temp0 += 128
+		DrawSpriteScreenXY(5, temp0, 89)
+	else
+		// We made a Good Future!
+		// Let's used the altered version of the text to let the Player know
+
+		// Draw "SONIC MADE A GOOD" for the first line
+		// (For Knux, this is just "MADE A GOOD", with his name being drawn separately down below)
+		DrawSpriteScreenXY(20, object.lineXPos0, 65)
+
+		// Then, comes "FUTURE IN"
+		DrawSpriteScreenXY(21, object.lineXPos1, 89)
+
+		// And to the right of that, draw the "Zone" text
+		temp0 = object.lineXPos1
+		temp0 += 140
+		DrawSpriteScreenXY(5, temp0, 89)
+	end if
+
+	// From where the "Zone" text was drawn, draw the Act Number next to it
+	temp0 += 64
+	DrawSpriteScreenXY(stage.actNum, temp0, 89)
+
+	// Draw the Score text
+	DrawSpriteScreenXY(6, object.lineXPos2, 121)
+
+	// And then to the right of that, draw the Score numbers
+	temp0 = object.lineXPos2
+	temp0 += 163
+	DrawNumbers(10, temp0, 121, player.score, 6, 8, 0)
+
+	// The fourth line holds the Rings text
+	DrawSpriteScreenXY(7, object.lineXPos3, 145)
+
+	// Append "Bonus" to the end of that Rings text
+	temp0 = object.lineXPos3
+	temp0 += 40
+	DrawSpriteScreenXY(9, temp0, 145)
+
+	// And on the same line, draw the Ring Bonus
+	temp0 += 123
+	DrawNumbers(10, temp0, 145, object.ringBonus, 5, 8, 0)
+
+	// The fifth line holds the Time Bonus
+
+	// So, draw the "Time" sprite first
+	DrawSpriteScreenXY(8, object.lineXPos4, 169)
+
+	// And then similarly, append "Bonus" to that
+	temp0 = object.lineXPos4
+	temp0 += 40
+	DrawSpriteScreenXY(9, temp0, 169)
+
+	// And now, draw the Time Bonus numbers at the end of the line
+	temp0 += 123
+	DrawNumbers(10, temp0, 169, object.timeBonus, 5, 8, 0)
+end event
+
+
+event ObjectStartup
+	// Load the appropriate sheet based on the current character
+	if stage.playerListPos == PLAYER_SONIC_A
+		LoadSpriteSheet("Global/Display.gif")
+	else
+		LoadSpriteSheet("Global/Display_t.gif")
+	end if
+
+	// 0 - "SONIC GOT"
+	SpriteFrame(0, 0, 136, 16, 0, 206)
+
+	// 1-3 - Act Numbers
+	SpriteFrame(0, 0, 8, 16, 194, 223)
+	SpriteFrame(0, 0, 16, 16, 203, 223)
+	SpriteFrame(0, 0, 16, 16, 220, 223)
+
+	// 4 - "THROUGH"
+	SpriteFrame(0, 0, 113, 16, 137, 206)
+
+	// 5 - "Zone"
+	SpriteFrame(0, 0, 56, 16, 137, 223)
+
+	// 6 - Score text
+	SpriteFrame(0, 0, 39, 11, 1, 1)
+
+	// 7 - Rings text
+	SpriteFrame(0, 0, 31, 11, 1, 33)
+
+	// 8 - Time text
+	SpriteFrame(0, 0, 31, 11, 1, 17)
+
+	// 9 - Bonus text
+	SpriteFrame(0, 0, 41, 11, 1, 107)
+
+	// 10-19 - Numbers
+	SpriteFrame(0, 0, 8, 11, 1, 50)
+	SpriteFrame(0, 0, 8, 11, 10, 50)
+	SpriteFrame(0, 0, 8, 11, 19, 50)
+	SpriteFrame(0, 0, 8, 11, 28, 50)
+	SpriteFrame(0, 0, 8, 11, 1, 62)
+	SpriteFrame(0, 0, 8, 11, 10, 62)
+	SpriteFrame(0, 0, 8, 11, 19, 62)
+	SpriteFrame(0, 0, 8, 11, 28, 62)
+	SpriteFrame(0, 0, 8, 11, 1, 74)
+	SpriteFrame(0, 0, 8, 11, 10, 74)
+
+	// 20 - "SONIC MADE A GOOD"
+	SpriteFrame(-60, 0, 256, 16, 0, 240)
+
+	// 21 - "FUTURE IN"
+	SpriteFrame(-12, 0, 136, 16, 0, 223)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(0, 0, 113, 16, 137, 206)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

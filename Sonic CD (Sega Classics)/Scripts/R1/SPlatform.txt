@@ -1,0 +1,120 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Small Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.stood
+private alias object.value1 : object.timer
+private alias object.value2 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SmallPlatform_DebugDraw
+reserve function SmallPlatform_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function SmallPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function SmallPlatform_DebugSpawn
+	CreateTempObject(TypeName[Small Platform], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.stood == true
+		if object.timer < 16
+			object.timer++
+
+			temp0 = object.timer
+			temp0 &= 3
+			if temp0 == 3
+				object.collisionOffset.y = 0x10000
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			object.collisionOffset.y = 0
+		end if
+	else
+		if object.timer > 0
+			object.timer--
+
+			temp0 = object.timer
+			temp0 &= 3
+			if temp0 == 3
+				object.collisionOffset.y = -0x10000
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			object.collisionOffset.y = 0
+		end if
+	end if
+
+	object.stood = false
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -9, 16, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			object.stood = true
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+
+	object.ypos += object.collisionOffset.y
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 190, 101) // #0 - Small Platform
+
+	SetTableValue(TypeName[Small Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(SmallPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(SmallPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 190, 101) // #0 - Small Platform
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

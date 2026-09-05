@@ -1,0 +1,144 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: UFO Power Up Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.explosionDir
+private alias object.value1 : object.explosionXVel
+private alias object.value2 : object.explosionYVel
+private alias object.value3 : object.timer
+private alias object.value4 : object.yvel
+private alias object.value5 : object.screenDepth // Not used in this script, but set by the parent UFO Object upon spawning
+private alias object.value6 : object.explosionTimer
+private alias object.value7 : object.startResults
+
+// Player Aliases
+private alias object.state : player.state
+
+// Special Stage Player States
+private alias 9 : SSSONIC_CAMERAPAN
+
+// Stage Finish Aliases
+private alias 8 : STAGEFINISH_LOADTIMEATTACK
+private alias 9 : STAGEFINISH_LOADCREDITS
+
+// Game Mode Aliases
+private alias 2 : MODE_TIMEATTACK
+
+// Reserved Object Slot Aliases
+private alias 2 : SLOT_PLAYER1
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// If the Object isn't falling at a rate of 4px downwards per frame yet, then update movements
+	if object.yvel < 0x40000
+		// Draw the Power Up icon
+		DrawSpriteScreenXY(object.propertyValue, object.ixpos, object.iypos)
+
+		// Apply an eighth pixel's worth of gravity per frame
+		object.yvel += 0x2000
+
+		// And then update the Power Up's position itself
+		object.ypos += object.yvel
+	end if
+
+	// Create explosions as needed
+	object.explosionTimer++
+	if object.explosionTimer == 6
+		object.explosionTimer = 0
+		PlaySfx(SfxName[Explosion], false)
+
+		// Randomise the explosion offset a tad bit
+		Rand(temp0, 48)
+		temp0 -= 24
+		temp0 += screen.xoffset
+		temp0 <<= 16
+		temp0 += object.explosionXVel
+
+		Rand(temp1, 48)
+		temp1 -= 24
+		temp1 += screen.yoffset
+		temp1 <<= 16
+		temp1 += object.explosionYVel
+
+		CreateTempObject(TypeName[Smoke Puff], 0, temp0, temp1)
+
+		object[tempObjectPos].drawOrder = 4
+	end if
+
+	// This value is randomised by the parent UFO object already, this Object doesn't set it itself
+	if object.explosionDir > 50
+		// Moving to the bottom right corner of the screen
+		object.explosionXVel += 0x20000
+	else
+		// Moving to the bottom left corner of the screen
+		object.explosionXVel -= 0x20000
+	end if
+
+	// Make the explosions gravitate to the bottom corner of the screen, at a rate of 0.75 pixels per frame
+	object.explosionYVel += 0xC000
+
+	object.timer++
+	if object.timer == 160
+		if object.startResults == true
+			// If this object was the spawned by the last UFO, then end the stage
+			// -> startResults is set by the parent UFO when spawning this Power Up
+
+			if options.gameMode < MODE_TIMEATTACK
+				if stage.actNum < 8
+					// If in a normal Special Stage, then hand the rest of the ending sequence to Sonic
+					player[SLOT_PLAYER1].state = SSSONIC_CAMERAPAN
+				else
+					// If in the hidden Robotnik Special Stage, then go ahead and load the credits
+					object[30].type = TypeName[Stage Finish]
+					object[30].state = STAGEFINISH_LOADCREDITS
+					object[30].drawOrder = 7
+				end if
+			else
+				// If in time attack, then go ahead and fade out to the TA Menu scene
+				object[30].type = TypeName[Stage Finish]
+				object[30].state = STAGEFINISH_LOADTIMEATTACK
+				object[30].drawOrder = 7
+			end if
+		end if
+
+		object.type = TypeName[Blank Object]
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 1, 67)  // 0 - Ring Icon
+	SpriteFrame(-8, -8, 16, 16, 18, 67) // 1 - Speed Shoes Icon
+	SpriteFrame(-8, -8, 16, 16, 35, 67) // 2 - Clock Icon
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 67)
+
+	// Although used by the object, it shouldn't be set by the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,195 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: BG Animation Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.vllYOffset             // Vertical Line Left
+private alias object.value2 : object.vlrYOffset             // Vertical Line Right
+private alias object.value3 : object.arrowXOffset
+
+// Menu Control Aliases
+private alias object[0].state  : menuControl.state          // This is used AFTER you play in time attack
+private alias object[0].value3 : menuControl.savedRound     // This is used AFTER you play in time attack
+private alias object[0].value7 : menuControl.ssUnlocked
+
+// Large Icon / Special Large Icon Aliases
+private alias object[40].xpos : object.lIconXPos
+
+// Menu Control States
+// *SM = Sub Menu
+private alias 0	 : MENUCONTROL_SETUP
+private alias 1	 : MENUCONTROL_FADEIN
+private alias 2	 : MENUCONTROL_CONTROLS
+private alias 3	 : MENUCONTROL_BLANK
+private alias 4	 : MENUCONTROL_RETURN_TO_MENU
+private alias 5	 : MENUCONTROL_ENTER_SM
+private alias 6	 : MENUCONTROL_CALL_RECORD_MENU
+private alias 7	 : MENUCONTROL_SM_CONTROLS
+private alias 8	 : MENUCONTROL_SM_SCROLL_DOWN
+private alias 9	 : MENUCONTROL_SM_SCROLL_UP
+private alias 10 : MENUCONTROL_SM_CONFIRMED
+private alias 11 : MENUCONTROL_SM_LOAD_LEVEL
+private alias 12 : MENUCONTROL_SM_LEVEL_RETURN
+private alias 13 : MENUCONTROL_SM_COMFIRMED_LEAVE
+private alias 14 : MENUCONTROL_SM_EXIT
+private alias 15 : MENUCONTROL_SM_RECORD_BEATED
+private alias 16 : MENUCONTROL_SCROLL_DOWN
+private alias 17 : MENUCONTROL_SCROLLING_1
+private alias 18 : MENUCONTROL_SCROLL_UP
+private alias 19 : MENUCONTROL_SCROLLING_2
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.vllYOffset--
+    if object.vllYOffset < -31
+        object.vllYOffset += 32
+    end if
+
+    object.vlrYOffset++
+    if object.vlrYOffset > -1
+        object.vlrYOffset -= 32
+    end if
+
+    object.arrowXOffset++
+    if object.arrowXOffset > -1
+        object.arrowXOffset -= 96
+    end if
+end event
+
+
+event ObjectDraw
+    if object.drawOrder == 3
+        DrawRect(0, 0, 2, screen.ysize, 0, 0, 0, 255)
+        temp0 = screen.xcenter
+        temp0 -= 32
+        DrawRect(0, 160, temp0, 2, 0, 0, 0, 255)
+        temp0 += 48
+
+        switch menuControl.state
+        case MENUCONTROL_SETUP
+        case MENUCONTROL_FADEIN
+        case MENUCONTROL_CONTROLS
+        case MENUCONTROL_BLANK
+        case MENUCONTROL_RETURN_TO_MENU
+        case MENUCONTROL_ENTER_SM
+        case MENUCONTROL_SM_EXIT
+        case MENUCONTROL_SCROLL_DOWN
+        case MENUCONTROL_SCROLLING_1
+        case MENUCONTROL_SCROLL_UP
+        case MENUCONTROL_SCROLLING_2
+            DrawRect(temp0, 0, screen.xcenter, screen.ysize, 224, 0, 0, 255)
+            DrawRect(temp0, 175, screen.xcenter, 38, 0, 0, 96, 255)
+            DrawRect(temp0, 31, screen.xcenter, 9, 0, 0, 0, 255)
+            break
+
+        case MENUCONTROL_CALL_RECORD_MENU
+        case MENUCONTROL_SM_CONTROLS
+        case MENUCONTROL_SM_SCROLL_DOWN
+        case MENUCONTROL_SM_SCROLL_UP
+        case MENUCONTROL_SM_CONFIRMED
+        case MENUCONTROL_SM_LOAD_LEVEL
+        case MENUCONTROL_SM_LEVEL_RETURN
+        case MENUCONTROL_SM_COMFIRMED_LEAVE
+        case MENUCONTROL_SM_RECORD_BEATED
+            DrawRect(temp0, 0, screen.xcenter, 32, 224, 0, 0, 255)
+            DrawRect(temp0, 226, screen.xcenter, 14, 224, 0, 0, 255)
+            DrawRect(temp0, 31, screen.xcenter, 2, 0, 0, 0, 255)
+            break
+
+        end switch
+
+        temp0 -= 50
+        DrawRect(2, 0, temp0, 160, 160, 160, 64, 255)
+        DrawRect(2, 162, temp0, 78, 0, 128, 0, 255)
+
+        temp1 = object.arrowXOffset
+        temp1 >>= 1
+        DrawSpriteScreenXY(3, temp1, 226)
+        DrawSpriteScreenXY(4, temp1, 226)
+
+        temp0 += 2
+        temp1 = object.vllYOffset
+        temp1 >>= 1
+        DrawSpriteScreenXY(1, temp0, temp1)
+
+        temp1 = object.vlrYOffset
+        temp1 >>= 1
+        DrawSpriteScreenXY(2, temp0, temp1)
+
+        SetDrawListEntityRef(object.entityPos, 4, screen[4].drawListSize)
+        screen[4].drawListSize++
+        object.drawOrder = 4
+    else
+        DrawRect(0, 213, screen.xsize, 13, 0, 0, 0, 255)
+        DrawSpriteScreenXY(0, 24, 195)
+
+        temp0 = screen.xcenter
+        temp0 += 19
+        DrawSpriteScreenXY(5, temp0, 213)
+
+        if menuControl.ssUnlocked == true
+            temp0 = screen.xsize
+            temp0 -= 64
+
+            temp1 = object.lIconXPos
+            temp1 -= -0x480000
+            temp1 >>= 17
+            temp0 += temp1
+
+            if menuControl.savedRound == 8
+                DrawSpriteScreenXY(7, temp0, 197)
+            else
+                DrawSpriteScreenXY(6, temp0, 197)
+            end if
+        end if
+
+        object.drawOrder = 3
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("TAttack/TimeAttack.gif")
+    LoadPalette("TimeAttack.act", 0, 0, 0, 256)
+
+    MatrixTranslateXYZ(MAT_WORLD, 0, 0, 0)
+    MatrixRotateXYZ(MAT_VIEW, 0, 0, 0)
+
+    SpriteFrame(0, 0, 152, 30, 70, 666)	    // #0 - Time Attack Header
+    SpriteFrame(0, 0, 24, 256, 463, 577)    // #1 - BG Vertical Line First Half
+    SpriteFrame(24, 0, 24, 256, 487, 577)   // #2 - BG Vertical Line Second Half
+    SpriteFrame(0, 0, 448, 14, 1, 701)      // #3 - BG Right Arrow Line
+    SpriteFrame(448, 0, 448, 14, 1, 701)    // #4 - BG Left Arrow Line
+    SpriteFrame(0, 0, 104, 13, 358, 687)    // #5 - Sonic The Hedgehog CD
+    SpriteFrame(-16, 0, 80, 16, 326, 798)   // #6 - Next
+    SpriteFrame(-16, 0, 80, 16, 326, 815)   // #7 - Next Highlight
+
+    object[31].type = TypeName[BG Animation]
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

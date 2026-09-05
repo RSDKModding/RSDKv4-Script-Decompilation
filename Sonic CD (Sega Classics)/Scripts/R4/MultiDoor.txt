@@ -1,0 +1,232 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Multi Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.offset.y
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// Push Button alias
+private alias object.propertyValue : pushButton.pressed
+
+// HUD alias
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : MULTIDOOR_INACTIVE
+private alias 1 : MULTIDOOR_OPEN
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case MULTIDOOR_INACTIVE
+        object.offset.y = object.ypos
+
+        // Check if the previous or next button got pressed
+        if pushButton[-1].pressed == true
+            object.state++
+        end if
+
+        if pushButton[+1].pressed == true
+            object.state++
+        end if
+        break
+
+    case MULTIDOOR_OPEN
+        if object.timer < 128
+            object.timer++
+            object.ypos += 0x10000
+            object.offset.y -= 0x10000
+        else
+            object.state++
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_SOLID, object.entityPos, -32, -65, 0, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == COL_TOP
+            player[currentPlayer].ypos += 0x10000
+        end if
+
+        BoxCollisionTest(C_SOLID, object.entityPos, 32, -65, 64, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == COL_TOP
+            player[currentPlayer].ypos += 0x10000
+        end if
+
+        temp0 = object.ypos
+        object.ypos = object.offset.y
+        BoxCollisionTest(C_SOLID, object.entityPos, -64, -64, -32, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        BoxCollisionTest(C_SOLID, object.entityPos, 0, -64, 32, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        object.ypos = temp0
+    next
+end event
+
+
+event ObjectDraw
+    temp0 = object.xpos
+    temp0 -= 0x300000
+    DrawSpriteXY(0, temp0, object.offset.y)
+    DrawSpriteXY(1, temp0, object.offset.y)
+    DrawSpriteXY(2, temp0, object.offset.y)
+    DrawSpriteXY(3, temp0, object.offset.y)
+
+    temp0 += 0x200000
+    DrawSpriteXY(4, temp0, object.ypos)
+    DrawSpriteXY(5, temp0, object.ypos)
+    DrawSpriteXY(6, temp0, object.ypos)
+    DrawSpriteXY(7, temp0, object.ypos)
+
+    temp0 += 0x200000
+    DrawSpriteXY(0, temp0, object.offset.y)
+    DrawSpriteXY(1, temp0, object.offset.y)
+    DrawSpriteXY(2, temp0, object.offset.y)
+    DrawSpriteXY(3, temp0, object.offset.y)
+
+    temp0 += 0x200000
+    DrawSpriteXY(4, temp0, object.ypos)
+    DrawSpriteXY(5, temp0, object.ypos)
+    DrawSpriteXY(6, temp0, object.ypos)
+    DrawSpriteXY(7, temp0, object.ypos)
+end event
+
+
+event ObjectStartup
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        break
+    end switch
+
+    // R4 blocks
+    SpriteFrame(-16, -64, 32, 32, temp0, temp1)
+    SpriteFrame(-16, -32, 32, 32, temp0, temp1)
+    SpriteFrame(-16, 0, 32, 32, temp0, temp1)
+    SpriteFrame(-16, 32, 32, 32, temp0, temp1)
+    SpriteFrame(-16, -64, 32, 32, temp2, temp1)
+    SpriteFrame(-16, -32, 32, 32, temp2, temp1)
+    SpriteFrame(-16, 0, 32, 32, temp2, temp1)
+    SpriteFrame(-16, 32, 32, 32, temp2, temp1)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    temp0 = object.xpos
+    temp0 -= 0x300000
+    DrawSpriteXY(0, temp0, object.ypos)
+    DrawSpriteXY(1, temp0, object.ypos)
+    DrawSpriteXY(2, temp0, object.ypos)
+    DrawSpriteXY(3, temp0, object.ypos)
+
+    temp0 += 0x200000
+    DrawSpriteXY(4, temp0, object.ypos)
+    DrawSpriteXY(5, temp0, object.ypos)
+    DrawSpriteXY(6, temp0, object.ypos)
+    DrawSpriteXY(7, temp0, object.ypos)
+
+    temp0 += 0x200000
+    DrawSpriteXY(0, temp0, object.ypos)
+    DrawSpriteXY(1, temp0, object.ypos)
+    DrawSpriteXY(2, temp0, object.ypos)
+    DrawSpriteXY(3, temp0, object.ypos)
+
+    temp0 += 0x200000
+    DrawSpriteXY(4, temp0, object.ypos)
+    DrawSpriteXY(5, temp0, object.ypos)
+    DrawSpriteXY(6, temp0, object.ypos)
+    DrawSpriteXY(7, temp0, object.ypos)
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+
+    switch checkResult
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        break
+        
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        break
+    end switch
+    
+    // R4 blocks
+    SpriteFrame(-16, -64, 32, 32, temp0, temp1)
+    SpriteFrame(-16, -32, 32, 32, temp0, temp1)
+    SpriteFrame(-16, 0, 32, 32, temp0, temp1)
+    SpriteFrame(-16, 32, 32, 32, temp0, temp1)
+    SpriteFrame(-16, -64, 32, 32, temp2, temp1)
+    SpriteFrame(-16, -32, 32, 32, temp2, temp1)
+    SpriteFrame(-16, 0, 32, 32, temp2, temp1)
+    SpriteFrame(-16, 32, 32, 32, temp2, temp1)
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

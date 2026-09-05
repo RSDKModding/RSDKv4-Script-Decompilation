@@ -1,0 +1,288 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Kumo Kumo Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : KUMOKUMO_AIRBORNE
+
+// Different Ground States for the different conditions a Kumo Kumo can come in
+private alias 1 : KUMOKUMO_GOOD_GROUND
+private alias 2 : KUMOKUMO_BAD_GROUND
+
+// State entered to start shooting a Kumo Kumo Web
+private alias 3 : KUMOKUMO_SHOOT
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function KumoKumo_DebugDraw
+reserve function KumoKumo_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value KumoKumo_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function KumoKumo_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= KumoKumo_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(3) // Bad quality
+    end if
+end function
+
+
+private function KumoKumo_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= KumoKumo_startDebugID
+    CreateTempObject(TypeName[Kumo Kumo], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case KUMOKUMO_AIRBORNE
+        object.yvel += 0x4000
+        object.ypos += object.yvel
+        if object.yvel > 0
+            ObjectTileCollision(CSIDE_FLOOR, 0, 24, 0)
+            if checkResult == true
+                object.ypos += 0x80000
+                object.frame = 0
+                object.drawOrder = 3
+
+                if object.quality == QUALITY_GOOD
+                    object.state = KUMOKUMO_GOOD_GROUND
+                else
+                    object.state = KUMOKUMO_BAD_GROUND
+                    object.direction = FACING_LEFT
+                end if
+            end if
+        end if
+        break
+
+    case KUMOKUMO_GOOD_GROUND
+        if object.timer < 180
+            object.timer++
+            object.frame++
+            object.frame &= 15
+        else
+            object.ypos -= 0x80000
+            object.timer = 0
+            object.yvel = -0x80000
+            object.ypos += object.yvel
+            object.yvel += 0x4000
+            object.state = KUMOKUMO_AIRBORNE
+        end if
+        break
+
+    case KUMOKUMO_BAD_GROUND
+        if object.timer < 180
+            object.timer++
+            object.frame++
+            object.frame &= 31
+        else
+            object.ypos -= 0x80000
+            object.timer = 0
+            object.yvel = -0x50000
+            object.ypos += object.yvel
+            object.state = KUMOKUMO_AIRBORNE
+        end if
+        break
+
+    case KUMOKUMO_SHOOT
+        if object.timer < 62
+            object.timer++
+        else
+            CreateTempObject(TypeName[Kumo Kumo Web], 0, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+
+            if object.direction == FACING_RIGHT
+                object[tempObjectPos].xpos += 0x80000
+                object[tempObjectPos].xvel = 0x30000
+            else
+                object[tempObjectPos].xpos -= 0x80000
+                object[tempObjectPos].xvel = -0x30000
+            end if
+
+            object.ypos -= 0x80000
+            object.timer = 0
+            object.yvel = -0x80000
+            object.ypos += object.yvel
+            object.yvel += 0x4000
+            object.state = KUMOKUMO_AIRBORNE
+            object.drawOrder = 4
+            PlaySfx(SfxName[Shot], false)
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Check collision for the main Badnik
+        BoxCollisionTest(C_TOUCH, object.entityPos, -24, -16, 24, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        end if
+
+		// Only Good Badniks are able to shoot, and they have to be on the ground too
+        if object.state == KUMOKUMO_GOOD_GROUND
+			// Based on the Kumo Kumo's direction, check to see if the Player's walked in front of it
+            if object.direction == FACING_RIGHT
+                BoxCollisionTest(C_TOUCH, object.entityPos, -64, -32, 0, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+					// The Player's stepped into range, turn around and shoot!
+                    object.direction = FACING_LEFT
+                    object.state = KUMOKUMO_SHOOT
+                    object.frame = 0
+                    object.timer = 0
+                end if
+            else
+                BoxCollisionTest(C_TOUCH, object.entityPos, 0, -32, 64, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+					// The Player is within range, start the shooting process
+                    object.direction = FACING_RIGHT
+                    object.state = KUMOKUMO_SHOOT
+                    object.frame = 0
+                    object.timer = 0
+                end if
+            end if
+        end if
+    next
+
+	// Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case KUMOKUMO_AIRBORNE
+        if object.quality == QUALITY_GOOD
+            DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        else
+            DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+        end if
+        break
+
+    case KUMOKUMO_GOOD_GROUND
+        temp0 = object.frame
+        temp0 >>= 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case KUMOKUMO_BAD_GROUND
+        temp0 = object.frame
+        temp0 >>= 4
+        temp0 += 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case KUMOKUMO_SHOOT
+        DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R5/Objects.gif")
+
+	// Kumo Kumo Frames
+	SpriteFrame(-28, -20, 56, 36, 199, 1)    // Good Standing Frame
+	SpriteFrame(-28, -16, 56, 32, 199, 38)   // Good Squatting Frame
+	SpriteFrame(-28, -28, 56, 52, 142, 1)    // Good Jumping Frame
+	SpriteFrame(-28, -20, 56, 36, 199, 71)   // Bad Standing Frame
+	SpriteFrame(-28, -16, 56, 32, 199, 108)  // Bad Squatting Frame
+	SpriteFrame(-28, -28, 56, 52, 142, 54)   // Bad Jumping Frame
+
+    temp0 = 0
+    KumoKumo_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Kumo Kumo], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(KumoKumo_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(KumoKumo_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // condition
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // condition
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+
+	SpriteFrame(-28, -20, 56, 36, 199, 1)
+	SpriteFrame(-28, -20, 56, 36, 199, 71)
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good", QUALITY_GOOD)
+	AddEnumVariable("Bad", QUALITY_BAD)
+end event

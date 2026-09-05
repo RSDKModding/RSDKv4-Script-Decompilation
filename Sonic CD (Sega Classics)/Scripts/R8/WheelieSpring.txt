@@ -1,0 +1,286 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Wheelie Spring Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.yvel      : player.yvel
+private alias object.gravity   : player.gravity
+private alias object.animation : player.animation
+private alias object.value1    : player.timer
+private alias object.value9    : player.animationReserve
+
+private alias 11 : ANI_BOUNCING_A
+
+// States
+private alias 0 : WHEELIESPRING_MOVING_RIGHT
+private alias 1 : WHEELIESPRING_MOVING_LEFT
+
+// Property Value
+private alias 0 : RED_SPRING
+private alias 2 : YELLOW_SPRING
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == WHEELIESPRING_MOVING_RIGHT
+        if object.timer < 96
+            object.timer++
+            object.xpos += 0x10000
+            ObjectTileGrip(CSIDE_FLOOR, 8, 15, 0)
+            if checkResult == false
+                object.state = WHEELIESPRING_MOVING_LEFT
+                object.timer = -64
+            else
+                ObjectTileCollision(CSIDE_LWALL, 40, -16, 0)
+                if checkResult == true
+                    object.state = WHEELIESPRING_MOVING_LEFT
+                    object.timer = -64
+                end if
+            end if
+
+            ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+        else
+            object.state = WHEELIESPRING_MOVING_LEFT
+            object.timer = -64
+        end if
+    else
+        if object.timer < 96
+            object.timer++
+            object.xpos -= 0x10000
+            ObjectTileGrip(CSIDE_FLOOR, -8, 15, 0)
+            if checkResult == false
+                object.state = WHEELIESPRING_MOVING_RIGHT
+                object.timer = -64
+            else
+                ObjectTileCollision(CSIDE_ROOF, -40, -16, 0)
+                if checkResult == true
+                    object.state = WHEELIESPRING_MOVING_RIGHT
+                    object.timer = -64
+                end if
+            end if
+
+            ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+        else
+            object.state = WHEELIESPRING_MOVING_RIGHT
+            object.timer = -64
+        end if
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if player[currentPlayer].state != Player_State_Static
+            if player[currentPlayer].yvel >= 0
+                BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_TOUCH, object.entityPos, -15, -18, 15, -12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+                if checkResult == true
+                    object.frame = 1
+
+                    player[currentPlayer].state = Player_State_Air
+
+                    player[currentPlayer].gravity = GRAVITY_AIR
+                    if object.propertyValue == RED_SPRING
+                        player[currentPlayer].yvel = -0x100000
+                    else
+                        player[currentPlayer].yvel = -0xA0000
+                    end if
+
+                    player[currentPlayer].animationReserve = ANI_WALKING
+                    if player[currentPlayer].animation == ANI_RUNNING
+                        player[currentPlayer].animationReserve = ANI_RUNNING
+                    end if
+
+                    if player[currentPlayer].animation == ANI_PEELOUT
+                        player[currentPlayer].animationReserve = ANI_PEELOUT
+                    end if
+
+                    player[currentPlayer].animation = ANI_BOUNCING_A
+                    player[currentPlayer].timer     = 0
+
+                    PlaySfx(SfxName[Spring], false)
+                end if
+            end if
+
+            if player[currentPlayer].gravity == GRAVITY_GROUND
+                BoxCollisionTest(C_SOLID, object.entityPos, -16, -20, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_TOUCH, object.entityPos, -15, -18, 15, -12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+                if checkResult == true
+                    object.frame = 1
+
+                    player[currentPlayer].state = Player_State_Air
+
+                    player[currentPlayer].gravity = GRAVITY_AIR
+                    if object.propertyValue == RED_SPRING
+                        player[currentPlayer].yvel = -0x100000
+                    else
+                        player[currentPlayer].yvel = -0xA0000
+                    end if
+
+                    player[currentPlayer].animation = ANI_BOUNCING_A
+                    player[currentPlayer].timer     = 0
+
+                    PlaySfx(SfxName[Spring], false)
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    if object.propertyValue == RED_SPRING
+        if object.frame == 0
+            DrawSprite(0)
+        else
+            object.frame++
+
+            temp0 = object.frame
+            temp0 >>= 1
+
+            switch temp0
+            case 0
+            case 1
+                DrawSprite(0)
+                break
+
+            case 2
+            case 6
+                DrawSprite(2)
+                break
+
+            case 3
+            case 4
+            case 5
+                DrawSprite(4)
+                break
+
+            end switch
+
+            if object.frame > 12
+                object.frame = 0
+            end if
+        end if
+    else
+        if object.frame == 0
+            DrawSprite(1)
+        else
+            object.frame++
+
+            temp0 = object.frame
+            temp0 >>= 1
+
+            switch temp0
+            case 0
+            case 1
+                DrawSprite(1)
+                break
+
+            case 2
+            case 6
+                DrawSprite(3)
+                break
+
+            case 3
+            case 4
+            case 5
+                DrawSprite(5)
+                break
+
+            end switch
+
+            if object.frame > 12
+                object.frame = 0
+            end if
+        end if
+    end if
+
+    temp0 = object.timer
+    temp0 += 64
+    temp0 %= 18
+    temp0 /= 9
+    temp0 += 6
+    DrawSprite(temp0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items.gif")
+
+    SpriteFrame(-16, -16, 32, 16, 84, 1)    // #0 - Red Spring
+    SpriteFrame(-16, -16, 32, 16, 84, 183)  // #1 - Yellow Spring
+    SpriteFrame(-16, -8, 32, 8, 84, 1)      // #2 - Red Spring Head
+    SpriteFrame(-16, -8, 32, 8, 84, 183)    // #3 - Yellow Spring Head
+    SpriteFrame(-16, -40, 32, 40, 84, 18)   // #4 - Red Spring Launch
+    SpriteFrame(-16, -40, 32, 40, 215, 34)  // #5 - Yellow Spring Launch
+    SpriteFrame(-8, 0, 16, 16, 233, 0)      // #6 - Wheel Frame 0
+    SpriteFrame(-8, 0, 16, 16, 233, 17)     // #7 - Wheel Frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 2
+            break
+
+        case 0 // springType
+            checkResult = object.propertyValue
+            checkResult &= 2
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 2
+            break
+
+        case 0 // springType
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 2
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+    DrawSprite(3)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items.gif")
+
+    SpriteFrame(-16, -24, 32, 16, 84, 1)    // #0 - Red Spring
+    SpriteFrame(-16, -24, 32, 16, 84, 183)  // #1 - Yellow Spring (Padding, as they are actually prop val 2)
+    SpriteFrame(-16, -24, 32, 16, 84, 183)  // #2 - Yellow Spring
+    SpriteFrame(-8, -8, 16, 16, 233, 0)     // #3 - Wheel Frame 0
+
+    AddEditorVariable("springType")
+    SetActiveVariable("springType")
+    AddEnumVariable("Red Spring", RED_SPRING)
+    AddEnumVariable("Yellow Spring", YELLOW_SPRING)
+end event

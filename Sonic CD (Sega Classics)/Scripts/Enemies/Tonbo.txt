@@ -1,0 +1,232 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tonbo Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0         : object.angle
+private alias object.value1         : object.originPos.y
+private alias object.propertyValue  : object.quality
+
+// Player Aliases
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0	: TONBO_MOVE_LEFT
+private alias 1	: TONBO_MOVE_RIGHT
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Tonbo_DebugDraw
+reserve function Tonbo_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Tonbo_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Tonbo_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Tonbo_startDebugID
+	if temp0 == 0
+		DrawSprite(0) // Good quality
+	else
+		DrawSprite(2) // Bad quality
+	end if
+end function
+
+
+private function Tonbo_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Tonbo_startDebugID
+	CreateTempObject(TypeName[Tonbo], temp0, object.xpos, object.ypos)
+	object[tempObjectPos].originPos.y = object.ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.quality == QUALITY_GOOD
+		switch object.state
+		case TONBO_MOVE_LEFT
+			Sin(object.ypos, object.angle)
+			object.ypos <<= 11
+			object.ypos += object.originPos.y
+			object.xpos -= 0x10000
+
+			object.angle -= 8
+			if object.angle == 0
+				object.state = TONBO_MOVE_RIGHT
+				object.direction = FACING_LEFT
+			end if
+			break
+
+		case TONBO_MOVE_RIGHT
+			Sin(object.ypos, object.angle)
+			FlipSign(object.ypos)
+			object.ypos <<= 11
+			object.ypos += object.originPos.y
+			object.xpos += 0x10000
+
+			object.angle += 8
+			if object.angle == 0x800
+				object.state = TONBO_MOVE_LEFT
+				object.direction = FACING_RIGHT
+			end if
+			break
+		end switch
+	else
+		switch object.state
+		case TONBO_MOVE_LEFT
+			Sin(object.ypos, object.angle)
+			object.ypos <<= 11
+			object.ypos += object.originPos.y
+			object.xpos -= 0x8000
+
+			object.angle -= 2
+			if object.angle == 0
+				object.state = TONBO_MOVE_RIGHT
+				object.direction = FACING_LEFT
+			end if
+			break
+
+		case FACING_LEFT
+			Sin(object.ypos, object.angle)
+			FlipSign(object.ypos)
+			object.ypos <<= 11
+			object.ypos += object.originPos.y
+			object.xpos += 0x8000
+
+			object.angle += 2
+			if object.angle == 0x400
+				object.state = TONBO_MOVE_LEFT
+				object.direction = FACING_RIGHT
+			end if
+			break
+		end switch
+	end if
+
+	object.animationTimer++
+	object.animationTimer %= 6
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -20, -10, 20, 10, currentPlayer, object[currentPlayer].value41, object[currentPlayer].value39, object[currentPlayer].value42, object[currentPlayer].value40)
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	next
+
+	// Check if this badnik should be a flower
+	CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+	object.frame = object.animationTimer
+	object.frame /= 3
+
+	if object.quality == QUALITY_GOOD
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	else
+		object.frame += 2
+		DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R4/Objects.gif")
+
+	foreach (TypeName[Tonbo], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].originPos.y = object[arrayPos0].ypos
+
+		object[arrayPos0].angle = 0x400
+		object[arrayPos0].angle >>= object[arrayPos0].quality
+	next
+
+	SpriteFrame(-29, -20, 64, 32, 18, 119)	// #0 - Tonbo frame 0
+	SpriteFrame(-29, -16, 64, 28, 83, 152)	// #1 - Tonbo frame 1
+	SpriteFrame(-29, -20, 64, 32, 18, 86)	// #2 - Tonbo frame 2
+	SpriteFrame(-29, -16, 64, 28, 18, 152)	// #3 - Tonbo frame 3
+
+	temp0 = 0
+	Tonbo_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Tonbo], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Tonbo_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Tonbo_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		case 0 // condition
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		case 0 // condition
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R4/Objects.gif")
+
+	SpriteFrame(-29, -20, 64, 32, 18, 119)	// #0 - Tonba, Good quality
+	SpriteFrame(-29, -20, 64, 32, 18, 86)	// #1 - Tonba, Bad quality
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", QUALITY_GOOD)
+	AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

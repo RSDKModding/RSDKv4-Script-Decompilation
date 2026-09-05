@@ -1,0 +1,432 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Mosqui Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.originPos.x
+private alias object.value2        : object.originPos.y
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : MOSQUI_MOVE_LEFT
+private alias 1 : MOSQUI_MOVE_RIGHT
+private alias 2 : MOSQUI_TURN_DOWN
+private alias 3 : MOSQUI_DART
+private alias 4 : MOSQUI_BLANK
+private alias 5 : MOSQUI_RESTORE
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Mosqui_DebugDraw
+reserve function Mosqui_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Mosqui_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Mosqui_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Mosqui_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(5) // Bad quality
+    end if
+end function
+
+
+private function Mosqui_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Mosqui_startDebugID
+    CreateTempObject(TypeName[Mosqui], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].originPos.x = object.xpos
+    object[tempObjectPos].originPos.y = object.ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case MOSQUI_MOVE_LEFT
+            object.priority = PRIORITY_ACTIVE
+
+            object.frame++
+            object.frame &= 3
+            object.xpos -= 0x10000
+
+            object.timer--
+            if object.timer == -128
+                object.state = MOSQUI_MOVE_RIGHT
+                object.direction = FACING_LEFT
+            end if
+
+            // Check that player is below Mosqui
+            if player[SLOT_PLAYER1].ypos > object.ypos
+                temp0 = player[SLOT_PLAYER1].ypos
+                temp0 -= object.ypos
+                if temp0 < 0x800000
+                    // Check that player is in attack range
+                    if player[SLOT_PLAYER1].xpos > object.xpos
+                        temp0 = player[SLOT_PLAYER1].xpos
+                        temp0 -= object.xpos
+                    else
+                        temp0 = object.xpos
+                        temp0 -= player[SLOT_PLAYER1].xpos
+                    end if
+
+                    if temp0 < 0x300000
+                        object.timer = 0
+                        object.frame = 2
+                        object.state = MOSQUI_TURN_DOWN
+                    end if
+                end if
+            end if
+            break
+
+        case MOSQUI_MOVE_RIGHT
+            object.frame++
+            object.frame &= 3
+            object.xpos += 0x10000
+
+            object.timer++
+            if object.timer == 128
+                object.state = MOSQUI_MOVE_LEFT
+                object.direction = FACING_RIGHT
+            end if
+
+            // Check that player is below Mosqui
+            if player[SLOT_PLAYER1].ypos > object.ypos
+                temp0 = player[SLOT_PLAYER1].ypos
+                temp0 -= object.ypos
+                if temp0 < 0x800000
+                    // Check that player is in attack range
+                    if player[SLOT_PLAYER1].xpos > object.xpos
+                        temp0 = player[SLOT_PLAYER1].xpos
+                        temp0 -= object.xpos
+                    else
+                        temp0 = object.xpos
+                        temp0 -= player[SLOT_PLAYER1].xpos
+                    end if
+
+                    if temp0 < 0x300000
+                        object.timer = 0
+                        object.frame = 2
+                        object.state = MOSQUI_TURN_DOWN
+                    end if
+                end if
+            end if
+            break
+
+        case MOSQUI_TURN_DOWN
+            object.timer++
+            if object.timer == 8
+                object.timer = 0
+                object.frame++
+                if object.frame == 5
+                    object.frame = 4
+                    object.state = MOSQUI_DART
+                end if
+            end if
+            break
+
+        case MOSQUI_DART
+            object.ypos += 0x60000
+            ObjectTileCollision(CSIDE_FLOOR, 0, 14, 0)
+            if checkResult == true
+                object.state = MOSQUI_BLANK
+                PlaySfx(SfxName[Jab], false)
+            end if
+            break
+
+        case MOSQUI_BLANK
+            break
+
+        case MOSQUI_RESTORE
+            if object.outOfBounds == true
+                object.state = MOSQUI_MOVE_LEFT
+                object.direction = FACING_RIGHT
+                object.priority = PRIORITY_BOUNDS
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case MOSQUI_MOVE_LEFT
+            object.priority = PRIORITY_ACTIVE
+
+            object.frame++
+            object.frame %= 10
+            object.xpos -= 0x8000
+
+            object.timer--
+            if object.timer == -256
+                object.state = MOSQUI_MOVE_RIGHT
+                object.direction = FACING_LEFT
+            end if
+
+            // Check that player is below Mosqui
+            if player[SLOT_PLAYER1].ypos > object.ypos
+                temp0 = player[SLOT_PLAYER1].ypos
+                temp0 -= object.ypos
+                if temp0 < 0x400000
+                    // Check that player is in attack range
+                    if player[SLOT_PLAYER1].xpos > object.xpos
+                        temp0 = player[SLOT_PLAYER1].xpos
+                        temp0 -= object.xpos
+                    else
+                        temp0 = object.xpos
+                        temp0 -= player[SLOT_PLAYER1].xpos
+                    end if
+
+                    if temp0 < 0x300000
+                        object.timer = 0
+                        object.frame = 7
+                        object.state = MOSQUI_TURN_DOWN
+                    end if
+                end if
+            end if
+            break
+
+        case MOSQUI_MOVE_RIGHT
+            object.frame++
+            object.frame %= 10
+            object.xpos += 0x8000
+
+            object.timer++
+            if object.timer == 256
+                object.state = MOSQUI_MOVE_LEFT
+                object.direction = FACING_RIGHT
+            end if
+
+            // Check that player is below Mosqui
+            if player[SLOT_PLAYER1].ypos > object.ypos
+                temp0 = player[SLOT_PLAYER1].ypos
+                temp0 -= object.ypos
+                if temp0 < 0x400000
+                    // Check that player is in attack range
+                    if player[SLOT_PLAYER1].xpos > object.xpos
+                        temp0 = player[SLOT_PLAYER1].xpos
+                        temp0 -= object.xpos
+                    else
+                        temp0 = object.xpos
+                        temp0 -= player[SLOT_PLAYER1].xpos
+                    end if
+
+                    if temp0 < 0x300000
+                        object.timer = 0
+                        object.frame = 7
+                        object.state = MOSQUI_TURN_DOWN
+                    end if
+                end if
+            end if
+            break
+
+        case MOSQUI_TURN_DOWN
+            object.timer++
+            if object.timer == 16
+                object.timer = 0
+                object.frame++
+                if object.frame == 10
+                    object.frame = 9
+                    object.state = MOSQUI_DART
+                end if
+            end if
+            break
+
+        case MOSQUI_DART
+            object.ypos += 0x60000
+            ObjectTileCollision(CSIDE_FLOOR, 0, 14, 0)
+            if checkResult == true
+                object.state = MOSQUI_BLANK
+            end if
+            break
+
+        case MOSQUI_BLANK
+            break
+
+        case MOSQUI_RESTORE
+            if object.outOfBounds == true
+                object.state = MOSQUI_MOVE_LEFT
+                object.priority = PRIORITY_BOUNDS
+            end if
+            break
+        end switch
+    end if
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+    if object.outOfBounds == true
+        temp0 = object.xpos
+        temp1 = object.ypos
+
+        object.xpos = object.originPos.x
+        object.ypos = object.originPos.y
+
+        if object.outOfBounds == true
+            object.xpos = object.originPos.x
+            object.ypos = object.originPos.y
+
+            object.direction = FACING_RIGHT
+            object.timer = 0
+            object.frame = 0
+            object.priority = PRIORITY_BOUNDS
+
+            object.state = MOSQUI_MOVE_LEFT
+        else
+            object.xpos = temp0
+            object.ypos = temp1
+        end if
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state < MOSQUI_RESTORE
+            BoxCollisionTest(C_TOUCH, object.entityPos, -15, -10, 15, 10, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    if object.state < MOSQUI_RESTORE
+        if object.quality == QUALITY_GOOD
+            if object.state < MOSQUI_TURN_DOWN
+                temp0 = object.frame
+                temp0 >>= 1
+                DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+            else
+                DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+            end if
+        else
+            if object.state < MOSQUI_TURN_DOWN
+                temp0 = object.frame
+                temp0 /= 5
+                temp0 += 5
+                DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+            else
+                DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+            end if
+        end if
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects.gif")
+
+    foreach (TypeName[Mosqui], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+
+    // Good Mosqui
+    SpriteFrame(-16, -11, 32, 24, 51, 1)    // #0 - Mosqui Fly Frame 0
+    SpriteFrame(-16, -3, 32, 16, 51, 26)    // #1 - Mosqui Fly Frame 1
+    SpriteFrame(-16, -14, 32, 32, 51, 43)   // #2 - Mosqui Turning Frame 0
+    SpriteFrame(-6, -13, 24, 32, 117, 43)   // #3 - Mosqui Turning Frame 1
+    SpriteFrame(-10, -14, 24, 32, 142, 43)  // #4 - Mosqui Turning Frame 0
+
+    // Bad Mosqui
+    SpriteFrame(-16, -11, 32, 24, 84, 1)    // #5 - Mosqui Fly Frame 0
+    SpriteFrame(-16, -3, 32, 16, 84, 26)    // #6 - Mosqui Fly Frame 1
+    SpriteFrame(-16, -14, 32, 32, 84, 43)   // #7 - Mosqui Turning Frame 0
+    SpriteFrame(-6, -13, 24, 32, 51, 76)    // #8 - Mosqui Turning Frame 1
+    SpriteFrame(-10, -14, 24, 32, 76, 76)   // #9 - Mosqui Turning Frame 2
+
+    temp0 = 0
+    Mosqui_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Mosqui], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Mosqui_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Mosqui_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects.gif")
+
+    SpriteFrame(-16, -11, 32, 24, 51, 1)  // #0 - Mosqui Fly, Good quality
+    SpriteFrame(-16, -11, 32, 24, 84, 1)  // #1 - Mosqui Fly, Bad quality
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

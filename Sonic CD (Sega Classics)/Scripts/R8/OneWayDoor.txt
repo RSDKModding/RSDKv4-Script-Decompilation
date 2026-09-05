@@ -1,0 +1,224 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: One Way Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.offset.y
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// States
+private alias 0 : ONEWAYDOOR_CLOSE
+private alias 1 : ONEWAYDOOR_OPEN
+
+// Property Values
+private alias 1 : OPEN_FROM_LEFT
+private alias 2 : OPEN_FROM_RIGHT
+private alias 3 : OPEN_FROM_LEFT_NO_LIGHTS
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == ONEWAYDOOR_CLOSE
+        if object.offset.y > 0
+            object.offset.y -= 0x20000
+        end if
+    else
+        if object.offset.y < 0x200000
+            object.offset.y += 0x20000
+        end if
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        temp0 = object.ypos
+        temp1 = player[currentPlayer].ypos
+        object.ypos -= object.offset.y
+        BoxCollisionTest(C_SOLID, object.entityPos, -8, -48, 8, -16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult > COL_TOP
+            player[currentPlayer].ypos = temp1
+        end if
+
+        object.ypos = temp0
+        object.ypos += object.offset.y
+        BoxCollisionTest(C_SOLID, object.entityPos, -8, -16, 8, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult > COL_TOP
+            player[currentPlayer].ypos = temp1
+        end if
+
+        object.ypos = temp0
+        if object.propertyValue == OPEN_FROM_RIGHT
+            BoxCollisionTest(C_TOUCH, object.entityPos, -96, -48, 8, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        else
+            BoxCollisionTest(C_TOUCH, object.entityPos, -8, -48, 96, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        end if
+
+        object.state = checkResult
+    next
+end event
+
+
+event ObjectDraw
+    object.frame = object.animationTimer
+    object.frame /= 3
+
+    switch object.propertyValue
+    case OPEN_FROM_LEFT
+        temp0 = object.offset.y
+        FlipSign(temp0)
+
+        temp0 += object.ypos
+        DrawSpriteXY(0, object.xpos, temp0)
+
+        object.frame += 6
+        DrawSpriteXY(object.frame, object.xpos, temp0)
+
+        temp0 = object.offset.y
+        temp0 += object.ypos
+        DrawSpriteXY(1, object.xpos, temp0)
+
+        object.frame += 2
+        DrawSpriteXY(object.frame, object.xpos, temp0)
+        break
+
+    case OPEN_FROM_RIGHT
+        temp0 = object.offset.y
+        FlipSign(temp0)
+
+        temp0 += object.ypos
+        DrawSpriteXY(0, object.xpos, temp0)
+
+        object.frame += 2
+        DrawSpriteXY(object.frame, object.xpos, temp0)
+
+        temp0 = object.offset.y
+        temp0 += object.ypos
+        DrawSpriteXY(1, object.xpos, temp0)
+
+        object.frame += 2
+        DrawSpriteXY(object.frame, object.xpos, temp0)
+        break
+
+    case OPEN_FROM_LEFT_NO_LIGHTS
+        temp0 = object.offset.y
+        FlipSign(temp0)
+
+        temp0 += object.ypos
+        DrawSpriteXY(0, object.xpos, temp0)
+
+        temp0 = object.offset.y
+        temp0 += object.ypos
+        DrawSpriteXY(1, object.xpos, temp0)
+        break
+
+    end switch
+
+    object.animationTimer++
+    object.animationTimer %= 6
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects.gif")
+
+    SpriteFrame(-8, -48, 16, 32, 58, 131)   // #0 - Left One Way Door
+    SpriteFrame(-8, -16, 16, 32, 58, 131)   // #1 - Right One Way Door
+
+    SpriteFrame(-16, -36, 8, 8, 50, 173)    // #2 - Left Door Lights (left side) frame 0
+    SpriteFrame(-16, -36, 8, 8, 59, 173)    // #3 - Left Door Lights (left side) frame 1
+    SpriteFrame(-16, -4, 8, 8, 50, 173)     // #4 - Right Door Lights (left side) frame 0
+    SpriteFrame(-16, -4, 8, 8, 59, 173)     // #5 - Right Door Lights (left side) frame 1
+
+    SpriteFrame(8, -36, 8, 8, 50, 164)      // #6 - Left Door Lights (right side) frame 0
+    SpriteFrame(8, -36, 8, 8, 59, 164)      // #7 - Left Door Lights (right side) frame 1
+    SpriteFrame(8, -4, 8, 8, 50, 164)       // #8 - Right Door Lights (right side) frame 0
+    SpriteFrame(8, -4, 8, 8, 59, 164)       // #9 - Right Door Lights (right side) frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 3
+            break
+
+        case 0 // type
+            checkResult = object.propertyValue
+            checkResult &= 3
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 3
+            break
+
+        case 0 // type
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 3
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(1)
+
+    switch object.propertyValue
+    case 1
+        DrawSprite(6)
+        DrawSprite(8)
+        break
+
+    case 2
+        DrawSprite(2)
+        DrawSprite(4)
+        break
+
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects.gif")
+
+    SpriteFrame(-8, -48, 16, 32, 58, 131)   // #0 - Left One Way Door
+    SpriteFrame(-8, -16, 16, 32, 58, 131)   // #1 - Right One Way Door
+
+    SpriteFrame(-16, -36, 8, 8, 50, 173)    // #2 - Left Door Lights (left side) frame 0
+    SpriteFrame(-16, -36, 8, 8, 59, 173)    // #3 - Left Door Lights (left side) frame 1
+    SpriteFrame(-16, -4, 8, 8, 50, 173)     // #4 - Right Door Lights (left side) frame 0
+    SpriteFrame(-16, -4, 8, 8, 59, 173)     // #5 - Right Door Lights (left side) frame 1
+
+    SpriteFrame(8, -36, 8, 8, 50, 164)      // #6 - Left Door Lights (right side) frame 0
+    SpriteFrame(8, -36, 8, 8, 59, 164)      // #7 - Left Door Lights (right side) frame 1
+    SpriteFrame(8, -4, 8, 8, 50, 164)       // #8 - Right Door Lights (right side) frame 0
+    SpriteFrame(8, -4, 8, 8, 59, 164)       // #9 - Right Door Lights (right side) frame 1
+
+    AddEditorVariable("type")
+    SetActiveVariable("type")
+    AddEnumVariable("Null", 0)
+    AddEnumVariable("Open from the left", OPEN_FROM_LEFT)
+    AddEnumVariable("Open from the right", OPEN_FROM_RIGHT)
+    AddEnumVariable("Open from the left (no lights)", OPEN_FROM_LEFT_NO_LIGHTS)
+end event

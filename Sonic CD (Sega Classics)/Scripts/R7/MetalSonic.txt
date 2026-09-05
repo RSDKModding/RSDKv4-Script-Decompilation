@@ -1,0 +1,531 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Metal Sonic Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// For the extra sprites associated with Metal Sonic, like his lightning effects
+private alias object.value3 : object.accessoryAnimation
+private alias object.value4 : object.accessoryFrame
+
+// Player Aliases
+private alias object.xpos      : player.xpos
+private alias object.animation : player.animation
+private alias object.jumpPress : player.jumpPress
+
+// State Aliases
+private alias 0 : METALSONIC_WAITING
+private alias 1 : METALSONIC_TURNRIGHT
+private alias 2 : METALSONIC_STARTUP
+private alias 3 : METALSONIC_ADVANCEMAIN
+private alias 4 : METALSONIC_CHARGEUP
+private alias 5 : METALSONIC_ELETRICSHIELD
+private alias 6 : METALSONIC_DASHING
+private alias 7 : METALSONIC_TAUNTING
+private alias 8 : METALSONIC_DEFEATED
+
+// Accessory Aliases, to be set to Object.AccessoryAnimation
+private alias 0 : ACCESSORY_NONE
+private alias 1 : ACCESSORY_CHARGE1
+private alias 2 : ACCESSORY_CHARGE2
+private alias 3 : ACCESSORY_CHARGE3
+private alias 4 : ACCESSORY_LIGHTNING
+
+// Metal Sonic has an entire animation file, these aliases correspond to animations in there
+private alias 0 : ANI_STANDING
+private alias 1 : ANI_TAUNTING
+private alias 2 : ANI_TURNING
+private alias 3 : ANI_HOVERING
+private alias 4 : ANI_HOVERINGFAST
+private alias 5 : ANI_ELECTRIFIED
+private alias 6 : ANI_DASHING1
+private alias 7 : ANI_DASHING2
+private alias 8 : ANI_DEFEATED
+private alias 9 : ANI_CHARGING
+
+// If you're wondering what Metal Sonic's SpriteFrames are then, it's for his effects like lightning and such
+
+// Vertical Door States
+private alias 2 : VERTICALDOOR_END_CLOSING
+private alias 4 : VERTICALDOOR_END_CLOSING_METAL
+private alias 6 : VERTICALDOOR_END_CLOSED_SONIC
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function MetalSonic_FollowGround
+
+// ========================
+// Static Values
+// ========================
+
+public value MetalSonic_heavyFlag = false
+
+// ========================
+// Function Definitions
+// ========================
+
+public function MetalSonic_FollowGround
+	// Move Metal Sonic 32 pixels up to help him follow the ground
+	object.ypos -= 0x200000
+
+	ObjectTileGrip(CSIDE_FLOOR, 0, 20, 0)
+	if checkResult == false
+		// Metal Sonic's in the air, move him 16 pixels down and try again
+		object.ypos += 0x100000
+
+		ObjectTileGrip(CSIDE_FLOOR, 0, 20, 0)
+
+		// He's still airborne even after moving him down before,
+		// Move him even further down and try again
+		if checkResult == false
+			object.ypos += 0x100000
+			ObjectTileGrip(CSIDE_FLOOR, 0, 20, 0)
+		end if
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case METALSONIC_WAITING
+		if object.animation == ANI_STANDING
+			if player[SLOT_PLAYER1].jumpPress == true
+				// Player's goofing around, go ahead and taunt them for two seconds
+				object.timer = 120
+				object.animation = ANI_TAUNTING
+			end if
+		else
+			if object.timer > 0
+				object.timer--
+			else
+				object.animation = ANI_STANDING
+			end if
+		end if
+		break
+
+	case METALSONIC_TURNRIGHT
+		// (He is turning to our right btw, not his right)
+		if object.timer < 140
+			object.timer++
+		else
+			// From this point on make Metal Sonic always active, as the player may overtake it during the race and put it out of normal bounds
+			object.priority = PRIORITY_ACTIVE
+
+			// Get ready...
+			object.timer = 0
+			object.accessoryAnimation = ACCESSORY_CHARGE1
+			object.accessoryFrame = 0
+			object.state++
+		end if
+		break
+
+	case METALSONIC_STARTUP
+		if object.timer < 204
+			object.timer++
+		else
+			// And take off, at the speed of sound! (4 pixels per frame, to be exact!)
+			object.timer = 0
+			object.accessoryAnimation = ACCESSORY_CHARGE2
+			object.animation = ANI_HOVERINGFAST
+			object.xvel = 0x40000
+
+			// Reset the achievement value
+			MetalSonic_heavyFlag = true
+
+			object.state++
+		end if
+		break
+
+	case METALSONIC_ADVANCEMAIN
+		// (object[-2] is the final vertical door at the end of the race)
+		temp0 = object[-2].xpos
+		temp0 -= 0x7000000
+
+		// Is the final door farther than 1792 pixels from Metal Sonic?
+		if object.xpos < temp0
+			// Go at a speed depending on how far the player is
+			temp0 = object.xpos
+			temp0 -= player[SLOT_PLAYER1].xpos
+			temp0 >>= 6
+			object.xvel = 0x40000
+			object.xvel -= temp0
+
+			// Minimum speed of 2 pixels per frame
+			if object.xvel < 0x20000
+				object.xvel = 0x20000
+			end if
+
+			// Maximum speed of 6 pixels per frame
+			if object.xvel > 0x60000
+				object.xvel = 0x60000
+			end if
+
+			// Threshold for the 3rd charge level animation is 3.75 pixels per frame
+			if object.xvel < 0x3C000
+				object.accessoryAnimation = ACCESSORY_CHARGE2
+				object.animation = ANI_HOVERING
+			else
+				object.accessoryAnimation = ACCESSORY_CHARGE3
+				object.animation = ANI_HOVERINGFAST
+			end if
+
+			if object.timer < 180
+				object.timer++
+			else
+				// Start attacking
+				object.animation = ANI_CHARGING
+				object.timer = 0
+				object.accessoryAnimation = ACCESSORY_CHARGE1
+				object.state++
+				PlaySfx(SfxName[MS Charge], false)
+			end if
+		else
+			// Metal Sonic is within 1792 pixels of the door
+
+			// Go at a speed depending on how far the player is
+			temp0 = object.xpos
+			temp0 -= player[SLOT_PLAYER1].xpos
+			temp0 >>= 6
+			object.xvel = 0x40000
+			object.xvel -= temp0
+
+			// Minimum speed of 2 pixels per frame
+			if object.xvel < 0x20000
+				object.xvel = 0x20000
+			end if
+
+			// Maximum speed of 6 pixels per frame
+			if object.xvel > 0x60000
+				object.xvel = 0x60000
+			end if
+
+			// Threshold for the 3rd charge level animation is 3.75 pixels per frame
+			if object.xvel < 0x3C000
+				object.accessoryAnimation = ACCESSORY_CHARGE2
+				object.animation = ANI_HOVERING
+			else
+				object.accessoryAnimation = ACCESSORY_CHARGE3
+				object.animation = ANI_HOVERINGFAST
+			end if
+		end if
+		break
+
+	case METALSONIC_CHARGEUP
+		if object.timer < 60
+			object.timer++
+		else
+			object.timer = 0
+			if player[SLOT_PLAYER1].xpos > object.xpos
+				// If the player's ahead of Metal Sonic then we gotta catch up, start a Super Dash!
+				object.state = METALSONIC_DASHING
+				object.animation = ANI_DASHING1
+				object.accessoryAnimation = ACCESSORY_NONE
+				object.accessoryFrame = 0
+				PlaySfx(SfxName[MS Jet], false)
+			else
+				// The player's behind Metal Sonic so we don't want to run too far, just initiate the Eletric Shield instead
+				object.state = METALSONIC_ELETRICSHIELD
+
+				// Slowing down to a speed of 2 pixels per frame
+				object.xvel = 0x20000
+				object.animation = ANI_ELECTRIFIED
+				object.accessoryAnimation = ACCESSORY_LIGHTNING
+				object.accessoryFrame = 0
+				PlaySfx(SfxName[MS Electric], false)
+			end if
+		end if
+		break
+
+	case METALSONIC_ELETRICSHIELD
+		if object.timer < 180
+			object.timer++
+
+			temp0 = object[-1].xpos
+			temp0 += 0x400000
+
+			// See if Metal Sonic is past 64 pixels from the starting door
+			if object.xpos < temp0
+				object.state = METALSONIC_DASHING
+				object.timer = 60
+				object.animation = ANI_DASHING2
+				object.accessoryAnimation = ACCESSORY_NONE
+				object.accessoryFrame = 0
+				PlaySfx(SfxName[MS Jet], false)
+			end if
+		else
+			object.timer = 0
+			object.state = METALSONIC_ADVANCEMAIN
+			object.accessoryFrame = 0
+		end if
+		break
+
+	case METALSONIC_DASHING
+		object.xvel += 0x800
+		if object.xvel > 0x80000
+			object.xvel = 0x80000
+		end if
+
+		if object.timer < 180
+			object.timer++
+			if object.timer == 10
+				object.animation = ANI_DASHING2
+			end if
+		else
+			object.timer = 0
+			object.state = METALSONIC_ADVANCEMAIN
+		end if
+		break
+
+	case METALSONIC_TAUNTING
+		// This State is used if Metal Sonic passes the final door before Sonic does
+
+		// Wait for the Player to die, then start taunting them
+		if player[SLOT_PLAYER1].animation == ANI_DYING
+			object.animation = ANI_TAUNTING
+		end if
+		break
+
+	case METALSONIC_DEFEATED
+		// This state is used for Metal Sonic after being killed with Robotnik's laser
+		object.yvel += 0x3800
+		object.ypos += object.yvel
+
+		if object.yvel > 0x100000
+			ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+		end if
+		break
+
+	end switch
+
+	if object.xvel > 0
+		// object[-1] is the first door in the race
+		temp0 = object[-1].xpos
+		temp0 += 0x400000
+
+		// Make sure Metal Sonic is always at least 64 pixels past the first door
+		if object.xpos < temp0
+			object.xpos = temp0
+		end if
+
+		// At higher speeds, we want to be more weary to avoid Robotnik's diabolical traps...
+		if object.xvel > 0x30000
+			temp0 = object.xvel
+			temp0 -= 0x30000
+
+			object.xpos += 0x30000
+			CallFunction(MetalSonic_FollowGround)
+
+			object.xpos += temp0
+			CallFunction(MetalSonic_FollowGround)
+		else
+			object.xpos += object.xvel
+			CallFunction(MetalSonic_FollowGround)
+		end if
+
+		if checkResult == true
+			// If on the ground, reset Metal Sonic's Y Velocity
+			object.yvel = 0
+		else
+			object.yvel += 0x3800
+			object.ypos += object.yvel
+		end if
+
+		// object[-2] is the final vertical door at the end of the race
+		switch object[-2].state
+		case VERTICALDOOR_END_CLOSING
+		case VERTICALDOOR_END_CLOSED_SONIC
+			// Door in its closed state, meaning Metal Sonic lost and Sonic won
+			if MetalSonic_heavyFlag == true
+				if stage.playerListPos == PLAYER_SONIC_A
+					// (unused)
+				end if
+			end if
+
+			temp0 = object[-2].xpos
+			temp0 -= 0x1E0000
+			if object.xpos > temp0
+				object.xpos = temp0
+				object.xvel = 0
+				object.yvel = -0x68000
+
+				object.accessoryAnimation = ACCESSORY_NONE
+				object.animation = ANI_DEFEATED
+
+				object.state = METALSONIC_DEFEATED
+				CreateTempObject(TypeName[Explosion], 0, object.xpos, object.ypos)
+
+				// Create some Debris, with randomised properties
+				temp0 = 0
+				temp1 = 4
+				while temp0 < 8
+					CreateTempObject(TypeName[Debris], temp1, object.xpos, object.ypos)
+
+					Rand(object[tempObjectPos].xvel, 4)
+					object[tempObjectPos].yvel++
+					object[tempObjectPos].xvel <<= 16
+					FlipSign(object[tempObjectPos].xvel)
+
+					Rand(object[tempObjectPos].yvel, 3)
+					object[tempObjectPos].yvel += 2
+					object[tempObjectPos].yvel <<= 16
+					FlipSign(object[tempObjectPos].yvel)
+
+					temp0++
+					temp1++
+					if temp1 > 8
+						temp1 = 4
+					end if
+				loop
+
+				PlaySfx(SfxName[Explosion], false)
+			end if
+			break
+
+		case VERTICALDOOR_END_CLOSING_METAL
+			temp0 = object[-2].xpos
+			temp0 += 0x240000
+			if object.xpos > temp0
+				object.xpos = temp0
+				object.xvel = 0
+				object.accessoryAnimation = ACCESSORY_NONE
+				object.animation = ANI_STANDING
+				object.state = METALSONIC_TAUNTING
+			end if
+			break
+		end switch
+	end if
+
+	ProcessAnimation()
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		switch object.animation
+		case ANI_ELECTRIFIED
+		case ANI_DASHING2
+			// Metal Sonic is in a sparking animation, harm the player if they make contact
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 16, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_Hit)
+
+				// Now that the player's been hit, the achievement is unobtainable
+				MetalSonic_heavyFlag = false
+			end if
+		end switch
+	next
+end event
+
+
+event ObjectDraw
+	// First, draw Metal Sonic's "accessory" (of sorts) behind him
+	switch object.accessoryAnimation
+	case ACCESSORY_CHARGE1
+		temp0 = object.accessoryFrame
+		temp0 >>= 1
+		DrawSprite(temp0)
+		object.accessoryFrame++
+		object.accessoryFrame &= 7
+		break
+
+	case ACCESSORY_CHARGE2
+		temp0 = object.accessoryFrame
+		temp0 >>= 1
+		temp0 += 4
+		DrawSprite(temp0)
+		object.accessoryFrame++
+		object.accessoryFrame &= 7
+		break
+
+	case ACCESSORY_CHARGE3
+		temp0 = object.accessoryFrame
+		temp0 >>= 1
+		temp0 += 8
+		DrawSprite(temp0)
+		object.accessoryFrame++
+		object.accessoryFrame &= 7
+		break
+
+	case ACCESSORY_LIGHTNING
+		temp0 = object.accessoryFrame
+		temp0 += 12
+		DrawSprite(temp0)
+		object.accessoryFrame++
+		object.accessoryFrame %= 10
+		break
+
+	end switch
+
+	// And now draw Metal Sonic himself, notably done here so he appears on top of these other sprites
+	DrawObjectAnimation()
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects3.gif")
+	LoadAnimation("MetalSonic.ani")
+
+	// 0-3 - Thruster Frames Set 1
+	SpriteFrame(0, 0, 0, 0, 1, 83)
+	SpriteFrame(-12, 3, 16, 16, 1, 83)
+	SpriteFrame(0, 0, 0, 0, 1, 83)
+	SpriteFrame(-12, 3, 16, 16, 18, 83)
+
+	// 4-7 - Thruster Frames Set 2
+	SpriteFrame(0, 0, 0, 0, 1, 83)
+	SpriteFrame(-14, -8, 16, 16, 18, 83)
+	SpriteFrame(0, 0, 0, 0, 1, 83)
+	SpriteFrame(-18, -12, 24, 24, 1, 100)
+
+	// 8-11 - Thruster Frames Set 3
+	SpriteFrame(0, 0, 0, 0, 1, 83)
+	SpriteFrame(-18, -12, 24, 24, 1, 100)
+	SpriteFrame(0, 0, 0, 0, 1, 83)
+	SpriteFrame(-22, -16, 32, 32, 1, 125)
+
+	// 12-16 - Static Charge Shield Frames
+	SpriteFrame(-24, -28, 48, 48, 150, 75)
+	SpriteFrame(-24, -28, 48, 48, 150, 75)
+	SpriteFrame(-24, -28, 48, 48, 150, 75)
+	SpriteFrame(-24, -28, 48, 48, 150, 75)
+	SpriteFrame(0, 0, 0, 0, 1, 83)
+	SpriteFrame(-24, -28, 48, 48, 199, 75)
+	SpriteFrame(-24, -28, 48, 48, 199, 75)
+	SpriteFrame(-24, -28, 48, 48, 199, 75)
+	SpriteFrame(-24, -28, 48, 48, 199, 75)
+	SpriteFrame(0, 0, 0, 0, 1, 83)
+
+	foreach (TypeName[Metal Sonic], arrayPos0, ALL_ENTITIES)
+		// Store Metal Sonic's entityPos to the global variable for it
+		// -> It's used by Break Spikes to know when they should break
+		metalSonic.entityPos = arrayPos0
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects3.gif")
+	SpriteFrame(-20, -20, 40, 40, 83, 1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

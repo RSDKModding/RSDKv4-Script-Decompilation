@@ -1,0 +1,654 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tube SW Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.inTube
+private alias object.value1 : object.leaveObject
+private alias object.value2 : object.colLeftTop
+private alias object.value3 : object.colRightBottom
+private alias object.value4 : object.onJumpArea
+
+// Player aliases
+private alias object.state         : player.state
+private alias object.direction     : player.direction
+private alias object.xpos          : player.xpos
+private alias object.ypos          : player.ypos
+private alias object.xvel          : player.xvel
+private alias object.yvel          : player.yvel
+private alias object.speed         : player.speed
+private alias object.angle         : player.angle
+private alias object.animation     : player.animation
+private alias object.gravity       : player.gravity
+private alias object.collisionMode : player.collisionMode
+private alias object.jumpPress     : player.jumpPress
+private alias object.jumpHold      : player.jumpHold
+private alias object.value1        : player.timer
+private alias object.value5        : player.rollAnimationSpeed
+private alias object.value17       : player.minRollSpeed
+private alias object.value43       : player.prevGravity
+
+// Property Values
+private alias 0  : TUBESW_ENTER_H
+private alias 1  : TUBESW_EXIT_H
+private alias 2  : TUBESW_DROP
+private alias 3  : TUBESW_ENTER_V_TOP
+private alias 4  : TUBESW_EXIT_V_TOP
+private alias 5  : TUBESW_SPIN_WHEEL_L_U     // Diagonal Left Up
+private alias 6  : TUBESW_SPIN_WHEEL_R_U     // Diagonal Right Up
+private alias 7  : TUBESW_SPIN_WHEEL_OVERLAP
+private alias 8  : TUBESW_SPIN_WHEEL_L_D     // Diagonal Left Down
+private alias 9  : TUBESW_ENTER_V_BOTTOM
+private alias 10 : TUBESW_EXIT_V_BOTTOM
+private alias 11 : TUBESW_SPIN_WHEEL
+private alias 12 : TUBESW_CURVE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        // (Note - this part is kinda weird in act 1, check out ObjectStartup for more info)
+        BoxCollisionTest(C_TOUCH, object.entityPos, object.colLeftTop, object.colLeftTop, object.colRightBottom, object.colRightBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            switch object.propertyValue
+            case TUBESW_ENTER_H
+                if player[currentPlayer].speed > -1
+                    player[currentPlayer].direction = FACING_RIGHT
+                    player[currentPlayer].speed     = 0xA0000
+
+                    player[currentPlayer].state     = Player_State_TubeRoll
+                    player[currentPlayer].animation = ANI_JUMPING
+
+                    player[currentPlayer].minRollSpeed = 0xA0000
+                else
+                    player[currentPlayer].state     = Player_State_Roll
+                    player[currentPlayer].animation = ANI_JUMPING
+                end if
+                break
+
+            case TUBESW_EXIT_H
+                if player[currentPlayer].collisionMode == CMODE_FLOOR
+                    if player[currentPlayer].speed < 1
+                        player[currentPlayer].direction = FACING_LEFT
+                        player[currentPlayer].speed     = -0xA0000
+
+                        player[currentPlayer].state     = Player_State_TubeRoll
+                        player[currentPlayer].animation = ANI_JUMPING
+
+                        player[currentPlayer].minRollSpeed = 0xA0000
+                    else
+                        player[currentPlayer].state     = Player_State_Roll
+                        player[currentPlayer].animation = ANI_JUMPING
+                    end if
+                else
+                    player[currentPlayer].gravity = GRAVITY_AIR
+                    FlipSign(player[currentPlayer].speed)
+                    player[currentPlayer].xvel  = player[currentPlayer].speed
+                    player[currentPlayer].state = Player_State_Air
+                end if
+                break
+
+            case TUBESW_DROP
+                player[currentPlayer].gravity       = GRAVITY_AIR
+                player[currentPlayer].collisionMode = CMODE_FLOOR
+                player[currentPlayer].xvel          = 0
+                player[currentPlayer].speed         = 0
+                break
+
+            case TUBESW_ENTER_V_TOP
+                if player[currentPlayer].yvel < 1
+                    player[currentPlayer].state = Player_State_TubeRoll
+
+                    player[currentPlayer].minRollSpeed = 0xC0000
+                    player[currentPlayer].speed        = -0xC0000
+                    player[currentPlayer].gravity      = GRAVITY_GROUND
+                    player[currentPlayer].prevGravity  = GRAVITY_GROUND
+                    player[currentPlayer].angle        = 64
+
+                    player[currentPlayer].collisionMode = CMODE_RWALL
+                    player[currentPlayer].animation     = ANI_JUMPING
+                    screen[0].adjustCameraY             = 0
+                else
+                    if player[currentPlayer].state != Player_State_Fly
+                        player[currentPlayer].animation = ANI_JUMPING
+                    end if
+                end if
+                break
+
+            case TUBESW_EXIT_V_TOP
+                if player[currentPlayer].state == Player_State_TubeRoll
+                    player[currentPlayer].state = Player_State_Roll
+                end if
+                break
+
+            case TUBESW_SPIN_WHEEL_L_U
+                if player[currentPlayer].state == Player_State_TubeAirRoll_CD
+                    if player[currentPlayer].jumpPress == true
+                        object.leaveObject = true
+                    else
+                        if player[currentPlayer].jumpHold == false
+                            object.leaveObject = true
+                        end if
+                    end if
+
+                    if object.leaveObject == true
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            player[currentPlayer].state   = Player_State_Air
+                            player[currentPlayer].gravity = GRAVITY_AIR
+
+                            player[currentPlayer].xpos = object.xpos
+                            player[currentPlayer].ypos = object.ypos
+
+                            player[currentPlayer].speed = -0x80000
+                            player[currentPlayer].xvel  = -0x80000
+                            player[currentPlayer].yvel  = -0x40000
+
+                            object.leaveObject = false
+                            object.onJumpArea  = true
+                        end if
+                    end if
+                else
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        if object.onJumpArea == false
+                            player[currentPlayer].gravity     = GRAVITY_GROUND
+                            player[currentPlayer].prevGravity = GRAVITY_GROUND
+
+                            player[currentPlayer].xpos = object.xpos
+                            player[currentPlayer].ypos = object.ypos
+
+                            player[currentPlayer].xvel  = 0
+                            player[currentPlayer].yvel  = 0
+                            player[currentPlayer].speed = 0x80000
+
+                            player[currentPlayer].state     = Player_State_TubeAirRoll_CD
+                            player[currentPlayer].animation = ANI_JUMPING
+
+                            player[currentPlayer].minRollSpeed  = 0x80000
+                            player[currentPlayer].angle         = 224
+                            player[currentPlayer].collisionMode = CMODE_FLOOR
+
+                            PlaySfx(SfxName[Release], false)
+                            object.onJumpArea = true
+                        end if
+                    else
+                        object.onJumpArea = false
+                    end if
+                end if
+                break
+
+            case TUBESW_SPIN_WHEEL_R_U
+                if player[currentPlayer].state == Player_State_TubeAirRoll_CD
+                    if player[currentPlayer].jumpPress == true
+                        object.leaveObject = true
+                    else
+                        if player[currentPlayer].jumpHold == false
+                            object.leaveObject = false
+                        end if
+                    end if
+
+                    if object.leaveObject == true
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            player[currentPlayer].state   = Player_State_Air
+                            player[currentPlayer].gravity = GRAVITY_AIR
+
+                            player[currentPlayer].xpos = object.xpos
+                            player[currentPlayer].ypos = object.ypos
+
+                            object.leaveObject = false
+
+                            player[currentPlayer].speed = 0x80000
+                            player[currentPlayer].xvel  = 0x80000
+                            player[currentPlayer].yvel  = -0x40000
+
+                            object.onJumpArea = true
+                        end if
+                    end if
+                else
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        if object.onJumpArea == false
+                            player[currentPlayer].gravity     = GRAVITY_GROUND
+                            player[currentPlayer].prevGravity = GRAVITY_GROUND
+
+                            player[currentPlayer].xpos = object.xpos
+                            player[currentPlayer].ypos = object.ypos
+
+                            player[currentPlayer].xvel  = 0
+                            player[currentPlayer].yvel  = 0
+                            player[currentPlayer].speed = 0x80000
+
+                            player[currentPlayer].state     = Player_State_TubeAirRoll_CD
+                            player[currentPlayer].animation = ANI_JUMPING
+
+                            player[currentPlayer].minRollSpeed  = 0x80000
+                            player[currentPlayer].angle         = 36
+                            player[currentPlayer].collisionMode = CMODE_RWALL
+
+                            PlaySfx(SfxName[Release], false)
+                            object.onJumpArea = true
+                        end if
+                    else
+                        object.onJumpArea = false
+                    end if
+                end if
+                break
+
+            case TUBESW_SPIN_WHEEL_OVERLAP
+                if object.inTube == false
+                    if player[currentPlayer].state == Player_State_TubeAirRoll_CD
+                        FlipSign(player[currentPlayer].speed)
+                        if player[currentPlayer].collisionMode == CMODE_FLOOR
+                            player[currentPlayer].collisionMode = CMODE_ROOF
+                            player[currentPlayer].angle         = 128
+                        else
+                            player[currentPlayer].collisionMode = CMODE_FLOOR
+                            player[currentPlayer].angle         = 0
+                        end if
+                    end if
+                end if
+                break
+
+            case TUBESW_SPIN_WHEEL_L_D
+                if player[currentPlayer].state == Player_State_TubeAirRoll_CD
+                    if player[currentPlayer].jumpPress == true
+                        object.leaveObject = true
+                    else
+                        if player[currentPlayer].jumpHold == false
+                            object.leaveObject = false
+                        end if
+                    end if
+
+                    if object.leaveObject == true
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            player[currentPlayer].state   = Player_State_Air
+                            player[currentPlayer].gravity = GRAVITY_AIR
+
+                            player[currentPlayer].xpos = object.xpos
+                            player[currentPlayer].ypos = object.ypos
+
+                            player[currentPlayer].speed = -0x80000
+                            player[currentPlayer].xvel  = -0x80000
+                            player[currentPlayer].yvel  = 0x20000
+
+                            object.leaveObject = false
+                            object.onJumpArea  = true
+                        end if
+                    end if
+                else
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        if object.onJumpArea == false
+                            player[currentPlayer].speed = -0x80000
+
+                            player[currentPlayer].gravity     = GRAVITY_GROUND
+                            player[currentPlayer].prevGravity = GRAVITY_GROUND
+
+                            player[currentPlayer].xpos = object.xpos
+                            player[currentPlayer].ypos = object.ypos
+
+                            player[currentPlayer].xvel = 0
+                            player[currentPlayer].yvel = 0
+
+                            player[currentPlayer].state     = Player_State_TubeAirRoll_CD
+                            player[currentPlayer].animation = ANI_JUMPING
+
+                            player[currentPlayer].minRollSpeed  = 0x80000
+                            player[currentPlayer].angle         = 172
+                            player[currentPlayer].collisionMode = CMODE_LWALL
+
+                            PlaySfx(SfxName[Release], false)
+                            object.onJumpArea = true
+                        end if
+                    else
+                        object.onJumpArea = false
+                    end if
+                end if
+                break
+
+            case TUBESW_ENTER_V_BOTTOM
+                if player[currentPlayer].yvel < 1
+                    player[currentPlayer].state        = Player_State_TubeRoll
+                    player[currentPlayer].minRollSpeed = 0xC0000
+                    player[currentPlayer].speed        = 0xC0000
+
+                    player[currentPlayer].gravity       = GRAVITY_GROUND
+                    player[currentPlayer].prevGravity   = GRAVITY_GROUND
+                    player[currentPlayer].angle         = 192
+                    player[currentPlayer].collisionMode = CMODE_LWALL
+                    player[currentPlayer].animation     = ANI_JUMPING
+
+                    screen[0].adjustCameraY = 0
+                else
+                    player[currentPlayer].animation = ANI_JUMPING
+                end if
+                break
+
+            case TUBESW_EXIT_V_BOTTOM
+                if object.inTube == false
+                    if player[currentPlayer].state == Player_State_Roll
+                        player[currentPlayer].state = Player_State_Air
+
+                        player[currentPlayer].gravity = GRAVITY_AIR
+                        player[currentPlayer].speed   = 0
+                        player[currentPlayer].xvel    = 0
+                    end if
+
+                    if player[currentPlayer].state == Player_State_TubeRoll
+                        player[currentPlayer].state = Player_State_Roll
+                    end if
+                end if
+                break
+
+            case TUBESW_SPIN_WHEEL
+                if player[currentPlayer].state != Player_State_TubeAirRoll_CD
+                    if object.inTube == false
+                        player[currentPlayer].gravity     = GRAVITY_GROUND
+                        player[currentPlayer].prevGravity = GRAVITY_GROUND
+
+                        player[currentPlayer].xpos = object.xpos
+                        player[currentPlayer].ypos = object.ypos
+
+                        player[currentPlayer].xvel = 0
+                        player[currentPlayer].yvel = 0
+                        player[currentPlayer].speed = 0x80000
+
+                        player[currentPlayer].state         = Player_State_TubeAirRoll_CD
+                        player[currentPlayer].animation     = ANI_JUMPING
+                        player[currentPlayer].minRollSpeed  = 0x80000
+                        player[currentPlayer].angle         = 224
+                        player[currentPlayer].collisionMode = CMODE_FLOOR
+
+                        PlaySfx(SfxName[Release], false)
+                    end if
+                end if
+                break
+
+            case TUBESW_CURVE
+                if player[currentPlayer].yvel > -1
+                    player[currentPlayer].state = Player_State_TubeRoll
+
+                    player[currentPlayer].minRollSpeed = 0xC0000
+                    player[currentPlayer].speed        = -0xC0000
+
+                    player[currentPlayer].gravity       = GRAVITY_GROUND
+                    player[currentPlayer].prevGravity   = GRAVITY_GROUND
+                    player[currentPlayer].angle         = 192
+                    player[currentPlayer].collisionMode = CMODE_LWALL
+                    player[currentPlayer].animation     = ANI_JUMPING
+
+                    screen[0].adjustCameraY = 0
+                else
+                    player[currentPlayer].state = Player_State_TubeRoll
+
+                    player[currentPlayer].minRollSpeed = 0xC0000
+                    player[currentPlayer].speed        = player[currentPlayer].yvel
+                    FlipSign(player[currentPlayer].speed)
+
+                    player[currentPlayer].gravity       = GRAVITY_GROUND
+                    player[currentPlayer].prevGravity   = GRAVITY_GROUND
+                    player[currentPlayer].angle         = 192
+                    player[currentPlayer].collisionMode = CMODE_LWALL
+                    player[currentPlayer].animation     = ANI_JUMPING
+                end if
+                break
+            end switch
+
+            object.inTube = true
+        else
+            object.inTube = false
+        end if
+    next
+end event
+
+
+event ObjectStartup
+    // Bug Details (?):
+    // -> In all versions of act 1, this object has the name of "Tube Switch", which doesn't match the TypeName down below
+    //    Because of this, all tube switches in act 1 have hitboxes of 0x0, so they only work if the player's touching their centers
+    // -> In act 2, however, the object has the correct name of "Tube SW", which lets the object have its correct hitboxes
+    // -> Now the question is, was this intentional or was it just a small mistake? Can't say for sure..
+    foreach (TypeName[Tube SW], arrayPos0, ALL_ENTITIES)
+        switch object[arrayPos0].propertyValue
+        case TUBESW_ENTER_H
+        case TUBESW_EXIT_H
+        case TUBESW_DROP
+        case TUBESW_ENTER_V_TOP
+        case TUBESW_EXIT_V_TOP
+        case TUBESW_SPIN_WHEEL_OVERLAP
+            object[arrayPos0].colLeftTop     = -16
+            object[arrayPos0].colRightBottom = 16
+            break
+
+        case TUBESW_SPIN_WHEEL_L_U
+        case TUBESW_SPIN_WHEEL_R_U
+        case TUBESW_SPIN_WHEEL_L_D
+            object[arrayPos0].colLeftTop     = -48
+            object[arrayPos0].colRightBottom = 48
+            break
+
+        case TUBESW_ENTER_V_BOTTOM
+        case TUBESW_EXIT_V_BOTTOM
+            object[arrayPos0].colLeftTop     = -8
+            object[arrayPos0].colRightBottom = 8
+            break
+
+        case TUBESW_SPIN_WHEEL
+            object[arrayPos0].colLeftTop     = -16
+            object[arrayPos0].colRightBottom = 16
+            break
+        end switch
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult %= 13
+            break
+
+        case 0 // type
+            checkResult = object.propertyValue
+            checkResult %= 13
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue %= 13
+            break
+
+        case 0 // type
+            object.propertyValue = editor.variableValue
+            object.propertyValue %= 13
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    temp0 = object.xpos
+    temp0 -= 0x80000
+    temp1 = object.ypos
+    temp1 -= 0x80000
+    DrawSpriteXY(0, temp0, temp1)
+
+    temp0 += 0x100000
+    DrawSpriteXY(0, temp0, temp1)
+
+    temp1 += 0x100000
+    DrawSpriteXY(0, temp0, temp1)
+
+    temp0 -= 0x100000
+    DrawSpriteXY(0, temp0, temp1)
+    if editor.showGizmos == true
+        editor.drawingOverlay = true
+
+        switch object.propertyValue
+        case TUBESW_ENTER_H
+        case TUBESW_EXIT_H
+        case TUBESW_DROP
+        case TUBESW_ENTER_V_TOP
+        case TUBESW_EXIT_V_TOP
+        case TUBESW_SPIN_WHEEL_OVERLAP
+            temp0 = -16
+            temp0 <<= 16
+            temp1 = -16
+            temp1 <<= 16
+            temp2 = 32
+            break
+
+        case TUBESW_SPIN_WHEEL_L_U
+        case TUBESW_SPIN_WHEEL_R_U
+        case TUBESW_SPIN_WHEEL_L_D
+            temp0 = -48
+            temp0 <<= 16
+            temp1 = -48
+            temp1 <<= 16
+            temp2 = 96
+            break
+
+        case TUBESW_ENTER_V_BOTTOM
+        case TUBESW_EXIT_V_BOTTOM
+            temp0 = -8
+            temp0 <<= 16
+            temp1 = -8
+            temp1 <<= 16
+            temp2 = 16
+            break
+
+        case TUBESW_SPIN_WHEEL
+            temp0 = -16
+            temp0 <<= 16
+            temp1 = -16
+            temp1 <<= 16
+            temp2 = 32
+            break
+        end switch
+
+        temp0 += object.xpos
+        temp1 += object.ypos
+        DrawRectOutline(temp0, temp1, temp2, temp2, 255, 255, 0, 255)
+
+        editor.drawingOverlay = false
+    end if
+
+    temp0 = object.xpos
+    temp1 = object.ypos
+    switch object.propertyValue
+    case TUBESW_ENTER_H
+        temp0 += 0x200000
+        DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, 255, 0)
+        break
+
+    case TUBESW_EXIT_H
+        temp0 += 0x200000
+        DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, 0, 0)
+        break
+
+    case TUBESW_DROP
+        temp1 += 0x200000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 0, 0)
+        break
+
+    case TUBESW_ENTER_V_TOP
+        temp1 -= 0x200000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 255, 0)
+        break
+
+    case TUBESW_EXIT_V_TOP
+        temp1 -= 0x200000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 0, 0)
+        break
+
+    case TUBESW_SPIN_WHEEL_L_U
+        temp0 -= 0x200000
+        temp1 -= 0x200000
+        DrawArrow(object.xpos, object.ypos, temp0, temp1, 255, 255, 0)
+        break
+
+    case TUBESW_SPIN_WHEEL_R_U
+        temp0 += 0x200000
+        temp1 -= 0x200000
+        DrawArrow(object.xpos, object.ypos, temp0, temp1, 255, 255, 0)
+        break
+
+    case TUBESW_SPIN_WHEEL_OVERLAP
+        temp0 -= 0x200000
+        temp1 += 0x100000
+        temp2 = object.xpos
+        temp2 += 0x200000
+        temp3 = object.ypos
+        temp3 -= 0x100000
+        DrawArrow(temp0, temp3, temp2, temp1, 128, 255, 0)
+        DrawArrow(temp0, temp1, temp2, temp3, 255, 128, 0)
+        break
+
+    case TUBESW_SPIN_WHEEL_L_D
+        temp0 -= 0x200000
+        temp1 += 0x200000
+        DrawArrow(object.xpos, object.ypos, temp0, temp1, 255, 255, 0)
+        break
+
+    case TUBESW_ENTER_V_BOTTOM
+        temp1 += 0x200000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 255, 0)
+        break
+
+    case TUBESW_EXIT_V_BOTTOM
+        temp1 += 0x200000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 0, 0)
+        break
+
+    case TUBESW_CURVE
+        temp1 += 0x200000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 255, 0)
+
+        temp1 -= 0x400000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 255, 0)
+        break
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-8, -8, 16, 16, 173, 67)  // #0 - "T" Icon
+
+    AddEditorVariable("type")
+    SetActiveVariable("type")
+    AddEnumVariable("Horizontal Entry", TUBESW_ENTER_H)
+    AddEnumVariable("Horizontal Exit", TUBESW_EXIT_H)
+    AddEnumVariable("Drop", TUBESW_DROP)
+    AddEnumVariable("Vertical Entry (Top)", TUBESW_ENTER_V_TOP)
+    AddEnumVariable("Vertical Exit (Top)", TUBESW_EXIT_V_TOP)
+    AddEnumVariable("Spin wheel, Diag L-U Exit", TUBESW_SPIN_WHEEL_L_U)
+    AddEnumVariable("Spin wheel, Diag R-U Exit", TUBESW_SPIN_WHEEL_R_U)
+    AddEnumVariable("Spin wheel, Overlap", TUBESW_SPIN_WHEEL_OVERLAP)
+    AddEnumVariable("Spin wheel, Diag L-D Exit", TUBESW_SPIN_WHEEL_L_D)
+    AddEnumVariable("Vertical Entry 2 (Bottom)", TUBESW_ENTER_V_BOTTOM)
+    AddEnumVariable("Vertical Exit 2 (Bottom)", TUBESW_EXIT_V_BOTTOM)
+    AddEnumVariable("Spin wheel, No Exit", TUBESW_SPIN_WHEEL)
+    AddEnumVariable("Curve", TUBESW_CURVE)
+end event

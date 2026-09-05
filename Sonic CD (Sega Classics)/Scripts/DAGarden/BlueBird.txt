@@ -1,0 +1,85 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Blue Bird Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1        : object.offset.y
+private alias object.propertyValue : object.angleSpeed
+
+// States
+private alias 0 : BLUEBIRD_SETUP
+private alias 1 : BLUEBIRD_MOVEMENT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.direction == FACING_RIGHT
+		object.xpos += 0x8000
+	else
+		object.xpos -= 0x8000
+	end if
+
+	switch object.state
+	case BLUEBIRD_SETUP
+		object.offset.y = object.ypos
+		object.state++
+		break
+
+	case BLUEBIRD_MOVEMENT
+		object.angle += object.angleSpeed
+		object.angle &= 511
+		Sin(object.ypos, object.angle)
+		object.ypos <<= 10
+		object.ypos += object.offset.y
+		break
+
+	end switch
+
+	if object.outOfBounds == true
+		object.type = TypeName[Blank Object]
+	end if
+end event
+
+
+event ObjectDraw
+	temp0 = object.animationSpeed
+	temp0 >>= 3
+	DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+	object.animationSpeed++
+	object.animationSpeed &= 15
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("DAGarden/Objects.gif")
+
+	SpriteFrame(-8, -9, 16, 16, 466, 577)	// Blue Bird Frame 0
+	SpriteFrame(-8, -8, 16, 16, 483, 577)	// Blue Bird Frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("DAGarden/Objects.gif")
+	SpriteFrame(-8, -9, 16, 16, 466, 577)	// Blue Bird Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

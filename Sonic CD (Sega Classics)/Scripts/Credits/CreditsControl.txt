@@ -1,0 +1,259 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Credits Control Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value2 : object.scroll
+private alias object.value3 : object.endCredits
+
+// Text Font Aliases
+private alias object.value1 : object.targetLine
+
+// States
+private alias 0 : CREDITSCONTROL_INIT
+private alias 1 : CREDITSCONTROL_FADEIN
+private alias 2 : CREDITSCONTROL_MAIN
+private alias 3 : CREDITSCONTROL_FADEOUT
+
+// Soundtrack
+private alias 0 : OST_JP
+
+// Priority
+private alias 1 : PRIORITY_ACTIVE
+
+// Engine States
+private alias 8 : ENGINE_RESETGAME
+
+// Text Info type
+private alias 0 : TEXTINFO_TEXTDATA
+private alias 1 : TEXTINFO_TEXTSIZE
+private alias 2 : TEXTINFO_ROWCOUNT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CREDITSCONTROL_INIT
+		// object.scroll should be 0 at this point, so this is
+		// essentially resetting the Camera Y Offset to be 0
+		screen.yoffset = object.scroll
+
+		// Center the camera to be around 256 pixels in, to make sure the text is centered
+		temp0 = 256
+		temp0 -= screen.xcenter
+		screen.xoffset = temp0
+
+		// This Object is what draws the backgound, so it needs to draw low
+		object.drawOrder = 0
+
+		if object.timer < 8
+			// Hold for a moment...
+			object.timer++
+		else
+			// Start fading in
+			object.timer = 254
+			PlayMusic(0)
+			object.state++
+		end if
+
+		// Set the screen to be black for now
+		SetScreenFade(0, 0, 0, 255)
+		break
+
+	case CREDITSCONTROL_FADEIN
+		if object.timer > 0
+			SetScreenFade(0, 0, 0, object.timer)
+			object.timer -= 8
+		else
+			object.state++
+		end if
+		break
+
+	case CREDITSCONTROL_MAIN
+		object.scroll++
+
+		// Speed up the credits if the player wants
+		if keyDown[0].buttonA == true
+			object.scroll++
+		end if
+
+		if keyDown[0].buttonC == true
+			object.scroll++
+		end if
+
+		temp0 = object.scroll
+		temp0 >>= 1
+		screen.yoffset = temp0
+
+		// If at the end of the Credits, then fade out
+		if object.scroll > object.endCredits
+			object.state = CREDITSCONTROL_FADEOUT
+			object.timer = 0
+		end if
+
+		// And then, let the Player just skip the Credits if they want to
+		if keyPress[0].start == true
+			object.state = CREDITSCONTROL_FADEOUT
+			object.timer = 0
+		end if
+
+		if keyPress[0].buttonB == true
+			object.state = CREDITSCONTROL_FADEOUT
+			object.timer = 0
+		end if
+
+		CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+		if checkResult > -1
+			object.state = CREDITSCONTROL_FADEOUT
+			object.timer = 0
+		end if
+		break
+
+	case CREDITSCONTROL_FADEOUT
+		if object.timer < 320
+			object.timer += 8
+			music.volume -= 2
+		else
+			StopMusic()
+
+			// Go back to the menu now
+			engine.state = ENGINE_RESETGAME
+		end if
+
+		// Have a maximum fade value of 255, since that's all that a byte can hold
+		temp0 = object.timer
+		if temp0 > 255
+			temp0 = 255
+		end if
+
+		SetScreenFade(0, 0, 0, temp0)
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	// The scene doesn't have a background or anything, so draw a Black Rectangle here to avoid frame smear
+	DrawRect(0, 0, screen.xsize, screen.ysize, 0, 0, 0, 255)
+end event
+
+
+event ObjectStartup
+	// There's no exact "credits" song for either region, per se, so
+	// these tracks are used instead
+	if options.soundtrack == OST_JP
+		SetMusicTrack("JP/TimeAttack.ogg", 0, 100512)
+	else
+		SetMusicTrack("US/DAGarden.ogg", 0, 117382)
+	end if
+
+	LoadTextFile(MENU_1, "Data/Game/Credits.txt", false)
+
+	// In this scene, we control the camera manually
+	screen[0].cameraEnabled = false
+
+	// Place the Credits Control object into the scene
+	object[0].type = TypeName[Credits Control]
+
+	// Make sure that it's always active, since it's the master control in this scene
+	object[0].priority = PRIORITY_ACTIVE
+
+	// Get the row count of how many entries there are in the credits file
+	GetTextInfo(temp1, MENU_1, TEXTINFO_ROWCOUNT, 0, 0)
+
+	// Find the first unoccupied object slot in the stage
+	arrayPos0 = 32
+	while object[arrayPos0].type != TypeName[Blank Object]
+		arrayPos0++
+	loop
+
+	// Create all the Credits text
+	// - temp0 is the current line being read from the file
+	// - temp2 is the X Position to spawn the text at (stays constant)
+	// - temp3 is the Y Position to spawn the text at
+
+	// Starting values:
+
+	// Starting line should be 0 (ofc)
+	temp0 = 0
+
+	// X Position should be 256 pixels to the right
+	temp2 = 0x1000000
+
+	// Starting Y Position should be 256 pixels as well
+	temp3 = 0x1000000
+
+	// Now, let's enter the loop!
+	while temp0 < temp1
+		// Get what type of entry it is
+		// [Reading the number inside the brackets]
+		GetTextInfo(temp4, MENU_1, TEXTINFO_TEXTDATA, temp0, 1)
+
+		// Get the length of the entry
+		GetTextInfo(temp5, MENU_1, TEXTINFO_TEXTSIZE, temp0, 0)
+
+		if temp5 == 0
+			// This is a blank line, so don't put any text on the current line and instead create a new line 22 pixels tall
+			temp3 += 0x160000
+		else
+			if temp4 == 48 // '0' character
+				ResetObjectEntity(arrayPos0, TypeName[Text Font 1], 0, temp2, temp3)
+				object[arrayPos0].targetLine = temp0
+				arrayPos0++
+
+				// 22 pixels difference
+				temp3 += 0x160000
+			else
+				if temp4 == 49 // '1' character
+					ResetObjectEntity(arrayPos0, TypeName[Text Font 2], 0, temp2, temp3)
+					object[arrayPos0].targetLine = temp0
+					arrayPos0++
+
+					// 14 pixels difference
+					temp3 += 0xE0000
+				else
+					if temp4 == 50 // '2' character
+						ResetObjectEntity(arrayPos0, TypeName[Text Font 3], 0, temp2, temp3)
+						object[arrayPos0].targetLine = temp0
+						arrayPos0++
+
+						// 14 pixels difference
+						temp3 += 0xE0000
+					end if
+				end if
+			end if
+		end if
+		temp0++
+	loop
+
+	temp3 -= 0xE0000 // 14 pixels
+	object[0].endCredits = temp3
+	object[0].endCredits >>= 15
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143) // "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

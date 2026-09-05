@@ -1,0 +1,423 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: VPlatform Small Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.oscillation
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.value16 : debugMode.currentSelection
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Property Values
+private alias 0 : DOWNWARDS_PLAT
+private alias 1 : DOWNWARDS_PLAT_UNUSED
+private alias 2 : DOWNWARDS_PLAT_CONV
+private alias 3 : UPWARDS_PLAT
+private alias 4 : UPWARDS_PLAT_UNUSED
+private alias 5 : UPWARDS_PLAT_CONV
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function VPlatformSmall_DebugDraw
+reserve function VPlatformSmall_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+public value VPlatformSmall_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function VPlatformSmall_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= VPlatformSmall_startDebugID
+
+	switch temp0
+	case 0 // Downwards Platform
+		DrawSprite(0)
+		break
+
+	case 1 // Downwards Platform (Conveyor)
+		DrawSprite(0)
+		DrawSprite(1)
+		break
+
+	end switch
+end function
+
+
+public function VPlatformSmall_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= VPlatformSmall_startDebugID
+
+	switch temp0
+	case 0 // Downwards Platform
+		temp1 = DOWNWARDS_PLAT
+		break
+
+	case 1 // Downwards Platform (Conveyor)
+		temp1 = DOWNWARDS_PLAT_CONV
+		break
+
+	end switch
+
+	// Spawn the platform
+	CreateTempObject(TypeName[VPlatform Small], temp1, object.xpos, object.ypos)
+
+	// Truncate the position
+	object[tempObjectPos].xpos &= -0x10000
+	object[tempObjectPos].ypos &= -0x10000
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Update the Platform's Oscillation Value
+	// (This value is stored per-Object, meaning that Platforms across the stage aren't synced)
+	object.oscillation++
+	if object.oscillation == 312
+		object.oscillation = 0
+	end if
+
+	// Get the Object's Angle value
+	// The final Angle value Will range from 0 to 510
+	object.angle = object.oscillation
+	object.angle <<= 6
+	object.angle /= 39
+
+	// Calculate its base Change value
+	Sin(object.collisionOffset.y, object.angle)
+
+	// From this base Change value, jump to the Platform handling type for what's further needed
+	switch object.propertyValue
+	case DOWNWARDS_PLAT
+	case DOWNWARDS_PLAT_CONV
+		// Downwards Platform
+		object.collisionOffset.y *= 0x1800
+		object.collisionOffset.y += 0x300000
+		object.collisionOffset.y += object.ypos
+		object.collisionOffset.y &= -0x10000 // Truncate the value
+		object.collisionOffset.y -= object.drawPos.y
+		break
+
+	case UPWARDS_PLAT
+	case UPWARDS_PLAT_CONV
+		// Upwards Platform
+		object.collisionOffset.y *= -0x1800
+		object.collisionOffset.y -= 0x300000
+		object.collisionOffset.y += object.ypos
+		object.collisionOffset.y &= -0x10000 // Truncate the value
+		object.collisionOffset.y -= object.drawPos.y
+		break
+
+	case DOWNWARDS_PLAT_UNUSED
+		// Unused duplicate of downwards platform
+		object.collisionOffset.y *= 0x1800
+		object.collisionOffset.y += 0x300000
+		object.collisionOffset.y += object.ypos
+		object.collisionOffset.y &= -0x10000 // Truncate the value
+		object.collisionOffset.y -= object.drawPos.y
+		break
+
+	case UPWARDS_PLAT_UNUSED
+		// Unused duplicate of upwards platform
+		object.collisionOffset.y *= -0x1800
+		object.collisionOffset.y -= 0x300000
+		object.collisionOffset.y += object.ypos
+		object.collisionOffset.y &= -0x10000 // Truncate the value
+		object.collisionOffset.y -= object.drawPos.y
+		break
+
+	end switch
+
+	// Back up the Object's position...
+	temp0 = object.ypos
+
+	// ...and move the Object to where the Platform actually is
+	object.ypos = object.drawPos.y
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		switch object.propertyValue
+		case DOWNWARDS_PLAT
+		case UPWARDS_PLAT
+			// Normal Platform
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				// Move the Player along with the Platform
+				player[currentPlayer].ypos += object.collisionOffset.y
+			end if
+			break
+
+		case DOWNWARDS_PLAT_CONV
+		case UPWARDS_PLAT_CONV
+			// Conveyor Platform
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				// Move the Player to match the Platform
+				player[currentPlayer].ypos += object.collisionOffset.y
+
+				// And then push them along with the Conveyor Belt too as needed
+				if conveyorBelt.flag == 0
+					player[currentPlayer].xpos += conveyorBelt.speed
+				else
+					player[currentPlayer].xpos -= conveyorBelt.speed
+				end if
+			end if
+			break
+
+		end switch
+	next
+
+	// Now that all the Collision's been done, it's safe to move the Object back now
+	object.ypos = temp0
+end event
+
+
+event ObjectDraw
+	// All Platform types have their own Draw routines
+	switch object.propertyValue
+	case DOWNWARDS_PLAT
+	case DOWNWARDS_PLAT_UNUSED
+		// Standard Downards Platform
+		Sin(object.drawPos.y, object.angle)
+		object.drawPos.y *= 0x1800
+		object.drawPos.y += 0x300000
+		object.drawPos.y += object.ypos
+		object.drawPos.y &= -0x10000 // Truncate the value
+		DrawSpriteXY(0, object.xpos, object.drawPos.y)
+		break
+
+	case DOWNWARDS_PLAT_CONV
+		// Downards Conveyor Platform
+		Sin(object.drawPos.y, object.angle)
+		object.drawPos.y *= 0x1800
+		object.drawPos.y += 0x300000
+		object.drawPos.y += object.ypos
+		object.drawPos.y &= -0x10000 // Truncate the value
+		DrawSpriteXY(0, object.xpos, object.drawPos.y)
+		DrawSpriteXY(1, object.xpos, object.drawPos.y)
+		break
+
+	case UPWARDS_PLAT
+	case UPWARDS_PLAT_UNUSED
+		// Standard Upwards Platform
+		Sin(object.drawPos.y, object.angle)
+		object.drawPos.y *= -0x1800
+		object.drawPos.y -= 0x300000
+		object.drawPos.y += object.ypos
+		object.drawPos.y &= -0x10000 // Truncate the value
+		DrawSpriteXY(0, object.xpos, object.drawPos.y)
+		break
+
+	case UPWARDS_PLAT_CONV
+		// Upwards Conveyor Platform
+		Sin(object.drawPos.y, object.angle)
+		object.drawPos.y *= -0x1800
+		object.drawPos.y -= 0x300000
+		object.drawPos.y += object.ypos
+		object.drawPos.y &= -0x10000 // Truncate the value
+		DrawSpriteXY(0, object.xpos, object.drawPos.y)
+		DrawSpriteXY(1, object.xpos, object.drawPos.y)
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// Different sprites for different time periods
+
+	// To avoid redundant labelling, the order of Sprite Frames will just be listed here
+	// 0 - Base Platform Frame
+	// 1 - Conveyor Frame, to be overlayed atop the base Platform Frame
+
+	switch HUD.currentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 51)
+		SpriteFrame(-16, -16, 32, 16, 65, 208)
+		break
+
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-16, -16, 32, 16, 223, 148)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-16, -16, 32, 16, 223, 182)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-16, -16, 32, 16, 223, 216)
+		break
+
+	end switch
+
+	temp0 = 0
+	VPlatformSmall_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[VPlatform Small], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(VPlatformSmall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(VPlatformSmall_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Direction
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Direction
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp2 = false
+
+	// temp0 holds just about no use with this sytem, but may as well just grab it
+	switch object.propertyValue
+	case DOWNWARDS_PLAT_CONV
+		temp2 = true
+		// [Fallthrough]
+
+	case DOWNWARDS_PLAT
+	default
+		temp0 = 0x1800
+		temp1 = 0x300000
+		break
+
+	case UPWARDS_PLAT_CONV
+		temp2 = true
+		// [Fallthrough]
+
+	case UPWARDS_PLAT
+		temp0 = -0x1800
+		temp1 = -0x300000
+		break
+
+	end switch
+
+	temp3 = object.ypos
+	temp3 &= 0xFFFF0000 // Truncate the value
+	DrawSpriteXY(0, object.xpos, temp3)
+
+	if temp2 == true
+		DrawSpriteXY(1, object.xpos, temp3)
+	end if
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		// Draw the Platform's path
+		Sin(temp4, 128)
+		temp4 *= temp0
+		temp4 += temp1
+		temp4 += object.ypos
+		temp4 &= 0xFFFF0000 // Truncate the value
+
+		DrawLine(object.xpos, temp3, object.xpos, temp4, 255, 255, 255)
+
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	switch checkResult
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 51)
+		SpriteFrame(-16, -16, 32, 16, 65, 208)
+		break
+
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-16, -16, 32, 16, 223, 148)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-16, -16, 32, 16, 223, 182)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-16, -16, 32, 16, 223, 216)
+		break
+
+	end switch
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Downwards", 0)
+	// 1 is unused
+	AddEnumVariable("Downwards (Conveyor)", 2)
+	AddEnumVariable("Upwards", 3)
+	// 4 is unused
+	AddEnumVariable("Upwards (Conveyor)", 5)
+end event

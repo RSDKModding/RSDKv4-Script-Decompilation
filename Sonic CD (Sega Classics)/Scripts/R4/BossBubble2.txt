@@ -1,0 +1,137 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Bubble 2 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.xvel      : player.xvel
+private alias object.yvel      : player.yvel
+private alias object.speed     : player.speed
+private alias object.animation : player.animation
+private alias object.value3    : player.drownTimer
+private alias object.value4    : player.drownLevel
+
+// States
+private alias 0 : BOSSBUBBLE2_GROWTH_1
+private alias 1 : BOSSBUBBLE2_GROWTH_2
+private alias 2 : BOSSBUBBLE2_BREATHABLE
+private alias 3 : BOSSBUBBLE2_CONSUMED
+private alias 4 : BOSSBUBBLE2_DISSAPEAR
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSBUBBLE2_GROWTH_1
+        if object.timer < 20
+            object.timer++
+        else
+            object.state++
+        end if
+        break
+
+    case BOSSBUBBLE2_GROWTH_2
+        object.state++
+        break
+
+    case BOSSBUBBLE2_CONSUMED
+        if object.timer < 22
+            object.timer++
+        else
+            object.state++
+        end if
+        break
+
+    case BOSSBUBBLE2_DISSAPEAR
+        if object.timer < 42
+            object.timer++
+        else
+            object.type = TypeName[Blank Object]
+        end if
+        break
+    end switch
+
+    if object.state == BOSSBUBBLE2_BREATHABLE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if player[currentPlayer].animation == ANI_JUMPING
+                BoxCollisionTest(C_TOUCH, object.entityPos, -2, -2, 2, 2, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.state = BOSSBUBBLE2_CONSUMED
+
+                    FlipSign(player[currentPlayer].speed)
+                    FlipSign(player[currentPlayer].xvel)
+
+                    player[currentPlayer].yvel       = 0x40000
+                    player[currentPlayer].animation  = ANI_BREATHING
+                    player[currentPlayer].drownTimer = 0
+                    player[currentPlayer].drownLevel = 0
+
+                    PlaySfx(SfxName[Breathing], false)
+                end if
+            end if
+
+            if player[currentPlayer].animation == ANI_FLYING
+                BoxCollisionTest(C_TOUCH, object.entityPos, -2, -2, 2, 2, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.state = BOSSBUBBLE2_CONSUMED
+
+                    FlipSign(player[currentPlayer].speed)
+                    FlipSign(player[currentPlayer].xvel)
+
+                    player[currentPlayer].yvel       = 0x40000
+                    player[currentPlayer].animation  = ANI_BREATHING
+                    player[currentPlayer].state      = Player_State_Air
+                    player[currentPlayer].drownTimer = 0
+                    player[currentPlayer].drownLevel = 0
+
+                    PlaySfx(SfxName[Breathing], false)
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(object.state)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects2.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 99, 118)     // #0 - Small bubble
+    SpriteFrame(-12, -12, 24, 24, 116, 126)  // #1 - Medium bubble
+    SpriteFrame(-16, -16, 32, 32, 222, 115)  // #2 - Big bubble
+    SpriteFrame(-16, -16, 32, 32, 189, 115)  // #3 - Big bubble inhaled
+    SpriteFrame(-16, -16, 32, 32, 156, 126)  // #4 - Big bubler bursted
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects2.gif")
+    SpriteFrame(-16, -16, 32, 32, 222, 115)  // #2 - Big bubble
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

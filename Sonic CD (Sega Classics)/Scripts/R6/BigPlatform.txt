@@ -1,0 +1,151 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Big Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : BIGPLATFORM_INACTIVE
+private alias 1 : BIGPLATFORM_OPEN
+private alias 2 : BIGPLATFORM_CLOSE
+
+// Time Period
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BIGPLATFORM_INACTIVE
+		BoxCollisionTest(C_TOUCH, object.entityPos, -96, -160, 128, 160, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			// Check that the player is 128 pixels away to the right from this platform
+			temp0 = player[SLOT_PLAYER1].xpos
+			temp0 -= object.xpos
+			if temp0 > 0x800000
+				object.state = BIGPLATFORM_CLOSE
+				object.priority = PRIORITY_ACTIVE
+			else
+				object.state = BIGPLATFORM_OPEN
+				object.priority = PRIORITY_ACTIVE
+			end if
+		end if
+		break
+
+	case BIGPLATFORM_OPEN
+		// Check that the player is 128 pixels away to the right from this platform
+		temp0 = player[SLOT_PLAYER1].xpos
+		temp0 -= object.xpos
+		if temp0 > 0x800000
+			object.state = BIGPLATFORM_CLOSE
+		end if
+
+		if object.angle > 0
+			object.angle -= 2
+		end if
+		break
+
+	case BIGPLATFORM_CLOSE
+		if player[SLOT_PLAYER1].xpos < object.xpos
+			object.state = BIGPLATFORM_OPEN
+		end if
+
+		if object.angle < 256
+			object.angle += 2
+		end if
+		break
+	end switch
+
+	Cos(object.collisionOffset.y, object.angle)
+	object.collisionOffset.y <<= 13
+	object.collisionOffset.y += 0x400000
+	object.collisionOffset.y += object.ypos
+	object.collisionOffset.y &= -0x10000 // Truncate the value
+	object.collisionOffset.y -= object.drawPos.y
+
+	BoxCollisionTest(C_TOUCH, object.entityPos, -328, -256, 328, 256, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+	if checkResult == false
+		object.state = BIGPLATFORM_INACTIVE
+		object.priority = PRIORITY_BOUNDS
+		object.angle = 256
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp0 = object.ypos
+		object.ypos = object.drawPos.y
+		BoxCollisionTest(C_SOLID, object.entityPos, -48, -81, 48, 80, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == COL_TOP
+			player[currentPlayer].ypos += object.collisionOffset.y
+			player[currentPlayer].ypos += 0x10000
+		end if
+
+		object.ypos = temp0
+	next
+end event
+
+
+event ObjectDraw
+	Cos(object.drawPos.y, object.angle)
+	object.drawPos.y <<= 13
+	object.drawPos.y += 0x400000
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(0, object.xpos, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R6/Objects4.gif")
+
+	if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+		SpriteFrame(-48, -80, 96, 192, 98, 1) // #0 - Big Platform
+	else
+		SpriteFrame(-48, -80, 96, 192, 1, 1)  // #0 - Big Platform
+	end if
+
+	foreach (TypeName[Big Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].angle = 256
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R6/Objects4.gif")
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	if checkResult == TIME_GOOD_FUTURE
+		SpriteFrame(-48, -80, 96, 192, 98, 1) // #0 - Big Platform
+	else
+		SpriteFrame(-48, -80, 96, 192, 1, 1)  // #0 - Big Platform
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

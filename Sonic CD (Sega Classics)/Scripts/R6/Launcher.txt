@@ -1,0 +1,177 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Launcher Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.originPos.x
+private alias object.value2 : object.activePlayer
+
+// Player Aliases
+private alias object.state           : player.state
+private alias object.priority        : player.priority
+private alias object.xpos            : player.xpos
+private alias object.ypos            : player.ypos
+private alias object.iypos           : player.iypos
+private alias object.xvel            : player.xvel
+private alias object.yvel            : player.yvel
+private alias object.speed           : player.speed
+private alias object.direction       : player.direction
+private alias object.gravity         : player.gravity
+private alias object.animation       : player.animation
+private alias object.scrollTracking  : player.scrollTracking
+private alias object.collisionBottom : player.collisionBottom
+
+// States
+private alias 0 : LAUNCHER_IDLE
+private alias 1 : LAUNCHER_DASH
+private alias 2 : LAUNCHER_EJECT_PLAYER
+private alias 3 : LAUNCHER_RECOIL
+private alias 4 : LAUNCHER_RESET
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state > LAUNCHER_IDLE
+        currentPlayer = object.activePlayer
+        if player[currentPlayer].state != Player_State_Static
+            object.state = LAUNCHER_IDLE
+            object.timer = 0
+        end if
+    end if
+
+    switch object.state
+    case LAUNCHER_IDLE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_SOLID, object.entityPos, -24, -26, -18, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.state = LAUNCHER_DASH
+                object.activePlayer = currentPlayer
+
+                player[currentPlayer].state = Player_State_Static
+                player[currentPlayer].animation = ANI_LAUNCHER
+                player[currentPlayer].direction = FACING_RIGHT
+
+                player[currentPlayer].xpos = object.xpos
+                player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+                FlipSign(player[currentPlayer].ypos)
+                player[currentPlayer].ypos -= 0x30000
+                player[currentPlayer].ypos += object.ypos
+                player[currentPlayer].yvel = 0
+
+                object.priority = PRIORITY_ACTIVE
+
+                player[currentPlayer].scrollTracking = false
+                player[currentPlayer].gravity = GRAVITY_AIR
+                PlaySfx(SfxName[Launcher], false)
+            end if
+        next
+        break
+
+    case LAUNCHER_DASH
+        object.xpos += 0xC0000
+
+        player[currentPlayer].xpos = object.xpos
+        player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+        FlipSign(player[currentPlayer].ypos)
+        player[currentPlayer].ypos -= 0x30000
+        player[currentPlayer].ypos += object.ypos
+
+        ObjectTileGrip(CSIDE_FLOOR, 32, 4, 0)
+        if checkResult == false
+            object.state++
+        end if
+        break
+
+    case LAUNCHER_EJECT_PLAYER
+        player[currentPlayer].xpos += 0xC0000
+        player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+        FlipSign(player[currentPlayer].ypos)
+        player[currentPlayer].ypos -= 0x30000
+        player[currentPlayer].ypos += object.ypos
+
+        object.state++
+        break
+
+    case LAUNCHER_RECOIL
+        if object.timer == 0
+            player[currentPlayer].xpos += 0xC0000
+        end if
+
+        player[currentPlayer].state = Player_State_Air
+        player[currentPlayer].animation = ANI_WALKING
+
+        player[currentPlayer].speed = 0xC2000
+        player[currentPlayer].xvel = 0xC2000
+        player[currentPlayer].iypos = player[currentPlayer].collisionBottom
+        FlipSign(player[currentPlayer].ypos)
+        player[currentPlayer].ypos -= 0x30000
+        player[currentPlayer].ypos += object.ypos
+
+        if object.timer < 2
+            object.timer++
+        else
+            object.state++
+        end if
+        // [Fallthrough]
+
+    case LAUNCHER_RESET
+        object.xpos -= 0x40000
+        if object.xpos < object.originPos.x
+            object.xpos = object.originPos.x
+            object.priority = PRIORITY_BOUNDS
+            object.state = LAUNCHER_IDLE
+        end if
+
+        if object.outOfBounds == true
+            object.xpos = object.originPos.x
+            object.priority = PRIORITY_BOUNDS
+            object.state = LAUNCHER_IDLE
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-28, -28, 56, 32, 83, 1) // #0 - Launcher
+
+    foreach (TypeName[Launcher], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].drawOrder = 4
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-28, -28, 56, 32, 83, 1) // #0 - Launcher
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

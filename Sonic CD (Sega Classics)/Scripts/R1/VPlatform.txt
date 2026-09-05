@@ -1,0 +1,145 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Vert Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.angle
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// Property Values
+private alias 0 : START_MOVING_DOWN
+private alias 1 : START_MOVING_UP
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function VertPlatform_DebugDraw
+reserve function VertPlatform_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function VertPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function VertPlatform_DebugSpawn
+	CreateTempObject(TypeName[Vert Platform], START_MOVING_DOWN, object.xpos, object.ypos)
+	object[tempObjectPos].xpos &= -0x10000
+	object[tempObjectPos].ypos &= -0x10000
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle = oscillation
+	object.angle <<= 1
+	if object.propertyValue == START_MOVING_UP
+		object.angle += 256
+	end if
+
+	Sin(object.collisionOffset.y, object.angle)
+	object.collisionOffset.y *= 0x1800
+	object.collisionOffset.y += object.ypos
+	object.collisionOffset.y &= -0x10000 // Truncate the value
+	object.collisionOffset.y -= object.drawPos.y
+
+	temp0 = object.ypos
+	object.ypos = object.drawPos.y
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -9, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == COL_TOP
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+
+	object.ypos = temp0
+end event
+
+
+event ObjectDraw
+	Sin(object.drawPos.y, object.angle)
+	object.drawPos.y *= 0x1800
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(0, object.xpos, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 101, 109) // #0 - Vertical Platform
+
+	SetTableValue(TypeName[Vert Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(VertPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(VertPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		case 0 // startDir
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 101, 109) // #0 - Vertical Platform
+	
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Up", START_MOVING_DOWN)
+	AddEnumVariable("Down", START_MOVING_UP)
+end event

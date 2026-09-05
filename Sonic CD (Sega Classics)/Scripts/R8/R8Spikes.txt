@@ -1,0 +1,116 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: R8 Spikes Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.state          : player.state
+private alias object.xpos           : player.xpos
+private alias object.yvel           : player.yvel
+private alias object.speed          : player.speed
+private alias object.collisionPlane : player.collisionPlane
+private alias object.value7         : player.invincibleTimer
+
+// Property Values
+private alias 0 : DRAWING_PLANE_A
+private alias 1 : DRAWING_PLANE_B
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if player[currentPlayer].collisionPlane == object.propertyValue
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -12, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if player[currentPlayer].yvel > -1
+                if player[currentPlayer].invincibleTimer == 0
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -15, -13, 15, -12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        player[currentPlayer].state = Player_State_GotHit
+                        if player[currentPlayer].xpos > object.xpos
+                            player[currentPlayer].speed = 0x20000
+                        else
+                            player[currentPlayer].speed = -0x20000
+                        end if
+                    end if
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items3.gif")
+    SpriteFrame(-16, -16, 32, 32, 50, 1) // #0 - Spikes
+
+    foreach (TypeName[R8 Spikes], arrayPos0, ALL_ENTITIES)
+        if object[arrayPos0].propertyValue == DRAWING_PLANE_B
+            object[arrayPos0].drawOrder = 1
+        end if
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // drawPlane
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // drawPlane
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    object.inkEffect = object.propertyValue
+    DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items3.gif")
+    SpriteFrame(-16, -16, 32, 32, 50, 1) // #0 - Spikes
+
+    AddEditorVariable("drawPlane")
+    SetActiveVariable("drawPlane")
+    AddEnumVariable("Plane A", DRAWING_PLANE_A)
+    AddEnumVariable("Plane B", DRAWING_PLANE_B)
+end event

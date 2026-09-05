@@ -1,0 +1,187 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: R8 Setup Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.paletteTimer
+private alias object.value1 : object.currentPalette
+private alias object.value2 : object.vGearFrame
+private alias object.value3 : object.hCylinderFrame
+private alias object.value4 : object.vCylinderFrame
+private alias object.value5 : object.lightsFrame
+
+// Player Aliases
+private alias object.xpos            : player.xpos
+private alias object.ypos            : player.ypos
+private alias object.collisionLeft   : player.collisionLeft
+private alias object.collisionTop    : player.collisionTop
+private alias object.collisionRight  : player.collisionRight
+private alias object.collisionBottom : player.collisionBottom
+
+// Reserved Object Slot Aliases
+private alias 21 : SLOT_R8SETUP
+
+// Tile Info
+private alias 1 : TILEINFO_DIRECTION
+private alias 8 : TILEINFO_ANGLEB
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.rotation++
+	object.rotation %= 144
+
+	temp0 = object.vGearFrame
+	temp0 %= 7
+	if temp0 == 0
+		temp0 = object.vGearFrame
+		temp0 /= 7
+		temp0 <<= 1
+		temp0 += 600
+		Copy16x16Tile(490, temp0)
+		temp0++
+		Copy16x16Tile(491, temp0)
+	end if
+
+	object.vGearFrame++
+	object.vGearFrame %= 28
+
+	temp0 = object.hCylinderFrame
+	temp0 &= 3
+	if temp0 == 0
+		temp0 = object.hCylinderFrame
+		temp0 >>= 2
+		temp0 <<= 1
+		temp0 += 608
+		Copy16x16Tile(492, temp0)
+		temp0++
+		Copy16x16Tile(493, temp0)
+	end if
+	
+	object.hCylinderFrame++
+	object.hCylinderFrame &= 15
+
+	temp0 = object.vCylinderFrame
+	temp0 %= 5
+	if temp0 == 0
+		temp0 = object.vCylinderFrame
+		temp0 /= 5
+		temp0 <<= 2
+		temp0 += 616
+		Copy16x16Tile(494, temp0)
+		temp0++
+		Copy16x16Tile(495, temp0)
+		temp0++
+		Copy16x16Tile(496, temp0)
+		temp0++
+		Copy16x16Tile(497, temp0)
+	end if
+
+	object.vCylinderFrame++
+	object.vCylinderFrame %= 20
+
+	temp0 = object.lightsFrame
+	temp0 &= 7
+	if temp0 == 0
+		temp0 = object.lightsFrame
+		temp0 >>= 3
+		temp0 += 632
+		Copy16x16Tile(498, temp0)
+	end if
+
+	object.lightsFrame++
+	object.lightsFrame %= 56
+
+	object.paletteTimer++
+	if object.paletteTimer == 5
+		object.paletteTimer = 0
+		object.currentPalette++
+		object.currentPalette %= 6
+		temp0 = object.currentPalette
+		temp0 += 639
+		Copy16x16Tile(499, temp0)
+	end if
+
+	SetActivePalette(object.currentPalette, 0, screen.ysize)
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp1 = player[currentPlayer].xpos
+		temp1 >>= 16
+		temp1 += player[currentPlayer].collisionRight
+
+		temp2 = player[currentPlayer].ypos
+		temp2 >>= 16
+		temp2 += player[currentPlayer].collisionBottom
+		temp2 += 2
+		Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
+		if temp0 == 1
+			Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_DIRECTION)
+			if temp0 == 0
+				player[currentPlayer].xpos += 0x10000
+			else
+				player[currentPlayer].xpos -= 0x10000
+			end if
+		else
+			temp1 = player[currentPlayer].xpos
+			temp1 >>= 16
+			temp1 += player[currentPlayer].collisionLeft
+			Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_ANGLEB)
+			if temp0 == 1
+				Get16x16TileInfo(temp0, temp1, temp2, TILEINFO_DIRECTION)
+				if temp0 == 0
+					player[currentPlayer].xpos += 0x10000
+				else
+					player[currentPlayer].xpos -= 0x10000
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectStartup
+	object[SLOT_R8SETUP].type = TypeName[R8 Setup]
+	object[SLOT_R8SETUP].priority = PRIORITY_ACTIVE
+
+	CopyPalette(0, 0, 1, 0, 255)
+	CopyPalette(0, 0, 2, 0, 255)
+	CopyPalette(0, 0, 3, 0, 255)
+	CopyPalette(0, 0, 4, 0, 255)
+	CopyPalette(0, 0, 5, 0, 255)
+
+	temp0 = 0
+	temp1 = 0
+	temp2 = 32
+	while temp0 < 6
+		LoadPalette("R82D_PalCycle.act", temp0, 160, temp1, temp2)
+		temp0++
+		temp1 += 32
+		temp2 += 32
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143) // #0 - "Script" Icon
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

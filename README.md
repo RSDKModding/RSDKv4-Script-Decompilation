@@ -1,6 +1,6 @@
 # RSDKv4 Script Decompilation
 
-A full decompilation for the scripts in Sonic 1 & 2's 2013 mobile remakes.
+A full decompilation for the scripts in Sonic 1 & 2's 2013 mobile remakes, and the Sega Classics port of Sonic CD for Amazon Fire TV.
 
 These scripts have been manually reverted back to what the original scripts could've looked like. This means that:
 * Function IDs have been recoverted back to proper function names
@@ -8,9 +8,18 @@ These scripts have been manually reverted back to what the original scripts coul
 * Default aliases have been re-added where possible
 * Re-added static variables and tables
 * Added editor renders and variables for (almost) every object
-* Origins code has been included via the use of `#platform:` markers
+* Origins code has been included via the use of `#platform:` markers, for Sonic 1 and 2.
 
 Some portions of the code have been slightly modified for compatibility purposes.
+
+---
+
+### Sonic CD (Sega Classics)
+
+The scripts included here are to be used with the 2018 Amazon Fire TV release of Sonic CD found in the Sega Classics app.
+However, running this version will require you to use a branch of RSDKv4 for optimal compatibility, which you can find [here](https://github.com/RSDKModding/RSDKv4-Decompilation/tree/sega-classics).
+
+---
 
 To use these scripts in mods:
 * RSDKv4/RSDKv5U Decompilation: Extract the `Scripts` folder to the exe's root directory: eg `[rootdir]/Scripts/`.

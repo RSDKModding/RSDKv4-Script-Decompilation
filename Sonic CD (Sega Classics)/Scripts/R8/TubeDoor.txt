@@ -1,0 +1,192 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tube Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.offset.x
+
+// Push Button Aliases
+private alias object[-1].xpos          : pushButton.xpos
+private alias object[-1].ypos          : pushButton.ypos
+private alias object[-1].propertyValue : pushButton.pressed
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.ypos      : player.ypos
+private alias object.animation : player.animation
+
+// States
+private alias 0 : TUBEDOOR_CLOSED
+private alias 1 : TUBEDOOR_OPEN
+private alias 2 : TUBEDOOR_CLOSE
+private alias 3 : TUBEDOOR_CHECK_HEIGHT
+
+// Property Values
+private alias 0 : TRIGGER_BY_BUTTON
+private alias 1 : TRIGGER_NONE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.outOfBounds == true
+        object.state = TUBEDOOR_CLOSED
+        object.offset.x = 0
+        object.priority = PRIORITY_BOUNDS
+    end if
+
+    switch object.state
+    case TUBEDOOR_CLOSED
+        object.priority = PRIORITY_ACTIVE
+        if pushButton.pressed == true
+            if object.propertyValue == TRIGGER_BY_BUTTON
+                object.state = TUBEDOOR_OPEN
+            end if
+        else
+            if player[SLOT_PLAYER1].state == Player_State_Static
+                if player[SLOT_PLAYER1].animation == ANI_JUMPING
+                    object.state = TUBEDOOR_CHECK_HEIGHT
+                    object.offset.x = 0x100000
+                end if
+            end if
+        end if
+        break
+
+    case TUBEDOOR_OPEN
+        if object.offset.x < 0x100000
+            object.offset.x += 0x20000
+        end if
+
+        if player[SLOT_PLAYER1].state == Player_State_Static
+            if player[SLOT_PLAYER1].animation == ANI_JUMPING
+                if player[SLOT_PLAYER1].ypos > object.ypos
+                    object.state = TUBEDOOR_CHECK_HEIGHT
+                end if
+            end if
+        end if
+        break
+
+    case TUBEDOOR_CLOSE
+        if object.offset.x > 0
+            object.offset.x -= 0x20000
+        else
+            object.state = TUBEDOOR_CLOSED
+        end if
+        break
+
+    case TUBEDOOR_CHECK_HEIGHT
+        temp0 = object.ypos
+        temp0 -= player[SLOT_PLAYER1].ypos
+        if temp0 > 0x100000
+            object.state = TUBEDOOR_CLOSE
+        end if
+        break
+
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state == TUBEDOOR_CLOSED
+            BoxCollisionTest(C_PLATFORM, object.entityPos, -8, -4, 56, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        else
+            BoxCollisionTest(C_PLATFORM, object.entityPos, -8, -4, 4, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, 44, -4, 56, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    temp0 = object.offset.x
+    FlipSign(temp0)
+    temp0 += object.xpos
+    DrawSpriteXY(2, temp0, object.ypos)
+
+    temp0 = object.offset.x
+    temp0 += object.xpos
+    DrawSpriteXY(3, temp0, object.ypos)
+
+    DrawSprite(0)
+    DrawSprite(1)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects2.gif")
+
+    SpriteFrame(-8, -4, 16, 8, 19, 75)  // #0 - Tube Door left side
+    SpriteFrame(40, -4, 16, 8, 133, 26) // #1 - Tube Door right side
+    SpriteFrame(8, -4, 16, 8, 100, 26)  // #2 - Tube Door first half
+    SpriteFrame(24, -4, 16, 8, 116, 26) // #3 - Tube Door second half
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // type
+			if object.propertyValue != 0
+				checkResult = 1
+			else
+				checkResult = 0
+			end if
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // type
+			if editor.variableValue != 0
+				object.propertyValue = 1
+			else
+				object.propertyValue = 0
+			end if
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(2)
+	DrawSprite(3)
+	DrawSprite(0)
+	DrawSprite(1)
+
+	if object.propertyValue == TRIGGER_BY_BUTTON
+		if editor.showGizmos == true
+			editor.drawingOverlay = true
+			DrawLine(object.xpos, object.ypos, pushButton.xpos, pushButton.ypos, 255, 255, 0)
+			editor.drawingOverlay = false
+		end if
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-8, -4, 16, 8, 19, 75)	// #0 - Tube Door left side
+	SpriteFrame(40, -4, 16, 8, 133, 26)	// #1 - Tube Door right side
+	SpriteFrame(8, -4, 16, 8, 100, 26)	// #2 - Tube Door first half
+	SpriteFrame(24, -4, 16, 8, 116, 26)	// #3 - Tube Door second half
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Trigger by button", TRIGGER_BY_BUTTON)
+	AddEnumVariable("No trigger", TRIGGER_NONE)
+end event

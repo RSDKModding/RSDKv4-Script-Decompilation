@@ -1,0 +1,208 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Solid Barrier Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Property Values
+private alias 0 : INACTIVE
+private alias 1 : CLOSE_CHECK
+private alias 2 : CLOSE_AUTO
+private alias 3 : OPEN_EGGMAN
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.propertyValue
+    case CLOSE_CHECK
+        BoxCollisionTest(C_TOUCH, object.entityPos, 112, -64, 256, 256, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            object.propertyValue = CLOSE_AUTO
+        end if
+        break
+
+    case CLOSE_AUTO
+        if object.timer < 64
+            object.timer += 4
+            object.ypos += 0x40000
+        else
+            object.propertyValue = INACTIVE
+        end if
+        break
+
+    case OPEN_EGGMAN
+        if object.timer < 128
+            object.timer += 4
+            object.ypos += 0x40000
+        else
+            object.propertyValue = INACTIVE
+        end if
+        break
+    end switch
+
+    if object.propertyValue > CLOSE_CHECK
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_SOLID, object.entityPos, -64, -64, 64, 128, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        next
+    else
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_SOLID, object.entityPos, -64, -64, 64, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    temp0 = 0
+    while temp0 < 16
+        DrawSprite(temp0)
+        temp0++
+    loop
+end event
+
+
+event ObjectStartup
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp2 = 163
+        temp3 = 1
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp2 = 1
+        temp3 = 157
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp2 = 1
+        temp3 = 190
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp2 = 1
+        temp3 = 223
+        break
+    end switch
+
+    temp0 = -64
+    temp1 = -64
+    while temp1 < 64
+        while temp0 < 64
+            SpriteFrame(temp0, temp1, 32, 32, temp2, temp3)
+            temp0 += 32
+        loop
+        temp0 = -64
+        temp1 += 32
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // blocks
+            checkResult = object.propertyValue
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // blocks
+            object.propertyValue = editor.variableValue
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    temp0 = 0
+    while temp0 < 16
+        DrawSprite(temp0)
+        temp0++
+    loop
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+    
+    switch checkResult
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp2 = 163
+        temp3 = 1
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp2 = 1
+        temp3 = 157
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp2 = 1
+        temp3 = 190
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp2 = 1
+        temp3 = 223
+        break
+
+    end switch
+
+    temp0 = -64
+    temp1 = -64
+    while temp1 < 64
+        while temp0 < 64
+            SpriteFrame(temp0, temp1, 32, 32, temp2, temp3)
+            temp0 += 32
+        loop
+        temp0  = -64
+        temp1 += 32
+    loop
+
+    AddEditorVariable("behaviour")
+    SetActiveVariable("behaviour")
+    AddEnumVariable("Inactive", INACTIVE)
+    AddEnumVariable("Check player to close", CLOSE_CHECK)
+    AddEnumVariable("Close automatically", CLOSE_AUTO)
+    AddEnumVariable("Open by Eggman", OPEN_EGGMAN)
+end event

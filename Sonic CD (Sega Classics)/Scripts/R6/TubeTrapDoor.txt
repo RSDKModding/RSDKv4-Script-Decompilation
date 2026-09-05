@@ -1,0 +1,214 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tube Trap Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.state          : player.state
+private alias object.xpos           : player.xpos
+private alias object.ypos           : player.ypos
+private alias object.xvel           : player.xvel
+private alias object.speed          : player.speed
+private alias object.pushing        : player.pushing
+private alias object.direction      : player.direction
+private alias object.animation      : player.animation
+private alias object.collisionLeft  : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+
+// States
+private alias 0 : TUBETRAPDOOR_ASCEND
+private alias 1 : TUBETRAPDOOR_DELAY_1
+private alias 2 : TUBETRAPDOOR_DESCEND
+private alias 3 : TUBETRAPDOOR_DELAY_2
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case TUBETRAPDOOR_ASCEND
+		if object.timer < 8
+			object.timer++
+			object.ypos -= 0xA0000
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case TUBETRAPDOOR_DELAY_1
+		if object.timer < 60
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case TUBETRAPDOOR_DESCEND
+		if object.timer < 80
+			object.timer++
+			object.ypos += 0x10000
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case TUBETRAPDOOR_DELAY_2
+		if object.timer < 60
+			object.timer++
+		else
+			object.timer = 0
+			object.state = TUBETRAPDOOR_ASCEND
+		end if
+		break
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -33, -40, 33, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			if player[currentPlayer].xpos < object.xpos
+				temp0 = object.xpos
+				temp0 -= player[currentPlayer].xpos
+
+				temp1 = 0x240000
+				temp1 -= player[currentPlayer].xvel
+
+				if temp0 > temp1
+					if player[currentPlayer].speed > -1
+						player[currentPlayer].xpos = -32
+						player[currentPlayer].xpos -= player[currentPlayer].collisionRight
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.xpos
+					end if
+
+					if player[currentPlayer].speed > 0
+						if player[currentPlayer].direction == FACING_RIGHT
+							player[currentPlayer].pushing = 2
+						end if
+
+						player[currentPlayer].speed = 0
+						player[currentPlayer].xvel = 0
+					end if
+				else
+					if object.state < TUBETRAPDOOR_DESCEND
+						if temp0 > 0x180000
+							player[currentPlayer].xpos += 0x140000
+							player[currentPlayer].speed = 0
+							player[currentPlayer].xvel = 0
+						end if
+					end if
+				end if
+			else
+				temp0 = player[currentPlayer].xpos
+				temp0 -= object.xpos
+
+				temp1 = 0x240000
+				temp1 += player[currentPlayer].xvel
+
+				if temp0 > temp1
+					if player[currentPlayer].speed < 1
+						player[currentPlayer].xpos = 32
+						player[currentPlayer].xpos -= player[currentPlayer].collisionLeft
+						player[currentPlayer].xpos <<= 16
+						player[currentPlayer].xpos += object.xpos
+					end if
+
+					if player[currentPlayer].speed < 0
+						if player[currentPlayer].direction == FACING_LEFT
+							player[currentPlayer].pushing = 2
+						end if
+
+						player[currentPlayer].speed = 0
+						player[currentPlayer].xvel = 0
+					end if
+				else
+					if object.state < TUBETRAPDOOR_DESCEND
+						if temp0 > 0x180000
+							player[currentPlayer].xpos -= 0x140000
+							player[currentPlayer].speed = 0
+							player[currentPlayer].xvel = 0
+						end if
+					end if
+				end if
+			end if
+		end if
+
+		switch object.state
+		case TUBETRAPDOOR_ASCEND
+			if object.timer < 4
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -30, -40, 30, -20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, -40, 16, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+				if checkResult == true
+					player[currentPlayer].speed >>= 1
+					player[currentPlayer].xvel >>= 1
+
+					BoxCollisionTest(C_SOLID, object.entityPos, -48, -80, -32, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					BoxCollisionTest(C_SOLID, object.entityPos, 32, -80, 48, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+					if player[currentPlayer].state == Player_State_Fly
+						player[currentPlayer].state = Player_State_Air
+						player[currentPlayer].animation = ANI_WALKING
+					end if
+				end if
+			end if
+			break
+
+		case TUBETRAPDOOR_DESCEND
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -30, -41, 30, -20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				player[currentPlayer].ypos += 0x10000
+			end if
+			break
+
+		case TUBETRAPDOOR_DELAY_2
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -30, -40, 30, -20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			break
+		end switch
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+	SpriteFrame(-32, -40, 64, 80, 191, 175) // #0 - Tube Trap Door
+
+	foreach (TypeName[Tube Trap Door], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+	SpriteFrame(-32, -40, 64, 80, 191, 175) // #0 - Tube Trap Door
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

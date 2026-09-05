@@ -1,0 +1,186 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Moving Wall Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.xpos        : player.xpos
+private alias object.controlMode : player.controlMode
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Property Values
+private alias 0 : MOVING_WALL
+private alias 1 : STOPPED_WALL
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.propertyValue == MOVING_WALL
+        if player[SLOT_PLAYER1].controlMode > CONTROLMODE_NONE
+            if object.timer < 384
+                object.timer++
+                object.xpos += 0x8000
+            else
+                object.priority = PRIORITY_BOUNDS
+                object.propertyValue = STOPPED_WALL
+            end if
+        end if
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_SOLID, object.entityPos, -32, -64, 32, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        
+        // The player can actually stand in the floor while pushing instead of being thrown out by the wall, this checks fixes it
+        if checkResult == COL_RIGHT
+            if object.timer == 383
+                player[currentPlayer].xpos += 0x20000
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+    DrawSprite(1)
+    DrawSprite(2)
+    DrawSprite(3)
+    DrawSprite(4)
+    DrawSprite(5)
+    DrawSprite(6)
+    DrawSprite(7)
+end event
+
+
+event ObjectStartup
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        break
+    end switch
+
+    // R4 Blocks
+    SpriteFrame(-32, -64, 32, 32, temp0, temp1)
+    SpriteFrame(0, -64, 32, 32, temp0, temp1)
+    SpriteFrame(-32, -32, 32, 32, temp0, temp1)
+    SpriteFrame(0, -32, 32, 32, temp0, temp1)
+    SpriteFrame(-32, 0, 32, 32, temp0, temp1)
+    SpriteFrame(0, 0, 32, 32, temp0, temp1)
+    SpriteFrame(-32, 32, 32, 32, temp0, temp1)
+    SpriteFrame(0, 32, 32, 32, temp0, temp1)
+
+    foreach (TypeName[Moving Wall], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].drawOrder = 4
+        object[arrayPos0].priority = PRIORITY_ACTIVE
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(1)
+    DrawSprite(2)
+    DrawSprite(3)
+    DrawSprite(4)
+    DrawSprite(5)
+    DrawSprite(6)
+    DrawSprite(7)
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+
+    switch checkResult
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        break
+
+    end switch
+
+    // R4 Blocks
+    SpriteFrame(-32, -64, 32, 32, temp0, temp1)
+    SpriteFrame(0, -64, 32, 32, temp0, temp1)
+    SpriteFrame(-32, -32, 32, 32, temp0, temp1)
+    SpriteFrame(0, -32, 32, 32, temp0, temp1)
+    SpriteFrame(-32, 0, 32, 32, temp0, temp1)
+    SpriteFrame(0, 0, 32, 32, temp0, temp1)
+    SpriteFrame(-32, 32, 32, 32, temp0, temp1)
+    SpriteFrame(0, 32, 32, 32, temp0, temp1)
+
+    AddEditorVariable("moveState")
+    SetActiveVariable("moveState")
+    AddEnumVariable("Moving Wall", MOVING_WALL)
+    AddEnumVariable("Stopped Wall", STOPPED_WALL)
+end event

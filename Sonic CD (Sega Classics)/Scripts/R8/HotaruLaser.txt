@@ -1,0 +1,95 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Hotaru Laser Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.laserYPos
+private alias object.value2 : object.hotaruEntity
+
+// States
+private alias 0 : HOTARULASER_SHOT
+private alias 1 : HOTARULASER_SPLASH
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case HOTARULASER_SHOT
+		object.ypos += 0x80000
+		ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+		if checkResult == true
+			object.laserYPos = object.ypos
+			object.state++
+		end if
+		break
+
+	case HOTARULASER_SPLASH
+		if object.timer < 2
+			object.ypos += 0x80000
+			object.timer++
+		else
+			object.type = TypeName[Blank Object]
+		end if
+		break
+
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		arrayPos0 = object.hotaruEntity
+		if object[arrayPos0].type == TypeName[Hotaru]
+			BoxCollisionTest(C_TOUCH, object.entityPos, -4, -8, 4, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_Hit)
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(2)
+
+	temp0 = object.animationTimer
+	temp0 >>= 1
+	DrawSpriteXY(temp0, object.xpos, object.laserYPos)
+
+	object.animationTimer++
+	object.animationTimer &= 3
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R8/Objects3.gif")
+
+	SpriteFrame(-12, -8, 24, 16, 146, 158)	// #0 - Laser Splash frame 0
+	SpriteFrame(-12, -8, 24, 16, 171, 158)	// #1 - Laser Splash frame 1
+
+	SpriteFrame(-4, -8, 8, 22, 196, 133)	// #2 - Laser
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects3.gif")
+	SpriteFrame(-4, -8, 8, 22, 196, 133)	// #0 - Laser
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

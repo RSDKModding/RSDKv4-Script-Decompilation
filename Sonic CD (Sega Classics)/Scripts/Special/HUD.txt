@@ -1,0 +1,189 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: HUD Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+// Not all of these are used here in the HUD script, some are just used as a way for other objects to globally transmit values
+private alias object.value0 : object.ufosCount     // Initially set via a loop in the UFO script
+private alias object.value1 : object.timeSeconds   // Displayed time
+private alias object.value2 : object.timeFrames    // Hidden and used for time processing, this value is managed by Special Setup instead of here
+private alias object.value3 : object.rings
+private alias object.value4 : object.lastUFOType   // Used by UFOs for ring streak bonus
+private alias object.value5 : object.speedShoes    // Used to transmit between player and UFO
+private alias object.value6 : object.bonusUFONo    // "No" akin to Entity No, not as in "is there no UFO?"
+private alias object.value7 : object.waterTimer    // Used in making time deplete faster when wet
+
+// Game Mode Aliases
+private alias 2 : MODE_TIMEATTACK
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Find the initial X Position to draw the HUD elements
+	temp1 = screen.xcenter
+	temp1 -= 128
+
+	// Draw the "UFO" graphic
+	DrawSpriteScreenXY(10, temp1, 10)
+
+	// Draw the first digit of the UFOs counter
+	temp0 = object.ufosCount
+	temp0 /= 10
+	temp1 += 24
+	DrawSpriteScreenXY(temp0, temp1, 11)
+
+	// Draw the second digit of the UFOs counter
+	temp0 = object.ufosCount
+	temp0 %= 10
+	temp1 += 8
+	DrawSpriteScreenXY(temp0, temp1, 11)
+
+	// Draw the "Time" Graphic
+	temp1 += 48
+	DrawSpriteScreenXY(11, temp1, 16)
+
+	if options.gameMode < MODE_TIMEATTACK
+		// In one of the normal game modes, where this object is the one keeping track of the time
+
+		// First digit of time
+		temp0 = object.timeSeconds
+		temp0 /= 100
+		temp1 += 40
+		DrawSpriteScreenXY(temp0, temp1, 11)
+
+		// Second digit of time
+		temp0 = object.timeSeconds
+		temp0 %= 100
+		temp0 /= 10
+		temp1 += 8
+		DrawSpriteScreenXY(temp0, temp1, 11)
+
+		// Last digit of time
+		temp0 = object.timeSeconds
+		temp0 %= 10
+		temp1 += 8
+		DrawSpriteScreenXY(temp0, temp1, 11)
+
+		temp1 += 64
+	else
+		// In Time Attack, where the global Stage.* variables are used for tracking time instead
+
+		// First things first, cap the timer at half an hour
+		// That's quite a while... why are you still here?
+		// (Note - this wasn't in the initial version of the game, it came from a mobile update - and origins, later on)
+		if stage.minutes > 29
+			stage.minutes = 30
+			stage.seconds = 0
+			stage.milliSeconds = 0
+		end if
+
+		// Now, actually draw the number
+
+		// First draw the minutes
+		temp1 += 40
+		DrawNumbers(0, temp1, 11, stage.minutes, 2, 8, 1)
+
+		// Then draw the seconds tick
+		temp1 += 8
+		DrawSpriteScreenXY(13, temp1, 11)
+
+		// And draw the following seconds
+		temp1 += 16
+		DrawNumbers(0, temp1, 11, stage.seconds, 2, 8, 1)
+
+		// Then draw the milliseconds tick
+		temp1 += 8
+		DrawSpriteScreenXY(14, temp1, 11)
+
+		// And draw its corresponding milliseconds
+		temp1 += 16
+		DrawNumbers(0, temp1, 11, stage.milliSeconds, 2, 8, 1)
+
+		// And the add the remaining X space left to temp1, in order to make other HUD elements appear in their right positions
+		temp1 += 32
+	end if
+
+	// Draw the "Rings" Graphic
+	DrawSpriteScreenXY(12, temp1, 16)
+
+	// Draw the first digit of the Rings counter
+	temp0 = object.rings
+	temp0 /= 100
+	temp1 += 32
+	DrawSpriteScreenXY(temp0, temp1, 11)
+
+	// Then draw the second digit of the Rings counter
+	temp0 = object.rings
+	temp0 %= 100
+	temp0 /= 10
+	temp1 += 8
+	DrawSpriteScreenXY(temp0, temp1, 11)
+
+	// And finally, draw the last, third digit of the Rings counter
+	temp0 = object.rings
+	temp0 %= 10
+	temp1 += 8
+	DrawSpriteScreenXY(temp0, temp1, 11)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// Place the HUD object into reserved object slot 4 and initialise its values
+	object[4].type = TypeName[HUD]
+
+	// The object should always be run, regardless if it's within camera bounds or not
+	object[4].priority = PRIORITY_ACTIVE
+
+	// Make the HUD draw ontop of all other sprites, too
+	object[4].drawOrder = 6
+
+	// Reset the last cleared UFO type
+	// (Needs to be set to -1 and not just default 0 because the Rings UFO uses type 0)
+	object[4].lastUFOType = -1
+
+	// 0-9 - Numbers 0-9
+	SpriteFrame(0, 0, 8, 13, 206, 84)
+	SpriteFrame(0, 0, 8, 13, 215, 84)
+	SpriteFrame(0, 0, 8, 13, 224, 84)
+	SpriteFrame(0, 0, 8, 13, 233, 84)
+	SpriteFrame(0, 0, 8, 13, 242, 84)
+	SpriteFrame(0, 0, 8, 13, 206, 98)
+	SpriteFrame(0, 0, 8, 13, 215, 98)
+	SpriteFrame(0, 0, 8, 13, 224, 98)
+	SpriteFrame(0, 0, 8, 13, 233, 98)
+	SpriteFrame(0, 0, 8, 13, 242, 98)
+
+	SpriteFrame(0, 0, 24, 16, 206, 58) // 10 - UFO Counter Graphic
+	SpriteFrame(0, 0, 24, 8, 231, 58)  // 11 - Time Graphic
+	SpriteFrame(0, 0, 31, 8, 206, 75)  // 12 - Rings Graphic
+	SpriteFrame(0, 0, 8, 13, 224, 112) // 13 - Single Tick Graphic
+	SpriteFrame(0, 0, 8, 13, 233, 112) // 14 - Double Tick Graphic
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(0, 0, 24, 16, 206, 58)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

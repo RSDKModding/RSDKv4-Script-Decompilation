@@ -1,0 +1,310 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Big Bomb Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value3 : object.leftBound
+private alias object.value4 : object.rightBound
+private alias object.value5 : object.savedYPos
+
+// Player Aliases
+private alias object.collisionPlane : player.collisionPlane
+
+// States
+private alias 0 : BIGBOMB_SETUP
+private alias 1 : BIGBOMB_MOVE_LEFT
+private alias 2 : BIGBOMB_MOVE_RIGHT
+private alias 3 : BIGBOMB_WAIT_PLAYER
+private alias 4 : BIGBOMB_PREPARE_FUSE
+private alias 5 : BIGBOMB_START_FUSE
+private alias 6 : BIGBOMB_EXPLODE
+
+// Animations
+private alias 0 : BOMBANI_IDLE
+private alias 1 : BOMBANI_WALKING
+private alias 2 : BOMBANI_SPOTTED
+private alias 3 : BOMBANI_EXPLOSION
+
+// Collision Planes
+private alias 0 : COLLISION_PLANE_A
+
+// Property Values
+private alias 0 : MOVING_BOMB
+private alias 1 : STATIC_BOMB
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BIGBOMB_SETUP
+        object.priority = PRIORITY_ACTIVE
+        ObjectTileCollision(CSIDE_FLOOR, 0, 27, 0)
+        if checkResult == true
+            if object.propertyValue == STATIC_BOMB
+                object.state = BIGBOMB_WAIT_PLAYER
+                object.direction = FACING_LEFT
+                object.animation = BOMBANI_IDLE
+            else
+                object.state = BIGBOMB_MOVE_LEFT
+                object.animation = BOMBANI_WALKING
+
+                object.leftBound = object.xpos
+                object.leftBound -= 0xC0000
+
+                object.rightBound = object.xpos
+                object.rightBound += 0xC0000
+            end if
+        else
+            object.ypos += 0x10000
+        end if
+        break
+
+    case BIGBOMB_MOVE_LEFT
+        object.xpos -= 0xA000
+        if object.xpos < object.leftBound
+            object.direction = FACING_LEFT
+            object.state = BIGBOMB_MOVE_RIGHT
+        end if
+
+        ObjectTileGrip(CSIDE_FLOOR, 0, 27, 0)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -96, -128, 96, 27, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            object.state = BIGBOMB_START_FUSE
+            object.animation = BOMBANI_SPOTTED
+        end if
+        break
+
+    case BIGBOMB_MOVE_RIGHT
+        object.xpos += 0xA000
+        if object.xpos > object.rightBound
+            object.direction = FACING_RIGHT
+            object.state = BIGBOMB_MOVE_LEFT
+        end if
+
+        ObjectTileGrip(CSIDE_FLOOR, 0, 27, 0)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -96, -128, 96, 27, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            object.state = BIGBOMB_START_FUSE
+            object.animation = BOMBANI_SPOTTED
+        end if
+        break
+
+    case BIGBOMB_WAIT_PLAYER
+        BoxCollisionTest(C_TOUCH, object.entityPos, -96, -128, 96, 27, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            object.animation = BOMBANI_WALKING
+            object.state++
+        end if
+        break
+
+    case BIGBOMB_PREPARE_FUSE
+        object.xpos += 0x20000
+        ObjectTileGrip(CSIDE_FLOOR, 24, 27, 0)
+        if checkResult == false
+            object.state = BIGBOMB_START_FUSE
+            object.animation = BOMBANI_SPOTTED
+        end if
+        break
+
+    case BIGBOMB_START_FUSE
+        if object.timer < 30
+            object.timer++
+        else
+            object.timer = 0
+            object.animation = BOMBANI_EXPLOSION
+            object.animationTimer = 0
+            object.savedYPos = object.ypos
+            object.state++
+        end if
+        break
+
+    case BIGBOMB_EXPLODE
+        if object.timer < 120
+            object.timer++
+            object.savedYPos += 0x4000
+        else
+            CreateTempObject(TypeName[BB Fireball], 0, object.xpos, object.ypos)
+            object[tempObjectPos].xvel = -0x30000
+            object[tempObjectPos].yvel = -0x62000
+
+            CreateTempObject(TypeName[BB Fireball], 0, object.xpos, object.ypos)
+            object[tempObjectPos].xvel = -0x20000
+            object[tempObjectPos].yvel = -0x52000
+
+            CreateTempObject(TypeName[BB Fireball], 0, object.xpos, object.ypos)
+            object[tempObjectPos].xvel = -0x10000
+            object[tempObjectPos].yvel = -0x42000
+
+            CreateTempObject(TypeName[BB Fireball], 0, object.xpos, object.ypos)
+            object[tempObjectPos].xvel = 0
+            object[tempObjectPos].yvel = -0x32000
+
+            CreateTempObject(TypeName[BB Fireball], 0, object.xpos, object.ypos)
+            object[tempObjectPos].xvel = 0x10000
+            object[tempObjectPos].yvel = -0x42000
+
+            CreateTempObject(TypeName[BB Fireball], 0, object.xpos, object.ypos)
+            object[tempObjectPos].xvel = 0x20000
+            object[tempObjectPos].yvel = -0x52000
+
+            CreateTempObject(TypeName[BB Fireball], 0, object.xpos, object.ypos)
+            object[tempObjectPos].xvel = 0x30000
+            object[tempObjectPos].yvel = -0x62000
+
+            CreateTempObject(TypeName[Explosion], 0, object.xpos, object.ypos)
+            ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+
+            PlaySfx(SfxName[Jump], false)
+        end if
+        break
+
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if player[currentPlayer].collisionPlane == COLLISION_PLANE_A
+            BoxCollisionTest(C_TOUCH, object.entityPos, -18, -18, 18, 18, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CallFunction(Player_Hit)
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    switch object.animation
+    case BOMBANI_IDLE
+        DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case BOMBANI_WALKING
+        temp0 = object.animationTimer
+        temp0 /= 20
+        temp0 *= 3
+        temp0 += 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        temp0++
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        temp0++
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        object.animationTimer++
+        object.animationTimer %= 80
+        break
+
+    case BOMBANI_SPOTTED
+        temp0 = object.animationTimer
+        temp0 /= 20
+        temp0 *= 3
+        temp0 += 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        temp0++
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        temp0++
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case BOMBANI_EXPLOSION
+        temp0 = object.animationTimer
+        temp0 /= 3
+        temp0 += 15
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.savedYPos)
+        object.animationTimer++
+        object.animationTimer %= 6
+        DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+        DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects2.gif")
+
+	// Walking frames
+	SpriteFrame(-20, -20, 40, 40, 67, 82)	// #0  - Big Bomb body frame 0
+	SpriteFrame(-27, 3, 48, 24, 109, 35)	// #1  - Big Bomb legs frame 0
+	SpriteFrame(-4, -44, 8, 24, 176, 18)	// #2  - Big Bomb fuse frame 0
+
+	SpriteFrame(-20, -22, 40, 40, 67, 82)	// #3  - Big Bomb body frame 1
+	SpriteFrame(-12, 3, 32, 24, 150, 85)	// #4  - Big Bomb legs frame 1
+	SpriteFrame(-4, -46, 8, 24, 176, 18)	// #5  - Big Bomb fuse frame 1
+
+	SpriteFrame(-20, -20, 40, 40, 67, 82)	// #6  - Big Bomb body frame 2
+	SpriteFrame(-27, 3, 48, 24, 109, 35)	// #7  - Big Bomb legs frame 2
+	SpriteFrame(-4, -44, 8, 24, 176, 18)	// #8  - Big Bomb fuse frame 2
+
+	SpriteFrame(-20, -22, 40, 40, 67, 82)	// #9  - Big Bomb body frame 3
+	SpriteFrame(-20, 3, 48, 24, 109, 60)	// #10 - Big Bomb legs frame 3
+	SpriteFrame(-4, -46, 8, 24, 176, 18)	// #11 - Big Bomb fuse frame 3
+
+	// Explosion charge
+	SpriteFrame(-20, -20, 40, 40, 67, 82)	// #12 - Big Bomb body frame 4
+	SpriteFrame(-20, 3, 40, 24, 109, 85)	// #13 - Big Bomb legs frame 4
+
+	SpriteFrame(-4, -44, 8, 24, 176, 18)	// #14 - Big Bomb active fuse frame 0
+	SpriteFrame(-4, -44, 8, 24, 158, 18)	// #15 - Big Bomb active fuse frame 1
+	SpriteFrame(-4, -44, 8, 24, 167, 18)	// #16 - Big Bomb active fuse frame 2
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	// Walking frames
+	SpriteFrame(-20, -20, 40, 40, 67, 82)	// #0  - Big Bomb body frame 0
+	SpriteFrame(-27, 3, 48, 24, 109, 35)	// #1  - Big Bomb legs frame 0
+	SpriteFrame(-4, -44, 8, 24, 176, 18)	// #2  - Big Bomb fuse frame 0
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Moving Bomb", MOVING_BOMB)
+	AddEnumVariable("Static Bomb", STATIC_BOMB)
+end event

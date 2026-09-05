@@ -1,0 +1,379 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Special Icon Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.minutes
+private alias object.value2        : object.seconds
+private alias object.value3        : object.milliseconds
+private alias object.value4        : object.lockedZone
+private alias object.propertyValue : object.portrait
+
+// Menu Control Aliases
+private alias object[0].value2 : menuControl.selectedButton // Only used for Mobile
+private alias object[0].value3 : menuControl.savedRound     // This is used AFTER you play in time attack
+private alias object[0].state  : menuControl.state          // This is used AFTER you play in time attack
+
+// States
+private alias 0 : ROUNDICON_BLANK
+private alias 1 : ROUNDICON_SELECTED_ZONE
+
+// MenuControl States
+private alias 2 : MENUCONTROL_CONTROLS
+private alias 3 : MENUCONTROL_BLANK
+private alias 4 : MENUCONTROL_RETURN_TO_MENU
+private alias 5 : MENUCONTROL_ENTER_SM
+
+// Property Values
+private alias 0 : SPECIAL_STAGE_1_ICON
+private alias 1 : SPECIAL_STAGE_2_ICON
+private alias 2 : SPECIAL_STAGE_3_ICON
+private alias 3 : SPECIAL_STAGE_4_ICON
+private alias 4 : SPECIAL_STAGE_5_ICON
+private alias 5 : SPECIAL_STAGE_6_ICON
+private alias 6 : SPECIAL_STAGE_7_ICON
+private alias 7 : EXIT_ICON
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if options.physicalControls == false
+		if menuControl.state == MENUCONTROL_CONTROLS
+			temp0 = object.ixpos
+			temp0 -= 34
+			temp1 = object.ixpos
+			temp1 += 34
+			temp2 = object.iypos
+			temp2 -= 45
+			temp3 = object.iypos
+			temp3 += 45
+			CheckTouchRect(temp0, temp2, temp1, temp3)
+			if checkResult > -1
+				menuControl.selectedButton = object.portrait
+			else
+				CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+				if checkResult < 0
+					if menuControl.selectedButton == object.portrait
+						PlaySfx(SfxName[Select], false)
+
+						menuControl.state = MENUCONTROL_BLANK
+						object.state = ROUNDICON_SELECTED_ZONE
+
+						if object.portrait == EXIT_ICON // Exit button pressed?
+							StopMusic()
+						end if
+					end if
+				else
+					if menuControl.selectedButton == object.portrait
+						menuControl.selectedButton = -1
+					end if
+				end if
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(10)
+
+	// Icon Movement
+	object.rotation++
+	object.rotation &= 511
+
+	Cos(temp0, object.rotation)
+	temp0 >>= 4
+
+	Sin(temp1, object.rotation)
+	temp1 >>= 4
+
+	switch object.portrait
+	case SPECIAL_STAGE_1_ICON
+		temp0 += 64
+		temp1 += 364
+		break
+
+	case SPECIAL_STAGE_2_ICON
+		temp0 += 192
+		temp1 += 364
+		break
+
+	case SPECIAL_STAGE_3_ICON
+		temp0 += 320
+		temp1 += 364
+		break
+
+	case SPECIAL_STAGE_4_ICON
+		temp0 += 448
+		temp1 += 364
+		break
+
+	case SPECIAL_STAGE_5_ICON
+		temp0 += 64
+		temp1 += 508
+		break
+
+	case SPECIAL_STAGE_6_ICON
+		temp0 += 192
+		temp1 += 508
+		break
+
+	case SPECIAL_STAGE_7_ICON
+		temp0 += 320
+		temp1 += 508
+		break
+
+	end switch
+
+	if object.portrait < EXIT_ICON // Draw for all special stages
+		vertexBuffer[0].x = object.xpos
+		vertexBuffer[0].x >>= 16
+		vertexBuffer[0].x -= 32
+		vertexBuffer[0].u = temp0
+		vertexBuffer[0].u -= 32
+		vertexBuffer[0].y = object.ypos
+		vertexBuffer[0].y >>= 16
+		vertexBuffer[0].y -= 43
+		vertexBuffer[0].v = temp1
+		vertexBuffer[0].v -= 43
+
+		vertexBuffer[1].x = object.xpos
+		vertexBuffer[1].x >>= 16
+		vertexBuffer[1].y = vertexBuffer[0].y
+		vertexBuffer[1].v = vertexBuffer[0].v
+
+		vertexBuffer[2].x = vertexBuffer[0].x
+		vertexBuffer[2].u = vertexBuffer[0].u
+		vertexBuffer[2].y = object.ypos
+		vertexBuffer[2].y >>= 16
+		vertexBuffer[2].y += 24
+		vertexBuffer[2].v = temp1
+		vertexBuffer[2].v += 24
+
+		vertexBuffer[3].x = vertexBuffer[1].x
+		vertexBuffer[3].u = vertexBuffer[1].u
+		vertexBuffer[3].y = vertexBuffer[2].y
+		vertexBuffer[3].v = vertexBuffer[2].v
+
+		Draw3DScene()
+		DrawSprite(19)
+
+		temp0 = object.xpos
+		temp0 >>= 16
+		temp0 -= 24
+
+		temp1 = object.ypos
+		temp1 >>= 16
+		temp1 += 34
+
+		// Zone specific time
+		DrawNumbers(0, temp0, temp1, object.minutes, 2, 6, 1)
+
+		temp0 += 16
+		DrawNumbers(0, temp0, temp1, object.seconds, 2, 6, 1)
+
+		temp0 += 19
+		DrawNumbers(0, temp0, temp1, object.milliseconds, 2, 6, 1)
+	else
+		// Draw the Exit
+		DrawSprite(20)
+
+		temp0 = object.xpos
+		temp0 >>= 16
+		temp0 -= 18
+
+		temp1 = object.ypos
+		temp1 >>= 16
+		temp1 += 34
+
+		// Total Time
+		DrawNumbers(0, temp0, temp1, object.minutes, 3, 6, 1)
+
+		temp0 += 16
+		DrawNumbers(0, temp0, temp1, object.seconds, 2, 6, 1)
+
+		temp0 += 19
+		DrawNumbers(0, temp0, temp1, object.milliseconds, 2, 6, 1)
+
+		DrawSprite(22)
+	end if
+
+	DrawSprite(object.frame)
+
+	if object.state == ROUNDICON_SELECTED_ZONE
+		temp0 = object.timer
+		temp0 &= 3
+		temp0 >>= 1
+		if temp0 == 0
+			if menuControl.savedRound == object.portrait
+				DrawSprite(21)
+			end if
+		end if
+
+		object.timer++
+		if object.timer == 30
+			object.timer = 0
+			object.state = ROUNDICON_BLANK
+			if object.portrait == EXIT_ICON
+				menuControl.state = MENUCONTROL_RETURN_TO_MENU
+			else
+				menuControl.state = MENUCONTROL_ENTER_SM
+				menuControl.selectedButton = -1
+			end if
+		end if
+	else
+		if menuControl.state == MENUCONTROL_CONTROLS
+			if menuControl.savedRound == object.portrait
+				DrawSprite(21)
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("TAttack/TimeAttack.gif")
+
+	SpriteFrame(0, 0, 6, 8, 330, 577)		// #0  - 0
+	SpriteFrame(0, 0, 6, 8, 337, 577)		// #1  - 1
+	SpriteFrame(0, 0, 6, 8, 344, 577)		// #2  - 2
+	SpriteFrame(0, 0, 6, 8, 351, 577)		// #3  - 3
+	SpriteFrame(0, 0, 6, 8, 330, 586)		// #4  - 4
+	SpriteFrame(0, 0, 6, 8, 337, 586)		// #5  - 5
+	SpriteFrame(0, 0, 6, 8, 344, 586)		// #6  - 6
+	SpriteFrame(0, 0, 6, 8, 351, 586)		// #7  - 7
+	SpriteFrame(0, 0, 6, 8, 330, 595)		// #8  - 8
+	SpriteFrame(0, 0, 6, 8, 337, 595)		// #9  - 9
+	SpriteFrame(-34, -45, 68, 90, 1, 609)	// #10 - Border
+	SpriteFrame(-32, 15, 64, 16, 66, 764)	// #11 - Special Zone 1
+	SpriteFrame(-32, 15, 64, 16, 131, 764)	// #12 - Special Zone 2
+	SpriteFrame(-32, 15, 64, 16, 196, 764)	// #13 - Special Zone 3
+	SpriteFrame(-32, 15, 64, 16, 261, 764)	// #14 - Special Zone 4
+	SpriteFrame(-32, 15, 64, 16, 66, 780)	// #15 - Special Zone 5
+	SpriteFrame(-32, 15, 64, 16, 131, 780)	// #16 - Special Zone 6
+	SpriteFrame(-32, 15, 64, 16, 196, 780)	// #17 - Special Zone 7
+	SpriteFrame(-32, 15, 64, 16, 265, 593)	// #18 - Total Time
+	SpriteFrame(-32, 31, 64, 13, 70, 638)	// #19 - ' "
+	SpriteFrame(-32, 31, 64, 13, 70, 652)	// #20 -  ' "
+	SpriteFrame(-35, -46, 70, 92, 441, 860)	// #21 - Selected Border
+	SpriteFrame(-29, -22, 56, 21, 223, 679)	// #22 - Exit
+
+	arrayPos0 = 32
+	while arrayPos0 < 1056
+		if object[arrayPos0].type == TypeName[Special Icon]
+			object[arrayPos0].frame = object[arrayPos0].portrait
+			object[arrayPos0].frame += 11
+
+			object[arrayPos0].rotation = object[arrayPos0].portrait
+			object[arrayPos0].rotation <<= 8
+
+			if object[arrayPos0].portrait > 3
+				object[arrayPos0].rotation += 256
+			end if
+		end if
+		arrayPos0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.portrait
+			checkResult &= 7
+			break
+
+		case 0 // roundID
+			checkResult = object.portrait
+			checkResult &= 7
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.portrait = editor.variableValue
+			object.portrait &= 7
+			break
+
+		case 0 // roundID
+			object.portrait = editor.variableValue
+			object.portrait &= 7
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.frame = object.portrait
+	object.frame += 11
+
+	DrawSprite(10)
+
+	if object.portrait < EXIT_ICON
+		// Draw for all main stages
+		DrawSprite(19)
+	else
+		// Draw the Exit
+		DrawSprite(20)
+		DrawSprite(22)
+	end if
+
+	DrawSprite(object.frame)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("TAttack/TimeAttack.gif")
+	SpriteFrame(0, 0, 6, 8, 330, 577)		// #0  - 0
+	SpriteFrame(0, 0, 6, 8, 337, 577)		// #1  - 1
+	SpriteFrame(0, 0, 6, 8, 344, 577)		// #2  - 2
+	SpriteFrame(0, 0, 6, 8, 351, 577)		// #3  - 3
+	SpriteFrame(0, 0, 6, 8, 330, 586)		// #4  - 4
+	SpriteFrame(0, 0, 6, 8, 337, 586)		// #5  - 5
+	SpriteFrame(0, 0, 6, 8, 344, 586)		// #6  - 6
+	SpriteFrame(0, 0, 6, 8, 351, 586)		// #7  - 7
+	SpriteFrame(0, 0, 6, 8, 330, 595)		// #8  - 8
+	SpriteFrame(0, 0, 6, 8, 337, 595)		// #9  - 9
+	SpriteFrame(-34, -45, 68, 90, 1, 609)	// #10 - Border
+	SpriteFrame(-32, 15, 64, 16, 66, 764)	// #11 - Special Zone 1
+	SpriteFrame(-32, 15, 64, 16, 131, 764)	// #12 - Special Zone 2
+	SpriteFrame(-32, 15, 64, 16, 196, 764)	// #13 - Special Zone 3
+	SpriteFrame(-32, 15, 64, 16, 261, 764)	// #14 - Special Zone 4
+	SpriteFrame(-32, 15, 64, 16, 66, 780)	// #15 - Special Zone 5
+	SpriteFrame(-32, 15, 64, 16, 131, 780)	// #16 - Special Zone 6
+	SpriteFrame(-32, 15, 64, 16, 196, 780)	// #17 - Special Zone 7
+	SpriteFrame(-32, 15, 64, 16, 265, 593)	// #18 - Total Time
+	SpriteFrame(-32, 31, 64, 13, 70, 638)	// #19 - ' "
+	SpriteFrame(-32, 31, 64, 13, 70, 652)	// #20 -  ' "
+	SpriteFrame(-35, -46, 70, 92, 441, 860)	// #21 - Selected Border
+	SpriteFrame(-29, -22, 56, 21, 223, 679)	// #22 - Exit
+
+	AddEditorVariable("roundID")
+	SetActiveVariable("roundID")
+	AddEnumVariable("Special Zone 1", 0)
+	AddEnumVariable("Special Zone 2", 1)
+	AddEnumVariable("Special Zone 3", 2)
+	AddEnumVariable("Special Zone 4", 3)
+	AddEnumVariable("Special Zone 5", 4)
+	AddEnumVariable("Special Zone 6", 5)
+	AddEnumVariable("Special Zone 7", 6)
+	AddEnumVariable("Total Time", 7)
+end event

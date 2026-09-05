@@ -1,0 +1,352 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Yago Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.speed
+private alias object.value2        : object.dashSpeed
+private alias object.value3        : object.originPos.x
+private alias object.value4        : object.originPos.y
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : YAGO_DESCEND
+private alias 1 : YAGO_ADVANCE
+private alias 2 : YAGO_TURN_AROUND
+private alias 3 : YAGO_DELAY
+private alias 4 : YAGO_DASH_CHARGE
+private alias 5 : YAGO_SET_DASH_PROPERTIES
+private alias 6 : YAGO_GOOD_DASH
+private alias 7 : YAGO_BAD_DASH
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Yago_DebugDraw
+reserve function Yago_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Yago_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Yago_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Yago_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function Yago_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Yago_startDebugID
+    CreateTempObject(TypeName[Yago], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].originPos.x = object.xpos
+    object[tempObjectPos].originPos.y = object.ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case YAGO_DESCEND
+        object.ypos += 0x10000
+        ObjectTileCollision(CSIDE_FLOOR, 0, 17, 0)
+        if checkResult == true
+            object.direction = FACING_RIGHT
+            object.speed = 0x500000
+            object.xvel = -0x4000
+            object.priority = PRIORITY_ACTIVE
+            object.state++
+        end if
+        break
+
+    case YAGO_ADVANCE
+        object.speed += object.xvel
+        if object.speed >= 0
+            object.xpos += object.xvel
+            object.ypos += 0x8000
+
+            ObjectTileCollision(CSIDE_FLOOR, 0, 17, 0)
+
+            if object.direction == FACING_RIGHT
+                // Yes, Roof is used, not RWall
+                ObjectTileCollision(CSIDE_ROOF, -20, 0, 0)
+            else
+                ObjectTileCollision(CSIDE_LWALL, 20, 0, 0)
+            end if
+
+            if checkResult == true
+                object.state++
+                object.timer = 30
+            else
+                temp0 = object.xpos
+                temp0 -= object.xpos
+                if temp0 < 0
+                    FlipSign(temp0)
+                end if
+
+                if temp0 < 0x500000
+                    object.state = YAGO_DASH_CHARGE
+                    object.timer = 6
+                end if
+            end if
+        else
+            object.state++
+            object.timer = 30
+        end if
+        break
+
+    case YAGO_TURN_AROUND
+        if object.timer > 0
+            object.timer--
+        else
+            object.timer = 30
+            object.speed = 0x500000
+            object.direction++
+            object.direction &= FACING_LEFT
+            FlipSign(object.xvel)
+            object.state++
+        end if
+        break
+
+    case YAGO_DELAY
+        if object.timer > 0
+            object.timer--
+        else
+            object.state = YAGO_ADVANCE
+        end if
+        break
+
+    case YAGO_DASH_CHARGE
+        if object.timer > 0
+            object.timer--
+        else
+            object.timer = 30
+            object.state++
+        end if
+        break
+
+    case YAGO_SET_DASH_PROPERTIES
+        object.ypos += 0x2000
+        if object.timer > 0
+            object.timer--
+        else
+            if object.quality == QUALITY_GOOD
+                if object.direction == FACING_RIGHT
+                    object.dashSpeed = -0x48000
+                else
+                    object.dashSpeed = 0x48000
+                end if
+
+                object.yvel = -0x18000
+            else
+                if object.direction == FACING_RIGHT
+                    object.dashSpeed = -0x10000
+                else
+                    object.dashSpeed = 0x10000
+                end if
+            end if
+
+            object.yvel = -0x18000
+            if object.quality == QUALITY_GOOD
+                object.state++
+            else
+                object.state = YAGO_BAD_DASH
+            end if
+        end if
+        break
+
+    case YAGO_GOOD_DASH
+        object.xpos += object.dashSpeed
+
+        if object.direction == FACING_RIGHT
+            ObjectTileCollision(CSIDE_RWALL, -20, 0, 0)
+        else
+            ObjectTileCollision(CSIDE_LWALL, 20, 0, 0)
+        end if
+
+        if checkResult == true
+            object.timer = 30
+            object.state = YAGO_TURN_AROUND
+        else
+            object.ypos += object.yvel
+            if object.yvel < 0
+                object.yvel += 0x2000
+            end if
+        end if
+        break
+
+    case YAGO_BAD_DASH
+        object.xpos += object.dashSpeed
+
+        if object.direction == FACING_RIGHT
+            ObjectTileCollision(CSIDE_RWALL, -20, 0, 0)
+        else
+            ObjectTileCollision(CSIDE_LWALL, 20, 0, 0)
+        end if
+
+        if checkResult == true
+            object.timer = 30
+            object.state = YAGO_TURN_AROUND
+        else
+            object.ypos += object.yvel
+            object.yvel += 0x1000
+            if object.yvel > 0
+                ObjectTileCollision(CSIDE_FLOOR, 0, 17, 0)
+                if checkResult == true
+                    object.speed = 0x500000
+                    object.state = YAGO_ADVANCE
+                end if
+            end if
+        end if
+        break
+    end switch
+
+    object.animationTimer++
+    object.animationTimer %= 20
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -20, -8, 20, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+    if object.outOfBounds == true
+        temp0 = object.xpos
+        temp1 = object.ypos
+
+        object.xpos = object.originPos.x
+        object.ypos = object.originPos.y
+
+        if object.outOfBounds == true
+            object.state = YAGO_DESCEND
+            object.priority = PRIORITY_BOUNDS
+        else
+            object.xpos = temp0
+            object.ypos = temp1
+        end if
+    end if
+end event
+
+
+event ObjectDraw
+    temp0 = object.animationTimer
+    temp0 /= 10
+    if object.quality == QUALITY_BAD
+        temp0 += 2
+    end if
+    DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects.gif")
+
+    SpriteFrame(-24, -12, 48, 24, 67, 181)  // #0 - Yago Frame 0
+    SpriteFrame(-24, -12, 48, 24, 67, 206)  // #1 - Yago Frame 1
+    SpriteFrame(-24, -12, 48, 24, 18, 181)  // #2 - Broken Yago Frame 0
+    SpriteFrame(-24, -12, 48, 24, 18, 206)  // #3 - Broken Yago Frame 1
+
+    foreach (TypeName[Yago], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+
+    temp0 = 0
+    Yago_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Yago], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Yago_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Yago_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects.gif")
+
+    SpriteFrame(-24, -12, 48, 24, 67, 181)  // #0 - Yago, Good quality
+    SpriteFrame(-24, -12, 48, 24, 18, 181)  // #1 - Yago, Bad quality
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

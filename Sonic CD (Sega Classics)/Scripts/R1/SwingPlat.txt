@@ -1,0 +1,196 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Swing Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+private alias object.value5 : object.SwingAngle
+
+private alias object.propertyValue : object.chainLength
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SwingPlatform_DebugDraw
+reserve function SwingPlatform_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function SwingPlatform_DebugDraw
+    DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end function
+
+
+public function SwingPlatform_DebugSpawn
+    CreateTempObject(TypeName[Swing Platform], 4, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.SwingAngle += 2
+    object.SwingAngle &= 511
+
+    Sin(object.angle, object.SwingAngle)
+    object.angle >>= 2
+    object.angle += 128
+
+    temp1 = object.chainLength
+    temp1++
+    temp1 <<= 4
+
+    Cos(object.collisionOffset.x, object.angle)
+    object.collisionOffset.x *= temp1
+    object.collisionOffset.x <<= 7
+    object.collisionOffset.x += object.xpos
+    object.collisionOffset.x &= -0x10000 // Truncate the value
+    object.collisionOffset.x -= object.drawPos.x
+
+    Sin(object.collisionOffset.y, object.angle)
+    object.collisionOffset.y *= temp1
+    object.collisionOffset.y <<= 7
+    object.collisionOffset.y += object.ypos
+    object.collisionOffset.y &= -0x10000 // Truncate the value
+    object.collisionOffset.y -= object.drawPos.y
+
+    temp0 = object.xpos
+    temp1 = object.ypos
+
+    object.xpos = object.drawPos.x
+    object.ypos = object.drawPos.y
+    
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -6, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[currentPlayer].xpos += object.collisionOffset.x
+            player[currentPlayer].ypos += object.collisionOffset.y
+        end if
+    next
+
+    object.xpos = temp0
+    object.ypos = temp1
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+
+    temp0 = 0
+    temp1 = 16
+    while temp0 < object.chainLength
+        Cos(temp2, object.angle)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, object.angle)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += object.ypos
+
+        DrawSpriteXY(1, temp2, temp3)
+        temp0++
+        temp1 += 16
+    loop
+
+    Cos(object.drawPos.x, object.angle)
+    object.drawPos.x *= temp1
+    object.drawPos.x <<= 7
+    object.drawPos.x += object.xpos
+    object.drawPos.x &= -0x10000 // Truncate the value
+
+    Sin(object.drawPos.y, object.angle)
+    object.drawPos.y *= temp1
+    object.drawPos.y <<= 7
+    object.drawPos.y += object.ypos
+    object.drawPos.y &= -0x10000 // Truncate the value
+
+    DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects2.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 173, 230)   // #0 - Connection Joint
+    SpriteFrame(-8, -8, 16, 16, 190, 230)   // #1 - Chain
+    SpriteFrame(-24, -8, 48, 16, 207, 230)  // #2 - Platform
+
+    SetTableValue(TypeName[Swing Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(SwingPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(SwingPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	object.angle = 0
+	DrawSprite(0)
+
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.chainLength
+		Cos(temp2, object.angle)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, object.angle)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+
+	Cos(object.drawPos.x, object.angle)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 7
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= 0xFFFF0000 // Truncate the value
+
+	Sin(object.drawPos.y, object.angle)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 7
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= 0xFFFF0000 // Truncate the value
+
+	DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects2.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 173, 230)   // #0 - Connection Joint
+    SpriteFrame(-8, -8, 16, 16, 190, 230)   // #1 - Chain
+    SpriteFrame(-24, -8, 48, 16, 207, 230)  // #2 - Platform
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "length")
+end event

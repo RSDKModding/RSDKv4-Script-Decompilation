@@ -1,0 +1,190 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Arm Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.xvel   : object.offset.x
+private alias object.yvel   : object.offset.y
+private alias object.value0 : object.armJointEntity // Set by [Boss Face]
+private alias object.value3 : object.timer
+private alias object.value4 : object.charging
+private alias object.value6 : object.velocity.x
+private alias object.value7 : object.velocity.y
+
+// Arm Joint Aliases
+private alias object.xpos : armJoint.xpos
+private alias object.ypos : armJoint.ypos
+
+// States
+private alias 0 : BOSSARM_SETUP
+private alias 1 : BOSSARM_IDLE
+private alias 2 : BOSSARM_DESTROYED
+private alias 3 : BOSSARM_MOVE_TO_FRONT
+private alias 4 : BOSSARM_MOVE_TO_BACK
+private alias 5 : BOSSARM_START_CHARGE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BossArm_HandleArmMovement
+
+// ========================
+// Function Definitions
+// ========================
+
+public function BossArm_HandleArmMovement
+    arrayPos0 = object.armJointEntity
+
+    object.xpos = armJoint[arrayPos0].xpos
+    object.xpos -= 0x240000
+    object.xpos += object.velocity.x
+
+    object.ypos = armJoint[arrayPos0].ypos
+
+    temp1 = true
+
+	// Check if the HVC is charging against Sonic
+    GetBit(temp0, object.charging, 7)
+
+	// If not, adjust the arms height to defend from the player
+    if temp0 == false
+        if object.ypos < object.ypos
+            if object.velocity.y > -0x80000
+                object.velocity.y -= 0x10000
+            end if
+
+            temp1 = false
+        end if
+    end if
+
+	// If it's charging, then the arm's height is set in stone
+    if temp1 == true
+        if object.velocity.y < 0x80000
+            object.velocity.y += 0x10000
+        end if
+    end if
+
+    object.ypos += object.velocity.y
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSARM_SETUP
+        object.state = BOSSARM_IDLE
+        // [Fallthrough]
+
+    case BOSSARM_IDLE
+        CallFunction(BossArm_HandleArmMovement)
+        break
+
+    case BOSSARM_DESTROYED
+        object.offset.x -= 0x620
+        object.offset.y += 0x1220
+
+        object.xpos += object.offset.x
+        object.ypos += object.offset.y
+
+        object.timer++
+        if object.timer == 7
+            object.timer = 0
+            CreateTempObject(TypeName[Explosion], 0, object.xpos, object.ypos)
+            PlaySfx(SfxName[Explosion], false)
+        end if
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+
+    case BOSSARM_MOVE_TO_FRONT
+        if object.velocity.x > 0
+            object.velocity.x -= 0x8000
+        end if
+
+        CallFunction(BossArm_HandleArmMovement)
+        break
+
+    case BOSSARM_MOVE_TO_BACK
+        if object.velocity.x < 0x100000
+            object.velocity.x += 0x8000
+        end if
+
+        CallFunction(BossArm_HandleArmMovement)
+        break
+
+    case BOSSARM_START_CHARGE
+        if object.velocity.x < 0x80000
+            object.velocity.x += 0x8000
+        else
+			// Set the arm to its retracted frame
+			// -> However, because of an oversight when drawing, this change can't be seen anyway so this has no effect
+            object.frame = 1
+        end if
+
+        arrayPos0 = object.armJointEntity
+
+        object.xpos = armJoint[arrayPos0].xpos
+        object.xpos -= 0x240000
+        object.xpos += object.velocity.x
+
+        if object.velocity.y < 0x80000
+            object.velocity.y += 0x10000
+        end if
+
+        object.ypos = armJoint[arrayPos0].ypos
+        object.ypos += object.velocity.y
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    DrawSprite(3)
+
+	// See above - this should actually be object.frame
+	// However, since it isn't, the arm just shows as extended all the time
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects3.gif")
+    
+    SpriteFrame(-15, -8, 32, 16, 141, 34)   // #0 - Arm Extend
+    SpriteFrame(-6, -8, 24, 16, 174, 34)    // #1 - Arm Retract Frame 0 (Unused, though meant to be used)
+    SpriteFrame(2, -8, 16, 16, 124, 51)     // #2 - Arm Retract Frame 1 (Unused)
+    SpriteFrame(9, -8, 24, 16, 141, 51)     // #3 - Arm Elbow
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(1)
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-15, -8, 32, 16, 141, 34) // Arm Extend
+    SpriteFrame(9, -8, 24, 16, 141, 51)   // Elbow
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

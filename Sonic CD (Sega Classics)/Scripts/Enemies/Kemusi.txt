@@ -1,0 +1,896 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Kemusi Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.bodyPosition1.x
+private alias object.value2        : object.bodyPosition2.x
+private alias object.value3        : object.bodyPosition3.x
+private alias object.value4        : object.bodyPosition1.y
+private alias object.value5        : object.bodyPosition2.y
+private alias object.value6        : object.bodyPosition3.y
+private alias object.value7        : object.pieceDirection
+private alias object.value8        : object.boundsL
+private alias object.value9        : object.boundsR
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : KEMUSI_INIT
+private alias 1 : KEMUSI_FINDGROUND
+private alias 2 : KEMUSI_SPIKED_ADVANCE
+private alias 3 : KEMUSI_SPIKED_RETRACT
+private alias 4 : KEMUSI_NORMAL_ADVANCE
+private alias 5 : KEMUSI_NORMAL_RETRACT
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Kemusi_DebugDraw
+reserve function Kemusi_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Kemusi_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Kemusi_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Kemusi_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(1) // Bad quality
+    end if
+end function
+
+
+private function Kemusi_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Kemusi_startDebugID
+    CreateTempObject(TypeName[Kemusi], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case KEMUSI_INIT
+        // Setup the first body fragment to be 12 pixels to the right from the head
+        object.bodyPosition1.x = object.xpos
+        object.bodyPosition1.x += 0xC0000
+
+        // Set the second body fragment to be 24 pixels away from the head
+        object.bodyPosition2.x = object.xpos
+        object.bodyPosition2.x += 0x180000
+
+        // And then make the third, and last, body fragment 36 pixels away from the head
+        object.bodyPosition3.x = object.xpos
+        object.bodyPosition3.x += 0x240000
+
+        // All the body fragments start on the same Y Position as the head
+        object.bodyPosition1.y = object.ypos
+        object.bodyPosition2.y = object.ypos
+        object.bodyPosition3.y = object.ypos
+
+        // Left bounds is 64 pixels away
+        object.boundsL = object.xpos
+        object.boundsL -= 0x400000
+
+        // And right bounds is 64 pixels away too, adding up to a total of 128 pixels range
+        object.boundsR = object.xpos
+        object.boundsR += 0x400000
+
+        object.state = KEMUSI_FINDGROUND
+        break
+
+    case KEMUSI_FINDGROUND
+        // Get the directions of every piece (incl. head)
+        GetBit(temp0, object.pieceDirection, 0)
+        GetBit(temp1, object.pieceDirection, 1)
+        GetBit(temp2, object.pieceDirection, 2)
+        GetBit(temp3, object.pieceDirection, 3)
+
+        // First, update make the head track the ground if needed
+        if temp0 == false
+            ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+            if checkResult == false
+                // If there was no collision, move the head down by a pixel
+                object.ypos += 0x10000
+            else
+                temp0 = checkResult
+            end if
+        end if
+
+        // ObjectTileCollision can only pull from object.xpos and object.ypos, no custom values, so it's rapidly
+        // changing throughout this section
+        // With that, back it up now so it can be properly set again later
+        temp4 = object.xpos
+        temp5 = object.ypos
+
+        // Then, update following piece 1
+        if temp1 == false
+            object.xpos = object.bodyPosition1.x
+            object.ypos = object.bodyPosition1.y
+            ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+
+            if checkResult == false
+                object.bodyPosition1.y += 0x10000
+            else
+                temp1 = checkResult
+                object.bodyPosition1.y = object.ypos
+            end if
+        end if
+
+        // Now, update piece 2's grip to the ground
+        if temp2 == false
+            object.xpos = object.bodyPosition2.x
+            object.ypos = object.bodyPosition2.y
+            ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+
+            if checkResult == false
+                object.bodyPosition2.y += 0x10000
+            else
+                temp2 = checkResult
+                object.bodyPosition2.y = object.ypos
+            end if
+        end if
+
+        // And finally, piece 3
+        if temp3 == 0
+            object.xpos = object.bodyPosition3.x
+            object.ypos = object.bodyPosition3.y
+            ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+
+            if checkResult == false
+                object.bodyPosition3.y += 0x10000
+            else
+                temp3 = checkResult
+                object.bodyPosition3.y = object.ypos
+            end if
+        end if
+
+        // Restore the Object's position, now that all the Object Tile Collision checks have been done
+        object.xpos = temp4
+        object.ypos = temp5
+
+        // Add the collision results of all individual pieces
+        // (0 if in the air, 1 if on the ground)
+        temp4 = temp0
+        temp4 += temp1
+        temp4 += temp2
+        temp4 += temp3
+
+        // 4 means, are all pieces are touching the ground?
+        if temp4 == 4
+            if object.quality == QUALITY_GOOD
+                object.state = KEMUSI_SPIKED_RETRACT
+            else
+                object.state = KEMUSI_NORMAL_RETRACT
+            end if
+
+            object.pieceDirection = 0
+        else
+            // Store the current collision states for use next frame
+            SetBit(object.pieceDirection, 0, temp0)
+            SetBit(object.pieceDirection, 1, temp1)
+            SetBit(object.pieceDirection, 2, temp2)
+            SetBit(object.pieceDirection, 3, temp3)
+        end if
+        break
+
+    case KEMUSI_SPIKED_ADVANCE
+        if object.timer < 36
+            object.timer++
+
+            GetBit(temp0, object.pieceDirection, 0)
+            if temp0 == 0
+                object.xpos -= 0x8000
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    if object.xpos < object.boundsL
+                        SetBit(object.pieceDirection, 0, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 0, 1)
+                end if
+            else
+                object.xpos += 0x8000
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    if object.xpos > object.boundsR
+                        SetBit(object.pieceDirection, 0, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 0, 0)
+                end if
+            end if
+
+            temp1 = object.xpos
+            temp2 = object.ypos
+
+            GetBit(temp0, object.pieceDirection, 1)
+
+            if temp0 == 0
+                object.bodyPosition1.x -= 0x5555
+
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition1.y = object.ypos
+                    if object.bodyPosition1.x < object.boundsL
+                        SetBit(object.pieceDirection, 1, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 1, 1)
+                end if
+            else
+                object.bodyPosition1.x += 0x5555
+
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition1.y = object.ypos
+                    if object.bodyPosition1.x > object.boundsR
+                        SetBit(object.pieceDirection, 1, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 1, 0)
+                end if
+            end if
+
+            GetBit(temp0, object.pieceDirection, 2)
+            if temp0 == 0
+                object.bodyPosition2.x -= 0x2AAA
+
+                object.xpos = object.bodyPosition2.x
+                object.ypos = object.bodyPosition2.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition2.y = object.ypos
+                    if object.bodyPosition2.x < object.boundsL
+                        SetBit(object.pieceDirection, 2, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 2, 1)
+                end if
+            else
+                object.bodyPosition2.x += 0x2AAA
+
+                object.xpos = object.bodyPosition2.x
+                object.ypos = object.bodyPosition2.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition2.y = object.ypos
+                    if object.bodyPosition2.x > object.boundsR
+                        SetBit(object.pieceDirection, 2, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 2, 0)
+                end if
+            end if
+
+            object.xpos = temp1
+            object.ypos = temp2
+        else
+            // Are all Pieces facing left?
+            if object.pieceDirection == 0
+                object.bodyPosition1.x = object.xpos
+                object.bodyPosition1.x += 0xC0000
+
+                object.bodyPosition2.x = object.xpos
+                object.bodyPosition2.x += 0x180000
+
+                object.bodyPosition3.x = object.xpos
+                object.bodyPosition3.x += 0x240000
+            end if
+
+            // Are all Pieces facing right?
+            if object.pieceDirection == 15
+                object.bodyPosition1.x = object.xpos
+                object.bodyPosition1.x -= 0xC0000
+
+                object.bodyPosition2.x = object.xpos
+                object.bodyPosition2.x -= 0x180000
+
+                object.bodyPosition3.x = object.xpos
+                object.bodyPosition3.x -= 0x240000
+            end if
+
+            object.timer = 0
+            object.state = KEMUSI_SPIKED_RETRACT
+        end if
+        break
+
+    case KEMUSI_SPIKED_RETRACT
+        if object.timer < 36
+            object.timer++
+
+            temp1 = object.xpos
+            temp2 = object.ypos
+
+            GetBit(temp0, object.pieceDirection, 1)
+            if temp0 == 0
+                object.bodyPosition1.x -= 0x2AAA
+
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition1.y = object.ypos
+                    if object.bodyPosition1.x < object.boundsL
+                        SetBit(object.pieceDirection, 1, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 1, 1)
+                end if
+            else
+                object.bodyPosition1.x += 0x2AAA
+
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition1.y = object.ypos
+                    if object.bodyPosition1.x > object.boundsR
+                        SetBit(object.pieceDirection, 1, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 1, 0)
+                end if
+            end if
+
+            GetBit(temp0, object.pieceDirection, 2)
+            if temp0 == 0
+                object.bodyPosition2.x -= 0x5555
+
+                object.xpos = object.bodyPosition2.x
+                object.ypos = object.bodyPosition2.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition2.y = object.ypos
+                    if object.bodyPosition2.x < object.boundsL
+                        SetBit(object.pieceDirection, 2, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 2, 1)
+                end if
+            else
+                object.bodyPosition2.x += 0x5555
+
+                object.xpos = object.bodyPosition2.x
+                object.ypos = object.bodyPosition2.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition2.y = object.ypos
+                    if object.bodyPosition2.x > object.boundsR
+                        SetBit(object.pieceDirection, 2, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 2, 0)
+                end if
+            end if
+
+            GetBit(temp0, object.pieceDirection, 3)
+            if temp0 == 0
+                object.bodyPosition3.x -= 0x8000
+
+                object.xpos = object.bodyPosition3.x
+                object.ypos = object.bodyPosition3.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition3.y = object.ypos
+                    if object.bodyPosition3.x < object.boundsL
+                        SetBit(object.pieceDirection, 3, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 3, 1)
+                end if
+            else
+                object.bodyPosition3.x += 0x8000
+
+                object.xpos = object.bodyPosition3.x
+                object.ypos = object.bodyPosition3.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition3.y = object.ypos
+                    if object.bodyPosition3.x > object.boundsR
+                        SetBit(object.pieceDirection, 3, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 3, 0)
+                end if
+            end if
+
+            object.xpos = temp1
+            object.ypos = temp2
+        else
+            object.timer = 0
+            object.state = KEMUSI_SPIKED_ADVANCE
+        end if
+        break
+
+    case KEMUSI_NORMAL_ADVANCE
+        if object.timer < 36
+            object.timer++
+
+            GetBit(temp0, object.pieceDirection, 0)
+            if temp0 == 0
+                object.xpos -= 0x4000
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    if object.xpos < object.boundsL
+                        SetBit(object.pieceDirection, 0, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 0, 1)
+                end if
+            else
+                object.xpos += 0x4000
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    if object.xpos > object.boundsR
+                        SetBit(object.pieceDirection, 0, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 0, 0)
+                end if
+            end if
+
+            temp1 = object.xpos
+            temp2 = object.ypos
+
+            GetBit(temp0, object.pieceDirection, 1)
+
+            if temp0 == 0
+                object.bodyPosition1.x -= 0x2AAA
+
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition1.y = object.ypos
+                    if object.bodyPosition1.x < object.boundsL
+                        SetBit(object.pieceDirection, 1, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 1, 1)
+                end if
+            else
+                object.bodyPosition1.x += 0x2AAA
+
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition1.y = object.ypos
+                    if object.bodyPosition1.x > object.boundsR
+                        SetBit(object.pieceDirection, 1, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 1, 0)
+                end if
+            end if
+
+            GetBit(temp0, object.pieceDirection, 2)
+            if temp0 == 0
+                object.bodyPosition2.x -= 0x1555
+
+                object.xpos = object.bodyPosition2.x
+                object.ypos = object.bodyPosition2.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition2.y = object.ypos
+                    if object.bodyPosition2.x < object.boundsL
+                        SetBit(object.pieceDirection, 2, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 2, 1)
+                end if
+            else
+                object.bodyPosition2.x += 0x1555
+
+                object.xpos = object.bodyPosition2.x
+                object.ypos = object.bodyPosition2.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition2.y = object.ypos
+                    if object.bodyPosition2.x > object.boundsR
+                        SetBit(object.pieceDirection, 2, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 2, 0)
+                end if
+            end if
+
+            object.xpos = temp1
+            object.ypos = temp2
+        else
+            if object.pieceDirection == 0
+                object.bodyPosition1.x = object.xpos
+                object.bodyPosition1.x += 0xC0000
+
+                object.bodyPosition2.x = object.xpos
+                object.bodyPosition2.x += 0x180000
+
+                object.bodyPosition3.x = object.xpos
+                object.bodyPosition3.x += 0x240000
+            end if
+
+            if object.pieceDirection == 15
+                object.bodyPosition1.x = object.xpos
+                object.bodyPosition1.x -= 0xC0000
+
+                object.bodyPosition2.x = object.xpos
+                object.bodyPosition2.x -= 0x180000
+
+                object.bodyPosition3.x = object.xpos
+                object.bodyPosition3.x -= 0x240000
+            end if
+
+            object.timer = 0
+            object.state = KEMUSI_NORMAL_RETRACT
+        end if
+        break
+
+    case KEMUSI_NORMAL_RETRACT
+        if object.timer < 36
+            object.timer++
+
+            temp1 = object.xpos
+            temp2 = object.ypos
+
+            GetBit(temp0, object.pieceDirection, 1)
+            if temp0 == 0
+                object.bodyPosition1.x -= 0x1555
+
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition1.y = object.ypos
+                    if object.bodyPosition1.x < object.boundsL
+                        SetBit(object.pieceDirection, 1, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 1, 1)
+                end if
+            else
+                object.bodyPosition1.x += 0x1555
+
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition1.y = object.ypos
+                    if object.bodyPosition1.x > object.boundsR
+                        SetBit(object.pieceDirection, 1, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 1, 0)
+                end if
+            end if
+
+            GetBit(temp0, object.pieceDirection, 2)
+            if temp0 == 0
+                object.bodyPosition2.x -= 0x2AAA
+
+                object.xpos = object.bodyPosition2.x
+                object.ypos = object.bodyPosition2.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition2.y = object.ypos
+                    if object.bodyPosition2.x < object.boundsL
+                        SetBit(object.pieceDirection, 2, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 2, 1)
+                end if
+            else
+                object.bodyPosition2.x += 0x2AAA
+
+                object.xpos = object.bodyPosition2.x
+                object.ypos = object.bodyPosition2.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition2.y = object.ypos
+                    if object.bodyPosition2.x > object.boundsR
+                        SetBit(object.pieceDirection, 2, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 2, 0)
+                end if
+            end if
+
+            GetBit(temp0, object.pieceDirection, 3)
+            if temp0 == 0
+                object.bodyPosition3.x -= 0x4000
+
+                object.xpos = object.bodyPosition3.x
+                object.ypos = object.bodyPosition3.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition3.y = object.ypos
+                    if object.bodyPosition3.x < object.boundsL
+                        SetBit(object.pieceDirection, 3, 1)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 3, 1)
+                end if
+            else
+                object.bodyPosition3.x += 0x4000
+
+                object.xpos = object.bodyPosition3.x
+                object.ypos = object.bodyPosition3.y
+                ObjectTileGrip(CSIDE_FLOOR, 0, 8, 0)
+
+                if checkResult == true
+                    object.bodyPosition3.y = object.ypos
+                    if object.bodyPosition3.x > object.boundsR
+                        SetBit(object.pieceDirection, 3, 0)
+                    end if
+                else
+                    SetBit(object.pieceDirection, 3, 0)
+                end if
+            end if
+
+            object.xpos = temp1
+            object.ypos = temp2
+        else
+            object.timer = 0
+            object.state =KEMUSI_NORMAL_ADVANCE
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        // First, check for the head
+        BoxCollisionTest(C_TOUCH, object.entityPos, -8, -10, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        else
+            // The head wasn't hit, so now check against every body fragment
+
+            // First, backup the Object's base Position
+            temp1 = object.xpos
+            temp2 = object.ypos
+
+            if object.quality == QUALITY_GOOD
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+
+                BoxCollisionTest(C_TOUCH, object.entityPos, -8, -10, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    CallFunction(Player_Hit)
+                else
+                    object.xpos = object.bodyPosition2.x
+                    object.ypos = object.bodyPosition2.y
+
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -8, -10, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        CallFunction(Player_Hit)
+                    else
+                        object.xpos = object.bodyPosition3.x
+                        object.ypos = object.bodyPosition3.y
+
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -8, -10, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            CallFunction(Player_Hit)
+                        end if
+                    end if
+                end if
+            else
+                object.xpos = object.bodyPosition1.x
+                object.ypos = object.bodyPosition1.y
+
+                BoxCollisionTest(C_TOUCH, object.entityPos, -8, -10, 8, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+                if checkResult == true
+                    CallFunction(Player_BadnikBreak)
+                else
+                    object.xpos = object.bodyPosition2.x
+                    object.ypos = object.bodyPosition2.y
+
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        CallFunction(Player_BadnikBreak)
+                    else
+                        object.xpos = object.bodyPosition3.x
+                        object.ypos = object.bodyPosition3.y
+
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            CallFunction(Player_BadnikBreak)
+                        end if
+                    end if
+                end if
+            end if
+
+            // It's safe to restore the Object's base Position now
+            object.xpos = temp1
+            object.ypos = temp2
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+end if // eh?
+end event
+
+
+event ObjectDraw
+    if object.quality == QUALITY_GOOD
+        GetBit(object.direction, object.pieceDirection, 3)
+        DrawSpriteFX(2, FX_FLIP, object.bodyPosition3.x, object.bodyPosition3.y)
+
+        GetBit(object.direction, object.pieceDirection, 2)
+        DrawSpriteFX(2, FX_FLIP, object.bodyPosition2.x, object.bodyPosition2.y)
+
+        GetBit(object.direction, object.pieceDirection, 1)
+        DrawSpriteFX(2, FX_FLIP, object.bodyPosition1.x, object.bodyPosition1.y)
+    else
+        GetBit(object.direction, object.pieceDirection, 3)
+        DrawSpriteFX(3, FX_FLIP, object.bodyPosition3.x, object.bodyPosition3.y)
+
+        GetBit(object.direction, object.pieceDirection, 2)
+        DrawSpriteFX(3, FX_FLIP, object.bodyPosition2.x, object.bodyPosition2.y)
+
+        GetBit(object.direction, object.pieceDirection, 1)
+        DrawSpriteFX(3, FX_FLIP, object.bodyPosition1.x, object.bodyPosition1.y)
+    end if
+
+    // Get the direction of the head
+    GetBit(object.direction, object.pieceDirection, 0)
+
+    switch object.state
+    case KEMUSI_INIT
+    case KEMUSI_FINDGROUND
+    case KEMUSI_SPIKED_RETRACT
+    case KEMUSI_NORMAL_RETRACT
+        // Closed mouth frame
+        DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case KEMUSI_SPIKED_ADVANCE
+    case KEMUSI_NORMAL_ADVANCE
+        // Open mouth frame
+        DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R5/Objects.gif")
+
+    SpriteFrame(-8, -16, 16, 24, 125, 75)  // #0 - Kemusi Closed Mouth Frame
+    SpriteFrame(-8, -16, 16, 24, 125, 50)  // #1 - Kemusi Smiling Frame
+    SpriteFrame(-8, -16, 16, 24, 67, 150)  // #2 - Kemusi Spiked Fragment Frame
+    SpriteFrame(-8, -8, 16, 16, 52, 1)     // #3 - Kemusi Normal Fragment Frame
+
+    temp0 = 0
+    Kemusi_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Kemusi], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Kemusi_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Kemusi_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    temp0 = object.xpos
+    temp0 += 0x240000
+
+    DrawSpriteXY(object.propertyValue, temp0, object.ypos)
+
+    temp0 -= 0xC0000
+    DrawSpriteXY(object.propertyValue, temp0, object.ypos)
+
+    temp0 -= 0xC0000
+    DrawSpriteXY(object.propertyValue, temp0, object.ypos)
+
+    temp0 -= 0xC0000
+    DrawSpriteXY(2, temp0, object.ypos) // smile :)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R5/Objects.gif")
+
+    SpriteFrame(-8, -16, 16, 24, 67, 150)
+    SpriteFrame(-8, -8, 16, 16, 52, 1)
+    SpriteFrame(-8, -16, 16, 24, 125, 50)
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

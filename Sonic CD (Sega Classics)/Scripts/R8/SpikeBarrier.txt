@@ -1,0 +1,96 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Spike Barrier Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.leftBound
+private alias object.value2 : object.rightBound
+
+// Player Aliases
+private alias object.collisionPlane : player.collisionPlane
+
+// States
+private alias 0 : SPIKEBARRIER_MOVE_LEFT
+private alias 1 : SPIKEBARRIER_MOVE_RIGHT
+
+// Collision Plane
+private alias 0 : COLLISION_PLANE_A
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == SPIKEBARRIER_MOVE_LEFT
+		object.xpos -= 0x5000
+		if object.xpos <= object.leftBound
+			object.state = SPIKEBARRIER_MOVE_RIGHT
+			object.direction = FACING_RIGHT
+		end if
+	else
+		object.xpos += 0x5000
+		if object.xpos >= object.rightBound
+			object.state = SPIKEBARRIER_MOVE_LEFT
+			object.direction = FACING_LEFT
+		end if
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if player[currentPlayer].collisionPlane == COLLISION_PLANE_A
+			BoxCollisionTest(C_TOUCH, object.entityPos, -14, -76, 14, 76, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_Hit)
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	temp0 = object.timer
+	temp0 >>= 1
+	DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+	object.timer++
+	object.timer &= 3
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-16, -76, 32, 152, 190, 1) // #0 - Spike Barrier frame 0
+	SpriteFrame(-16, -76, 32, 152, 223, 1) // #1 - Spike Barrier frame 1
+
+	foreach (TypeName[Spike Barrier], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder  = 4
+		object[arrayPos0].rightBound = object[arrayPos0].xpos
+		object[arrayPos0].leftBound  = object[arrayPos0].rightBound
+		object[arrayPos0].leftBound -= 0x800000
+		object[arrayPos0].direction  = FACING_LEFT
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+	SpriteFrame(-16, -76, 32, 152, 190, 1) // #0 - Spike Barrier frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

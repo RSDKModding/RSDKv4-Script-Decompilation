@@ -1,0 +1,2250 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Egg Mobile Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.angle  : object.oscillation
+private alias object.value0 : object.timer
+private alias object.value4 : object.wingOffset
+private alias object.value6 : object.oscillationValue
+private alias object.value7 : object.invulnerableTimer
+
+// Player Aliases
+private alias object.state          : player.state
+private alias object.xpos           : player.xpos
+private alias object.ypos           : player.ypos
+private alias object.xvel           : player.xvel
+private alias object.yvel           : player.yvel
+private alias object.speed          : player.speed
+private alias object.animation      : player.animation
+private alias object.collisionRight : player.collisionRight
+private alias object.controlMode    : player.controlMode
+private alias object.up             : player.up
+private alias object.down           : player.down
+private alias object.left           : player.left
+private alias object.right          : player.right
+private alias object.jumpHold       : player.jumpHold
+
+// Helper 1 Aliases
+private alias object[+1].value0 : helper1.bossHealth
+private alias object[+1].value1 : helper1.controller                // This handles the boss movement
+private alias object[+1].value2 : helper1.controllerState
+private alias object[+1].value3 : helper1.controllerDisabled
+private alias object[+1].value4 : helper1.leftBound
+private alias object[+1].value5 : helper1.rightBound
+private alias object[+1].value6 : helper1.centerBound
+private alias object[+1].value7 : helper1.targetPos                 // Depending of what the boss needs this target is for X or Y Positions
+
+// Helper 2 Alias
+private alias object[+2].state          : helper2.bossInvincible    // Checks if Eggman can be hit during his patterns
+private alias object[+2].value0         : helper2.secondaryState    // Sets the preparation of the Wing Throw Attack
+private alias object[+2].value1         : helper2.stopTimer         // How much time eggman will stop moving during the intro/ground spin attack
+private alias object[+2].value2         : helper2.animSpeedState
+private alias object[+2].value3         : helper2.wingSpawnXPos
+private alias object[+2].value4         : helper2.maxOscillation
+private alias object[+2].value6         : helper2.cutsceneRightBound
+private alias object[+2].value7         : helper2.sfxState
+private alias object[+2].animationTimer : helper2.sfxTimer
+private alias object[+2].animationSpeed : helper2.sfxUsed
+
+// Boss Wing Aliases
+private alias object.xpos      : bossWing.xpos
+private alias object.ypos      : bossWing.ypos
+private alias object.xvel      : bossWing.xvel
+private alias object.yvel      : bossWing.yvel
+private alias object.value0    : bossWing.timer
+private alias object.value5    : bossWing.attached
+private alias object.frame     : bossWing.frame
+private alias object.rotation  : bossWing.rotation
+private alias object.state     : bossWing.state
+private alias object.type      : bossWing.type
+private alias object.drawOrder : bossWing.drawOrder
+private alias object.priority  : bossWing.priority
+
+// Bug Details:
+// This should be aliased as object[9], because this version of the game has the HUD reserved at that slot.
+// Instead, we are incorrectly using the RSDKv3 version's reserved slot
+
+// Fix:
+// Adjust this alias to use object[9] instead of object[24]
+
+// HUD Aliases
+private alias object[24].propertyValue : HUD.currentTimePeriod
+
+// Helper 2 States
+private alias 0 : HELPER2_PREPARE_DETACH
+private alias 1 : HELPER2_CENTER_WINGS
+private alias 2 : HELPER2_DETACH_WINGS
+private alias 3 : HELPER2_PREPARE_THROW
+private alias 4 : HELPER2_THROW_WINGS
+
+// Boss Wing States
+private alias 1 : BOSSWING_DETACH
+private alias 2 : BOSSWING_FALL_VERTICAL
+private alias 5 : BOSSWING_FALL_DIAGONAL
+
+// Eggman animations
+private alias 0 : EGGANI_IDLE
+private alias 1 : EGGANI_HURT
+private alias 2 : EGGANI_LAUGH
+private alias 3 : EGGANI_DEFEAT
+
+// Cutscene
+private alias 1 : CUTSCENE_FINALFEVER
+
+// Time Periods
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function EggMobile_StopMovement
+reserve function EggMobile_MoveToLeft
+reserve function EggMobile_MoveToRight
+reserve function EggMobile_GroundSpinAscend
+reserve function EggMobile_GroundSpinDescend
+reserve function EggMobile_MoveLeftToCenter
+reserve function EggMobile_MoveRightToCenter
+reserve function EggMobile_GroundSpinLeft
+reserve function EggMobile_GroundSpinRight
+reserve function EggMobile_HandleWingThrowATK
+reserve function EggMobile_WingThrowVertical
+reserve function EggMobile_WingThrowDiagonal
+reserve function EggMobile_RestoreWings
+reserve function EggMobile_SetTargetDestiny
+reserve function EggMobile_ApproachPlayer
+reserve function EggMobile_ExtendWings
+reserve function EggMobile_RetractWings
+reserve function EggMobile_Hit
+reserve function EggMobile_PreparePogoAttack
+reserve function EggMobile_PogoAttackDescend
+reserve function EggMobile_PogoAttackAscend
+reserve function EggMobile_PogoAttackMoveLeft
+reserve function EggMobile_PogoAttackMoveRight
+
+reserve function Helper1Controller_FourWings
+reserve function Helper1Controller_ThreeWings
+reserve function Helper1Controller_TwoWings
+reserve function Helper1Controller_OneWing
+
+reserve function EggMobile_Destroyed
+reserve function EggMobile_Destroyed_FinalFever
+reserve function EggMobile_HandleWingRotation
+reserve function EggMobile_DropDamagedWing
+reserve function EggMobile_HandleAnimations
+
+// ========================
+// Function Definitions
+// ========================
+
+public function EggMobile_StopMovement
+    object.timer++
+    if object.timer == helper2.stopTimer
+        object.timer = 0
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_MoveToLeft
+    object.xpos -= object.xvel
+    if object.xpos <= helper1.leftBound
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_MoveToRight
+    object.xpos += object.xvel
+    if object.xpos >= helper1.rightBound
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_GroundSpinAscend
+    object.ypos -= object.yvel
+    if object.ypos <= helper1.targetPos
+        object.ypos = helper1.targetPos
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_GroundSpinDescend
+    object.ypos += object.yvel
+    if object.ypos >= helper1.targetPos
+        object.ypos = helper1.targetPos
+        helper1.controllerDisabled = false
+    end if
+    if object.oscillationValue != 0
+        if helper1.bossHealth < 4
+            temp0 = object.oscillation
+            temp0 >>= 6
+            if temp0 == helper2.maxOscillation
+                object.oscillationValue = 0
+                object.oscillation = temp0
+                object.oscillation <<= 6
+            end if
+        else
+            temp0 = object.oscillation
+            temp0 %= 0x500
+            if temp0 == 0
+                object.oscillationValue = 0
+            end if
+        end if
+    end if
+end function
+
+
+public function EggMobile_MoveLeftToCenter // Fun fact, the chance of this one triggering is really small
+    object.xpos -= object.xvel
+    if object.xpos <= helper1.centerBound
+        object.xpos = helper1.centerBound
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_MoveRightToCenter
+    object.xpos += object.xvel
+    if object.xpos >= helper1.centerBound
+        object.xpos = helper1.centerBound
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_GroundSpinLeft
+    object.xpos -= 0x14CCC
+    if object.xpos <= helper1.targetPos
+        object.xpos = helper1.targetPos
+        object.oscillationValue = 0
+        helper1.controllerDisabled = false
+    end if
+    temp0 = object.rotation
+    temp0 <<= 1
+    temp0 &= 511
+    Sin(temp1, temp0)
+    if temp1 < 0
+        FlipSign(temp1)
+    end if
+    temp1 >>= 7
+    temp1 += 64
+    ObjectTileGrip(CSIDE_FLOOR, 0, temp1, 0)
+end function
+
+
+public function EggMobile_GroundSpinRight
+    object.xpos += 0x14CCC
+    if object.xpos >= helper1.targetPos
+        object.xpos = helper1.targetPos
+        object.oscillationValue = 0
+        helper1.controllerDisabled = false
+    end if
+    temp0 = object.rotation
+    temp0 <<= 1
+    temp0 &= 511
+    Sin(temp1, temp0)
+    if temp1 < 0
+        FlipSign(temp1)
+    end if
+    temp1 >>= 7
+    temp1 += 64
+    ObjectTileGrip(CSIDE_FLOOR, 0, temp1, 0)
+end function
+
+
+public function EggMobile_HandleWingThrowATK
+    switch helper2.secondaryState
+    case HELPER2_PREPARE_DETACH
+        object.timer++
+        if object.timer == 20
+            object.timer = 0
+            helper2.secondaryState++
+        end if
+        break
+
+    case HELPER2_CENTER_WINGS
+        if object.oscillationValue != 0
+            temp0 = object.oscillation
+            temp0 >>= 7
+            if temp0 == 0
+                temp0 <<= 7
+                object.oscillation = temp0
+                object.oscillationValue = 0
+                helper2.secondaryState++
+            end if
+        end if
+        break
+
+    case HELPER2_DETACH_WINGS
+        object.timer++
+        object.wingOffset += 128
+
+        if object.timer == 22
+            bossWing[-4].frame = 1
+            bossWing[-3].frame = 1
+            bossWing[-2].frame = 1
+            bossWing[-1].frame = 1
+        end if
+
+        if object.timer == 26
+            bossWing[-4].frame = 2
+            bossWing[-3].frame = 2
+            bossWing[-2].frame = 2
+            bossWing[-1].frame = 2
+        end if
+
+        if object.timer == 36
+            object.timer = 0
+            helper2.secondaryState++
+        end if
+        break
+
+    case HELPER2_PREPARE_THROW
+        object.timer++
+        if object.timer == 10
+            object.timer = 0
+            helper2.secondaryState++
+            object.oscillationValue = -64
+            helper1.targetPos = object[+3].ypos
+            helper1.targetPos -= 0x440000
+        end if
+        break
+
+    case HELPER2_THROW_WINGS
+        temp0 = 0
+        arrayPos0 = object.entityPos
+        arrayPos0 -= 4
+        while temp0 < 4
+            if bossWing[arrayPos0].attached == true
+                temp0 = bossWing[arrayPos0].rotation
+                temp0 >>= 4
+                if temp0 == 0
+                    bossWing[arrayPos0].rotation = 0
+                    bossWing[arrayPos0].attached = 0
+                    bossWing[arrayPos0].state = BOSSWING_DETACH
+                    bossWing[arrayPos0].yvel = 0x28000
+                end if
+            end if
+            arrayPos0++
+            temp0++
+        loop
+
+        if object.ypos <= helper1.targetPos
+            object.ypos = helper1.targetPos
+            object.timer++
+            if object.timer == 60
+                object.timer = 0
+                object.oscillationValue = 0
+                object.oscillation = 0
+                helper1.controllerDisabled = false
+            end if
+        else
+            object.ypos -= 0x14000
+        end if
+        break
+    end switch
+end function
+
+
+public function EggMobile_WingThrowVertical
+    if helper2.animSpeedState < helper1.bossHealth
+        if object.timer == 0
+            arrayPos0 = object.entityPos
+            arrayPos0 -= 4
+            arrayPos0 += helper2.animSpeedState
+
+            bossWing[arrayPos0].type = TypeName[Boss Wing]
+            bossWing[arrayPos0].state = BOSSWING_FALL_VERTICAL
+            bossWing[arrayPos0].rotation = 0
+            bossWing[arrayPos0].timer = 0
+
+            if helper1.bossHealth > 2
+                bossWing[arrayPos0].frame = 4
+            else
+                bossWing[arrayPos0].frame = 3
+            end if
+
+            bossWing[arrayPos0].ypos = object[+3].ypos
+            bossWing[arrayPos0].ypos -= 0x800000
+            bossWing[arrayPos0].xvel = 0
+            bossWing[arrayPos0].yvel = 0x38000
+
+            switch helper2.wingSpawnXPos
+            case 0
+                bossWing[arrayPos0].xpos = -0x400000
+                break
+
+            case 1
+                bossWing[arrayPos0].xpos = 0x400000
+                break
+
+            case 2
+                bossWing[arrayPos0].xpos = 0x800000
+                break
+
+            case 3
+                bossWing[arrayPos0].xpos = -0x800000
+                break
+
+            case 4
+                bossWing[arrayPos0].xpos = -0x800000
+                break
+
+            case 5
+                bossWing[arrayPos0].xpos = -0x400000
+                break
+
+            case 6
+                bossWing[arrayPos0].xpos = 0
+                break
+
+            case 7
+                bossWing[arrayPos0].xpos = 0x400000
+                break
+
+            case 8
+                bossWing[arrayPos0].xpos = 0x800000
+                break
+
+            case 9
+                bossWing[arrayPos0].xpos = 0x400000
+                break
+
+            case 10
+                bossWing[arrayPos0].xpos = 0
+                break
+
+            case 11
+                bossWing[arrayPos0].xpos = -0x800000
+                break
+
+            case 12
+                bossWing[arrayPos0].xpos = -0x500000
+                break
+
+            case 13
+                bossWing[arrayPos0].xpos = 0x500000
+                break
+
+            case 14
+                bossWing[arrayPos0].xpos = -0x300000
+                break
+
+            case 15
+                bossWing[arrayPos0].xpos = 0xA0000
+                break
+
+            end switch
+
+            bossWing[arrayPos0].xpos += object[+3].xpos
+            object.timer++
+        else
+            if object.timer < 30
+                object.timer++
+            else
+                object.timer = 0
+                helper2.animSpeedState++
+                helper2.wingSpawnXPos++
+            end if
+        end if
+    else
+        if bossWing[-4].type == TypeName[Blank Object]
+            if bossWing[-3].type == TypeName[Blank Object]
+                if bossWing[-2].type == TypeName[Blank Object]
+                    if bossWing[-1].type == TypeName[Blank Object]
+                        helper1.controllerDisabled = false
+                    end if
+                end if
+            end if
+        end if
+    end if
+end function
+
+
+public function EggMobile_WingThrowDiagonal
+    if helper2.animSpeedState < 1
+        bossWing[-1].type = TypeName[Boss Wing]
+        bossWing[-1].state = BOSSWING_FALL_VERTICAL
+        bossWing[-1].timer = 0
+        bossWing[-1].frame = 3
+
+        if player[SLOT_PLAYER1].xpos < object[+3].xpos
+            bossWing[-1].ypos = object[+3].ixpos
+            bossWing[-1].ypos += 248
+
+            temp0 = player[SLOT_PLAYER1].xpos
+            temp0 >>= 16
+            bossWing[-1].ypos -= temp0
+            bossWing[-1].ypos *= -0x6A0A
+            bossWing[-1].ypos >>= 16
+            bossWing[-1].ypos &= 0xFFFF
+            bossWing[-1].ypos <<= 16
+            bossWing[-1].ypos += object[+3].ypos
+            bossWing[-1].ypos += 0x600000
+            bossWing[-1].xpos = object[+3].xpos
+            bossWing[-1].xpos += 0xC80000
+
+            bossWing[-1].rotation = 96
+            bossWing[-1].xvel = -0x33BBA
+            bossWing[-1].yvel = 0x156CF
+        else
+            object[-1].ypos = player[SLOT_PLAYER1].xpos
+            object[-1].ypos >>= 16
+
+            temp0 = object[+3].ixpos
+            temp0 -= 248
+            object[-1].ypos -= temp0
+            object[-1].ypos *= -0x6A0A
+            object[-1].ypos >>= 16
+            object[-1].ypos &= 0xFFFF
+            object[-1].ypos <<= 16
+            object[-1].ypos += object[+3].ypos
+            object[-1].ypos += 0x600000
+            object[-1].xpos = object[+3].xpos
+            object[-1].xpos -= 0xC80000
+
+            object[-1].rotation = 416
+            object[-1].xvel = 0x33BBA
+            object[-1].yvel = 0x156CF
+        end if
+
+        helper2.animSpeedState++
+    else
+        if bossWing[-4].type == TypeName[Blank Object]
+            if bossWing[-3].type == TypeName[Blank Object]
+                if bossWing[-2].type == TypeName[Blank Object]
+                    if bossWing[-1].type == TypeName[Blank Object]
+                        helper1.controllerDisabled = false
+                    end if
+                end if
+            end if
+        end if
+    end if
+end function
+
+
+public function EggMobile_RestoreWings
+    if object.timer == 0
+        switch helper1.bossHealth
+        case 1
+            bossWing[-2].type = TypeName[Boss Wing]
+            bossWing[-2].frame = 0
+            bossWing[-2].attached = true
+            break
+
+        case 2
+            bossWing[-2].type = TypeName[Boss Wing]
+            bossWing[-2].frame = 0
+            bossWing[-2].attached = true
+
+            bossWing[-1].type = TypeName[Boss Wing]
+            bossWing[-1].frame = 0
+            bossWing[-1].attached = true
+            break
+
+        case 3
+            bossWing[-3].type = TypeName[Boss Wing]
+            bossWing[-3].frame = 0
+            bossWing[-3].attached = true
+
+            bossWing[-2].type = TypeName[Boss Wing]
+            bossWing[-2].frame = 0
+            bossWing[-2].attached = true
+
+            bossWing[-1].type = TypeName[Boss Wing]
+            bossWing[-1].frame = 0
+            bossWing[-1].attached = true
+            break
+
+        case 4
+            bossWing[-4].type = TypeName[Boss Wing]
+            bossWing[-4].frame = 0
+            bossWing[-4].attached = true
+
+            bossWing[-3].type = TypeName[Boss Wing]
+            bossWing[-3].frame = 0
+            bossWing[-3].attached = true
+
+            bossWing[-2].type = TypeName[Boss Wing]
+            bossWing[-2].frame = 0
+            bossWing[-2].attached = true
+
+            bossWing[-1].type = TypeName[Boss Wing]
+            bossWing[-1].frame = 0
+            bossWing[-1].attached = true
+            break
+
+        end switch
+
+        object.wingOffset = 0
+        object.timer++
+    else
+        object.timer++
+        if object.timer < 120
+            object.wingOffset += 112
+            if object.wingOffset >= 0x1000
+                object.wingOffset = 0x1000
+            end if
+        else
+            object.timer = 0
+            helper1.controllerDisabled = false
+        end if
+    end if
+end function
+
+
+public function EggMobile_SetTargetDestiny
+    object.xvel = player[SLOT_PLAYER1].xpos
+    object.xvel -= object.xpos
+    object.xvel >>= 16
+
+    temp0 = object.xvel
+    if temp0 < 0
+        FlipSign(temp0)
+    end if
+
+    if temp0 < 64
+        object.xvel <<= 4
+        object.xvel /= 90
+        object.xvel <<= 12
+        object.yvel = object[+3].ypos
+        object.yvel -= 0x40000
+
+        helper1.targetPos = object.yvel
+
+        object.yvel -= object.ypos
+        object.yvel >>= 16
+        object.yvel <<= 4
+        object.yvel /= 90
+        object.yvel <<= 12
+
+        if helper1.bossHealth == 2
+            helper2.maxOscillation = 0x1180
+        else
+            helper2.maxOscillation = 0xF00
+        end if
+    else
+        if object.xvel >= 0
+            object.xvel -= 16
+        else
+            object.xvel += 16
+        end if
+
+        object.xvel <<= 4
+        object.xvel /= 90
+        object.xvel <<= 12
+        object.yvel = object[+3].ypos
+        object.yvel += 0xA0000
+
+        helper1.targetPos = object.yvel
+
+        object.yvel -= object.ypos
+        object.yvel >>= 16
+        object.yvel <<= 4
+        object.yvel /= 90
+        object.yvel <<= 12
+
+        if helper1.bossHealth == 2
+            helper2.maxOscillation = 0x1180
+        else
+            helper2.maxOscillation = 0xC80
+        end if
+    end if
+end function
+
+
+public function EggMobile_ApproachPlayer
+    object.xpos += object.xvel
+    object.ypos += object.yvel
+    if object.timer > 10
+        if object.oscillation == helper2.maxOscillation
+            object.oscillationValue = 0
+        end if
+    else
+        object.timer++
+    end if
+
+    if object.ypos >= helper1.targetPos
+        object.timer = 0
+        object.ypos = helper1.targetPos
+        helper1.targetPos = object[+3].ypos
+        helper1.targetPos -= 0x440000
+        FlipSign(object.xvel)
+        FlipSign(object.yvel)
+        helper1.controllerDisabled = false
+        PlaySfx(SfxName[MS Charge], false)
+    end if
+end function
+
+
+public function EggMobile_ExtendWings
+    object.wingOffset += 288
+    if object.wingOffset > 0x2200
+        object.wingOffset = 0x2200
+    end if
+
+    object.timer++
+    if object.timer == 120
+        object.timer = 0
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_RetractWings
+    object.xpos += object.xvel
+    object.ypos += object.yvel
+
+    object.wingOffset -= 128
+    if object.wingOffset < 0x1000
+        object.wingOffset = 0x1000
+    end if
+
+    if object.ypos <= helper1.targetPos
+        object.ypos = helper1.targetPos
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_Hit
+    object.wingOffset -= 128
+    if object.wingOffset < 0x1000
+        object.wingOffset = 0x1000
+    end if
+
+    object.ypos -= object.yvel
+
+    temp0 = object[+3].ypos
+    temp0 -= 0x440000
+    if object.ypos <= temp0
+        object.ypos = temp0
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_PreparePogoAttack
+    if object.timer < 20
+        object.timer++
+    else
+        temp0 = object.oscillation
+        temp0 >>= 7
+        if temp0 == 0
+            object.timer = 0
+            bossWing[-2].rotation = 256
+            object.oscillation = 0
+            object.oscillationValue = 0
+            helper1.controllerDisabled = false
+        end if
+    end if
+end function
+
+
+public function EggMobile_PogoAttackDescend
+    temp0 = object.timer
+    temp0 <<= 8
+    temp0 /= 60
+    Sin(object.ypos, temp0)
+    object.ypos *= -0x3200
+    object.ypos += object[+3].ypos
+    object.ypos += 0x200000
+    object.timer++
+    if object.timer > 29
+        object.timer = 0
+        object.ypos = object[+3].ypos
+        object.ypos -= 0x440000
+        helper1.controllerDisabled = false
+    end if
+end function
+
+
+public function EggMobile_PogoAttackAscend
+    temp0 = object.timer
+    temp0 += 30
+    temp0 <<= 8
+    temp0 /= 60
+    Sin(object.ypos, temp0)
+    object.ypos *= -0x3200
+    object.ypos += object[+3].ypos
+    object.ypos += 0x200000
+    object.timer++
+    if object.timer > 29
+        object.timer = 0
+        helper1.controllerDisabled = false
+        PlaySfx(SfxName[Impact 1], false)
+    end if
+end function
+
+
+public function EggMobile_PogoAttackMoveLeft
+    temp0 = object.timer
+    temp0 <<= 8
+    temp0 /= 60
+
+    Cos(object.xpos, temp0)
+    object.xpos *= 0x1480
+    object.xpos += helper1.targetPos
+
+    Sin(object.ypos, temp0)
+    object.ypos *= -0x3400
+    object.ypos += object[+3].ypos
+    object.ypos += 0x200000
+
+    temp0 = object[+3].ypos
+    temp0 += 0x200000
+    temp0 -= object.ypos
+    temp0 >>= 9
+
+    object.wingOffset = 0x1000
+    object.wingOffset += temp0
+    if object.wingOffset > 0x2200
+        object.wingOffset = 0x2200
+    end if
+
+    object.timer++
+    if object.timer > 59
+        object.timer = 0
+        helper1.controllerDisabled = false
+        PlaySfx(SfxName[Impact 1], false)
+    end if
+end function
+
+
+public function EggMobile_PogoAttackMoveRight
+    temp0 = object.timer
+    temp0 <<= 8
+    temp0 /= 60
+
+    Cos(object.xpos, temp0)
+    object.xpos *= -0x1480
+    object.xpos += helper1.targetPos
+
+    Sin(object.ypos, temp0)
+    object.ypos *= -0x3400
+    object.ypos += object[+3].ypos
+    object.ypos += 0x200000
+
+    temp0 = object[+3].ypos
+    temp0 += 0x200000
+    temp0 -= object.ypos
+    temp0 >>= 9
+
+    object.wingOffset = 0x1000
+    object.wingOffset += temp0
+    if object.wingOffset > 0x2200
+        object.wingOffset = 0x2200
+    end if
+
+    object.timer++
+    if object.timer > 59
+        object.timer = 0
+        helper1.controllerDisabled = false
+        PlaySfx(SfxName[Impact 1], false)
+    end if
+end function
+
+
+public function Helper1Controller_FourWings
+    switch helper1.controllerState
+    case 0
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 120
+        helper2.bossInvincible = true
+        break
+
+    case 1
+        object.state = EggMobile_MoveToRight
+        object.oscillationValue = -64
+        object.xvel = 0x16000
+        helper2.bossInvincible = true
+        break
+
+    case 2
+        object.state = EggMobile_MoveToLeft
+        break
+
+    case 3
+        object.state = EggMobile_MoveRightToCenter
+        break
+
+    case 4
+        object.state = EggMobile_GroundSpinDescend
+        object.yvel = 0xA000
+        helper1.targetPos = object[+3].ypos
+        helper1.targetPos += 0x200000
+        helper2.bossInvincible = false
+        break
+
+    case 5
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 20
+        break
+
+    case 6
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            object.direction = FACING_LEFT
+            object.state = EggMobile_GroundSpinRight
+            helper1.targetPos = helper1.centerBound
+            helper1.targetPos += 0x680000
+            object.oscillationValue = 16
+        else
+            object.direction = FACING_RIGHT
+            object.state = EggMobile_GroundSpinLeft
+            helper1.targetPos = helper1.centerBound
+            helper1.targetPos -= 0x680000
+            object.oscillationValue = -16
+        end if
+
+        helper2.sfxState = 1
+        helper2.sfxUsed = false
+        helper2.sfxTimer = 0
+        break
+
+    case 7
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 60
+        object.oscillationValue = 0
+        break
+
+    case 8
+        if object.xpos < object[+3].xpos
+            object.state = EggMobile_GroundSpinRight
+            helper1.targetPos = helper1.centerBound
+            helper1.targetPos += 0x680000
+            object.oscillationValue = 16
+        else
+            object.state = EggMobile_GroundSpinLeft
+            helper1.targetPos = helper1.centerBound
+            helper1.targetPos -= 0x680000
+            object.oscillationValue = -16
+        end if
+
+        helper2.sfxTimer = 0
+        break
+
+    case 9
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 60
+        object.oscillationValue = 0
+        helper2.sfxState = 0
+        helper2.sfxTimer = 0
+        break
+
+    case 10
+        object.state = EggMobile_GroundSpinAscend
+        object.oscillationValue = -64
+        helper1.targetPos = object[+3].ypos
+        helper1.targetPos -= 0x240000
+        break
+
+    case 11
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 90
+        break
+
+    case 12
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_MoveToLeft
+        else
+            object.state = EggMobile_MoveToRight
+        end if
+        break
+
+    case 13
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_MoveToRight
+        else
+            object.state = EggMobile_MoveToLeft
+        end if
+        break
+
+    case 14
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_MoveLeftToCenter
+        else
+            object.state = EggMobile_MoveRightToCenter
+        end if
+        break
+
+    case 15
+        object.state = EggMobile_HandleWingThrowATK
+        helper2.secondaryState = 0
+        helper2.bossInvincible = true
+        break
+
+    case 16
+        object.state = EggMobile_WingThrowVertical
+        helper2.animSpeedState = 0
+        helper2.wingSpawnXPos = player[SLOT_PLAYER1].xpos
+        helper2.wingSpawnXPos >>= 16
+        helper2.wingSpawnXPos &= 3
+        helper2.wingSpawnXPos <<= 2
+        bossWing[-4].type = TypeName[Blank Object]
+        bossWing[-3].type = TypeName[Blank Object]
+        bossWing[-2].type = TypeName[Blank Object]
+        bossWing[-1].type = TypeName[Blank Object]
+        helper2.bossInvincible = true
+        break
+
+    case 17
+        object.state = EggMobile_RestoreWings
+        helper2.bossInvincible = true
+        break
+
+    case 18
+        CallFunction(EggMobile_SetTargetDestiny)
+        object.state = EggMobile_ApproachPlayer
+        object.oscillationValue = -64
+        helper2.bossInvincible = false
+        break
+
+    case 19
+        object.state = EggMobile_ExtendWings
+        break
+
+    case 20
+        object.state = EggMobile_RetractWings
+        break
+
+    case 21
+        CallFunction(EggMobile_SetTargetDestiny)
+        object.state = EggMobile_ApproachPlayer
+        object.oscillationValue = -64
+        break
+
+    case 22
+        object.state = EggMobile_ExtendWings
+        break
+
+    case 23
+        object.state = EggMobile_RetractWings
+        break
+
+    end switch
+
+    if helper1.controllerState < 23
+        helper1.controllerState++
+    else
+        helper1.controllerState = 1
+    end if
+
+    helper1.controllerDisabled = true
+end function
+
+
+public function Helper1Controller_ThreeWings
+    switch helper1.controllerState
+    case 0
+        object.state = EggMobile_MoveToRight
+        object.oscillationValue = -80
+        object.xvel = 0x18000
+        helper2.bossInvincible = true
+        break
+
+    case 1
+        object.state = EggMobile_MoveToLeft
+        break
+
+    case 2
+        object.state = EggMobile_MoveRightToCenter
+        break
+
+    case 3
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            object.state = EggMobile_MoveToLeft
+            object.direction = FACING_LEFT
+        else
+            object.state = EggMobile_MoveToRight
+            object.direction = FACING_RIGHT
+        end if
+        break
+
+    case 4
+        object.oscillation /= 160
+        object.oscillation *= 160
+        object.state = EggMobile_GroundSpinDescend
+        object.yvel = 0xC000
+        helper1.targetPos = object[+3].ypos
+        helper1.targetPos += 0x200000
+        helper2.bossInvincible = false
+        temp0 = 4
+        arrayPos0 = object.entityPos
+        arrayPos0 -= 4
+        while temp0 > 0
+            if bossWing[arrayPos0].attached == false
+                helper2.maxOscillation = temp0
+                if object.direction == FACING_LEFT
+                    helper2.maxOscillation += 3
+                else
+                    helper2.maxOscillation++
+                end if
+                helper2.maxOscillation *= 20
+                helper2.maxOscillation %= 80
+                temp0 = 0
+            end if
+            arrayPos0++
+            temp0--
+        loop
+        break
+
+    case 5
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 20
+        break
+
+    case 6
+        if object.xpos < object[+3].xpos
+            object.state = EggMobile_GroundSpinRight
+            helper1.targetPos = object[+3].xpos
+            helper1.targetPos -= 0x140000
+            object.oscillationValue = 16
+        else
+            object.state = EggMobile_GroundSpinLeft
+            helper1.targetPos = object[+3].xpos
+            helper1.targetPos += 0x140000
+            object.oscillationValue = -16
+        end if
+
+        helper2.sfxState = 1
+        helper2.sfxUsed = false
+        helper2.sfxTimer = 0
+        break
+
+    case 7
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 60
+        object.oscillationValue = 0
+        break
+
+    case 8
+        if object.xpos < helper1.centerBound
+            object.direction = FACING_LEFT
+            object.state = EggMobile_GroundSpinLeft
+            helper1.targetPos = helper1.leftBound
+            object.oscillationValue = -16
+        else
+            object.direction = FACING_RIGHT
+            object.state = EggMobile_GroundSpinRight
+            helper1.targetPos = helper1.rightBound
+            object.oscillationValue = 16
+        end if
+
+        helper2.sfxTimer = 0
+        break
+
+    case 9
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 60
+        object.oscillationValue = 0
+        helper2.sfxState = 2
+        helper2.sfxTimer = 0
+        break
+
+    case 10
+        object.state = EggMobile_GroundSpinAscend
+        object.oscillationValue = -80
+        helper1.targetPos = object[+3].ypos
+        helper1.targetPos -= 0x240000
+        break
+
+    case 11
+        object.state = EggMobile_StopMovement
+        helper2.stopTimer = 90
+        break
+
+    case 12
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_MoveToLeft
+        else
+            object.state = EggMobile_MoveToRight
+        end if
+        break
+
+    case 13
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_MoveToRight
+        else
+            object.state = EggMobile_MoveToLeft
+        end if
+        break
+
+    case 14
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_MoveLeftToCenter
+        else
+            object.state = EggMobile_MoveRightToCenter
+        end if
+        break
+
+    case 15
+        object.state = EggMobile_HandleWingThrowATK
+        helper2.secondaryState = 0
+        helper2.bossInvincible = true
+        break
+
+    case 16
+        object.state = EggMobile_WingThrowVertical
+        helper2.animSpeedState = 0
+        helper2.wingSpawnXPos = player[SLOT_PLAYER1].xpos
+        helper2.wingSpawnXPos >>= 16
+        helper2.wingSpawnXPos &= 3
+        helper2.wingSpawnXPos <<= 2
+        bossWing[-4].type = TypeName[Blank Object]
+        bossWing[-3].type = TypeName[Blank Object]
+        bossWing[-2].type = TypeName[Blank Object]
+        bossWing[-1].type = TypeName[Blank Object]
+        helper2.bossInvincible = true
+        break
+
+    case 17
+        object.state = EggMobile_RestoreWings
+        helper2.bossInvincible = true
+        break
+
+    case 18
+        CallFunction(EggMobile_SetTargetDestiny)
+        object.state = EggMobile_ApproachPlayer
+        object.oscillationValue = -64
+        helper2.bossInvincible = false
+        break
+
+    case 19
+        object.state = EggMobile_ExtendWings
+        break
+
+    case 20
+        object.state = EggMobile_RetractWings
+        break
+
+    case 21
+        CallFunction(EggMobile_SetTargetDestiny)
+        object.state = EggMobile_ApproachPlayer
+        object.oscillationValue = -64
+        break
+
+    case 22
+        object.state = EggMobile_ExtendWings
+        break
+
+    case 23
+        object.state = EggMobile_RetractWings
+        break
+
+    end switch
+
+    if helper1.controllerState < 23
+        helper1.controllerState++
+    else
+        helper1.controllerState = 0
+    end if
+
+    helper1.controllerDisabled = true
+end function
+
+
+public function Helper1Controller_TwoWings
+    switch helper1.controllerState
+    case 0
+        object.state = EggMobile_MoveToRight
+        object.oscillationValue = -106
+        object.xvel = 0x1A000
+        helper2.bossInvincible = true
+        break
+
+    case 1
+        object.state = EggMobile_MoveToLeft
+        break
+
+    case 2
+        object.state = EggMobile_MoveRightToCenter
+        break
+
+    case 3
+        object.state = EggMobile_HandleWingThrowATK
+        helper2.secondaryState = 0
+        break
+
+    case 4
+        object.state = EggMobile_WingThrowVertical
+        helper2.animSpeedState = 0
+        helper2.wingSpawnXPos = player[SLOT_PLAYER1].xpos
+        helper2.wingSpawnXPos >>= 16
+        helper2.wingSpawnXPos &= 3
+        helper2.wingSpawnXPos <<= 2
+        bossWing[-4].type = TypeName[Blank Object]
+        bossWing[-3].type = TypeName[Blank Object]
+        bossWing[-2].type = TypeName[Blank Object]
+        bossWing[-1].type = TypeName[Blank Object]
+        helper2.bossInvincible = true
+        break
+
+    case 5
+        object.state = EggMobile_RestoreWings
+        helper2.bossInvincible = true
+        break
+
+    case 6
+        CallFunction(EggMobile_SetTargetDestiny)
+        object.state = EggMobile_ApproachPlayer
+        object.oscillationValue = -64
+        helper2.bossInvincible = false
+        break
+
+    case 7
+        object.state = EggMobile_ExtendWings
+        break
+
+    case 8
+        object.state = EggMobile_RetractWings
+        break
+
+    case 9
+        CallFunction(EggMobile_SetTargetDestiny)
+        object.state = EggMobile_ApproachPlayer
+        object.oscillationValue = -64
+        break
+
+    case 10
+        object.state = EggMobile_ExtendWings
+        break
+
+    case 11
+        object.state = EggMobile_RetractWings
+        break
+
+    end switch
+
+    if helper1.controllerState < 11
+        helper1.controllerState++
+    else
+        helper1.controllerState = 0
+    end if
+
+    helper1.controllerDisabled = true
+end function
+
+
+public function Helper1Controller_OneWing
+    switch helper1.controllerState
+    case 0
+        object.state = EggMobile_MoveToRight
+        object.oscillationValue = -160
+        object.xvel = 0x1A000
+        helper2.bossInvincible = true
+        break
+
+    case 1
+        object.state = EggMobile_MoveToLeft
+        break
+
+    case 2
+        object.state = EggMobile_MoveRightToCenter
+        break
+
+    case 3
+        object.state = EggMobile_HandleWingThrowATK
+        helper2.secondaryState = 4
+        object.oscillation >>= 6
+        object.oscillation <<= 6
+        object.timer = 0
+        helper1.targetPos = object[+3].ypos
+        helper1.targetPos -= 0x440000
+        break
+
+    case 4
+        object.state = EggMobile_WingThrowDiagonal
+        helper2.animSpeedState = 0
+        bossWing[-4].type = TypeName[Blank Object]
+        bossWing[-3].type = TypeName[Blank Object]
+        bossWing[-2].type = TypeName[Blank Object]
+        bossWing[-1].type = TypeName[Blank Object]
+        object.timer = 0
+        object.wingOffset = 0
+        break
+
+    case 5
+        object.state = EggMobile_RestoreWings
+        break
+
+    case 6
+        object.state = EggMobile_MoveToRight
+        object.oscillationValue = -160
+        break
+
+    case 7
+        object.state = EggMobile_MoveToLeft
+        break
+
+    case 8
+        object.state = EggMobile_MoveRightToCenter
+        break
+
+    case 9
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            object.state = EggMobile_MoveToLeft
+            object.direction = 1
+        else
+            object.state = EggMobile_MoveToRight
+            object.direction = 0
+        end if
+        break
+
+    case 10
+        object.state = EggMobile_PreparePogoAttack
+        break
+
+    case 11
+        object.state = EggMobile_PogoAttackAscend
+        helper2.bossInvincible = false
+        break
+
+    case 12
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_PogoAttackMoveLeft
+            helper1.targetPos = object.xpos
+            helper1.targetPos -= 0x290000
+        else
+            object.state = EggMobile_PogoAttackMoveRight
+            helper1.targetPos = object.xpos
+            helper1.targetPos += 0x290000
+        end if
+        break
+
+    case 13
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_PogoAttackMoveLeft
+            helper1.targetPos -= 0x520000
+        else
+            object.state = EggMobile_PogoAttackMoveRight
+            helper1.targetPos += 0x520000
+        end if
+        break
+
+    case 14
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_PogoAttackMoveLeft
+            helper1.targetPos -= 0x520000
+        else
+            object.state = EggMobile_PogoAttackMoveRight
+            helper1.targetPos += 0x520000
+        end if
+        break
+
+    case 15
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_PogoAttackMoveRight
+        else
+            object.state = EggMobile_PogoAttackMoveLeft
+        end if
+        break
+
+    case 16
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_PogoAttackMoveRight
+            helper1.targetPos += 0x520000
+        else
+            object.state = EggMobile_PogoAttackMoveLeft
+            helper1.targetPos -= 0x520000
+        end if
+        break
+
+    case 17
+        if object.direction == FACING_RIGHT
+            object.state = EggMobile_PogoAttackMoveRight
+            helper1.targetPos += 0x520000
+        else
+            object.state = EggMobile_PogoAttackMoveLeft
+            helper1.targetPos -= 0x520000
+        end if
+        break
+
+    case 18
+        object.state = EggMobile_PogoAttackDescend
+        break
+
+    end switch
+
+    if helper1.controllerState < 18
+        helper1.controllerState++
+    else
+        helper1.controllerState = 0
+    end if
+
+    helper1.controllerDisabled = true
+end function
+
+
+public function EggMobile_Destroyed
+    switch helper2.secondaryState
+    case 0
+        object.timer++
+        if object.timer == 90
+            object.timer = 0
+            object.xvel = 0x14000
+
+            helper1.targetPos = object.ypos
+
+            player[SLOT_PLAYER1].controlMode = CONTROLMODE_NONE
+            player[SLOT_PLAYER1].jumpHold    = false
+            player[SLOT_PLAYER1].right       = true
+            player[SLOT_PLAYER1].left        = false
+            player[SLOT_PLAYER1].up          = false
+            player[SLOT_PLAYER1].down        = false
+
+            helper2.secondaryState++
+            if stage.playerListPos == PLAYER_SONIC_A
+                if stage.debugMode == false
+                    // (unused)
+                end if
+            end if
+        end if
+        break
+
+    case 1
+        object.xpos += object.xvel
+        Sin(object.ypos, object.timer)
+        object.ypos <<= 9
+        object.ypos += helper1.targetPos
+        helper1.targetPos += 0x4000
+        object.timer += 4
+        object.timer &= 511
+
+        temp0 = helper1.rightBound
+        temp0 += 0x800000
+        if object.xpos > temp0
+            object.timer = 0
+            object[+4].type = TypeName[Amy Rose]
+            helper2.secondaryState++
+        end if
+
+        if player[SLOT_PLAYER1].right == true
+            temp0 = player[SLOT_PLAYER1].collisionRight
+            temp0 <<= 16
+            temp0 += player[SLOT_PLAYER1].xpos
+            temp1 = helper2.cutsceneRightBound
+            temp1 <<= 16
+            if temp0 > temp1
+                player[SLOT_PLAYER1].left = true
+                player[SLOT_PLAYER1].right = false
+            end if
+        else
+            temp0 = helper1.centerBound
+            temp0 += 0x400000
+            if player[SLOT_PLAYER1].xpos < temp0
+                player[SLOT_PLAYER1].xpos = temp0
+                player[SLOT_PLAYER1].speed = 0
+                player[SLOT_PLAYER1].left = false
+            end if
+        end if
+        break
+
+    case 2
+        temp0 = helper1.centerBound
+        temp0 += 0x400000
+        if player[SLOT_PLAYER1].xpos < temp0
+            player[SLOT_PLAYER1].xpos = temp0
+            player[SLOT_PLAYER1].speed = 0
+            player[SLOT_PLAYER1].left = false
+        end if
+        break
+
+    end switch
+
+    temp0 = object.animationTimer
+    temp0 &= 1
+    if temp0 == 0
+        if helper2.secondaryState > 0
+            screen.shakeY = 2
+        end if
+
+        Rand(temp0, 300)
+        temp0 -= 150
+        temp0 <<= 16
+        temp0 += object[+3].xpos
+
+        Rand(temp1, 200)
+        temp1 -= 100
+        temp1 <<= 16
+        temp1 += object[+3].ypos
+
+        CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+        if object.animationTimer == 0
+            if object[+5].type == TypeName[Blank Object]
+                PlaySfx(SfxName[Explosion], false)
+            end if
+        end if
+    end if
+
+    object.animationTimer++
+    object.animationTimer &= 7
+end function
+
+
+public function EggMobile_Destroyed_FinalFever
+    switch helper2.secondaryState
+    case 0
+        object.timer++
+        if object.timer == 30
+            object.timer = 0
+            object.xvel = 0x20000
+            helper1.targetPos = object.ypos
+            helper2.secondaryState++
+        end if
+        break
+
+    case 1
+        object.xpos += object.xvel
+        Sin(object.ypos, object.timer)
+        object.ypos <<= 9
+        object.ypos += helper1.targetPos
+        helper1.targetPos += 0x4000
+        object.timer += 4
+        object.timer &= 511
+        temp0 = helper1.rightBound
+        temp0 += 0x580000
+        if object.xpos > temp0
+            helper2.secondaryState++
+            object.timer = 0
+            helper2.cutsceneRightBound += 64
+            player[SLOT_PLAYER1].controlMode = CONTROLMODE_NONE
+            player[SLOT_PLAYER1].jumpHold    = false
+            player[SLOT_PLAYER1].right       = true
+            player[SLOT_PLAYER1].left        = false
+            player[SLOT_PLAYER1].up          = false
+            player[SLOT_PLAYER1].down        = false
+        end if
+        break
+
+    case 2
+        player[SLOT_PLAYER1].right = true
+        object.timer++
+        if object.timer == 120
+            object[+5].type = TypeName[Fade Screen]
+            object[+5].propertyValue = CUTSCENE_FINALFEVER
+        end if
+        break
+
+    end switch
+
+    temp0 = object.animationTimer
+    temp0 &= 3
+    if temp0 == 0
+        Rand(temp0, 64)
+        temp0 -= 32
+        temp0 <<= 16
+        temp0 += object.xpos
+
+        Rand(temp1, 64)
+        temp1 -= 32
+        temp1 <<= 16
+        temp1 += object.ypos
+
+        CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+        if object.animationTimer == 0
+            if object[+5].type == TypeName[Blank Object]
+                PlaySfx(SfxName[Explosion], false)
+            end if
+        end if
+    end if
+
+    object.animationTimer++
+    object.animationTimer &= 7
+end function
+
+
+public function EggMobile_HandleWingRotation
+    arrayPos0 = object.entityPos
+    arrayPos0 -= 4
+    temp0 = 0
+    temp1 = object.rotation
+    while temp0 < 4
+        if bossWing[arrayPos0].attached == true
+            bossWing[arrayPos0].rotation = temp1
+
+            Sin(bossWing[arrayPos0].xpos, temp1)
+            bossWing[arrayPos0].xpos *= object.wingOffset
+            bossWing[arrayPos0].xpos &= -0x10000 // Truncate the value
+            bossWing[arrayPos0].xpos += object.xpos
+
+            Cos(bossWing[arrayPos0].ypos, temp1)
+            temp2 = object.wingOffset
+            FlipSign(temp2)
+            bossWing[arrayPos0].ypos *= temp2
+            bossWing[arrayPos0].ypos &= -0x10000 // Truncate the value
+            bossWing[arrayPos0].ypos += object.ypos
+        end if
+
+        temp1 += 128
+        temp1 &= 511
+        arrayPos0++
+        temp0++
+    loop
+end function
+
+
+public function EggMobile_DropDamagedWing
+    temp6 = object[arrayPos0].xpos
+    temp6 -= object.xpos
+    temp6 -= 0x180000
+    if temp0 < 0
+        FlipSign(temp6)
+    end if
+
+    temp7 = object[arrayPos0].ypos
+    temp7 -= object.ypos
+    temp7 -= 0x440000
+    if temp7 < 0
+        FlipSign(temp7)
+    end if
+
+    temp6 += temp7
+    temp6 >>= 16
+end function
+
+
+public function EggMobile_HandleAnimations
+    temp0 = object[+1].animationTimer
+    temp0 >>= 2
+    temp0 &= 1
+    if temp0 == 1
+        temp0 = object[+1].animationTimer
+        temp0 >>= 3
+        temp0 += 11
+        DrawSprite(temp0)
+
+        temp0 += 5
+        DrawSprite(temp0)
+
+        temp0 += 5
+        DrawSprite(temp0)
+
+        temp0 += 5
+        DrawSprite(temp0)
+
+        temp0 += 5
+        DrawSprite(temp0)
+
+        temp0 += 5
+        DrawSprite(temp0)
+
+        temp0 += 5
+        DrawSprite(temp0)
+    end if
+
+    object[+1].animationTimer++
+    object[+1].animationTimer %= 40
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.oscillation += object.oscillationValue
+    if object.oscillation < 0
+        object.oscillation += 0x1400
+    end if
+    object.oscillation %= 0x1400
+
+    object.rotation = object.oscillation
+    object.rotation /= 10
+
+    if helper1.controllerDisabled == false
+        CallFunction(helper1.controller)
+    end if
+
+    CallFunction(object.state)
+    CallFunction(EggMobile_HandleWingRotation)
+
+    if object.invulnerableTimer > 0
+        if object.invulnerableTimer > 20
+            temp0 = object.invulnerableTimer
+            temp0 &= 15
+            if temp0 == 0
+                Rand(temp0, 48)
+                temp0 -= 24
+                temp0 <<= 16
+                temp0 += object.xpos
+
+                Rand(temp1, 48)
+                temp1 -= 32
+                temp1 <<= 16
+                temp1 += object.ypos
+
+                CreateTempObject(TypeName[Boss Spark], 0, temp0, temp1)
+                object[tempObjectPos].inkEffect = INK_NONE
+                object[tempObjectPos].alpha = 248
+
+                Rand(temp0, 48)
+                temp0 -= 24
+                temp0 <<= 16
+                temp0 += object.xpos
+
+                Rand(temp1, 48)
+                temp1 -= 32
+                temp1 <<= 16
+                temp1 += object.ypos
+
+                CreateTempObject(TypeName[Boss Spark], 0, temp0, temp1)
+                object[tempObjectPos].inkEffect = INK_NONE
+                object[tempObjectPos].alpha = 248
+            end if
+        end if
+
+        object.invulnerableTimer--
+    end if
+
+    if object.oscillationValue != 0
+        switch helper2.sfxState
+        case 0
+            helper2.sfxTimer += 6
+            if helper2.sfxTimer == 42
+                PlaySfx(SfxName[Wing Rotate], false)
+            end if
+
+            if helper2.sfxTimer > 59
+                helper2.sfxTimer -= 60
+                PlaySfx(SfxName[Wing Rotate], false)
+            end if
+            break
+
+        case 1
+            helper2.sfxTimer += 3
+            if helper2.sfxTimer > 59
+                helper2.sfxTimer -= 60
+                if helper2.sfxUsed == false
+                    PlaySfx(SfxName[Wing Rotate], false)
+                    helper2.sfxUsed = true
+                else
+                    PlaySfx(SfxName[Mech Step], false)
+                    helper2.sfxUsed = false
+                end if
+            end if
+            break
+
+        case 2
+            helper2.sfxTimer += 8
+            if helper2.sfxTimer > 59
+                helper2.sfxTimer -= 60
+                PlaySfx(SfxName[Wing Rotate], false)
+            end if
+            break
+
+        case 3
+            helper2.sfxTimer += 10
+            if helper2.sfxTimer > 59
+                helper2.sfxTimer -= 60
+                PlaySfx(SfxName[Wing Rotate], false)
+            end if
+            break
+
+        case 4
+            helper2.sfxTimer += 16
+            if helper2.sfxTimer > 59
+                helper2.sfxTimer -= 60
+                PlaySfx(SfxName[Wing Rotate], false)
+            end if
+            break
+
+        end switch
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if helper2.bossInvincible == false
+            if object.invulnerableTimer == 0
+                BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    if player[currentPlayer].animation != ANI_JUMPING
+                        CallFunction(Player_Hit)
+                        if player[currentPlayer].state == Player_State_GotHit
+                            object.animation = EGGANI_LAUGH
+                        end if
+                    else
+                        object.oscillation >>= 5
+                        object.oscillation <<= 5
+                        FlipSign(player[currentPlayer].speed)
+                        FlipSign(player[currentPlayer].xvel)
+                        FlipSign(player[currentPlayer].yvel)
+
+                        temp0 = 0
+                        arrayPos0 = object.entityPos
+                        arrayPos0--
+                        temp1 = 0x10000
+                        while temp0 < 4
+                            if bossWing[arrayPos0].attached == true
+                                CallFunction(EggMobile_DropDamagedWing)
+                                if temp6 < temp1
+                                    arrayPos1 = arrayPos0
+                                    temp1 = temp6
+                                end if
+                            end if
+                            arrayPos0--
+                            temp0++
+                        loop
+
+                        if temp1 < 0x10000
+                            bossWing[arrayPos1].attached = false
+                            bossWing[arrayPos1].state = BOSSWING_FALL_DIAGONAL
+                            bossWing[arrayPos1].priority = PRIORITY_ACTIVE
+
+                            if bossWing[arrayPos1].xpos > object.xpos
+                                bossWing[arrayPos1].xvel = 0x10000
+                            else
+                                bossWing[arrayPos1].xvel = -0x10000
+                            end if
+
+                            bossWing[arrayPos1].yvel = -0x30000
+                        end if
+
+                        helper1.bossHealth--
+                        switch helper1.bossHealth
+                        case 0
+                            stage.timeEnabled = false
+                            player.score += 1000
+                            helper2.bossInvincible = true
+                            object.animation = EGGANI_DEFEAT
+                            object.timer = 0
+
+                            if HUD.currentTimePeriod == TIME_BAD_FUTURE
+                                object.state = EggMobile_Destroyed
+                            else
+                                // Before Final Fever was cut, this would have set the state to EggMobile_Destroyed_FinalFever instead
+                                // Now there's a redundant time period check, what a shame
+                                object.state = EggMobile_Destroyed
+                            end if
+
+                            object[+3].state++
+                            object[+3].alpha >>= 1
+                            object[+3].alpha <<= 1
+                            helper2.secondaryState = 0
+                            object.animationTimer = 0
+                            helper1.controllerDisabled = true
+                            helper2.sfxState = 5
+                            break
+
+                        case 1
+                            object.invulnerableTimer = 120
+                            helper1.controllerState = 0
+                            helper1.controllerDisabled = true
+                            object.state = EggMobile_Hit
+                            object.yvel = 0x10000
+                            helper1.controller = Helper1Controller_OneWing
+                            object.timer = 0
+                            object.animation = EGGANI_HURT
+                            helper2.sfxState = 4
+                            PlaySfx(SfxName[Boss Hit], false)
+                            break
+
+                        case 2
+                            object.invulnerableTimer = 120
+                            helper1.controllerState = 0
+                            helper1.controllerDisabled = true
+                            object.state = EggMobile_Hit
+                            object.yvel = 0xE000
+                            helper1.controller = Helper1Controller_TwoWings
+                            object.timer = 0
+                            object.animation = EGGANI_HURT
+                            helper2.sfxState = 3
+                            PlaySfx(SfxName[Boss Hit], false)
+                            break
+
+                        case 3
+                            object.invulnerableTimer = 120
+                            helper1.controllerState = 0
+                            helper1.controllerDisabled = true
+                            object.state = EggMobile_Hit
+                            object.yvel = 0xC000
+                            helper1.controller = Helper1Controller_ThreeWings
+                            object.timer = 0
+                            object.animation = EGGANI_HURT
+                            helper2.sfxState = 2
+                            PlaySfx(SfxName[Boss Hit], false)
+                            break
+
+                        end switch
+                    end if
+                end if
+            end if
+        end if
+
+        temp0 = player[currentPlayer].collisionRight
+        temp0 <<= 16
+        temp0 += player[currentPlayer].xpos
+        temp1 = helper2.cutsceneRightBound
+        temp1 <<= 16
+        if temp0 > temp1
+            player[currentPlayer].xvel = 0
+            player[currentPlayer].speed = 0
+            player[currentPlayer].xpos = temp1
+            temp0 = player[currentPlayer].collisionRight
+            temp0 <<= 16
+            player[currentPlayer].xpos -= temp0
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    temp0 = object.invulnerableTimer
+    temp0 &= 1
+    if temp0 == 0
+        switch object.animation
+        case EGGANI_IDLE
+            DrawSprite(0)
+            CallFunction(EggMobile_HandleAnimations)
+
+            if object.oscillationValue != 0
+                temp0 = oscillation
+                temp0 &= 7
+                temp0 >>= 2
+                temp0 += 2
+                DrawSprite(temp0)
+            end if
+
+            DrawSprite(6)
+            DrawSprite(10)
+            break
+
+        case EGGANI_HURT
+            DrawSprite(0)
+            CallFunction(EggMobile_HandleAnimations)
+
+            if object.oscillationValue != 0
+                temp0 = oscillation
+                temp0 &= 7
+                temp0 >>= 2
+                temp0 += 2
+                DrawSprite(temp0)
+            end if
+
+            DrawSprite(9)
+            DrawSprite(10)
+
+            if object.animationTimer < 120
+                object.animationTimer++
+            else
+                object.animationTimer = 0
+                object.animation = 0
+            end if
+            break
+
+        case EGGANI_LAUGH
+            DrawSprite(0)
+            CallFunction(EggMobile_HandleAnimations)
+
+            if object.oscillationValue != 0
+                temp0 = oscillation
+                temp0 &= 7
+                temp0 >>= 2
+                temp0 += 2
+                DrawSprite(temp0)
+            end if
+
+            temp0 = object.animationTimer
+            temp0 &= 15
+            temp0 >>= 3
+            temp0 += 6
+            DrawSprite(temp0)
+
+            if object.animationTimer < 120
+                object.animationTimer++
+            else
+                object.animationTimer = 0
+                object.animation = 0
+            end if
+
+            DrawSprite(10)
+            break
+
+        case EGGANI_DEFEAT
+            DrawSprite(1)
+            DrawSprite(8)
+            break
+
+        end switch
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects3.gif")
+
+    SpriteFrame(-36, -60, 88, 112, 1, 1)    // #0  - Egg Spinner
+    SpriteFrame(-36, -36, 72, 72, 1, 114)   // #1  - Egg Spinner Destroyed
+    SpriteFrame(-36, -36, 32, 16, 90, 1)    // #2  - Egg Spinner Details frame 0
+    SpriteFrame(-36, -36, 32, 16, 123, 1)   // #3  - Egg Spinner Details frame 1
+
+    SpriteFrame(-18, -28, 36, 32, 90, 67)   // #4  - Eggman Reveal frame 0
+    SpriteFrame(-18, -28, 36, 32, 127, 67)  // #5  - Eggman Reveal frame 1
+    SpriteFrame(-18, -28, 36, 32, 164, 67)  // #6  - Eggman Idle frame 0
+    SpriteFrame(-18, -28, 36, 32, 201, 67)  // #7  - Eggman Idle frame 1
+    SpriteFrame(-22, -28, 44, 32, 166, 100) // #8  - Eggman Hurt frame 0
+    SpriteFrame(-22, -28, 44, 32, 211, 100) // #9  - Eggman Hurt frame 1
+    SpriteFrame(-12, -28, 32, 32, 133, 100) // #10 - Egg Spinner Cockpit
+
+    SpriteFrame(-8, 28, 25, 17, 26, 237)    // #11 - Egg Spinner Bottom Lights frame 0
+    SpriteFrame(-8, 28, 25, 17, 52, 237)    // #12 - Egg Spinner Bottom Lights frame 1
+    SpriteFrame(-8, 28, 25, 17, 78, 237)    // #13 - Egg Spinner Bottom Lights frame 2
+    SpriteFrame(-8, 28, 25, 17, 104, 237)   // #14 - Egg Spinner Bottom Lights frame 3
+    SpriteFrame(-8, 28, 25, 17, 112, 219)   // #15 - Egg Spinner Bottom Lights frame 4
+
+    SpriteFrame(-30, 23, 12, 11, 42, 225)   // #16 - Egg Spinner Bottom Left Lights frame 0
+    SpriteFrame(-30, 23, 12, 11, 55, 225)   // #17 - Egg Spinner Bottom Left Lights frame 1
+    SpriteFrame(-30, 23, 12, 11, 68, 225)   // #18 - Egg Spinner Bottom Left Lights frame 2
+    SpriteFrame(-30, 23, 12, 11, 81, 225)   // #19 - Egg Spinner Bottom Left Lights frame 3
+    SpriteFrame(-30, 23, 12, 11, 94, 225)   // #20 - Egg Spinner Bottom Left Lights frame 4
+
+    SpriteFrame(49, -9, 2, 2, 27, 247)      // #21 - Egg Spinner Right Lights frame 0
+    SpriteFrame(49, -9, 2, 2, 53, 247)      // #22 - Egg Spinner Right Lights frame 1
+    SpriteFrame(49, -9, 2, 2, 79, 247)      // #23 - Egg Spinner Right Lights frame 2
+    SpriteFrame(49, -9, 2, 2, 105, 247)     // #24 - Egg Spinner Right Lights frame 3
+    SpriteFrame(49, -9, 2, 2, 113, 229)     // #25 - Egg Spinner Right Lights frame 4
+
+    SpriteFrame(-19, -19, 8, 20, 42, 204)   // #26 - Egg Spinner Cockpit Left Lights frame 0
+    SpriteFrame(-19, -19, 8, 20, 51, 204)   // #27 - Egg Spinner Cockpit Left Lights frame 1
+    SpriteFrame(-19, -19, 8, 20, 60, 204)   // #28 - Egg Spinner Cockpit Left Lights frame 2
+    SpriteFrame(-19, -19, 8, 20, 69, 204)   // #29 - Egg Spinner Cockpit Left Lights frame 3
+    SpriteFrame(-19, -19, 8, 20, 78, 204)   // #30 - Egg Spinner Cockpit Left Lights frame 4
+
+    SpriteFrame(17, -13, 4, 10, 87, 206)    // #31 - Egg Spinner Cockpit Right Lights frame 0
+    SpriteFrame(17, -13, 4, 10, 92, 206)    // #32 - Egg Spinner Cockpit Right Lights frame 1
+    SpriteFrame(17, -13, 4, 10, 97, 206)    // #33 - Egg Spinner Cockpit Right Lights frame 2
+    SpriteFrame(17, -13, 4, 10, 102, 206)   // #34 - Egg Spinner Cockpit Right Lights frame 3
+    SpriteFrame(17, -13, 4, 10, 107, 206)   // #35 - Egg Spinner Cockpit Right Lights frame 4
+
+    SpriteFrame(14, -59, 4, 3, 107, 217)    // #36 - Egg Spinner Top Lights frame 0
+    SpriteFrame(14, -59, 4, 3, 107, 221)    // #37 - Egg Spinner Top Lights frame 1
+    SpriteFrame(14, -59, 4, 3, 107, 225)    // #38 - Egg Spinner Top Lights frame 2
+    SpriteFrame(14, -59, 4, 3, 107, 229)    // #39 - Egg Spinner Top Lights frame 3
+    SpriteFrame(14, -59, 4, 3, 107, 233)    // #40 - Egg Spinner Top Lights frame 4
+
+    SpriteFrame(32, -47, 5, 3, 112, 215)    // #41 - Egg Spinner Top Right Lights frame 0
+    SpriteFrame(32, -47, 5, 3, 117, 215)    // #42 - Egg Spinner Top Right Lights frame 1
+    SpriteFrame(32, -47, 5, 3, 122, 215)    // #43 - Egg Spinner Top Right Lights frame 2
+    SpriteFrame(32, -47, 5, 3, 127, 215)    // #44 - Egg Spinner Top Right Lights frame 3
+    SpriteFrame(32, -47, 5, 3, 132, 215)    // #45 - Egg Spinner Top Right Lights frame 4
+
+    arrayPos0 = 32
+    while arrayPos0 < 1056
+        if object[arrayPos0].type == TypeName[Egg Mobile]
+            object[arrayPos0].drawOrder = 2
+            object[arrayPos0].type = TypeName[Blank Object]
+            arrayPos0--
+
+            bossWing[arrayPos0].type = TypeName[Blank Object]
+            bossWing[arrayPos0].attached = true
+            bossWing[arrayPos0].drawOrder = 2
+            arrayPos0--
+
+            bossWing[arrayPos0].type = TypeName[Blank Object]
+            bossWing[arrayPos0].attached = true
+            bossWing[arrayPos0].drawOrder = 2
+            arrayPos0--
+
+            bossWing[arrayPos0].type = TypeName[Blank Object]
+            bossWing[arrayPos0].attached = true
+            bossWing[arrayPos0].drawOrder = 2
+            arrayPos0--
+
+            bossWing[arrayPos0].type = TypeName[Blank Object]
+            bossWing[arrayPos0].attached = true
+            bossWing[arrayPos0].drawOrder = 2
+            arrayPos0 += 4
+        end if
+        arrayPos0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(2)
+    DrawSprite(6)
+    DrawSprite(10)
+    DrawSprite(11)
+    DrawSprite(16)
+    DrawSprite(21)
+    DrawSprite(26)
+    DrawSprite(31)
+    DrawSprite(36)
+    DrawSprite(41)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects3.gif")
+
+    SpriteFrame(-36, -60, 88, 112, 1, 1)    // #0  - Egg Spinner
+    SpriteFrame(-36, -36, 72, 72, 1, 114)   // #1  - Egg Spinner Destroyed
+    SpriteFrame(-36, -36, 32, 16, 90, 1)    // #2  - Egg Spinner Details frame 0
+    SpriteFrame(-36, -36, 32, 16, 123, 1)   // #3  - Egg Spinner Details frame 1
+
+    SpriteFrame(-18, -28, 36, 32, 90, 67)   // #4  - Eggman Reveal frame 0
+    SpriteFrame(-18, -28, 36, 32, 127, 67)  // #5  - Eggman Reveal frame 1
+    SpriteFrame(-18, -28, 36, 32, 164, 67)  // #6  - Eggman Idle frame 0
+    SpriteFrame(-18, -28, 36, 32, 201, 67)  // #7  - Eggman Idle frame 1
+    SpriteFrame(-22, -28, 44, 32, 166, 100) // #8  - Eggman Hurt frame 0
+    SpriteFrame(-22, -28, 44, 32, 211, 100) // #9  - Eggman Hurt frame 1
+    SpriteFrame(-12, -28, 32, 32, 133, 100) // #10 - Egg Spinner Cockpit
+
+    SpriteFrame(-8, 28, 25, 17, 26, 237)    // #11 - Egg Spinner Bottom Lights frame 0
+    SpriteFrame(-8, 28, 25, 17, 52, 237)    // #12 - Egg Spinner Bottom Lights frame 1
+    SpriteFrame(-8, 28, 25, 17, 78, 237)    // #13 - Egg Spinner Bottom Lights frame 2
+    SpriteFrame(-8, 28, 25, 17, 104, 237)   // #14 - Egg Spinner Bottom Lights frame 3
+    SpriteFrame(-8, 28, 25, 17, 112, 219)   // #15 - Egg Spinner Bottom Lights frame 4
+
+    SpriteFrame(-30, 23, 12, 11, 42, 225)   // #16 - Egg Spinner Bottom Left Lights frame 0
+    SpriteFrame(-30, 23, 12, 11, 55, 225)   // #17 - Egg Spinner Bottom Left Lights frame 1
+    SpriteFrame(-30, 23, 12, 11, 68, 225)   // #18 - Egg Spinner Bottom Left Lights frame 2
+    SpriteFrame(-30, 23, 12, 11, 81, 225)   // #19 - Egg Spinner Bottom Left Lights frame 3
+    SpriteFrame(-30, 23, 12, 11, 94, 225)   // #20 - Egg Spinner Bottom Left Lights frame 4
+
+    SpriteFrame(49, -9, 2, 2, 27, 247)      // #21 - Egg Spinner Right Lights frame 0
+    SpriteFrame(49, -9, 2, 2, 53, 247)      // #22 - Egg Spinner Right Lights frame 1
+    SpriteFrame(49, -9, 2, 2, 79, 247)      // #23 - Egg Spinner Right Lights frame 2
+    SpriteFrame(49, -9, 2, 2, 105, 247)     // #24 - Egg Spinner Right Lights frame 3
+    SpriteFrame(49, -9, 2, 2, 113, 229)     // #25 - Egg Spinner Right Lights frame 4
+
+    SpriteFrame(-19, -19, 8, 20, 42, 204)   // #26 - Egg Spinner Cockpit Left Lights frame 0
+    SpriteFrame(-19, -19, 8, 20, 51, 204)   // #27 - Egg Spinner Cockpit Left Lights frame 1
+    SpriteFrame(-19, -19, 8, 20, 60, 204)   // #28 - Egg Spinner Cockpit Left Lights frame 2
+    SpriteFrame(-19, -19, 8, 20, 69, 204)   // #29 - Egg Spinner Cockpit Left Lights frame 3
+    SpriteFrame(-19, -19, 8, 20, 78, 204)   // #30 - Egg Spinner Cockpit Left Lights frame 4
+
+    SpriteFrame(17, -13, 4, 10, 87, 206)    // #31 - Egg Spinner Cockpit Right Lights frame 0
+    SpriteFrame(17, -13, 4, 10, 92, 206)    // #32 - Egg Spinner Cockpit Right Lights frame 1
+    SpriteFrame(17, -13, 4, 10, 97, 206)    // #33 - Egg Spinner Cockpit Right Lights frame 2
+    SpriteFrame(17, -13, 4, 10, 102, 206)   // #34 - Egg Spinner Cockpit Right Lights frame 3
+    SpriteFrame(17, -13, 4, 10, 107, 206)   // #35 - Egg Spinner Cockpit Right Lights frame 4
+
+    SpriteFrame(14, -59, 4, 3, 107, 217)    // #36 - Egg Spinner Top Lights frame 0
+    SpriteFrame(14, -59, 4, 3, 107, 221)    // #37 - Egg Spinner Top Lights frame 1
+    SpriteFrame(14, -59, 4, 3, 107, 225)    // #38 - Egg Spinner Top Lights frame 2
+    SpriteFrame(14, -59, 4, 3, 107, 229)    // #39 - Egg Spinner Top Lights frame 3
+    SpriteFrame(14, -59, 4, 3, 107, 233)    // #40 - Egg Spinner Top Lights frame 4
+
+    SpriteFrame(32, -47, 5, 3, 112, 215)    // #41 - Egg Spinner Top Right Lights frame 0
+    SpriteFrame(32, -47, 5, 3, 117, 215)    // #42 - Egg Spinner Top Right Lights frame 1
+    SpriteFrame(32, -47, 5, 3, 122, 215)    // #43 - Egg Spinner Top Right Lights frame 2
+    SpriteFrame(32, -47, 5, 3, 127, 215)    // #44 - Egg Spinner Top Right Lights frame 3
+    SpriteFrame(32, -47, 5, 3, 132, 215)    // #45 - Egg Spinner Top Right Lights frame 4
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

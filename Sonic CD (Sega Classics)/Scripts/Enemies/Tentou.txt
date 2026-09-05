@@ -1,0 +1,252 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tentou Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.oscillation
+private alias object.value1        : object.bombTimer
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : TENTOU_GUARD
+private alias 1 : TENTOU_FLEE
+private alias 2 : TENTOU_FLY
+
+// Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Tentou_DebugDraw
+reserve function Tentou_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Tentou_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Tentou_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Tentou_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(3) // Bad quality
+    end if
+end function
+
+
+private function Tentou_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Tentou_startDebugID
+    CreateTempObject(TypeName[Tentou], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case TENTOU_GUARD
+        if object.xpos > object.xpos
+            object.direction = FACING_RIGHT
+        else
+            object.direction = FACING_LEFT
+        end if
+
+        temp0 = object.oscillation
+        temp0 <<= 4
+
+        Sin(temp1, temp0)
+        temp1 >>= 8
+        temp1 += 24
+        ObjectTileGrip(CSIDE_FLOOR, 0, temp1, 0)
+
+        BoxCollisionTest(C_TOUCH, object.entityPos, -64, -256, 64, 256, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+
+        // If the player gets close enough, start fleeing
+        if checkResult == true
+            object.state = TENTOU_FLEE
+            object.drawOrder = 4
+
+            if object.xpos > player[SLOT_PLAYER1].xpos
+                object.xvel = 0x10000
+                object.direction = FACING_LEFT
+            else
+                object.xvel = -0x10000
+                object.direction = FACING_RIGHT
+            end if
+        end if
+        break
+
+    case TENTOU_FLEE
+        temp0 = object.oscillation
+        temp0 &= 3
+        if temp0 < 3
+            object.xpos += object.xvel
+        end if
+
+        if object.oscillation < 16
+            ObjectTileGrip(CSIDE_FLOOR, 0, 24, 0)
+        else
+            ObjectTileGrip(CSIDE_FLOOR, 0, 23, 0)
+        end if
+
+        // Once the tentou runs out of floor, start flying up
+        if checkResult == false
+            object.state = TENTOU_FLY
+        end if
+
+        // If the tentou is a good quality one, set bombs while escaping
+        if object.quality == QUALITY_GOOD
+            if object.bombTimer < 128
+                object.bombTimer++
+            else
+                object.bombTimer = 0
+                CreateTempObject(TypeName[Tentou Bomb], 0, object.xpos, object.ypos)
+                object[tempObjectPos].ypos += 0x140000
+            end if
+        end if
+        break
+
+    case TENTOU_FLY
+        object.ypos -= 0x8000
+        break
+    end switch
+
+    object.oscillation++
+    object.oscillation &= 31
+
+    object.frame++
+    object.frame %= 12
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 20, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    temp0 = object.frame
+    temp0 >>= 2
+    if object.quality == QUALITY_BAD
+        temp0 += 3
+    end if
+
+    DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects.gif")
+
+    // New Tentou
+    SpriteFrame(-16, -16, 32, 32, 67, 134)  // #0 - Tentou Frame 0
+    SpriteFrame(-16, -16, 32, 32, 100, 134) // #1 - Tentou Frame 1
+    SpriteFrame(-16, -16, 32, 32, 133, 134) // #2 - Tentou Frame 2
+
+    // New Tentou
+    SpriteFrame(-16, -16, 32, 32, 67, 101)  // #3 - Tentou Frame 0
+    SpriteFrame(-16, -16, 32, 32, 100, 101) // #4 - Tentou Frame 1
+    SpriteFrame(-16, -16, 32, 32, 133, 101) // #5 - Tentou Frame 2
+
+    temp0 = 0
+    Tentou_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Tentou], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Tentou_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Tentou_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    switch object.quality
+    case QUALITY_GOOD
+        DrawSprite(0)
+        break
+
+    case QUALITY_BAD
+        DrawSprite(1)
+        break
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects.gif")
+
+    SpriteFrame(-16, -16, 32, 32, 67, 134)  // #0 - Tentou, Good quality
+    SpriteFrame(-16, -16, 32, 32, 67, 101)  // #1 - Tentou, Bad quality
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

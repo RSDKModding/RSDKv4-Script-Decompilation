@@ -1,0 +1,93 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Invincibility Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : INVINCIBILITY_SPAWNER
+private alias 1 : INVINCIBILITY_SPARKLES
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == INVINCIBILITY_SPAWNER
+		object.drawOrder = 7
+
+		object.timer++
+		if object.timer > 3
+			object.timer = 0
+			CreateTempObject(TypeName[Invincibility], 0, object[-playerCount].xpos, object[-playerCount].ypos)
+			object[tempObjectPos].state = INVINCIBILITY_SPARKLES
+			object[tempObjectPos].inkEffect = INK_ALPHA
+			object[tempObjectPos].alpha = 256
+			object[tempObjectPos].drawOrder = object[-playerCount].drawOrder
+		end if
+
+		object.frame = ringFrame
+		object.frame &= 3
+	else
+		object.frame = ringFrame
+		object.frame &= 3
+		object.alpha -= 8
+		if object.alpha == 120
+			object.type = TypeName[Blank Object]
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if warp.timer == 0
+		switch object.state
+		case INVINCIBILITY_SPAWNER
+			if object.timer == 0
+				DrawSpriteXY(object.frame, object[-playerCount].xpos, object[-playerCount].ypos)
+			end if
+			break
+
+		case INVINCIBILITY_SPARKLES
+			object.alpha += 8
+			DrawSpriteFX(object.frame, FX_INK, object.xpos, object.ypos)
+			object.alpha -= 8
+			break
+		end switch
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items3.gif")
+
+	SpriteFrame(-24, -24, 48, 48, 1, 1)		// #0 - Invincibility Frame 0
+	SpriteFrame(-24, -24, 48, 48, 1, 50)	// #1 - Invincibility Frame 1
+	SpriteFrame(-24, -24, 48, 48, 1, 99)	// #2 - Invincibility Frame 2
+	SpriteFrame(-24, -24, 48, 48, 1, 148)	// #3 - Invincibility Frame 3
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-24, -24, 48, 48, 1, 1)		// #0 - Invincibility Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

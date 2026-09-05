@@ -1,0 +1,156 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.originPos.y
+private alias object.value2 : object.fallSpeed
+private alias object.value4 : object.collisionOffset.y
+private alias object.value5 : object.fcEntityPos
+private alias object.value6 : object.intangibleTime
+
+// Floor Control States
+private alias object.state  : floorControl.state
+private alias object.value0 : floorControl.timer
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.ypos      : player.ypos
+private alias object.yvel      : player.yvel
+private alias object.jumpPress : player.jumpPress
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Floor Control aliases
+private alias 4 : FLOORCONTROL_TILE_SWAP
+
+// Time Periods
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.originPos.y = object.ypos
+    if object.fallSpeed > 0
+        object.yvel += object.fallSpeed
+        object.ypos += object.yvel
+
+        ObjectTileCollision(CSIDE_FLOOR, -16, 16, 0)
+        temp0 = checkResult
+
+        ObjectTileCollision(CSIDE_FLOOR, 16, 16, 0)
+        temp0 |= checkResult
+
+        if temp0 == true
+            PlaySfx(SfxName[Impact1], false)
+            object.fallSpeed = 0
+            object.yvel = 0
+        end if
+    else
+        arrayPos0 = object.fcEntityPos
+        if floorControl[arrayPos0].state == FLOORCONTROL_TILE_SWAP
+            if floorControl[arrayPos0].timer > 29
+                BoxCollisionTest(C_TOUCH, object.entityPos, -16, -512, 16, 512, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+
+				if checkResult == true
+                    object.fallSpeed = 0xE00
+                else
+                    object.fallSpeed = 0xB00
+                end if
+
+                object.yvel = -0x60000
+            end if
+        end if
+    end if
+
+    object.collisionOffset.y = object.ypos
+    object.collisionOffset.y -= object.originPos.y
+
+    if object.intangibleTime > 0
+        object.intangibleTime--
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.intangibleTime == 0
+            temp0 = object.ypos
+            object.ypos = object.originPos.y
+
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -18, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_TOP
+                player[currentPlayer].ypos += object.collisionOffset.y
+                player[currentPlayer].ypos += 0x20000
+            else
+                if object.fallSpeed > 0
+                    if checkResult == COL_BOTTOM
+                        CallFunction(Player_Hit)
+                        if player[currentPlayer].state == Player_State_GotHit
+                            object.intangibleTime = 20
+                        end if
+                    end if
+                end if
+
+                BoxCollisionTest(C_TOUCH, object.entityPos, -16, -32, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    if player[currentPlayer].yvel < -0x40000
+                        if player[currentPlayer].jumpPress == true
+                            temp1 = object.yvel
+                            temp1 >>= 1
+                            player[currentPlayer].yvel += temp1
+                        end if
+                    end if
+                end if
+            end if
+
+            object.ypos = temp0
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects3.gif")
+
+    if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+        SpriteFrame(-16, -16, 32, 32, 223, 200) // #0 - Boss Platform
+    else
+        SpriteFrame(-16, -16, 32, 32, 141, 220) // #0 - Boss Platform
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects3.gif")
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+    if checkResult == TIME_GOOD_FUTURE
+        SpriteFrame(-16, -16, 32, 32, 223, 200) // #0 - Boss Platform
+    else
+        SpriteFrame(-16, -16, 32, 32, 141, 220) // #0 - Boss Platform
+    end if
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

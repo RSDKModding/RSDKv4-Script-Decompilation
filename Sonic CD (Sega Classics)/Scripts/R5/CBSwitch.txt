@@ -1,0 +1,207 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: CBSwitch Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.prevResult
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : CBSWITCH_POINTRIGHT_MAIN
+private alias 4 : CBSWITCH_POINTRIGHT_START
+private alias 5 : CBSWITCH_POINTRIGHT_TRANSITION
+
+private alias 3 : CBSWITCH_POINTLEFT_MAIN
+private alias 1 : CBSWITCH_POINTLEFT_START
+private alias 2 : CBSWITCH_POINTLEFT_TRANSITION
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CBSwitch_DebugDraw
+reserve function CBSwitch_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function CBSwitch_DebugDraw
+	DrawSprite(conveyorBelt.frame)
+end function
+
+
+public function CBSwitch_DebugSpawn
+	CreateTempObject(TypeName[CBSwitch], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Only do checks if the Player wasn't already in the Switch last frame
+		if object.prevResult == false
+			if player[currentPlayer].xpos > object.xpos
+				BoxCollisionTest(C_TOUCH, object.entityPos, 0, -12, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				
+				// Regardless of what it is, store the current result for next frame
+				object.prevResult = checkResult
+
+				// Now that it's been stored, take a look at the actual result
+				if checkResult == true
+					switch object.state
+					case CBSWITCH_POINTRIGHT_MAIN
+					case CBSWITCH_POINTLEFT_MAIN
+						PlaySfx(SfxName[Switch], false)
+						if conveyorBelt.flag == 0
+							conveyorBelt.flag = 3
+							object.state = CBSWITCH_POINTLEFT_START
+						else
+							conveyorBelt.flag = 0
+							object.state = CBSWITCH_POINTRIGHT_START
+						end if
+					end switch
+				end if
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 0, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				
+				// Store the result for next frame
+				object.prevResult = checkResult
+
+				// And now look at the actual result
+				if checkResult == true
+					switch object.state
+					case CBSWITCH_POINTRIGHT_MAIN
+					case CBSWITCH_POINTLEFT_MAIN
+						PlaySfx(SfxName[Switch], 0)
+						if conveyorBelt.flag == 0
+							conveyorBelt.flag = 3
+							object.state = CBSWITCH_POINTLEFT_START
+						else
+							conveyorBelt.flag = 0
+							object.state = CBSWITCH_POINTRIGHT_START
+						end if
+					end switch
+				end if
+			end if
+		else
+			// The Player's still touched the Switch right after a, well, Switch
+			// so just hold and wait for them to move away
+			if player[currentPlayer].xpos > object.xpos
+				BoxCollisionTest(C_TOUCH, object.entityPos, 0, -12, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				object.prevResult = checkResult
+			else
+				BoxCollisionTest(C_TOUCH, object.entityPos, -16, -12, 0, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				object.prevResult = checkResult
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	switch object.state
+	case CBSWITCH_POINTLEFT_START
+		if object.timer < 7
+			object.timer++
+		else
+			object.timer = 0
+			conveyorBelt.frame = 1
+			object.state = CBSWITCH_POINTLEFT_TRANSITION
+		end if
+		break
+
+	case CBSWITCH_POINTLEFT_TRANSITION
+		if object.timer < 7
+			object.timer++
+		else
+			object.timer = 0
+			conveyorBelt.frame = 2
+			object.state = CBSWITCH_POINTLEFT_MAIN
+		end if
+		break
+
+	case CBSWITCH_POINTRIGHT_START
+		if object.timer < 7
+			object.timer++
+		else
+			object.timer = 0
+			conveyorBelt.frame = 1
+			object.state = CBSWITCH_POINTRIGHT_TRANSITION
+		end if
+		break
+
+	case CBSWITCH_POINTRIGHT_TRANSITION
+		if object.timer < 7
+			object.timer++
+		else
+			object.timer = 0
+			conveyorBelt.frame = 0
+			object.state = CBSWITCH_POINTRIGHT_MAIN
+		end if
+		break
+
+	end switch
+
+	DrawSprite(conveyorBelt.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// The Past gets different Sprite Frames
+	if HUD.currentTimePeriod == TIME_PAST
+		SpriteFrame(-4, -16, 32, 28, 1, 225)
+		SpriteFrame(-8, -36, 16, 48, 206, 207)
+		SpriteFrame(-28, -16, 32, 28, 34, 225)
+	else
+		SpriteFrame(-4, -16, 32, 28, 1, 18)
+		SpriteFrame(-8, -36, 16, 48, 125, 1)
+		SpriteFrame(-28, -16, 32, 28, 34, 18)
+	end if
+
+	SetTableValue(TypeName[CBSwitch], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(CBSwitch_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(CBSwitch_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

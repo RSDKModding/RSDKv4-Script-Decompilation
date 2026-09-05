@@ -1,0 +1,283 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Semi Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.xvel
+private alias object.value2        : object.yvel
+private alias object.value3        : object.originPos.x
+private alias object.value4        : object.originPos.y
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : SEMI_IDLE
+private alias 1 : SEMI_START_FLY
+private alias 2 : SEMI_BOMB_THROW
+private alias 3 : SEMI_RESET
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Semi_DebugDraw
+reserve function Semi_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Semi_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Semi_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Semi_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function Semi_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Semi_startDebugID
+
+    //....huh?
+    CreateTempObject(TypeName[Poh Bee], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.outOfBounds == true
+        object.state = SEMI_RESET
+        object.timer = 0
+
+        object.xpos = object.originPos.x
+        object.ypos = object.originPos.y
+    end if
+
+    switch object.state
+    case SEMI_START_FLY
+        object.priority = PRIORITY_ACTIVE
+
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+
+        if object.timer < 96
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+        end if
+        break
+
+    case SEMI_BOMB_THROW
+        object.xpos += object.xvel
+        if object.quality == QUALITY_GOOD
+            if object.timer == 0
+                object.timer = 60
+                CreateTempObject(TypeName[Semi Bomb], 0, object.xpos, object.ypos)
+                object[tempObjectPos].ypos += 0xC0000
+            else
+                object.timer--
+            end if
+        end if
+        break
+
+    case SEMI_RESET
+        if object.outOfBounds == true
+            object.state = SEMI_IDLE
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        switch object.state
+        case SEMI_IDLE
+            BoxCollisionTest(C_TOUCH, object.entityPos, -96, -128, 96, 128, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.state = SEMI_START_FLY
+                if object.xpos > player[currentPlayer].xpos
+                    if object.quality == QUALITY_GOOD
+                        object.xvel = 0x10000
+                        object.yvel = -0x8000
+                    else
+                        object.xvel = 0xC000
+                        object.yvel = 0x6000
+                    end if
+                else
+                    if object.quality == QUALITY_GOOD
+                        object.xvel = -0x10000
+                        object.yvel = -0x8000
+                    else
+                        object.xvel = -0xC000
+                        object.yvel = 0x6000
+                    end if
+                end if
+            end if
+            break
+
+        case SEMI_START_FLY
+        case SEMI_BOMB_THROW
+            BoxCollisionTest(C_TOUCH, object.entityPos, -14, -12, 14, 12, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+            break
+        end switch
+    next
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case SEMI_IDLE
+        DrawSprite(object.quality)
+        break
+
+    case SEMI_START_FLY
+    case SEMI_BOMB_THROW
+        temp0 = object.frame
+        temp0 >>= 2
+
+        if object.quality == QUALITY_GOOD
+            temp0 += 2
+        else
+            temp0 += 6
+        end if
+
+        if object.frame > 7
+            object.direction = FACING_LEFT
+        else
+            object.direction = FACING_RIGHT
+        end if
+
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        object.frame++
+        object.frame &= 15
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    // Good Quality
+    SpriteFrame(-16, -16, 32, 32, 1, 224)   // #0  - Semi
+
+    // Bad Quality
+    SpriteFrame(-16, -16, 32, 32, 158, 166) // #1  - Semi
+
+    // Good Rotation
+    SpriteFrame(-16, -16, 32, 32, 34, 224)  // #2  - Semi Good Rotating frame 0
+    SpriteFrame(-20, -16, 40, 32, 67, 224)  // #3  - Semi Good Rotating frame 1
+    SpriteFrame(-16, -16, 32, 32, 34, 224)  // #4  - Semi Good Rotating frame 2
+    SpriteFrame(-20, -16, 40, 32, 67, 224)  // #5  - Semi Good Rotating frame 3
+
+    // Bad Rotation
+    SpriteFrame(-16, -16, 32, 32, 108, 224) // #7  - Semi Bad Rotating frame 0
+    SpriteFrame(-20, -16, 40, 32, 141, 224) // #8  - Semi Bad Rotating frame 1
+    SpriteFrame(-16, -16, 32, 32, 108, 224) // #9  - Semi Bad Rotating frame 2
+    SpriteFrame(-20, -16, 40, 32, 141, 224) // #10 - Semi Bad Rotating frame 3
+
+    foreach (TypeName[Semi], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+        object[arrayPos0].drawOrder = 5
+    next
+
+    temp0 = 0
+    Semi_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Semi], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Semi_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Semi_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-16, -16, 32, 32, 1, 224)   // #0  - Semi, Good quality
+    SpriteFrame(-16, -16, 32, 32, 158, 166) // #1  - Semi, Bad quality
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

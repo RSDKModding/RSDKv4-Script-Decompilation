@@ -1,0 +1,315 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Flat Bumper Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.state   : player.state
+private alias object.xvel    : player.xvel
+private alias object.yvel    : player.yvel
+private alias object.speed   : player.speed
+private alias object.gravity : player.gravity
+private alias object.value1  : player.timer
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : FLATBUMPER_MOVE_R_OR_U
+private alias 1 : FLATBUMPER_MOVE_L_OR_D
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Property Values
+private alias 0 : MOVE_HORIZONTALLY
+private alias 1 : MOVE_VERTICALLY
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function FlatBumper_DebugDraw
+reserve function FlatBumper_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function FlatBumper_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function FlatBumper_DebugSpawn
+	CreateTempObject(TypeName[Flat Bumper], MOVE_HORIZONTALLY, object.xpos, object.ypos)
+	object[tempObjectPos].xpos &= -0x10000
+	object[tempObjectPos].ypos &= -0x10000
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case FLATBUMPER_MOVE_R_OR_U
+		if object.timer < 96
+			object.timer++
+			if object.propertyValue == MOVE_HORIZONTALLY
+				object.xpos += 0x10000
+			else
+				object.ypos += 0x10000
+			end if
+		else
+			object.state = FLATBUMPER_MOVE_L_OR_D
+		end if
+		break
+
+	case FLATBUMPER_MOVE_L_OR_D
+		if object.timer > -96
+			object.timer--
+			if object.propertyValue == 0
+				object.xpos -= 0x10000
+			else
+				object.ypos -= 0x10000
+			end if
+		else
+			object.state = FLATBUMPER_MOVE_R_OR_U
+		end if
+		break
+
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Left
+		temp0 = 0
+		BoxCollisionTest(C_TOUCH, object.entityPos, -34, -16, -28, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+		// Right
+		temp1 = checkResult
+		BoxCollisionTest(C_TOUCH, object.entityPos, 28, -16, 34, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+		// Check if you touched the bumper
+		temp2 = checkResult
+		BoxCollisionTest(C_SOLID2, object.entityPos, -32, -14, 32, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+		switch checkResult
+		case COL_TOP
+			if player[currentPlayer].state == Player_State_Fly
+				player[currentPlayer].yvel = -0x40000
+			else
+				player[currentPlayer].yvel = -0x70000
+				player[currentPlayer].timer = 0
+			end if
+
+			player[currentPlayer].gravity = GRAVITY_AIR
+			temp0 = true
+			break
+
+		case COL_BOTTOM
+			if player[currentPlayer].state == Player_State_Fly
+				player[currentPlayer].yvel = 0x40000
+			else
+				player[currentPlayer].yvel = 0x70000
+				player[currentPlayer].timer = 0
+			end if
+
+			player[currentPlayer].timer = 0
+			player[currentPlayer].gravity = GRAVITY_AIR
+			temp0 = true
+			break
+
+		end switch
+
+		// Check if you collided with the left side of the bumper
+		if temp1 == true
+			player[currentPlayer].speed = -0x70000
+			player[currentPlayer].xvel = -0x70000
+			temp0 = true
+		end if
+
+		// Check if you collided with the right side of the bumper
+		if temp2 == true
+			player[currentPlayer].speed = 0x70000
+			player[currentPlayer].xvel = 0x70000
+			temp0 = true
+		end if
+
+		// Check if you collided with the center from the top
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			if player[currentPlayer].state == Player_State_Fly
+				player[currentPlayer].yvel = -0x40000
+			else
+				player[currentPlayer].yvel = -0x70000
+				player[currentPlayer].timer = 0
+			end if
+
+			player[currentPlayer].gravity = GRAVITY_AIR
+			temp0 = true
+		end if
+
+		// Check if you collided with the center from the bottom
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, 0, 16, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			if player[currentPlayer].state == Player_State_Fly
+				player[currentPlayer].yvel = 0x40000
+			else
+				player[currentPlayer].yvel = 0x70000
+				player[currentPlayer].timer = 0
+			end if
+
+			player[currentPlayer].gravity = GRAVITY_AIR
+			temp0 = true
+		end if
+
+		if temp0 == true
+			PlaySfx(SfxName[Bumper 2], false)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	switch HUD.currentTimePeriod
+	case TIME_PRESENT
+	case TIME_PAST
+		LoadSpriteSheet("R3/Objects.gif")
+		SpriteFrame(-32, -16, 64, 32, 1, 75)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 132, 67)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 132, 100)
+		break
+
+	end switch
+
+	SetTableValue(TypeName[Flat Bumper], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(FlatBumper_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(FlatBumper_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if object.propertyValue == MOVE_HORIZONTALLY
+		temp0 = object.xpos
+		temp0 += 0x600000
+
+		temp1 = object.xpos
+		temp1 -= 0x600000
+
+		temp2 = object.ypos
+		temp2 -= 0x100000
+
+		if editor.showGizmos == true
+			editor.drawingOverlay = true
+			DrawRectOutline(temp1, temp2, 0xC0, 32, 255, 255, 0, 255)
+			DrawArrow(object.xpos, object.ypos, temp1, object.ypos, 255, 255, 255, 0)
+			editor.drawingOverlay = false
+		end if
+
+		DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, 128, 0, 0)
+	else
+		temp0 = object.ypos
+		temp0 += 0x600000
+
+		temp1 = object.ypos
+		temp1 -= 0x600000
+
+		temp2 = object.xpos
+		temp2 -= 0x100000
+
+		if editor.showGizmos == true
+			editor.drawingOverlay = true
+			DrawRectOutline(temp2, temp1, 0x32, 0xC0, 255, 255, 0, 255)
+			DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, 255, 255, 0)
+			editor.drawingOverlay = false
+		end if
+
+		DrawArrow(object.xpos, object.ypos, object.xpos, temp1, 255, 128, 0, 0)
+	end if
+end event
+
+
+event RSDKLoad
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	switch checkResult
+	case TIME_PRESENT
+	case TIME_PAST
+		LoadSpriteSheet("R3/Objects.gif")
+		SpriteFrame(-32, -16, 64, 32, 1, 75)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 132, 67)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R3/Objects3.gif")
+		SpriteFrame(-32, -16, 64, 32, 132, 100)
+		break
+
+	end switch
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Horizontal", MOVE_HORIZONTALLY)
+	AddEnumVariable("Vertical", MOVE_VERTICALLY)
+end event

@@ -1,0 +1,129 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Spin Gate Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.turning
+private alias object.value2 : object.currentLight
+
+// Gate Light Aliases
+private alias object[+1].type : gateLight1.type
+private alias object[+2].type : gateLight2.type
+private alias object[+3].type : gateLight3.type
+
+// States
+private alias 0 : SPINGATE_IDLE
+private alias 1 : SPINGATE_TURNING
+
+// Directions
+private alias 2 : FACING_UPEND_RIGHT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == SPINGATE_TURNING
+        if object.timer < 96
+            object.timer++
+        else
+            object.timer = 0
+            object.state = SPINGATE_IDLE
+        end if
+    end if
+
+    if object.state == SPINGATE_IDLE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                if object.turning == false
+                    object.state = SPINGATE_TURNING
+
+                    object.currentLight++
+                    object.currentLight &= 3
+
+                    object.turning = true
+
+                    switch object.currentLight
+                    case 0
+                        gateLight1.type = TypeName[Blank Object]
+                        gateLight2.type = TypeName[Blank Object]
+                        gateLight3.type = TypeName[Blank Object]
+                        break
+
+                    case 1
+                        gateLight1.type = TypeName[Gate Light]
+                        break
+
+                    case 2
+                        gateLight2.type = TypeName[Gate Light]
+                        break
+
+                    case 3
+                        gateLight3.type = TypeName[Gate Light]
+                        break
+
+                    end switch
+                end if
+            else
+                object.turning = false
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    temp0 = object.timer
+    temp0 >>= 2
+    temp0 &= 3
+
+    switch temp0
+    case 0
+    case 1
+    case 2
+        DrawSprite(temp0)
+        break
+
+    case 3
+        object.direction = FACING_UPEND_RIGHT
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects2.gif")
+
+    SpriteFrame(-16, -8, 32, 16, 18, 50)    // #0 - Spin Gate
+    SpriteFrame(-16, -16, 32, 32, 51, 0)    // #1 - Spin Gate Rotate Frame 0
+    SpriteFrame(-16, -16, 32, 32, 84, 0)    // #2 - Spin Gate Rotate Frame 1
+    SpriteFrame(-16, -16, 32, 32, 51, 0)    // #3 - Spin Gate Rotate Frame 2
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects2.gif")
+    SpriteFrame(-16, -8, 32, 16, 18, 50)    // #0 - Spin Gate
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

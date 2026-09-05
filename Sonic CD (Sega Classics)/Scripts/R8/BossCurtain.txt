@@ -1,0 +1,300 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Curtain Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.leftCurtainTile
+private alias object.value2 : object.rightCurtainTile
+
+// Player Aliases
+private alias object.xpos           : player.xpos
+private alias object.xvel           : player.xvel
+private alias object.speed          : player.speed
+private alias object.collisionRight : player.collisionRight
+
+// Boss Wing Alias
+private alias object.type   : bossWing.type
+private alias object.value7 : bossWing.eggMobileEntity
+
+// Egg Mobile Alias
+private alias object[-3].type   : eggMobile.type
+private alias object[-3].value4 : eggMobile.wingOffset
+
+// Helper 1 Aliases
+private alias object[-2].value0 : helper1.bossHealth
+private alias object[-2].value1 : helper1.controller
+private alias object[-2].value4 : helper1.leftBound
+private alias object[-2].value5 : helper1.rightBound
+private alias object[-2].value6 : helper1.centerBound
+
+// Helper 2 Alias
+private alias object[-1].value6 : helper2.cutsceneRightBound
+
+// Bug Details: 
+// For the RSDKv4 revision, we should be using object[21]. 
+// Instead, we are incorrectly using RSDKv3's object[19] slot.
+
+// Fix:
+// Change SLOT_R8SETUP's alias to 21
+
+// Reserved Object Slot Aliases
+private alias 19 : SLOT_R8SETUP
+
+// R8 Setup Aliases
+private alias object[SLOT_R8SETUP].value1 : R8Setup.currentPalette
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : BOSSCURTAIN_WAIT_PLAYER
+private alias 1 : BOSSCURTAIN_SPAWN_BOSS
+private alias 2 : BOSSCURTAIN_SET_BOUNDS
+
+// Time Periods
+private alias 1 : TIME_PAST
+
+// Soundtrack
+private alias 0 : OST_JP
+
+// Tile Info
+private alias 0 : TILEINFO_INDEX
+
+// Fade Music Property Values
+private alias 0 : FADEMUSIC_TO_BOSS
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSCURTAIN_WAIT_PLAYER
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            // This check doesn't make sense
+            // is a boss stage, you're already forced to be in the future
+            if HUD.currentTimePeriod > TIME_PAST
+                if options.soundtrack == OST_JP
+                    SetMusicTrack("JP/FinalBoss.ogg", 4, true)
+                else
+                    SetMusicTrack("US/FinalBoss.ogg", 4, true)
+                end if
+            end if
+
+            object.state++
+        end if
+        break
+
+    case BOSSCURTAIN_SPAWN_BOSS
+        if object.timer < 240
+            object.timer++
+            if object.timer == 140
+                CreateTempObject(TypeName[Fade Music], FADEMUSIC_TO_BOSS, object.xpos, object.ypos)
+            end if
+        else
+            object.timer = 0
+            R8Setup.currentPalette = 0
+
+            arrayPos0 = object.entityPos
+            arrayPos0 -= 3
+
+            eggMobile[-3].type = TypeName[Egg Mobile]
+
+            bossWing[-7].type = TypeName[Boss Wing]
+            bossWing[-7].eggMobileEntity = arrayPos0
+
+            bossWing[-6].type = TypeName[Boss Wing]
+            bossWing[-6].eggMobileEntity = arrayPos0
+
+            bossWing[-5].type = TypeName[Boss Wing]
+            bossWing[-5].eggMobileEntity = arrayPos0
+
+            bossWing[-4].type = TypeName[Boss Wing]
+            bossWing[-4].eggMobileEntity = arrayPos0
+
+            helper1.bossHealth = 4
+            helper1.centerBound = object.xpos
+
+            helper1.leftBound = object.xpos
+            helper1.leftBound -= 0x7C0000
+
+            helper1.rightBound = object.xpos
+            helper1.rightBound += 0x7C0000
+
+            eggMobile.wingOffset = 0x1000
+
+            helper1.controller = Helper1Controller_FourWings
+
+            helper2.cutsceneRightBound = stage.curXBoundary2
+            object.state++
+        end if
+        break
+
+    case BOSSCURTAIN_SET_BOUNDS
+        if object.alpha > 0
+            object.alpha -= 4
+        end if
+
+        object.leftCurtainTile -= 0x20000
+        object.rightCurtainTile += 0x20000
+
+        temp1 = object.leftCurtainTile
+        temp1 >>= 16
+        temp1 += 7
+
+        temp3 = object.rightCurtainTile
+        temp3 >>= 16
+        temp3 -= 7
+
+        temp2 = object.iypos
+        temp2 -= 92
+
+        temp0 = 0
+        while temp0 < 12
+            // Swap tiles to fake motion on the curtain background
+            Set16x16TileInfo(0, temp1, temp2, TILEINFO_INDEX)
+            temp1 -= 16
+
+            Set16x16TileInfo(395, temp1, temp2, TILEINFO_INDEX)
+            temp1 += 16
+
+            Set16x16TileInfo(0, temp3, temp2, TILEINFO_INDEX)
+            temp3 += 16
+
+            Set16x16TileInfo(395, temp3, temp2, TILEINFO_INDEX)
+            temp3 -= 16
+            temp2 += 16
+
+            temp0++
+        loop
+
+        if object.timer < 120
+            object.timer++
+        else
+            object.timer = 0
+            object.state++
+
+            // Wide resolutions get forced to fight in a 320px wide area
+            if screen.xsize > 320
+                ResetObjectEntity(object.entityPos, TypeName[Forcefield], 240, object.xpos, object.ypos)
+            else
+                ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, object.xpos, object.ypos)
+            end if
+        end if
+        break
+
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        // Player Right Bound
+        temp0 = player[currentPlayer].collisionRight
+        temp0 <<= 16
+        temp0 += player[currentPlayer].xpos
+
+        // Stage Bound
+        temp1 = stage.curXBoundary2
+        temp1 <<= 16
+
+        // Stop the player from advancing if the player right bound pos is after the stage bound pos
+        if temp0 > temp1
+            player[currentPlayer].xvel = 0
+            player[currentPlayer].speed = 0
+            player[currentPlayer].xpos = temp1
+
+            temp0 = player[currentPlayer].collisionRight
+            temp0 <<= 16
+            player[currentPlayer].xpos -= temp0
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    if object.drawOrder == 2
+        DrawRect(0, 0, screen.xsize, screen.ysize, 0, 0, 0, object.alpha)
+        SetDrawListEntityRef(object.entityPos, 3, screen[3].drawListSize)
+        screen[3].drawListSize++
+        object.drawOrder = 3
+    else
+        temp0 = 0
+        while temp0 < 6
+            DrawSpriteXY(temp0, object.leftCurtainTile, object.ypos)
+            DrawSpriteFX(temp0, FX_FLIP, object.rightCurtainTile, object.ypos)
+            temp0++
+        loop
+        object.drawOrder = 2
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects2.gif")
+
+    SpriteFrame(-8, -96, 16, 32, 134, 187)  // #0 - Curtain Center Section 1
+    SpriteFrame(-8, -64, 16, 32, 134, 187)  // #1 - Curtain Center Section 2
+    SpriteFrame(-8, -32, 16, 32, 134, 187)  // #2 - Curtain Center Section 3
+    SpriteFrame(-8, 0, 16, 32, 134, 187)    // #3 - Curtain Center Section 4
+    SpriteFrame(-8, 32, 16, 32, 134, 187)   // #4 - Curtain Center Section 5
+    SpriteFrame(-8, 64, 16, 32, 134, 187)   // #5 - Curtain Center Section 6
+
+    arrayPos0 = 32
+    while arrayPos0 < 1056
+        if object[arrayPos0].type == TypeName[Boss Curtain]
+            object[arrayPos0].direction = FACING_LEFT
+            object[arrayPos0].drawOrder = 2
+            object[arrayPos0].alpha = 224
+
+            object[arrayPos0].leftCurtainTile = object[arrayPos0].xpos
+            object[arrayPos0].leftCurtainTile -= 0x80000
+
+            object[arrayPos0].rightCurtainTile = object[arrayPos0].xpos
+            object[arrayPos0].rightCurtainTile += 0x80000
+        end if
+        arrayPos0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    object.direction = FACING_LEFT
+
+    temp1 = object.xpos
+    temp1 -= 0x80000
+    temp2 = object.xpos
+    temp2 += 0x80000
+    
+    temp0 = 0
+    while temp0 < 6
+        DrawSpriteXY(temp0, temp1, object.ypos)
+        DrawSpriteFX(temp0, FX_FLIP, temp2, object.ypos)
+        temp0++
+    loop
+
+    object.drawOrder = 2
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects2.gif")
+
+    SpriteFrame(-8, -96, 16, 32, 134, 187)  // #0 - Curtain Center Section 1
+    SpriteFrame(-8, -64, 16, 32, 134, 187)  // #1 - Curtain Center Section 2
+    SpriteFrame(-8, -32, 16, 32, 134, 187)  // #2 - Curtain Center Section 3
+    SpriteFrame(-8, 0, 16, 32, 134, 187)    // #3 - Curtain Center Section 4
+    SpriteFrame(-8, 32, 16, 32, 134, 187)   // #4 - Curtain Center Section 5
+    SpriteFrame(-8, 64, 16, 32, 134, 187)   // #5 - Curtain Center Section 6
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,248 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Ga Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0         : object.timer
+private alias object.value1         : object.originPos.x
+private alias object.value2         : object.originPos.y
+private alias object.animationTimer : object.frameTimer
+private alias object.propertyValue  : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : GA_IDLE
+private alias 1 : GA_RESPAWN
+private alias 2 : GA_REVEAL
+private alias 3 : GA_FLY
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Ga_DebugDraw
+reserve function Ga_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Ga_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Ga_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Ga_startDebugID
+    if temp0 == 0
+        DrawSprite(3) // Good quality
+    else
+        DrawSprite(7) // Bad quality
+    end if
+end function
+
+
+private function Ga_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Ga_startDebugID
+    CreateTempObject(TypeName[Ga], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case GA_IDLE
+        BoxCollisionTest(C_TOUCH, object.entityPos, -96, -256, 96, 256, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            object.drawOrder = 5
+
+            object.state = GA_REVEAL
+
+            object.frameTimer = 0
+            object.frame = 0
+
+            object.priority = PRIORITY_ACTIVE
+
+            object.originPos.x = object.xpos
+            object.originPos.y = object.ypos
+        end if
+        break
+
+    case GA_RESPAWN
+        if object.outOfBounds == true
+            object.state = GA_IDLE
+            if object.priority != PRIORITY_XBOUNDS_DESTROY
+                object.priority = PRIORITY_BOUNDS
+            end if
+        end if
+        break
+
+    case GA_REVEAL
+        if object.timer < 110
+            object.timer++
+            if object.timer == 30
+                object.frame++
+            end if
+
+            if object.timer == 60
+                object.frame++
+            end if
+        else
+            if object.xpos > object.xpos
+                object.xvel = -0x8000
+                object.direction = FACING_RIGHT
+            else
+                object.xvel = 0x8000
+                object.direction = FACING_LEFT
+            end if
+
+            object.state = GA_FLY
+            object.timer = 0
+
+            if object.quality > QUALITY_GOOD
+                object.xvel >>= 1
+            end if
+
+            object.yvel = 0x8000
+        end if
+
+        if object.outOfBounds == true
+            object.state = GA_RESPAWN
+            object.timer = 0
+
+            object.xpos = object.originPos.x
+            object.ypos = object.originPos.y
+        end if
+        break
+
+    case GA_FLY
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+
+        if object.timer < 65
+            object.timer++
+        else
+            object.timer = 0
+            FlipSign(object.yvel)
+
+            // Only good quality Ga entities drop sparkles
+            if object.quality == QUALITY_GOOD
+                CreateTempObject(TypeName[Ga Sparkle], 0, object.xpos, object.ypos)
+                object[tempObjectPos].drawOrder = 5
+            end if
+        end if
+
+        object.frameTimer++
+        object.frameTimer %= 20
+
+        object.frame = object.frameTimer
+        object.frame /= 5
+
+        if object.quality == QUALITY_GOOD
+            object.frame += 3
+        else
+            object.frame += 7
+        end if
+
+        if object.outOfBounds == true
+            object.state = GA_RESPAWN
+            object.timer = 0
+
+            object.xpos = object.originPos.x
+            object.ypos = object.originPos.y
+        end if
+        break
+    end switch
+
+    if object.state > GA_REVEAL
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -8, 16, 8, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+        next
+    end if
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    if object.state > GA_RESPAWN
+        DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects.gif")
+
+    SpriteFrame(-12, -16, 24, 16, 1, 216)   // #0  - Ga Reveal Frame 0
+    SpriteFrame(-12, -16, 24, 24, 26, 216)  // #1  - Ga Reveal Frame 1
+    SpriteFrame(-12, -20, 24, 32, 231, 170) // #2  - Ga Reveal Frame 2
+
+    // New Ga
+    SpriteFrame(-12, -12, 32, 24, 34, 191)  // #3  - Ga Fly Frame 0
+    SpriteFrame(-12, -8, 32, 16, 165, 183)  // #4  - Ga Fly Frame 1
+    SpriteFrame(-12, -8, 32, 16, 166, 233)  // #5  - Ga Fly Frame 2
+    SpriteFrame(-12, -8, 32, 16, 165, 183)  // #6  - Ga Fly Frame 3
+
+    // Old Ga
+    SpriteFrame(-12, -12, 32, 24, 1, 157)   // #7  - Ga Fly Frame 0
+    SpriteFrame(-12, -8, 32, 16, 1, 182)    // #8  - Ga Fly Frame 1
+    SpriteFrame(-12, -8, 32, 16, 1, 199)    // #9  - Ga Fly Frame 2
+    SpriteFrame(-12, -8, 32, 16, 1, 182)    // #10 - Ga Fly Frame 3
+
+    temp0 = 0
+    Ga_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Ga], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Ga_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Ga_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    object.inkEffect = INK_ALPHA
+    object.alpha = 196
+    DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects.gif")
+    SpriteFrame(-12, -20, 24, 32, 231, 170) // #0  - Ga Reveal
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

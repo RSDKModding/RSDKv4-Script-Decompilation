@@ -1,0 +1,126 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Bounce Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.originPos.y
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.fallSpeed
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// R6 Setup alias
+private alias object[21].value7 : R6Setup.bounceFloorFlag
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.originPos.y = object.ypos
+    object.originPos.y &= -0x10000 // Truncate the value
+
+    object.yvel += object.fallSpeed
+    object.ypos += object.yvel
+
+    ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
+    if checkResult == true
+        if object.fallSpeed == 0x1000
+            PlaySfx(SfxName[Impact1], false)
+        end if
+
+        if R6Setup.bounceFloorFlag == true
+            object.yvel = -0x60000
+            object.fallSpeed = 0x1000
+        else
+            object.yvel = -0x20000
+            object.fallSpeed = 0x1488
+        end if
+    end if
+
+    object.collisionOffset.y = object.ypos
+    object.collisionOffset.y -= object.originPos.y
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        temp0 = object.ypos
+        object.ypos = object.originPos.y
+
+        temp1 = object.xpos
+        temp1 -= player[currentPlayer].xpos
+        if temp1 < 0
+            FlipSign(temp1)
+        end if
+
+        if temp1 > 0x280000
+            BoxCollisionTest(C_SOLID, object.entityPos, -32, -16, 32, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        end if
+
+        BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -18, 32, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[currentPlayer].ypos += object.collisionOffset.y
+            player[currentPlayer].ypos += 0x20000
+        end if
+
+        object.ypos = temp0
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    foreach (TypeName[Bounce Platform], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].fallSpeed = 0x1000
+    next
+
+    SpriteFrame(-32, -16, 64, 32, 132, 43) // #0 - Bounce Platform
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		temp1 = object.xpos
+		temp1 -= 0x100000
+		temp0 = object.ypos
+		temp0 -= 0x200000
+		DrawArrow(temp1, object.ypos, temp1, temp0, 255, 255, 0)
+
+		temp1 = object.xpos
+		temp1 += 0x100000
+		temp0 = object.ypos
+		temp0 -= 0x600000
+		DrawArrow(temp1, object.ypos, temp1, temp0, 255, 255, 0)
+
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-32, -16, 64, 32, 132, 43) // #0 - Bounce Platform
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

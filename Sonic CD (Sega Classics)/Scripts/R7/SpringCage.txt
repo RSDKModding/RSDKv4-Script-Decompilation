@@ -1,0 +1,421 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Spring Cage Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.fullAngle
+private alias object.value1 : object.launchTimer
+
+// R7 Spring Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.xvel      : player.xvel
+private alias object.yvel      : player.yvel
+private alias object.gravity   : player.gravity
+private alias object.state     : player.state
+private alias object.animation : player.animation
+private alias object.speed     : player.speed
+private alias object.value1    : player.timer
+
+// States
+private alias 0 : SPRINGCAGE_OPEN
+private alias 1 : SPRINGCAGE_OCCUPIED
+
+// Property Values
+private alias 0 : ROTATING_SPRING
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == SPRINGCAGE_OPEN
+		if object.propertyValue == ROTATING_SPRING
+			// Spin around
+			object.fullAngle++
+			object.fullAngle %= 48
+
+			object.angle = object.fullAngle
+			object.angle /= 6
+		end if
+
+		// Update the content spring to show the correct sprite
+		switch object.angle
+		case 0
+			// Right
+			object[+1].propertyValue = 1
+			break
+
+		case 1
+		case 7
+			// Up right
+			object[+1].propertyValue = 4
+			break
+
+		case 2
+		case 6
+			// Up
+			object[+1].propertyValue = 0
+			break
+
+		case 3
+		case 5
+			// Up left
+			object[+1].propertyValue = 5
+			break
+
+		case 4
+			// Left
+			object[+1].propertyValue = 2
+			break
+
+		end switch
+	else
+		if object.launchTimer < 90
+			if player[SLOT_PLAYER1].state != Player_State_Death
+				object.launchTimer++
+				if object.launchTimer == 60
+					PlaySfx(SfxName[Large Booster], false)
+
+					player[SLOT_PLAYER1].state = Player_State_Air
+					player[SLOT_PLAYER1].gravity = GRAVITY_AIR
+					player[SLOT_PLAYER1].timer = 0
+
+					// Activate the spring
+					object[+1].timer = 1
+
+					switch object.angle
+					case 0
+						player[SLOT_PLAYER1].speed = 0x100000
+						player[SLOT_PLAYER1].xvel = 0x100000
+						player[SLOT_PLAYER1].yvel = 0
+						break
+
+					case 1
+					case 7
+						player[SLOT_PLAYER1].speed = 0xC0000
+						player[SLOT_PLAYER1].xvel = 0xC0000
+						player[SLOT_PLAYER1].yvel = -0xB0000
+						break
+
+					case 2
+					case 6
+						player[SLOT_PLAYER1].speed = 0
+						player[SLOT_PLAYER1].xvel = 0
+						player[SLOT_PLAYER1].yvel = -0x100000
+						break
+
+					case 3
+					case 5
+						player[SLOT_PLAYER1].speed = -0xC0000
+						player[SLOT_PLAYER1].xvel = -0xC0000
+						player[SLOT_PLAYER1].yvel = -0xB0000
+						break
+
+					case 4
+						player[SLOT_PLAYER1].speed = -0x100000
+						player[SLOT_PLAYER1].xvel = -0x100000
+						player[SLOT_PLAYER1].yvel = 0
+						break
+
+					end switch
+				end if
+			else
+				object.state = SPRINGCAGE_OPEN
+				object.launchTimer = 0
+			end if
+		else
+			object.state = SPRINGCAGE_OPEN
+			object.launchTimer = 0
+		end if
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.state == SPRINGCAGE_OPEN
+			// See if the player's hopped in yet
+			BoxCollisionTest(C_TOUCH, object.entityPos, -28, -32, 28, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.state = SPRINGCAGE_OCCUPIED
+
+				// Move the player into the cage and set them up to be launched
+				player[currentPlayer].xpos = object.xpos
+				player[currentPlayer].ypos = object.ypos
+				player[currentPlayer].state = Player_State_Static
+				player[currentPlayer].animation = ANI_JUMPING
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].yvel = 0
+
+				// Make minor positioning corrections based on the cage's current angle
+				switch object.angle
+				case 0
+					player[currentPlayer].xpos += 0x200000 // 32 pixels right
+					break
+
+				case 1
+				case 7
+					player[currentPlayer].xpos += 0x180000 // 24 pixels right
+					player[currentPlayer].ypos -= 0x180000 // 24 pixels up
+					break
+
+				case 2
+				case 6
+					player[currentPlayer].ypos -= 0x200000 // 32 pixels up
+					break
+
+				case 3
+				case 5
+					player[currentPlayer].xpos -= 0x180000 // 24 pixels left
+					player[currentPlayer].ypos -= 0x180000 // 24 pixels up
+					break
+
+				case 4
+					player[currentPlayer].xpos -= 0x200000 // 32 pixels up
+					break
+
+				end switch
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	// Jump based on what angle the cage is currently
+	switch object.angle
+	case 0
+		// Facing right
+		DrawSprite(1)
+
+		object.direction = 2
+		DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 1
+	case 7
+		// Facing up-right
+		DrawSprite(2)
+
+		object.direction = 3
+		DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 2
+	case 6
+		// Facing up
+		DrawSprite(4)
+
+		object.direction = FACING_LEFT
+		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 3
+	case 5
+		// Facing up left
+		object.direction = FACING_LEFT
+		DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+
+		object.direction = 2
+		DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 4
+		// Facing left
+		DrawSprite(5)
+
+		object.direction = 2
+		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	end switch
+
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 90, 52)    // #0 - Base Frame
+	SpriteFrame(-8, -28, 64, 24, 34, 96)   // #1 - Top Horizontal Half
+	SpriteFrame(-24, -56, 56, 56, 59, 121) // #2 - Top Diagonal Half
+	SpriteFrame(-56, -24, 56, 56, 59, 121) // #3 - Bottom Diagonal Half
+	SpriteFrame(-28, -56, 24, 64, 34, 121) // #4 - Vertical Half
+	SpriteFrame(-56, -28, 64, 24, 34, 96)  // #5 - Bottom Horizontal Half
+
+	foreach (TypeName[Spring Cage], arrayPos0, ALL_ENTITIES)
+		arrayPos1 = arrayPos0
+		arrayPos1++
+		switch object[arrayPos0].propertyValue
+		case 1
+			object[arrayPos0].angle = 4
+			object[arrayPos1].propertyValue = 2
+			break
+
+		case 3
+			object[arrayPos0].angle = 1
+			object[arrayPos1].propertyValue = 1
+			break
+
+		case 4
+			object[arrayPos0].angle = 2
+			object[arrayPos1].propertyValue = 4
+			break
+
+		case 5
+			object[arrayPos0].angle = 3
+			object[arrayPos1].propertyValue = 5
+			break
+
+		case 6
+			object[arrayPos0].angle = 0
+			object[arrayPos1].propertyValue = 2
+			break
+
+		end switch
+
+		object[arrayPos0].drawOrder = 4
+
+		// Move the spring to the cage
+		object[arrayPos1].xpos = object[arrayPos0].xpos
+		object[arrayPos1].ypos = object[arrayPos0].ypos
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Direction
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Direction
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	switch object.propertyValue
+	case 1
+		DrawSprite(5)
+
+		object.direction = 2
+		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 3
+		DrawSprite(2)
+
+		object.direction = 3
+		DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 0
+	case 4
+		DrawSprite(4)
+
+		object.direction = FACING_LEFT
+		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 5
+		object.direction = FACING_LEFT
+		DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+
+		object.direction = 2
+		DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	case 6
+		DrawSprite(1)
+
+		object.direction = 2
+		DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		break
+
+	end switch
+
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		GetObjectType(temp0, "R7 Spring")
+
+		arrayPos1 = object[+1].entityPos
+		if object[arrayPos1].type != temp0
+			// Uh oh! The next object should be an R7 Spring object, but it isn't...
+			// Draw a bunch of red to let the user know
+
+			editor.drawingOverlay = true
+
+			DrawArrow(object.xpos, object.ypos, object[arrayPos1].xpos, object[arrayPos1].ypos, 255, 0, 0)
+
+			temp0 = object[arrayPos1].xpos
+			temp0 -= 0x100000
+
+			temp1 = object[arrayPos1].ypos
+			temp1 -= 0x100000
+
+			temp2 = object[arrayPos1].xpos
+			temp2 += 0x100000
+
+			temp3 = object[arrayPos1].ypos
+			temp3 += 0x100000
+
+			DrawLine(temp0, temp1, temp2, temp3, 255, 0, 0)
+			DrawLine(temp2, temp1, temp0, temp3, 255, 0, 0)
+
+			editor.drawingOverlay = false
+		end if
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 90, 52)    // Base Frame
+	SpriteFrame(-8, -28, 64, 24, 34, 96)   // Top Horizontal Half
+	SpriteFrame(-24, -56, 56, 56, 59, 121) // Top Diagonal Half
+	SpriteFrame(-56, -24, 56, 56, 59, 121) // Bottom Diagonal Half
+	SpriteFrame(-28, -56, 24, 64, 34, 121) // Vertical Half
+	SpriteFrame(-56, -28, 64, 24, 34, 96)  // Bottom Horizontal Half
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Rotating", 0)
+	AddEnumVariable("Left", 1)
+	// 2 is pointing up dupe
+	AddEnumVariable("Up-Right", 3)
+	AddEnumVariable("Up", 4)
+	AddEnumVariable("Up-Left", 5)
+	AddEnumVariable("Right", 6)
+end event

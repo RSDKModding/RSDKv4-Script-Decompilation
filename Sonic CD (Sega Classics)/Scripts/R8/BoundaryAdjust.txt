@@ -1,0 +1,101 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boundary Adjust Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// States
+private alias 0 : BOUNDARYADJUST_SET_BOUNDS
+private alias 1 : BOUNDARYADJUST_RESTORE_BOUNDS
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == BOUNDARYADJUST_SET_BOUNDS
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            // Set Left Bound
+            temp0 = 3120
+            temp0 -= screen.xcenter
+            stage.newXBoundary1 = temp0
+
+            // Set Right Bound
+            temp0 += screen.xsize
+            stage.newXBoundary2 = temp0
+
+            // Set Top Bound
+            temp0 = object.iypos
+            temp0 -= screen.ysize
+            stage.newYBoundary1 = temp0
+
+            // Set Bottom Bound
+            stage.curYBoundary2 = screen.yoffset
+            stage.curYBoundary2 += screen.ysize
+            if stage.curYBoundary2 < object.iypos
+                stage.curYBoundary2 = object.iypos
+            end if
+
+            object.state++
+        end if
+    else
+        stage.curYBoundary2 -= 3
+        if stage.curYBoundary2 <= object.iypos
+            stage.curYBoundary2 = object.iypos
+            object.type = TypeName[Blank Object]
+        end if
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    if editor.showGizmos == true
+        editor.drawingOverlay = true
+        // Draw a little indicator of where the bounds will be moved to
+        // Let's assume it's the original width res of the game, 424
+        temp0 = 3120
+        temp0 -= 242
+        temp0 <<= 16
+
+        temp1 = object.iypos
+        temp1 -= 240
+        temp1 <<= 16
+        DrawRectOutline(temp0, temp1, 424, 240, 255, 255, 0, 255)
+        editor.drawingOverlay = false
+    end if
+    
+    temp0 = object.xpos
+    temp0 -= 0x80000
+    temp1 = object.ypos
+    temp1 -= 0x80000
+    DrawSpriteXY(0, temp0, temp1)
+
+    temp0 += 0x100000
+    DrawSpriteXY(0, temp0, temp1)
+
+    temp1 += 0x100000
+    DrawSpriteXY(0, temp0, temp1)
+
+    temp0 -= 0x100000
+    DrawSpriteXY(0, temp0, temp1)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-8, -8, 16, 16, 173, 67) // #0 - "T" Icon
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

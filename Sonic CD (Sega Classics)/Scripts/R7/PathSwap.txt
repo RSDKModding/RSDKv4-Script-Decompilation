@@ -1,0 +1,191 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Path Swap Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// If the Player has touched this Path Swapper last frame, used to distinguish new touches from old touches
+private alias object.value7 : object.prevTouch
+
+private alias object.value1 : object.chunkX1
+private alias object.value3 : object.chunkX2
+private alias object.value2 : object.chunkY1
+private alias object.value4 : object.chunkY2
+
+// Holds the chunk ID of what's already there on the level map, New holds what it should be replaced with
+private alias object.value5 : object.chunkIDOld
+private alias object.value6 : object.chunkIDNew
+
+// States
+private alias 0 : PATHSWAP_IDLE
+private alias 1 : PATHSWAP_SPINNING
+
+// ========================
+// Static Values
+// ========================
+
+public value pathSwap.flag  = 0
+public value pathSwap.frame = 0
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == PATHSWAP_SPINNING
+		if object.timer < 39
+			object.timer++
+		else
+			object.state = PATHSWAP_IDLE
+			object.timer = 0
+			object.priority = PRIORITY_BOUNDS
+		end if
+
+		pathSwap.frame = object.timer
+		pathSwap.frame /= 5
+	end if
+
+	if pathSwap.flag == false
+		temp0 = object.chunkIDOld
+	else
+		temp0 = object.chunkIDNew
+	end if
+
+	if object.propertyValue != 1
+		SetTileLayerEntry(temp0, 0, object.chunkX1, object.chunkY1)
+		temp0++
+		SetTileLayerEntry(temp0, 0, object.chunkX2, object.chunkY1)
+		temp0++
+		SetTileLayerEntry(temp0, 0, object.chunkX1, object.chunkY2)
+		temp0++
+		SetTileLayerEntry(temp0, 0, object.chunkX2, object.chunkY2)
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.propertyValue < 2
+			if object.state == PATHSWAP_IDLE
+				if pathSwap.frame == 0
+					BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						if object.prevTouch == false
+							object.state = PATHSWAP_SPINNING
+							object.priority = PRIORITY_ACTIVE
+							object.prevTouch = true
+
+							// This is a weird way to do it... but sure
+							// A `^= true` would work just as well here too, though you don't see those all too often in CD
+							pathSwap.flag++
+							pathSwap.flag &= 1
+						end if
+					else
+						object.prevTouch = false
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	if object.propertyValue < 2
+		DrawSprite(pathSwap.frame)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Path Swapper Frames
+	SpriteFrame(-24, -15, 48, 40, 109, 18)
+	SpriteFrame(-24, -11, 48, 36, 158, 22)
+	SpriteFrame(-24, -7, 48, 32, 207, 26)
+	SpriteFrame(-24, -11, 48, 36, 158, 63)
+	SpriteFrame(-24, -15, 48, 40, 109, 59)
+	SpriteFrame(-24, -11, 48, 36, 158, 63)
+	SpriteFrame(-24, -7, 48, 32, 207, 26)
+	SpriteFrame(-24, -11, 48, 36, 158, 22)
+
+	pathSwap.flag = false
+	pathSwap.frame = 0
+
+	foreach (TypeName[Path Swap], arrayPos0, ALL_ENTITIES)
+		// Setup chunk positions
+		object[arrayPos0].chunkX1 = object[arrayPos0].ixpos
+		object[arrayPos0].chunkX1 >>= 8
+		object[arrayPos0].chunkX1 <<= 1
+
+		object[arrayPos0].chunkX2 = object[arrayPos0].chunkX1
+		object[arrayPos0].chunkX2++
+
+		object[arrayPos0].chunkY1 = object[arrayPos0].iypos
+		object[arrayPos0].chunkY1 >>= 8
+		object[arrayPos0].chunkY1 <<= 1
+
+		object[arrayPos0].chunkY2 = object[arrayPos0].chunkY1
+		object[arrayPos0].chunkY2++
+
+		// Setup chunk IDs
+
+		// Get the base chunk ID
+		GetTileLayerEntry(object[arrayPos0].chunkIDOld, 0, object[arrayPos0].chunkX1, object[arrayPos0].chunkY1)
+		
+		// The chunk's B replacement is always 4 chunks immediately after it
+		object[arrayPos0].chunkIDNew = object[arrayPos0].chunkIDOld
+		object[arrayPos0].chunkIDNew += 4
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // Type
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	GetBit(object.inkEffect, object.propertyValue, 1) // Invis types get to be blended
+	DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-24, -15, 48, 40, 109, 18)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+
+	// Bit of a guess here -
+	// Subtype 0 is used just about everywhere, 2 is used in SSZ1B once, and then 2 is completely unused it seems?
+
+	AddEnumVariable("Normal", 0)
+	AddEnumVariable("Decoration", 1)
+	AddEnumVariable("Invisible", 2) // Used to update chunks but without the sign being visible there
+end event

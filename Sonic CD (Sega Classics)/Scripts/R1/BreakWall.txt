@@ -1,0 +1,399 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Breakable Wall Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.xpos           : player.xpos
+private alias object.xvel           : player.xvel
+private alias object.speed          : player.speed
+private alias object.right          : player.right
+private alias object.pushing        : player.pushing
+private alias object.direction      : player.direction
+private alias object.animation      : player.animation
+private alias object.collisionLeft  : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+
+// Property Values
+private alias 0 : VARIANT_1_SMALL
+private alias 1 : VARIANT_1_BIG_LEFT
+private alias 2 : VARIANT_1_BIG_MIDDLE
+private alias 3 : VARIANT_1_BIG_RIGHT
+
+private alias 4 : VARIANT_2_SMALL
+private alias 5 : VARIANT_2_BIG_LEFT
+private alias 6 : VARIANT_2_BIG_MIDDLE
+private alias 7 : VARIANT_2_BIG_RIGHT
+// From 8 onwards it will be considered debris
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.propertyValue > 7
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+        object.yvel += 0x4000
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+        end if
+    else
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if player[currentPlayer].animation == ANI_JUMPING
+                BoxCollisionTest(C_TOUCH, object.entityPos, -17, -24, 17, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.type = TypeName[Blank Object]
+                    PlaySfx(SfxName[Explosion], false)
+
+                    temp0 = object.propertyValue
+                    temp0 *= 6
+                    temp0 += 8
+
+                    temp1 = object.xpos
+                    temp1 -= 0x80000
+
+                    temp2 = object.xpos
+                    temp2 += 0x80000
+
+                    temp3 = object.ypos
+                    temp3 -= 0x100000
+
+                    if player[currentPlayer].xpos < object.xpos
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp1, temp3)
+                        object[tempObjectPos].xvel = -0x30000
+                        object[tempObjectPos].yvel = -0x20000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp3)
+                        object[tempObjectPos].xvel = -0x20000
+                        object[tempObjectPos].yvel = -0x20000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+                        temp3 += 0x100000
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp1, temp3)
+                        object[tempObjectPos].xvel = -0x40000
+                        object[tempObjectPos].yvel = -0x10000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp3)
+                        object[tempObjectPos].xvel = -0x30000
+                        object[tempObjectPos].yvel = -0x10000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+                        temp3 += 0x100000
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp1, temp3)
+                        object[tempObjectPos].xvel = -0x30000
+                        object[tempObjectPos].yvel = 0x10000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp3)
+                        object[tempObjectPos].xvel = -0x20000
+                        object[tempObjectPos].yvel = 0x10000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+                        temp3 += 0x100000
+                    else
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp1, temp3)
+                        object[tempObjectPos].xvel = 0x20000
+                        object[tempObjectPos].yvel = -0x20000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp3)
+                        object[tempObjectPos].xvel = 0x30000
+                        object[tempObjectPos].yvel = -0x20000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+                        temp3 += 0x100000
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp1, temp3)
+                        object[tempObjectPos].xvel = 0x30000
+                        object[tempObjectPos].yvel = -0x10000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp3)
+                        object[tempObjectPos].xvel = 0x40000
+                        object[tempObjectPos].yvel = -0x10000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+                        temp3 += 0x100000
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp1, temp3)
+                        object[tempObjectPos].xvel = 0x20000
+                        object[tempObjectPos].yvel = 0x10000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+
+                        CreateTempObject(TypeName[Breakable Wall], temp0, temp2, temp3)
+                        object[tempObjectPos].xvel = 0x30000
+                        object[tempObjectPos].yvel = 0x10000
+                        object[tempObjectPos].drawOrder = 4
+                        temp0++
+                        temp3 += 0x100000
+                    end if
+                end if
+            else
+				// "Fake" Wall Collision
+                BoxCollisionTest(C_TOUCH, object.entityPos, -17, -24, 16, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    if player[currentPlayer].xpos < object.xpos
+                        player[currentPlayer].xpos = player[currentPlayer].collisionLeft
+                        player[currentPlayer].xpos <<= 16
+                        player[currentPlayer].xpos += object.xpos
+                        player[currentPlayer].xpos -= 0x100000
+                        player[currentPlayer].speed = 0
+                        player[currentPlayer].xvel = 0
+                        if player[currentPlayer].right == true
+                            if player[currentPlayer].direction == FACING_RIGHT
+                                player[currentPlayer].pushing = 2
+                            end if
+                        end if
+                    else
+                        player[currentPlayer].xpos = player[currentPlayer].collisionRight
+                        player[currentPlayer].xpos <<= 16
+                        player[currentPlayer].xpos += object.xpos
+                        player[currentPlayer].xpos += 0x100000
+                        player[currentPlayer].speed = 0
+                        player[currentPlayer].xvel = 0
+                        if player[currentPlayer].direction == FACING_LEFT
+                            player[currentPlayer].pushing = 2
+                        end if
+                    end if
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects2.gif")
+
+    arrayPos0 = 32
+    while arrayPos0 < 1056
+        if object[arrayPos0].type == TypeName[Breakable Wall]
+            object[arrayPos0].drawOrder = 4
+        end if
+        arrayPos0++
+    loop
+
+	// Variant 1
+	SpriteFrame(-16, -24, 32, 48, 190, 1)		// #0 - BreakWall singular piece
+	SpriteFrame(-16, -24, 32, 48, 223, 1)		// #1 - BreakWall left piece
+	SpriteFrame(-16, -24, 32, 48, 190, 50)		// #2 - BreakWall middle piece
+	SpriteFrame(-16, -24, 32, 48, 223, 50)		// #3 - BreakWall right piece
+
+	// Variant 2
+	SpriteFrame(-16, -24, 32, 48, 190, 99)		// #4 - BreakWall singular piece
+	SpriteFrame(-16, -24, 32, 48, 223, 99)		// #5 - BreakWall left piece
+	SpriteFrame(-16, -24, 32, 48, 190, 148)		// #6 - BreakWall middle piece
+	SpriteFrame(-16, -24, 32, 48, 223, 148)		// #7 - BreakWall right piece
+
+	// Variant 1 debris chunks
+
+	// Debris chunks BreakWall singular piece
+    temp0 = 0
+    temp3 = 1
+    while temp0 < 3
+        temp1 = 0
+        temp2 = 190
+        while temp1 < 2
+            SpriteFrame(-8, -8, 16, 16, temp2, temp3)
+            temp1++
+            temp2 += 16
+        loop
+        temp0++
+        temp3 += 16
+    loop
+
+	// Debris chunks BreakWall left piece
+    temp0 = 0
+    temp3 = 1
+    while temp0 < 3
+        temp1 = 0
+        temp2 = 223
+        while temp1 < 2
+            SpriteFrame(-8, -8, 16, 16, temp2, temp3)
+            temp1++
+            temp2 += 16
+        loop
+        temp0++
+        temp3 += 16
+    loop
+
+	// Debris chunks BreakWall middle piece
+    temp0 = 0
+    temp3 = 50
+    while temp0 < 3
+        temp1 = 0
+        temp2 = 190
+        while temp1 < 2
+            SpriteFrame(-8, -8, 16, 16, temp2, temp3)
+            temp1++
+            temp2 += 16
+        loop
+        temp0++
+        temp3 += 16
+    loop
+
+	// Debris chunks BreakWall right piece
+    temp0 = 0
+    temp3 = 50
+    while temp0 < 3
+        temp1 = 0
+        temp2 = 223
+        while temp1 < 2
+            SpriteFrame(-8, -8, 16, 16, temp2, temp3)
+            temp1++
+            temp2 += 16
+        loop
+        temp0++
+        temp3 += 16
+    loop
+
+	// Variant 2 debris chunks
+
+	// Debris chunks BreakWall singular piece
+    temp0 = 0
+    temp3 = 99
+    while temp0 < 3
+        temp1 = 0
+        temp2 = 190
+        while temp1 < 2
+            SpriteFrame(-8, -8, 16, 16, temp2, temp3)
+            temp1++
+            temp2 += 16
+        loop
+        temp0++
+        temp3 += 16
+    loop
+
+	// Debris chunks BreakWall left piece
+    temp0 = 0
+    temp3 = 99
+    while temp0 < 3
+        temp1 = 0
+        temp2 = 223
+        while temp1 < 2
+            SpriteFrame(-8, -8, 16, 16, temp2, temp3)
+            temp1++
+            temp2 += 16
+        loop
+        temp0++
+        temp3 += 16
+    loop
+
+	// Debris chunks BreakWall middle piece
+    temp0 = 0
+    temp3 = 148
+    while temp0 < 3
+        temp1 = 0
+        temp2 = 190
+        while temp1 < 2
+            SpriteFrame(-8, -8, 16, 16, temp2, temp3)
+            temp1++
+            temp2 += 16
+        loop
+        temp0++
+        temp3 += 16
+    loop
+
+	// Debris chunks BreakWall right piece
+    temp0 = 0
+    temp3 = 148
+    while temp0 < 3
+        temp1 = 0
+        temp2 = 223
+        while temp1 < 2
+            SpriteFrame(-8, -8, 16, 16, temp2, temp3)
+            temp1++
+            temp2 += 16
+        loop
+        temp0++
+        temp3 += 16
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 7
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 7
+			break
+
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 7
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R1/Objects2.gif")
+
+	// Variant 1
+	SpriteFrame(-16, -24, 32, 48, 190, 1)		// #0 - BreakWall singular piece
+	SpriteFrame(-16, -24, 32, 48, 223, 1)		// #1 - BreakWall left piece
+	SpriteFrame(-16, -24, 32, 48, 190, 50)		// #2 - BreakWall middle piece
+	SpriteFrame(-16, -24, 32, 48, 223, 50)		// #3 - BreakWall right piece
+
+	// Variant 2
+	SpriteFrame(-16, -24, 32, 48, 190, 99)		// #4 - BreakWall singular piece
+	SpriteFrame(-16, -24, 32, 48, 223, 99)		// #5 - BreakWall left piece
+	SpriteFrame(-16, -24, 32, 48, 190, 148)		// #6 - BreakWall middle piece
+	SpriteFrame(-16, -24, 32, 48, 223, 148)		// #7 - BreakWall right piece
+
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Variant 1 (Single)", VARIANT_1_SMALL)
+	AddEnumVariable("Variant 1 (Left)", VARIANT_1_BIG_LEFT)
+	AddEnumVariable("Variant 1 (Middle)", VARIANT_1_BIG_MIDDLE)
+	AddEnumVariable("Variant 1 (Right)", VARIANT_1_BIG_RIGHT)
+	AddEnumVariable("Variant 2 (Single)", VARIANT_2_SMALL)
+	AddEnumVariable("Variant 2 (Left)", VARIANT_2_BIG_LEFT)
+	AddEnumVariable("Variant 2 (Middle)", VARIANT_2_BIG_MIDDLE)
+	AddEnumVariable("Variant 2 (Right)", VARIANT_2_BIG_RIGHT)
+end event

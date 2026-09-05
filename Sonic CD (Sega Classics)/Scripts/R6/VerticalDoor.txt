@@ -1,0 +1,141 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Vertical Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.doorHeight
+
+// Push Button Aliases
+private alias object.propertyValue : pushButton.pressed
+
+// States
+private alias 0 : VERTICALDOOR_CLOSED
+private alias 1 : VERTICALDOOR_OPEN
+
+// Property Values
+private alias 0 : CHECK_FROM_LEFT
+private alias 1 : CHECK_FROM_RIGHT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == VERTICALDOOR_CLOSED
+        if pushButton[+1].pressed == true
+            object.state = VERTICALDOOR_OPEN
+        end if
+
+        if object.doorHeight > 0
+            object.doorHeight -= 0x40000
+            object.ypos += 0x40000
+        end if
+    else
+        if object.doorHeight < 0x400000
+            object.doorHeight += 0x40000
+            object.ypos -= 0x40000
+        end if
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.propertyValue == CHECK_FROM_LEFT
+            if object.state == VERTICALDOOR_OPEN
+                BoxCollisionTest(C_SOLID, object.entityPos, -8, -32, 8, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_TOUCH, object.entityPos, -64, -128, -32, 128, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.state = VERTICALDOOR_CLOSED
+                end if
+            else
+                BoxCollisionTest(C_SOLID, object.entityPos, -8, -32, 8, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            end if
+        else
+            if object.state == VERTICALDOOR_OPEN
+                BoxCollisionTest(C_SOLID, object.entityPos, -8, -32, 8, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_TOUCH, object.entityPos, 32, -128, 64, 128, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.state = VERTICALDOOR_CLOSED
+                end if
+            else
+                BoxCollisionTest(C_SOLID, object.entityPos, -8, -32, 8, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-8, -32, 16, 64, 239, 1) // #0 - Vertical Door
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // checkSide
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // checkSide
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+
+    if editor.showGizmos == true
+        temp1 = object.ypos
+        temp1 -= 0x800000
+        temp0 = object.xpos
+        if object.propertyValue == CHECK_FROM_LEFT
+            temp0 -= 0x400000
+            DrawRectOutline(temp0, temp1, 0x20, 0x100, 255, 255, 0, 255)
+        else
+            temp0 += 0x200000
+            DrawRectOutline(temp0, temp1, 0x20, 0x100, 255, 255, 0, 255)
+        end if
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-8, -32, 16, 64, 239, 1) // #0 - Vertical Door
+
+    AddEditorVariable("checkSide")
+    SetActiveVariable("checkSide")
+    AddEnumVariable("Check from left", CHECK_FROM_LEFT)
+    AddEnumVariable("Check from right",  CHECK_FROM_RIGHT)
+end event

@@ -1,0 +1,167 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Speed Booster Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.drawOffsetX
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.speed     : player.speed
+private alias object.direction : player.direction
+
+// States
+private alias 0 : SPEEDBOOSTER_IDLE
+private alias 1 : SPEEDBOOSTER_RECOIL_R
+private alias 2 : SPEEDBOOSTER_RECOVER_R
+private alias 3 : SPEEDBOOSTER_RECOIL_L
+private alias 4 : SPEEDBOOSTER_RECOVER_L
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SPEEDBOOSTER_RECOIL_R
+		if object.timer < 6
+			object.drawOffsetX -= 0x80000
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case SPEEDBOOSTER_RECOVER_R
+		if object.timer < 6
+			object.drawOffsetX += 0x80000
+			object.timer++
+		else
+			object.timer = 0
+			object.state = SPEEDBOOSTER_IDLE
+			object.priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	case SPEEDBOOSTER_RECOIL_L
+		if object.timer < 6
+			object.drawOffsetX += 0x80000
+			object.timer++
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case SPEEDBOOSTER_RECOVER_L
+		if object.timer < 6
+			object.drawOffsetX -= 0x80000
+			object.timer++
+		else
+			object.timer = 0
+			object.state = SPEEDBOOSTER_IDLE
+			object.priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.state == SPEEDBOOSTER_IDLE
+			if player[currentPlayer].state != Player_State_Air
+				BoxCollisionTest(C_TOUCH, object.entityPos, -32, -12, 32, 4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					// Make the Speed Boster always active for the next few frames
+					object.priority = PRIORITY_ACTIVE
+
+					PlaySfx(SfxName[Large Booster], false)
+
+					// Different actions for the different directions the player will be sent
+					if player[currentPlayer].speed > 0
+						object.state = SPEEDBOOSTER_RECOIL_R
+						player[currentPlayer].speed = 0x100000
+						player[currentPlayer].direction = FACING_RIGHT
+
+						CreateTempObject(TypeName[Fire Trail], 0, object.xpos, object.ypos)
+						object[tempObjectPos].xpos -= 0x180000
+						object[tempObjectPos].ypos -= 0x60000
+
+						CreateTempObject(TypeName[Blank Object], 0, object.xpos, object.ypos)
+						object[tempObjectPos].xvel = -0x20000
+						object[tempObjectPos].yvel = -0x70000
+					else
+						object.state = SPEEDBOOSTER_RECOIL_L
+						player[currentPlayer].speed = -0x100000
+						player[currentPlayer].direction = FACING_LEFT
+
+						CreateTempObject(TypeName[Fire Trail], 0, object.xpos, object.ypos)
+						object[tempObjectPos].xpos += 0x180000
+						object[tempObjectPos].ypos -= 0x60000
+						object[tempObjectPos].direction = FACING_LEFT
+
+						CreateTempObject(TypeName[Blank Object], 0, object.xpos, object.ypos)
+						object[tempObjectPos].xvel = 0x20000
+						object[tempObjectPos].yvel = -0x70000
+						object[tempObjectPos].direction = FACING_LEFT
+					end if
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	temp0 = object.drawOffsetX
+	temp0 += object.xpos
+	DrawSpriteXY(0, temp0, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Booster Frame
+	SpriteFrame(-32, -12, 64, 24, 34, 96)
+
+	foreach (TypeName[Speed Booster], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		temp0 = object.ixpos
+		temp0 -= 32
+
+		temp1 = object.iypos
+		temp1 -= 12
+
+		// Draw the Booster's activation box
+		DrawRectOutline(temp0, temp1, 64, 16, 255, 255, 255, 255)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-32, -12, 64, 24, 34, 96)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,287 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Noro Noro Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.spikes
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.gravity : player.gravity
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : NORONORO_FINDGROUND
+private alias 1 : NORONORO_ROLLLEFT
+private alias 2 : NORONORO_ROLLRIGHT
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function NoroNoro_DebugDraw
+reserve function NoroNoro_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value NoroNoro_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function NoroNoro_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= NoroNoro_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function NoroNoro_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= NoroNoro_startDebugID
+    CreateTempObject(TypeName[Noro Noro], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    // Firstly, animate the object
+    object.frame++
+    object.frame %= 60
+
+    switch object.state
+    case NORONORO_FINDGROUND
+        // Check to see if the Noro Noro's on the floor
+        ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
+        if checkResult == true
+            // If it is, then advance states
+            object.state = NORONORO_ROLLLEFT
+        else
+            // The Noro Noro's still in the air, so move down a pixel
+            object.ypos += 0x10000
+        end if
+        break
+
+    case NORONORO_ROLLLEFT
+        // Roll 0.25 pixels left
+        object.xpos -= 0x4000
+
+        object.timer--
+        if object.timer == -320
+            object.state = NORONORO_ROLLRIGHT
+            object.direction = FACING_LEFT
+        end if
+
+        ObjectTileGrip(CSIDE_FLOOR, 0, 16, 0)
+        if checkResult == false
+            object.state = NORONORO_ROLLRIGHT
+            object.timer = 0
+            object.direction = FACING_LEFT
+        end if
+        break
+
+    case NORONORO_ROLLRIGHT
+        object.xpos += 0x4000
+        object.timer++
+        if object.timer == 320
+            object.state = NORONORO_ROLLLEFT
+            object.direction = FACING_RIGHT
+        end if
+
+        ObjectTileGrip(CSIDE_FLOOR, 0, 16, 0)
+        if checkResult == false
+            object.state = NORONORO_ROLLLEFT
+            object.timer = 0
+            object.direction = FACING_RIGHT
+        end if
+        break
+    end switch
+
+    // There's a small difference in interaction based on if the Player is in the air or not
+    // If in the air - Spikes are checked first, *then* the Noro Noro itself
+    // In on the ground - the Noro Noro is checked upon first, *then* Spikes are checked
+
+    // This only applies to Spikes Noro Noros, normal ones are just about the same regardless of the Player's aerial state
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if player[currentPlayer].gravity == GRAVITY_AIR
+            if object.quality == QUALITY_GOOD
+                if object.type == TypeName[Noro Noro]
+                    if object.state > NORONORO_FINDGROUND
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -96, -256, 96, 256, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            if object.spikes == false
+                                // If Spikes aren't already out, then play the SFX
+                                PlaySfx(SfxName[Spikes Move], false)
+                            end if
+
+                            object.spikes = true
+                        else
+                            object.spikes = false
+                        end if
+
+                        // Check for the Spikes hitbox
+                        if object.spikes == true
+                            BoxCollisionTest(C_TOUCH, object.entityPos, -8, -18, 8, -2, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                            if checkResult == true
+                                // Damage the Player
+                                CallFunction(Player_Hit)
+                            end if
+                        end if
+                    end if
+                end if
+            end if
+
+            // Normal Noro Noro hitbox
+            BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+        else
+            // First, check the Noro Noro's hitbox
+            BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+
+            if object.quality == QUALITY_GOOD
+                // Make sure the Noro Noro hasn't already been detroyed yet
+                if object.type == TypeName[Noro Noro]
+                    if object.state > NORONORO_FINDGROUND
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -96, -256, 96, 256, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            if object.spikes == false
+                                // If Spikes aren't already out, then play the SFX
+                                PlaySfx(SfxName[Spikes Move], false)
+                            end if
+
+                            object.spikes = true
+                        else
+                            object.spikes = false
+                        end if
+
+                        // Check for the Spikes hitbox
+                        if object.spikes == true
+                            BoxCollisionTest(C_TOUCH, object.entityPos, -8, -18, 8, -2, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                            if checkResult == true
+                                // Damage the Player
+                                CallFunction(Player_Hit)
+                            end if
+                        end if
+                    end if
+                end if
+            end if
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    if object.quality == QUALITY_GOOD
+        // Spikes Noro Noro
+        DrawSpriteFX(object.spikes, FX_FLIP, object.xpos, object.ypos)
+    else
+        // Normal Noro Noro
+        DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos)
+    end if
+
+    if object.frame > 29
+        DrawSpriteFX(3, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R5/Objects.gif")
+
+    // Noro Noro Frames
+    SpriteFrame(-16, -24, 32, 40, 1, 150)   // #0 - Spikes Ejecting Frame
+    SpriteFrame(-16, -24, 32, 40, 34, 150)  // #1 - Spikes Ejected Frame
+    SpriteFrame(-16, -16, 32, 32, 66, 117)  // #2 - Spikes Retracted Frame
+    SpriteFrame(-16, -8, 16, 8, 67, 18)     // #3 - Blinking Frame
+
+    temp0 = 0
+    NoroNoro_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Noro Noro], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(NoroNoro_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(NoroNoro_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R5/Objects.gif")
+    SpriteFrame(-16, -24, 32, 40, 34, 150)
+    SpriteFrame(-16, -16, 32, 32, 66, 117)
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

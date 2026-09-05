@@ -1,0 +1,155 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Grab Pole Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.breakTimer
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.xvel      : player.xvel
+private alias object.yvel      : player.yvel
+private alias object.speed     : player.speed
+private alias object.direction : player.direction
+private alias object.animation : player.animation
+private alias object.jumpPress : player.jumpPress
+private alias object.up        : player.up
+private alias object.down      : player.down
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : GRABPOLE_IDLE
+private alias 1 : GRABPOLE_HANGING
+private alias 2 : GRABPOLE_BROKEN
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case GRABPOLE_IDLE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, 16, -28, 32, 28, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.state = GRABPOLE_HANGING
+
+                player[currentPlayer].state     = Player_State_Static
+                player[currentPlayer].animation = ANI_CLINGING
+                player[currentPlayer].direction = 0
+                player[currentPlayer].speed     = 0
+                player[currentPlayer].xvel      = 0
+                player[currentPlayer].yvel      = 0
+            end if
+        next
+        break
+
+    case GRABPOLE_HANGING
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if player[currentPlayer].state == Player_State_Death
+                object.state = GRABPOLE_IDLE
+            end if
+
+            if player[currentPlayer].state == Player_State_Drown
+                object.state = GRABPOLE_IDLE
+            end if
+
+            if object.state > GRABPOLE_IDLE
+                if object.breakTimer < 180
+                    object.breakTimer++
+
+                    player[currentPlayer].xpos = object.xpos
+                    player[currentPlayer].direction = FACING_RIGHT
+
+                    if stage.playerListPos == PLAYER_SONIC_A
+                        player[currentPlayer].xpos += 0x140000
+                    else
+                        player[currentPlayer].xpos += 0x100000
+                    end if
+                else
+                    object.frame = 1
+                    object.state = GRABPOLE_BROKEN
+                    player[currentPlayer].state = Player_State_Air
+                end if
+            end if
+
+            if player[currentPlayer].up == true
+                player[currentPlayer].ypos -= 0x10000
+            end if
+
+            if player[currentPlayer].down == true
+                player[currentPlayer].ypos += 0x10000
+            end if
+
+            if player[currentPlayer].jumpPress == true
+                object.frame = 1
+                object.state = GRABPOLE_BROKEN
+                player[currentPlayer].state = Player_State_Air
+            end if
+
+            BoxCollisionTest(C_SOLID, object.entityPos, 0, -64, 32, -46, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            BoxCollisionTest(C_SOLID, object.entityPos, 0, 46, 32, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        next
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects3.gif")
+
+    if HUD.currentTimePeriod < 3 // Present Past or Good Future
+        SpriteFrame(-4, -46, 8, 92, 134, 46)    // #0 - Pole
+        SpriteFrame(-4, -46, 16, 92, 117, 46)   // #1 - Broken Pole
+    else
+        SpriteFrame(-4, -46, 8, 92, 51, 163)    // #0 - Pole
+        SpriteFrame(-4, -46, 16, 92, 34, 163)   // #1 - Broken Pole
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects3.gif")
+
+    CallFunction(EditorHelpers_FindTimePeriod)
+    if checkResult < 3 // Present Past or Good Future
+        SpriteFrame(-4, -46, 8, 92, 134, 46)    // #0 - Pole
+        SpriteFrame(-4, -46, 16, 92, 117, 46)   // #1 - Broken Pole
+    else
+        SpriteFrame(-4, -46, 8, 92, 51, 163)    // #0 - Pole
+        SpriteFrame(-4, -46, 16, 92, 34, 163)   // #1 - Broken Pole
+    end if
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

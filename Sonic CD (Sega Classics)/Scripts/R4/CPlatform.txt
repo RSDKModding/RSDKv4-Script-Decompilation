@@ -1,0 +1,322 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: CPlatform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.hitboxLeft
+private alias object.value1 : object.hitboxRight
+private alias object.value2 : object.collapseDelay
+private alias object.value3 : object.bridgeLength
+private alias object.value4 : object.hitboxTop
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : CPLATFORM_CHECK_COLLISION
+private alias 1 : CPLATFORM_CRUMBLE_RIGHT
+private alias 2 : CPLATFORM_CRUMBLE_LEFT
+private alias 3 : CPLATFORM_COLLAPSE_LEFT
+private alias 4 : CPLATFORM_COLLAPSE_RIGHT
+private alias 5 : CPLATFORM_RESTORE // Sonic Nexus leftover
+private alias 6 : CPLATFORM_FALLING_DEBRIS
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CPlatform_DebugDraw
+reserve function CPlatform_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+public value CPlatform_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function CPlatform_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= CPlatform_startDebugID
+    temp2 = temp0
+
+    temp0 <<= 19
+    FlipSign(temp0)
+
+    temp0 += object.xpos
+    temp0 += 0x80000
+    temp1 = 0
+    while temp1 < temp2
+        DrawSpriteXY(0, temp0, object.ypos)
+        temp0 += 0x100000
+        temp1++
+    loop
+
+    if temp1 == 0
+        DrawSprite(0)
+    end if
+end function
+
+
+public function CPlatform_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= CPlatform_startDebugID
+
+    CreateTempObject(TypeName[CPlatform], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].bridgeLength = object[tempObjectPos].propertyValue
+
+    object[tempObjectPos].hitboxLeft = object[tempObjectPos].propertyValue
+    object[tempObjectPos].hitboxLeft <<= 3
+
+    object[tempObjectPos].hitboxRight = object[tempObjectPos].hitboxLeft
+    FlipSign(object[tempObjectPos].hitboxLeft)
+
+    object[tempObjectPos].hitboxTop = -16
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case CPLATFORM_CRUMBLE_RIGHT
+        if object.collapseDelay > 0
+            object.collapseDelay--
+        else
+            PlaySfx(SfxName[Crumble], false)
+            object.state = CPLATFORM_COLLAPSE_RIGHT
+        end if
+        break
+
+    case CPLATFORM_CRUMBLE_LEFT
+        if object.collapseDelay > 0
+            object.collapseDelay--
+        else
+            PlaySfx(SfxName[Crumble], false)
+            object.state = CPLATFORM_COLLAPSE_LEFT
+        end if
+        break
+
+    case CPLATFORM_COLLAPSE_LEFT
+        object.collapseDelay++
+        if object.collapseDelay == 12
+            object.collapseDelay = 0
+            if object.hitboxLeft < object.hitboxRight
+                object.bridgeLength--
+                object.hitboxLeft += 16
+
+                temp0 = object.hitboxLeft
+                temp0 -= 8
+                temp0 <<= 16
+                temp0 += object.xpos
+                
+                CreateTempObject(TypeName[CPlatform], 0, temp0, object.ypos)
+                object[tempObjectPos].ypos -= 0x80000
+                object[tempObjectPos].yvel = -0x10000
+                object[tempObjectPos].state = CPLATFORM_FALLING_DEBRIS
+                object[tempObjectPos].hitboxTop = object.hitboxTop
+                
+                CreateTempObject(TypeName[CPlatform], 0, temp0, object.ypos)
+                object[tempObjectPos].ypos += 0x80000
+                object[tempObjectPos].state = CPLATFORM_FALLING_DEBRIS
+                object[tempObjectPos].hitboxTop = object.hitboxTop
+            else
+                ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+            end if
+        end if
+        break
+
+    case CPLATFORM_COLLAPSE_RIGHT
+        object.collapseDelay++
+        if object.collapseDelay == 12
+            object.collapseDelay = 0
+            if object.hitboxRight > object.hitboxLeft
+                object.bridgeLength--
+                object.hitboxRight -= 16
+
+                temp0 = object.hitboxRight
+                temp0 += 8
+                temp0 <<= 16
+                temp0 += object.xpos
+
+                CreateTempObject(TypeName[CPlatform], 0, temp0, object.ypos)
+                object[tempObjectPos].ypos -= 0x80000
+                object[tempObjectPos].yvel = -0x10000
+                object[tempObjectPos].state = CPLATFORM_FALLING_DEBRIS
+                object[tempObjectPos].hitboxTop = object.hitboxTop
+                
+                CreateTempObject(TypeName[CPlatform], 0, temp0, object.ypos)
+                object[tempObjectPos].ypos += 0x80000
+                object[tempObjectPos].state = CPLATFORM_FALLING_DEBRIS
+                object[tempObjectPos].hitboxTop = object.hitboxTop
+            else
+                ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+            end if
+        end if
+        break
+
+    case CPLATFORM_RESTORE
+        if object.outOfBounds == true
+            object.state = CPLATFORM_CHECK_COLLISION
+
+            object.bridgeLength = object.propertyValue
+
+            object.hitboxLeft = object.propertyValue
+            object.hitboxLeft <<= 3
+
+            object.hitboxRight = object.hitboxLeft
+            FlipSign(object.hitboxLeft)
+
+            object.priority = PRIORITY_BOUNDS
+            object.collapseDelay = 0
+        end if
+        break
+
+    case CPLATFORM_FALLING_DEBRIS
+        object.yvel += 0x4000
+        if object.yvel > 0
+            object.ypos += object.yvel
+        end if
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+        end if
+        break
+    end switch
+
+    if object.state == CPLATFORM_CHECK_COLLISION
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.collapseDelay = 1
+                object.priority = PRIORITY_ACTIVE
+                
+                if player[currentPlayer].xpos > object.xpos
+                    object.state = CPLATFORM_CRUMBLE_RIGHT
+                else
+                    object.state = CPLATFORM_CRUMBLE_LEFT
+                end if
+            end if
+        next
+    else
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case CPLATFORM_CHECK_COLLISION
+    case CPLATFORM_CRUMBLE_RIGHT
+    case CPLATFORM_CRUMBLE_LEFT
+    case CPLATFORM_COLLAPSE_RIGHT
+        temp0 = 0
+
+        temp1 = object.hitboxLeft
+        temp1 <<= 16
+        temp1 += 0x80000
+        temp1 += object.xpos
+        while temp0 < object.bridgeLength
+            DrawSpriteXY(0, temp1, object.ypos)
+            temp0++
+            temp1 += 0x100000
+        loop
+        break
+
+    case CPLATFORM_COLLAPSE_LEFT
+        temp0 = 0
+
+        temp1 = object.hitboxRight
+        temp1 <<= 16
+        temp1 -= 0x80000
+        temp1 += object.xpos
+        while temp0 < object.bridgeLength
+            DrawSpriteXY(0, temp1, object.ypos)
+            temp0++
+            temp1 -= 0x100000
+        loop
+        break
+
+    case CPLATFORM_FALLING_DEBRIS
+        DrawSprite(1)
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects.gif")
+
+    foreach (TypeName[CPlatform], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].bridgeLength = object[arrayPos0].propertyValue
+
+        object[arrayPos0].hitboxLeft = object[arrayPos0].propertyValue
+        object[arrayPos0].hitboxLeft <<= 3
+
+        object[arrayPos0].hitboxRight = object[arrayPos0].hitboxLeft
+        FlipSign(object[arrayPos0].hitboxLeft)
+
+        object[arrayPos0].hitboxTop = -16
+    next
+
+    SpriteFrame(-8, -16, 16, 32, 1, 198)  // #0 - Collapsing Platform
+    SpriteFrame(-8, -8, 16, 16, 1, 198)   // #1 - Collapsing Platform debris
+
+    temp0 = 0
+    CPlatform_startDebugID = DebugMode_ObjCount
+    CPlatform_startDebugID--
+    while temp0 < 8
+        SetTableValue(TypeName[CPlatform], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(CPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(CPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    temp0 = 0
+
+    temp1 = object.propertyValue
+    temp1 <<= 3
+    FlipSign(temp1)
+
+    temp2 = temp1
+    temp2 <<= 16
+    temp2 += 0x80000
+    temp2 += object.xpos
+    
+    while temp0 < object.propertyValue
+        DrawSpriteXY(0, temp2, object.ypos)
+        temp0++
+        temp2 += 0x100000
+    loop
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects.gif")
+    SpriteFrame(-8, -16, 16, 32, 1, 198)  // #0 - Collapsing Platform
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

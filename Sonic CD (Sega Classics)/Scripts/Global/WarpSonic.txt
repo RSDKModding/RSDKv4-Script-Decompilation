@@ -1,0 +1,196 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Warp Sonic Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.frameTimer
+private alias object.value1 : object.timer
+private alias object.value2 : object.warpStarTimer
+
+// AfterImage 1 Aliases
+private alias object[1].value0 : afterImage1.delay
+private alias object[1].value1 : afterImage1.delay2
+private alias object[1].value2 : afterImage1.delay3
+private alias object[1].value3 : afterImage1.ypos
+
+// AfterImage 2 Aliases
+private alias object[1].value4 : afterImage2.delay
+private alias object[1].value5 : afterImage2.delay2
+private alias object[1].value6 : afterImage2.delay3
+private alias object[1].value7 : afterImage2.ypos
+
+// AfterImage 3 Aliases
+private alias object[2].value0 : afterImage3.delay
+private alias object[2].value1 : afterImage3.delay2
+private alias object[2].value2 : afterImage3.delay3
+private alias object[2].value3 : afterImage3.ypos
+
+// Time Warp Aliases
+private alias object[0].state : timeWarp.state
+
+// Warp Star Warp Aliases
+private alias object.value1 : warpStar.randFadeTimer
+private alias object.state  : warpStar.state
+
+// States
+private alias 0 : WARPSONIC_REACH_CENTER
+private alias 1 : WARPSONIC_IDLE
+private alias 2 : WARPSONIC_LEAVE
+
+// Warp Star States
+private alias 2 : WARPSTAR_CUTSCENE
+
+// Time Warp States
+private alias 4 : TIMEWARP_LEAVING
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// tldr;
+	// this gets the ypos for the afterimages
+	afterImage3.ypos   = afterImage3.delay3
+	afterImage3.delay3 = afterImage3.delay2
+	afterImage3.delay2 = afterImage3.delay
+	afterImage3.delay  = afterImage2.ypos
+
+	afterImage2.ypos   = afterImage2.delay3
+	afterImage2.delay3 = afterImage2.delay2
+	afterImage2.delay2 = afterImage2.delay
+	afterImage2.delay  = afterImage1.ypos
+
+	afterImage1.ypos   = afterImage1.delay3
+	afterImage1.delay3 = afterImage1.delay2
+	afterImage1.delay2 = afterImage1.delay
+	afterImage1.delay  = object.ypos
+
+	switch object.state
+	case WARPSONIC_REACH_CENTER
+		object.ypos -= 0x80000
+		if object.ypos < 0x780000
+			object.ypos = 0x780000
+			object.state = WARPSONIC_IDLE
+			object.timer = 0
+		end if
+		break
+
+	case WARPSONIC_IDLE
+		object.timer++
+		if object.timer == 120
+			object.timer = 0
+			object.state = WARPSONIC_LEAVE
+			timeWarp.state = TIMEWARP_LEAVING
+		end if
+		break
+
+	case WARPSONIC_LEAVE
+		object.ypos -= 0x80000
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+		break
+	end switch
+
+	object.warpStarTimer++
+	if object.warpStarTimer == 4
+		object.warpStarTimer = 0
+
+		Rand(temp0, 32)
+		temp0 -= 16
+		temp0 <<= 16
+		temp0 += object.xpos
+
+		Rand(temp1, 32)
+		temp1 -= 16
+		temp1 <<= 16
+		temp1 += object.ypos
+
+		CreateTempObject(TypeName[Warp Star], 0, temp0, temp1)
+		warpStar[tempObjectPos].state = WARPSTAR_CUTSCENE
+
+		Rand(warpStar[tempObjectPos].randFadeTimer, 32)
+		warpStar[tempObjectPos].randFadeTimer += 16
+	end if
+end event
+
+
+event ObjectDraw
+	// Afterimages Frames
+	temp0 = object.frame
+	temp0++
+	if temp0 > 4
+		temp0 = 0
+	end if
+
+	// Afterimages
+	if object.ypos < 0x1040000
+		object.inkEffect = INK_ALPHA
+		object.alpha = 160
+		DrawSpriteFX(temp0, FX_INK, object.xpos, afterImage1.ypos)
+		object.alpha = 128
+		DrawSpriteFX(temp0, FX_INK, object.xpos, afterImage2.ypos)
+		object.alpha = 96
+		DrawSpriteFX(temp0, FX_INK, object.xpos, afterImage3.ypos)
+	end if
+
+	DrawSprite(object.frame)
+
+	object.frameTimer++
+	if object.frameTimer > 2
+		object.frameTimer = 0
+		object.frame++
+		if object.frame > 4
+			object.frame = 0
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	// #0 - Bouncing Frame 0
+	// #1 - Bouncing Frame 1
+	// #2 - Bouncing Frame 2
+	// #3 - Bouncing Frame 3
+	// #4 - Bouncing Frame 4
+
+	if stage.playerListPos == PLAYER_SONIC_A
+		LoadSpriteSheet("Global/Items3.gif")
+		SpriteFrame(-14, -22, 29, 44, 116, 211)
+		SpriteFrame(-11, -22, 20, 44, 146, 211)
+		SpriteFrame(-11, -22, 25, 44, 167, 211)
+		SpriteFrame(-13, -22, 25, 44, 193, 211)
+		SpriteFrame(-8, -22, 20, 44, 219, 211)
+	else
+		LoadSpriteSheet("Players/Tails2.gif")
+		SpriteFrame(-17, -22, 24, 48, 1, 1)
+		SpriteFrame(-11, -22, 24, 48, 26, 1)
+		SpriteFrame(-13, -22, 24, 48, 51, 1)
+		SpriteFrame(-7, -22, 24, 48, 76, 1)
+		SpriteFrame(-10, -22, 21, 48, 101, 1)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-14, -22, 29, 44, 116, 211)	// #0 - Bouncing Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

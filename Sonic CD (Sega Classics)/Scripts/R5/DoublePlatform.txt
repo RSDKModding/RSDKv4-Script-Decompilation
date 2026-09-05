@@ -1,0 +1,184 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Double Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.drawPos.x
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.x
+private alias object.value3 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// Bug Details: 
+// This should be aliased as object[9], because this version of the game has the HUD reserved at that slot.
+// Instead, we are incorrectly using the RSDKv3 version's reserved slot
+
+// Fix:
+// Adjust this alias to use object[9] instead of object[24]
+
+// HUD Aliases
+private alias object[24].propertyValue : HUD.currentTimePeriod 
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.angle += 2
+    object.angle &= 511
+
+    if object.angle > 0
+        object.collisionOffset.x = object.angle
+        object.collisionOffset.x *= -0x4000
+        object.collisionOffset.x += object.xpos
+        object.collisionOffset.x &= -0x10000 // Truncate the value
+        object.collisionOffset.x -= object.drawPos.x
+    else
+        object.collisionOffset.x = 0
+    end if
+
+    Cos(object.collisionOffset.y, object.angle)
+    object.collisionOffset.y *= 0x3000
+    object.collisionOffset.y += object.ypos
+    object.collisionOffset.y &= -0x10000 // Truncate the value
+    object.collisionOffset.y -= object.drawPos.y
+
+	// First, backup the Object's base position
+    temp0 = object.xpos
+    temp1 = object.ypos
+
+	// Now, move the Object to where it's Platforms really are
+    object.xpos = object.drawPos.x
+    object.ypos = object.drawPos.y
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Check Platform 1
+        BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[currentPlayer].xpos += object.collisionOffset.x
+            player[currentPlayer].ypos += object.collisionOffset.y
+        end if
+
+		// Check Platform 2
+        BoxCollisionTest(C_PLATFORM, object.entityPos, 96, -16, 160, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[currentPlayer].xpos += object.collisionOffset.x
+            player[currentPlayer].ypos += object.collisionOffset.y
+        end if
+    next
+
+	// We can restore the Object's base position now
+    object.xpos = temp0
+    object.ypos = temp1
+end event
+
+
+event ObjectDraw
+    object.drawPos.x = object.angle
+    object.drawPos.x *= -0x4000
+    object.drawPos.x += object.xpos
+    object.drawPos.x &= -0x10000 // Truncate the value
+
+    Cos(object.drawPos.y, object.angle)
+    object.drawPos.y *= 0x3000
+    object.drawPos.y += object.ypos
+    object.drawPos.y &= -0x10000 // Truncate the value
+
+    DrawSpriteXY(0, object.drawPos.x, object.drawPos.y)
+    DrawSpriteXY(1, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R5/Objects3.gif")
+
+	// Use different sprites for the different time periods
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        SpriteFrame(-32, -16, 64, 32, 66, 98)
+        SpriteFrame(96, -16, 64, 32, 66, 98)
+        break
+
+    case TIME_PAST
+        SpriteFrame(-32, -16, 64, 32, 66, 98)
+        SpriteFrame(96, -16, 64, 32, 66, 98)
+        break
+
+    case TIME_GOOD_FUTURE
+        SpriteFrame(-32, -16, 64, 32, 66, 98)
+        SpriteFrame(96, -16, 64, 32, 66, 98)
+        break
+
+    case TIME_BAD_FUTURE
+        SpriteFrame(-32, -16, 64, 32, 131, 98)
+        SpriteFrame(96, -16, 64, 32, 131, 98)
+        break
+
+    end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    temp1 += object.xpos
+    temp1 &= -0x10000 // Truncate the value
+
+    Cos(temp2, 0)
+    temp2 *= 0x3000
+    temp2 += object.ypos
+    temp2 &= -0x10000 // Truncate the value
+
+    DrawSpriteXY(0, temp1, temp2)
+    DrawSpriteXY(1, temp1, temp2)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R5/Objects3.gif")
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	// Use different sprites for the different time periods
+    switch checkResult
+    case TIME_PRESENT
+        SpriteFrame(-32, -16, 64, 32, 66, 98)
+        SpriteFrame(96, -16, 64, 32, 66, 98)
+        break
+
+    case TIME_PAST
+        SpriteFrame(-32, -16, 64, 32, 66, 98)
+        SpriteFrame(96, -16, 64, 32, 66, 98)
+        break
+
+    case TIME_GOOD_FUTURE
+        SpriteFrame(-32, -16, 64, 32, 66, 98)
+        SpriteFrame(96, -16, 64, 32, 66, 98)
+        break
+
+    case TIME_BAD_FUTURE
+        SpriteFrame(-32, -16, 64, 32, 131, 98)
+        SpriteFrame(96, -16, 64, 32, 131, 98)
+        break
+
+    end switch
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

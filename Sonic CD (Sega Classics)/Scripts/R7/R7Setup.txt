@@ -1,0 +1,440 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: R7 Setup Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.activePalette
+private alias object.value2 : object.flamesTimer
+private alias object.value3 : object.stateStageUpdate
+private alias object.value4 : object.stateStageDraw
+
+// Player Aliases
+private alias object.xpos            : player.xpos
+private alias object.ypos            : player.ypos
+private alias object.speed           : player.speed
+private alias object.collisionMode   : player.collisionMode
+private alias object.collisionBottom : player.collisionBottom
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Reserved Object Slot Aliases
+private alias 21 : SLOT_R7SETUP
+
+// Tile Info
+private alias 0 : TILEINFO_INDEX
+private alias 8 : TILEINFO_ANGLEB
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function R7Setup_GetLoopTileInfo
+reserve function R7Setup_PresentStageUpdate
+reserve function R7Setup_PastStageUpdate
+reserve function R7Setup_GoodFutureStageUpdate
+reserve function R7Setup_BadFutureStageUpdate
+reserve function R7Setup_BossStageDraw
+
+// ========================
+// Tables
+// ========================
+
+private table R7Setup_unused1
+end table
+
+private table R7Setup_unused2
+end table
+
+// ========================
+// Function Definitions
+// ========================
+
+public function R7Setup_GetLoopTileInfo
+	// Gets info from out of bounds chunks, located past the signpost
+
+	// Precondition:
+	//   - temp0 is the chunk ID of the chunk currently being checked against
+
+	temp3 = player[SLOT_PLAYER1].xpos
+	temp3 >>= 16
+	temp3 &= 255
+	temp3 += 0x3100
+	temp0 -= 16
+	temp0 >>= 2
+	temp0 <<= 8
+
+	temp4 = player[SLOT_PLAYER1].ypos
+	temp4 >>= 16
+	temp4 &= 255
+	temp4 += temp0
+
+	Get16x16TileInfo(temp0, temp3, temp4, TILEINFO_INDEX)
+end function
+
+
+public function R7Setup_PresentStageUpdate
+	object.timer++
+	if object.timer == 5
+		object.timer = 0
+		object.activePalette++
+		object.activePalette &= 1
+		SetActivePalette(object.activePalette, 0, 240)
+	end if
+end function
+
+
+public function R7Setup_PastStageUpdate
+	object.timer++
+	if object.timer > 1
+		tileLayer[1].deformationOffset++
+		object.timer = 0
+	end if
+end function
+
+
+public function R7Setup_GoodFutureStageUpdate
+end function
+
+
+public function R7Setup_BadFutureStageUpdate
+	object.timer++
+	if object.timer == 5
+		object.timer = 0
+		object.activePalette++
+		object.activePalette %= 6
+		SetActivePalette(object.activePalette, 0, 240)
+	end if
+end function
+
+
+public function R7Setup_BossStageDraw
+	// Find the XPos to draw the lamp at, since it's supposed to have parallax and loop around the stage
+	object.xpos = screen.xoffset
+	object.xpos /= 420
+	object.xpos *= 420
+	object.xpos += 320
+	object.xpos *= 3
+	object.xpos >>= 1
+	temp0 = screen.xoffset
+	temp0 *= 3
+	temp0 >>= 1
+	object.xpos -= temp0
+	object.ypos = 520
+
+	// And now find the YPos to draw it at, there's also vertical parallax too
+	temp0 = screen.yoffset
+	temp0 *= 23
+	temp0 >>= 4
+	object.ypos -= temp0
+
+	DrawSpriteScreenXY(0, object.xpos, object.ypos)
+	DrawSpriteScreenXY(1, object.xpos, object.ypos)
+	DrawSpriteScreenXY(2, object.xpos, object.ypos)
+	DrawSpriteScreenXY(3, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	CallFunction(object.stateStageUpdate)
+
+	if object.flamesTimer > 0
+		object.flamesTimer--
+	end if
+	
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Manage stage layers
+
+		// Get the chunk ID of the chunk the player's currently in
+		temp1 = player[currentPlayer].xpos
+		temp1 >>= 23
+		temp2 = player[currentPlayer].ypos
+		temp2 >>= 23
+		GetTileLayerEntry(temp0, 0, temp1, temp2)
+
+		// If possible, jump to its corresponding entry over here now
+		switch temp0
+		case 16
+		case 17
+		case 18
+		case 19
+			// Loop chunks, opening on left side
+			CallFunction(R7Setup_GetLoopTileInfo)
+			if player[currentPlayer].collisionMode == CMODE_FLOOR
+				if temp0 == 1001
+					temp1 &= 1022
+					temp2 &= 1022
+					SetTileLayerEntry(20, 0, temp1, temp2)
+					temp1++
+					SetTileLayerEntry(21, 0, temp1, temp2)
+					temp1--
+					temp2++
+					SetTileLayerEntry(22, 0, temp1, temp2)
+					temp1++
+					SetTileLayerEntry(23, 0, temp1, temp2)
+				end if
+			else
+				if player[currentPlayer].speed > 0
+					if temp0 == 1003
+						temp1 &= 1022
+						temp2 &= 1022
+						SetTileLayerEntry(20, 0, temp1, temp2)
+						temp1++
+						SetTileLayerEntry(21, 0, temp1, temp2)
+						temp1--
+						temp2++
+						SetTileLayerEntry(22, 0, temp1, temp2)
+						temp1++
+						SetTileLayerEntry(23, 0, temp1, temp2)
+					end if
+				end if
+			end if
+			break
+
+		case 20
+		case 21
+		case 22
+		case 23
+			// Loop chunks, opening on right side
+			CallFunction(R7Setup_GetLoopTileInfo)
+			if player[currentPlayer].collisionMode == CMODE_FLOOR
+				if temp0 == 1000
+					temp1 &= 1022
+					temp2 &= 1022
+					SetTileLayerEntry(16, 0, temp1, temp2)
+					temp1++
+					SetTileLayerEntry(17, 0, temp1, temp2)
+					temp1--
+					temp2++
+					SetTileLayerEntry(18, 0, temp1, temp2)
+					temp1++
+					SetTileLayerEntry(19, 0, temp1, temp2)
+				end if
+			else
+				if player[currentPlayer].speed < 0
+					if temp0 == 1002
+						temp1 &= 1022
+						temp2 &= 1022
+						SetTileLayerEntry(16, 0, temp1, temp2)
+						temp1++
+						SetTileLayerEntry(17, 0, temp1, temp2)
+						temp1--
+						temp2++
+						SetTileLayerEntry(18, 0, temp1, temp2)
+						temp1++
+						SetTileLayerEntry(19, 0, temp1, temp2)
+					end if
+				end if
+			end if
+			break
+
+		case 24
+		case 25
+		case 26
+		case 27
+			// Wavy chunks, opening on left side... or at least they should be
+			// However!
+			// These don't exist in Act 3, so this function call is actually checking against blank chunks...
+			CallFunction(R7Setup_GetLoopTileInfo)
+			if temp0 == 1001
+				temp1 &= 1022
+				temp2 &= 1022
+				SetTileLayerEntry(28, 0, temp1, temp2)
+				temp1++
+				SetTileLayerEntry(29, 0, temp1, temp2)
+				temp1--
+				temp2++
+				SetTileLayerEntry(30, 0, temp1, temp2)
+				temp1++
+				SetTileLayerEntry(31, 0, temp1, temp2)
+			end if
+			break
+
+		case 28
+		case 29
+		case 30
+		case 31
+			// Wavy chunks, opening on right side, but see note above
+			// Same story here
+			CallFunction(R7Setup_GetLoopTileInfo)
+			if temp0 == 1000
+				temp1 &= 1022
+				temp2 &= 1022
+				SetTileLayerEntry(24, 0, temp1, temp2)
+				temp1++
+				SetTileLayerEntry(25, 0, temp1, temp2)
+				temp1--
+				temp2++
+				SetTileLayerEntry(26, 0, temp1, temp2)
+				temp1++
+				SetTileLayerEntry(27, 0, temp1, temp2)
+			end if
+			break
+
+		end switch
+
+		if object.flamesTimer == 0
+			// Get the absolute version of the Player's speed
+			temp0 = player[currentPlayer].speed
+			if temp0 < 0
+				FlipSign(temp0)
+			end if
+
+			// Is the player going at a speed above 10 pixels?
+			if temp0 > 0xA0000
+				temp3 = player[currentPlayer].xpos
+				temp3 >>= 16
+
+				temp4 = player[currentPlayer].ypos
+				temp4 >>= 16
+				temp4 += 8
+
+				// See if the player's on a fire-compatible tile
+				Get16x16TileInfo(temp0, temp3, temp4, TILEINFO_ANGLEB)
+				
+				if temp0 == 1
+					object.flamesTimer = 4
+					
+					// Spawn a Flame Trail behind the player
+					CreateTempObject(TypeName[Fire Trail], 0, player[currentPlayer].xpos, player[currentPlayer].ypos)
+
+					if player[currentPlayer].speed < 0
+						object[tempObjectPos].direction = FACING_LEFT
+					else
+						object[tempObjectPos].direction = FACING_RIGHT
+					end if
+
+					object[tempObjectPos].drawOrder = 4
+					object[tempObjectPos].iypos += player[currentPlayer].collisionBottom
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	CallFunction(object.stateStageDraw)
+end event
+
+
+event ObjectStartup
+	// Place the Setup object into slot 21, make it always active, and give it a high draworder so that it's in front of Sonic
+	object[SLOT_R7SETUP].type = TypeName[R7 Setup]
+	object[SLOT_R7SETUP].priority = PRIORITY_ACTIVE
+	object[SLOT_R7SETUP].stateStageDraw = R7Setup_GoodFutureStageUpdate
+
+	switch HUD.currentTimePeriod
+	case TIME_PRESENT
+		object[SLOT_R7SETUP].stateStageUpdate = R7Setup_PresentStageUpdate
+
+		CopyPalette(0, 0, 1, 0, 255)
+		CopyPalette(0, 0, 2, 0, 255)
+		CopyPalette(0, 0, 3, 0, 255)
+		CopyPalette(0, 0, 4, 0, 255)
+		CopyPalette(0, 0, 5, 0, 255)
+
+		temp0 = 0
+		temp1 = 0
+		temp2 = 32
+		while temp0 < 2
+			LoadPalette("R7A_PalCycle.act", temp0, 160, temp1, temp2)
+			temp0++
+			temp1 += 32
+			temp2 += 32
+		loop
+		break
+
+	case TIME_PAST
+		object[SLOT_R7SETUP].stateStageUpdate = R7Setup_PastStageUpdate
+
+		SetLayerDeformation(2, 128, 8, 0, 0, 0)
+		break
+
+	case TIME_GOOD_FUTURE
+		object[SLOT_R7SETUP].stateStageUpdate = R7Setup_GoodFutureStageUpdate
+
+		if stage.actNum == 3
+			object[SLOT_R7SETUP].drawOrder = 5
+			object[SLOT_R7SETUP].stateStageDraw = R7Setup_BossStageDraw
+
+			LoadSpriteSheet("R7/Objects2.gif")
+			SpriteFrame(-24, -24, 48, 24, 207, 1)
+			SpriteFrame(-8, 0, 16, 224, 239, 26)
+			SpriteFrame(-8, 224, 16, 224, 239, 26)
+			SpriteFrame(-8, 448, 16, 224, 239, 26)
+
+			stage.curXBoundary2 -= 288
+		end if
+		break
+
+	case TIME_BAD_FUTURE
+		object[SLOT_R7SETUP].stateStageUpdate = R7Setup_BadFutureStageUpdate
+
+		CopyPalette(0, 0, 1, 0, 255)
+		CopyPalette(0, 0, 2, 0, 255)
+		CopyPalette(0, 0, 3, 0, 255)
+		CopyPalette(0, 0, 4, 0, 255)
+		CopyPalette(0, 0, 5, 0, 255)
+
+		temp0 = 0
+		temp1 = 0
+		temp2 = 16
+		while temp0 < 6
+			LoadPalette("R7D_PalCycle.act", temp0, 160, temp1, temp2)
+			temp0++
+			temp1 += 16
+			temp2 += 16
+		loop
+
+		if stage.actNum == 3
+			object[SLOT_R7SETUP].drawOrder = 5
+			object[SLOT_R7SETUP].stateStageDraw = R7Setup_BossStageDraw
+
+			LoadSpriteSheet("R7/Objects2.gif")
+			SpriteFrame(-24, -24, 48, 24, 173, 26)
+			SpriteFrame(-8, 0, 16, 224, 222, 26)
+			SpriteFrame(-8, 224, 16, 224, 222, 26)
+			SpriteFrame(-8, 448, 16, 224, 222, 26)
+
+			stage.curXBoundary2 -= 288
+		end if
+		break
+
+	end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

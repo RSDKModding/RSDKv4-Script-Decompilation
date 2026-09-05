@@ -1,0 +1,388 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Crumble Ledge 3 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.hitboxLeft
+private alias object.value1 : object.hitboxRight
+private alias object.value2 : object.timer
+private alias object.value3 : object.length
+private alias object.value4 : object.hitboxTop
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : CLEDGE3_IDLE
+private alias 1 : CLEDGE3_DELAY_FROM_RIGHT
+private alias 2 : CLEDGE3_DELAY_FROM_LEFT
+private alias 3 : CLEDGE3_COLLAPSE_RIGHT
+private alias 4 : CLEDGE3_COLLAPSE_LEFT
+private alias 5 : CLEDGE3_RESTORE // Unused
+private alias 6 : CLEDGE3_DEBRIS
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CrumbleLedge3_DebugDraw
+reserve function CrumbleLedge3_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+public value CrumbleLedge3_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function CrumbleLedge3_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= CrumbleLedge3_startDebugID
+
+    temp2 = temp0
+    temp0 <<= 19
+    FlipSign(temp0)
+
+    temp0 += object.xpos
+    temp0 += 0x80000
+    temp1 = 0
+    while temp1 < temp2
+        DrawSpriteXY(0, temp0, object.ypos)
+        temp0 += 0x100000
+        temp1++
+    loop
+
+    if temp1 == 0
+        DrawSprite(0)
+    end if
+end function
+
+
+public function CrumbleLedge3_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= CrumbleLedge3_startDebugID
+
+    CreateTempObject(TypeName[Crumble Ledge 3], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].length = object[tempObjectPos].propertyValue
+    object[tempObjectPos].hitboxLeft = object[tempObjectPos].propertyValue
+    object[tempObjectPos].hitboxLeft <<= 3
+    object[tempObjectPos].hitboxRight = object[tempObjectPos].hitboxLeft
+    FlipSign(object[tempObjectPos].hitboxLeft)
+    object[tempObjectPos].hitboxTop = -16
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case CLEDGE3_DELAY_FROM_RIGHT
+        if object.timer > 0
+            object.timer--
+        else
+            PlaySfx(SfxName[Crumble], false)
+            object.state = CLEDGE3_COLLAPSE_RIGHT
+        end if
+        break
+
+    case CLEDGE3_DELAY_FROM_LEFT
+        if object.timer > 0
+            object.timer--
+        else
+            PlaySfx(SfxName[Crumble], false)
+            object.state = CLEDGE3_COLLAPSE_LEFT
+        end if
+        break
+
+    case CLEDGE3_COLLAPSE_RIGHT
+        object.timer++
+        if object.timer == 12
+            object.timer = 0
+            if object.hitboxLeft < object.hitboxRight
+                object.length--
+                object.hitboxLeft += 16
+
+                temp0 = object.hitboxLeft
+                temp0 -= 8
+                temp0 <<= 16
+                temp0 += object.xpos
+
+                CreateTempObject(TypeName[Crumble Ledge 3], 0, temp0, object.ypos)
+                object[tempObjectPos].state = CLEDGE3_DEBRIS
+                object[tempObjectPos].hitboxTop = object.hitboxTop
+
+                if object.frame < 2
+                    object[tempObjectPos].frame = object.frame
+                else
+                    temp0 = object.propertyValue
+                    temp0--
+                    if object.length == temp0
+                        object[tempObjectPos].frame = 4
+                    else
+                        if object.length == 0
+                            object[tempObjectPos].frame = 6
+                        else
+                            object[tempObjectPos].frame = 5
+                        end if
+                    end if
+                end if
+            else
+                ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+            end if
+        end if
+        break
+
+    case CLEDGE3_COLLAPSE_LEFT
+        object.timer++
+        if object.timer == 12
+            object.timer = 0
+            if object.hitboxRight > object.hitboxLeft
+                object.length--
+                object.hitboxRight -= 16
+
+                temp0 = object.hitboxRight
+                temp0 += 8
+                temp0 <<= 16
+                temp0 += object.xpos
+
+                CreateTempObject(TypeName[Crumble Ledge 3], 0, temp0, object.ypos)
+                object[tempObjectPos].state = CLEDGE3_DEBRIS
+                object[tempObjectPos].hitboxTop = object.hitboxTop
+
+                if object.frame < 2
+                    object[tempObjectPos].frame = object.frame
+                else
+                    temp0 = object.propertyValue
+                    temp0--
+                    if object.length == temp0
+                        object[tempObjectPos].frame = 6
+                    else
+                        if object.length == 0
+                            object[tempObjectPos].frame = 4
+                        else
+                            object[tempObjectPos].frame = 5
+                        end if
+                    end if
+                end if
+            else
+                ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+            end if
+        end if
+        break
+
+    case CLEDGE3_RESTORE
+        if object.outOfBounds == true
+            object.state = CLEDGE3_IDLE
+            object.length = object.propertyValue
+            object.hitboxLeft = object.propertyValue
+            object.hitboxLeft <<= 3
+            object.hitboxRight = object.hitboxLeft
+            FlipSign(object.hitboxLeft)
+            object.priority = PRIORITY_BOUNDS
+            object.timer = 0
+        end if
+        break
+
+    case CLEDGE3_DEBRIS
+        object.yvel += 0x4000
+        if object.yvel > 0
+            object.ypos += object.yvel
+        end if
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+        end if
+        break
+    end switch
+
+    if object.state == CLEDGE3_IDLE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.timer = 1
+                object.priority = PRIORITY_ACTIVE
+                if player[currentPlayer].xpos > object.xpos
+                    object.state = CLEDGE3_DELAY_FROM_RIGHT
+                else
+                    object.state = CLEDGE3_DELAY_FROM_LEFT
+                end if
+            end if
+        next
+    else
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case CLEDGE3_IDLE
+    case CLEDGE3_DELAY_FROM_RIGHT
+    case CLEDGE3_DELAY_FROM_LEFT
+    case CLEDGE3_COLLAPSE_RIGHT
+        temp0 = 0
+        temp1 = object.hitboxLeft
+        temp1 <<= 16
+        temp1 += 0x80000
+        temp1 += object.xpos
+        if object.frame < 2
+            while temp0 < object.length
+                DrawSpriteXY(object.frame, temp1, object.ypos)
+                temp0++
+                temp1 += 0x100000
+            loop
+        else
+            temp2 = object.propertyValue
+            temp2--
+            while temp0 < object.length
+                DrawSpriteXY(2, temp1, object.ypos)
+                DrawSpriteXY(3, temp1, object.ypos)
+                if temp0 == 0
+                    DrawSpriteXY(4, temp1, object.ypos)
+                else
+                    if temp0 < temp2
+                        DrawSpriteXY(5, temp1, object.ypos)
+                    else
+                        DrawSpriteXY(6, temp1, object.ypos)
+                    end if
+                end if
+                temp0++
+                temp1 += 0x100000
+            loop
+        end if
+        break
+
+    case CLEDGE3_COLLAPSE_LEFT
+        temp0 = 0
+        temp1 = object.hitboxRight
+        temp1 <<= 16
+        temp1 -= 0x80000
+        temp1 += object.xpos
+        if object.frame < 2
+            while temp0 < object.length
+                DrawSpriteXY(object.frame, temp1, object.ypos)
+                temp0++
+                temp1 -= 0x100000
+            loop
+        else
+            temp2 = object.propertyValue
+            temp2--
+            while temp0 < object.length
+                DrawSpriteXY(2, temp1, object.ypos)
+                DrawSpriteXY(3, temp1, object.ypos)
+                if temp0 == 0
+                    DrawSpriteXY(6, temp1, object.ypos)
+                else
+                    if temp0 < temp2
+                        DrawSpriteXY(5, temp1, object.ypos)
+                    else
+                        DrawSpriteXY(4, temp1, object.ypos)
+                    end if
+                end if
+                temp0++
+                temp1 -= 0x100000
+            loop
+        end if
+        break
+
+    case CLEDGE3_DEBRIS
+        if object.frame < 2
+            DrawSprite(object.frame)
+        else
+            DrawSprite(2)
+            DrawSprite(3)
+            DrawSprite(object.frame)
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects2.gif")
+
+    foreach (TypeName[Crumble Ledge 3], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].length = object[arrayPos0].propertyValue
+        object[arrayPos0].hitboxLeft = object[arrayPos0].propertyValue
+        object[arrayPos0].hitboxLeft <<= 3
+        object[arrayPos0].hitboxRight = object[arrayPos0].hitboxLeft
+        FlipSign(object[arrayPos0].hitboxLeft)
+
+        switch object[arrayPos0].frame
+        case 0
+            object[arrayPos0].hitboxTop = -17
+            break
+
+        case 1
+        case 2
+            object[arrayPos0].hitboxTop = -24
+            break
+        end switch
+    next
+
+    SpriteFrame(-8, -32, 16, 48, 163, 1)  // #0 - Ledge top (short)
+    SpriteFrame(-8, -40, 16, 64, 163, 1)  // #1 - Ledge top (full)
+    SpriteFrame(-8, -40, 16, 48, 163, 1)  // #2 - Ledge top (short, offset)
+    SpriteFrame(-8, 8, 16, 16, 190, 66)   // #3 - Ledge middle
+    SpriteFrame(-8, 24, 16, 16, 82, 49)   // #4 - Ledge bottom left
+    SpriteFrame(-8, 24, 16, 16, 98, 49)   // #5 - Ledge bottom middle
+    SpriteFrame(-8, 24, 16, 16, 130, 49)  // #6 - Ledge bottom right
+
+    temp0 = 0
+    CrumbleLedge3_startDebugID = DebugMode_ObjCount
+    CrumbleLedge3_startDebugID--
+    while temp0 < 8
+        SetTableValue(TypeName[Crumble Ledge 3], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(CrumbleLedge3_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(CrumbleLedge3_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    object.length = object.propertyValue
+    object.hitboxLeft = object.propertyValue
+    object.hitboxLeft <<= 3
+    object.hitboxRight = object.hitboxLeft
+    FlipSign(object.hitboxLeft)
+
+    temp0 = 0
+    temp1 = object.hitboxLeft
+    temp1 <<= 16
+    temp1 += 0x80000
+    temp1 += object.xpos
+    while temp0 < object.length
+        DrawSpriteXY(0, temp1, object.ypos)
+        temp0++
+        temp1 += 0x100000
+    loop
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects2.gif")
+    SpriteFrame(-8, -32, 16, 48, 163, 1) // #0 - Ledge
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "length")
+end event

@@ -1,0 +1,173 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Special Ring Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// States
+private alias 0 : SPECIALRING_IDLE
+private alias 1 : SPECIALRING_BLANK
+
+// Player Aliases
+private alias object.type        : player.type
+private alias object.direction   : player.direction
+private alias object.left        : player.left
+private alias object.right       : player.right
+private alias object.controlMode : player.controlMode
+private alias object.value0      : player.rings
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == SPECIALRING_IDLE
+        if player[SLOT_PLAYER1].rings > 49
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                player[SLOT_PLAYER1].type = TypeName[Blank Object]
+                player[playerCount].type  = TypeName[Blank Object]
+
+                player[SLOT_PLAYER1].controlMode = CONTROLMODE_NONE
+                player[SLOT_PLAYER1].direction   = FACING_RIGHT
+
+                ResetObjectEntity(4, TypeName[Blank Object], 0, 0, 0)
+
+                object.drawOrder = 4
+                object.state     = SPECIALRING_BLANK
+                object.frame     = 32
+
+                StopSfx(SfxName[Flying])
+                StopSfx(SfxName[Tired])
+                PlaySfx(SfxName[Special Ring], false)
+
+                player[SLOT_PLAYER1].left  = false
+                player[SLOT_PLAYER1].right = false
+            end if
+        end if
+    end if
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case SPECIALRING_IDLE
+        if player[SLOT_PLAYER1].rings > 49
+            temp0 = object.frame
+            temp0 >>= 2
+
+            if temp0 > 3
+                object.direction = FACING_LEFT
+            else
+                object.direction = FACING_RIGHT
+            end if
+
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+            object.frame++
+            if object.frame > 31
+                object.frame = 0
+            end if
+        end if
+        break
+
+    case SPECIALRING_BLANK
+        temp0 = object.frame
+        temp0 >>= 2
+
+        if temp0 > 11
+            object.direction = FACING_LEFT
+        else
+            object.direction = FACING_RIGHT
+        end if
+
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        if temp0 == 11
+            object.direction = FACING_LEFT
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        else
+            if temp0 == 15
+                object.direction = FACING_LEFT
+                DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+            end if
+        end if
+
+        object.frame++
+        if object.frame > 63
+            ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    if stage.playerListPos == PLAYER_SONIC_A
+        LoadSpriteSheet("Global/Items2.gif")
+    else
+        LoadSpriteSheet("Global/Items2_t.gif")
+    end if
+
+    // Special Ring Frames
+    SpriteFrame(-32, -32, 64, 64, 83, 1)	// #0  - Special Ring Frame 0
+    SpriteFrame(-28, -32, 56, 64, 199, 131)	// #1  - Special Ring Frame 1
+    SpriteFrame(-24, -32, 48, 64, 148, 1)	// #2  - Special Ring Frame 2
+    SpriteFrame(-16, -32, 32, 64, 223, 66)	// #3  - Special Ring Frame 3
+    SpriteFrame(-12, -32, 24, 64, 197, 1)	// #4  - Special Ring Frame 4
+    SpriteFrame(-16, -32, 32, 64, 223, 66)	// #5  - Special Ring Frame 5
+    SpriteFrame(-24, -32, 48, 64, 148, 1)	// #6  - Special Ring Frame 6
+    SpriteFrame(-28, -32, 56, 64, 199, 131)	// #7  - Special Ring Frame 7
+
+    // Vanishing Frames
+    SpriteFrame(0, -32, 32, 64, 222, 1)		// #8  - Ring Vanishing Frame 0
+    SpriteFrame(-16, -32, 48, 64, 101, 66)	// #9  - Ring Vanishing Frame 1
+    SpriteFrame(-24, -32, 56, 64, 150, 66)	// #10 - Ring Vanishing Frame 2
+    SpriteFrame(0, -32, 32, 64, 156, 131)	// #11 - Ring Vanishing Frame 3
+    SpriteFrame(-24, -32, 56, 64, 150, 66)	// #12 - Ring Vanishing Frame 4
+    SpriteFrame(-16, -32, 48, 64, 101, 66)	// #13 - Ring Vanishing Frame 5
+    SpriteFrame(0, -32, 32, 64, 222, 1)		// #14 - Ring Vanishing Frame 6
+    SpriteFrame(-32, -32, 32, 64, 124, 131)	// #15 - Ring Vanishing Frame 7
+
+    // If all Time Stones are collected, we don't need any Special Stages anymore
+    if specialStage.timeStones >= 0x7F
+        foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
+            ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+        next
+    end if
+
+    // In Time Attack, we shouldn't enter any Special Stages
+    if options.gameMode == MODE_TIMEATTACK
+        foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
+            ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+        next
+    end if
+
+    // That 'Lite!' on the banner wasn't joking, better remove all Special Rings!
+    if engine.trialMode == true
+        foreach (TypeName[Special Ring], arrayPos0, ALL_ENTITIES)
+            ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+        next
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items2.gif")
+    SpriteFrame(-32, -32, 64, 64, 83, 1)	// #0  - Special Ring Frame 0
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

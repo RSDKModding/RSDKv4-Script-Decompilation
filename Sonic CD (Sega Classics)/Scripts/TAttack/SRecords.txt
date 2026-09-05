@@ -1,0 +1,281 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: S Records Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1        : object.minutes
+private alias object.value2        : object.seconds
+private alias object.value3        : object.milliSeconds
+private alias object.propertyValue : object.record
+
+// Special Large Icon Aliases
+private alias object.propertyValue : sLargeIcon.portrait
+
+// Menu Control Aliases
+private alias object[0].value0 : menuControl.timer
+private alias object[0].value4 : menuControl.smYPos
+private alias object[0].value5 : menuControl.smCurrentButton
+private alias object[0].state  : menuControl.state
+
+// Menu Control States
+// *SM = Sub Menu
+private alias 7  : MENUCONTROL_SM_CONTROLS
+private alias 10 : MENUCONTROL_SM_CONFIRMED
+private alias 11 : MENUCONTROL_SM_LOAD_LEVEL
+private alias 13 : MENUCONTROL_SM_COMFIRMED_LEAVE
+
+// Property Values
+private alias 0 : FIRST_RECORD
+private alias 1 : SECOND_RECORD
+private alias 2 : THIRD_RECORD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SRecords_DrawRecords
+
+// ========================
+// Function Definitions
+// ========================
+
+public function SRecords_DrawRecords
+    object.minutes = saveRAM[arrayPos0]
+    object.minutes /= 6000
+
+    object.seconds = saveRAM[arrayPos0]
+    object.seconds /= 100
+    object.seconds %= 60
+
+    object.milliSeconds = saveRAM[arrayPos0]
+    object.milliSeconds %= 100
+
+    temp0 = object.xpos
+    temp0 >>= 16
+    temp0 -= 16
+    DrawNumbers(0, temp0, temp1, object.minutes, 2, 8, 1)
+
+    temp0 += 24
+    DrawNumbers(0, temp0, temp1, object.seconds, 2, 8, 1)
+
+    temp0 += 24
+    DrawNumbers(0, temp0, temp1, object.milliSeconds, 2, 8, 1)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.ypos = object.record
+    object.ypos *= 192
+    object.ypos -= menuControl.smYPos
+    if object.ypos < -384
+        object.ypos += 576
+    end if
+    object.ypos += 224
+    object.ypos <<= 16
+end event
+
+
+event ObjectDraw
+    DrawSprite(18)
+    DrawSprite(10)
+
+    switch object.record
+    case FIRST_RECORD
+        temp0 = sLargeIcon[-1].portrait
+        temp0 += 11
+        DrawSprite(temp0)
+        break
+
+    case SECOND_RECORD
+        temp0 = sLargeIcon[-2].portrait
+        temp0 += 11
+        DrawSprite(temp0)
+        break
+
+    case THIRD_RECORD
+        temp0 = sLargeIcon[-3].portrait
+        temp0 += 11
+        DrawSprite(temp0)
+        break
+
+    end switch
+
+    arrayPos0 = temp0
+    arrayPos0 -= 11
+    arrayPos0 *= 18
+
+    temp0 = object.record
+    temp0 *= 6
+
+    arrayPos0 += temp0
+    arrayPos0 += 49
+
+    temp1 = object.ypos
+    temp1 >>= 16
+    temp1 += 97
+    CallFunction(SRecords_DrawRecords)
+
+    temp1 += 24
+    arrayPos0 += 2
+    CallFunction(SRecords_DrawRecords)
+
+    temp1 += 24
+    arrayPos0 += 2
+    CallFunction(SRecords_DrawRecords)
+    DrawSprite(21)
+
+    switch menuControl.state
+    case MENUCONTROL_SM_CONTROLS
+        switch menuControl.smCurrentButton
+        case 0
+            DrawSprite(19)
+            break
+
+        case 2
+            DrawSprite(20)
+            break
+
+        end switch
+        break
+
+    case MENUCONTROL_SM_CONFIRMED
+        temp0 = menuControl.timer
+        temp0 &= 3
+        temp0 >>= 1
+        if temp0 == 0
+            DrawSprite(20)
+        end if
+        break
+
+    case MENUCONTROL_SM_LOAD_LEVEL
+        DrawSprite(20)
+        break
+
+    case MENUCONTROL_SM_COMFIRMED_LEAVE
+        temp0 = menuControl.timer
+        temp0 &= 3
+        temp0 >>= 1
+        if temp0 == 0
+            DrawSprite(19)
+        end if
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("TAttack/TimeAttack.gif")
+
+    SpriteFrame(0, 0, 8, 16, 370, 638)			// #0  - 0
+    SpriteFrame(0, 0, 8, 16, 379, 638)			// #1  - 1
+    SpriteFrame(0, 0, 8, 16, 388, 638)			// #2  - 2
+    SpriteFrame(0, 0, 8, 16, 397, 638)			// #3  - 3
+    SpriteFrame(0, 0, 8, 16, 406, 638)			// #4  - 4
+    SpriteFrame(0, 0, 8, 16, 415, 638)			// #5  - 5
+    SpriteFrame(0, 0, 8, 16, 424, 638)			// #6  - 6
+    SpriteFrame(0, 0, 8, 16, 433, 638)			// #7  - 7
+    SpriteFrame(0, 0, 8, 16, 442, 638)			// #8  - 8
+    SpriteFrame(0, 0, 8, 16, 451, 638)			// #9  - 9
+    SpriteFrame(-26, 17, 54, 32, 1, 797)		// #10 - Special Stage
+    SpriteFrame(-20, 49, 38, 16, 368, 593)		// #11 - Zone 1
+    SpriteFrame(-20, 49, 40, 15, 366, 610)		// #12 - Zone 2
+    SpriteFrame(-20, 49, 40, 15, 422, 655)		// #13 - Zone 3
+    SpriteFrame(-20, 49, 40, 15, 422, 671)		// #14 - Zone 4
+    SpriteFrame(-20, 49, 40, 15, 422, 731)		// #15 - Zone 5
+    SpriteFrame(-20, 49, 40, 15, 422, 747)		// #16 - Zone 6
+    SpriteFrame(-20, 49, 40, 15, 422, 763)      // #17 - Zone 7
+    SpriteFrame(-60, 0, 224, 192, 81, 831)      // #18 - Record Menu
+    SpriteFrame(-36, 0, 44, 8, 306, 864)        // #19 - Exit
+    SpriteFrame(8, 0, 28, 8, 390, 864)          // #20 - Go
+    SpriteFrame(-60, 0, 112, 8, 306, 846)       // #21 - Unfocused Exit Go
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // zoneID
+            checkResult = object.propertyValue
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // zoneID
+            object.propertyValue = editor.variableValue
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(18)
+    DrawSprite(10)
+
+    temp0 = 11
+    temp0 += object.propertyValue
+    DrawSprite(temp0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("TAttack/TimeAttack.gif")
+    SpriteFrame(0, 0, 8, 16, 370, 638)			// #0  - 0
+    SpriteFrame(0, 0, 8, 16, 379, 638)			// #1  - 1
+    SpriteFrame(0, 0, 8, 16, 388, 638)			// #2  - 2
+    SpriteFrame(0, 0, 8, 16, 397, 638)			// #3  - 3
+    SpriteFrame(0, 0, 8, 16, 406, 638)			// #4  - 4
+    SpriteFrame(0, 0, 8, 16, 415, 638)			// #5  - 5
+    SpriteFrame(0, 0, 8, 16, 424, 638)			// #6  - 6
+    SpriteFrame(0, 0, 8, 16, 433, 638)			// #7  - 7
+    SpriteFrame(0, 0, 8, 16, 442, 638)			// #8  - 8
+    SpriteFrame(0, 0, 8, 16, 451, 638)			// #9  - 9
+    SpriteFrame(-26, 17, 54, 32, 1, 797)		// #10 - Special Stage
+    SpriteFrame(-20, 49, 38, 16, 368, 593)		// #11 - Zone 1
+    SpriteFrame(-20, 49, 40, 15, 366, 610)		// #12 - Zone 2
+    SpriteFrame(-20, 49, 40, 15, 422, 655)		// #13 - Zone 3
+    SpriteFrame(-20, 49, 40, 15, 422, 671)		// #14 - Zone 4
+    SpriteFrame(-20, 49, 40, 15, 422, 731)		// #15 - Zone 5
+    SpriteFrame(-20, 49, 40, 15, 422, 747)		// #16 - Zone 6
+    SpriteFrame(-20, 49, 40, 15, 422, 763)		// #17 - Zone 7
+    SpriteFrame(-60, 0, 224, 192, 81, 831)		// #18 - Record Menu
+    SpriteFrame(-36, 0, 44, 8, 306, 864)		// #19 - Exit
+    SpriteFrame(8, 0, 28, 8, 390, 864)			// #20 - Go
+    SpriteFrame(-60, 0, 112, 8, 306, 855)		// #21 - Black Rect
+
+    AddEditorVariable("zoneID")
+    SetActiveVariable("zoneID")
+    AddEnumVariable("Zone 1", 0)
+    AddEnumVariable("Zone 2", 1)
+    AddEnumVariable("Zone 3", 2)
+    AddEnumVariable("Zone 4", 3)
+    AddEnumVariable("Zone 5", 4)
+    AddEnumVariable("Zone 6", 5)
+    AddEnumVariable("Zone 7", 6)
+end event

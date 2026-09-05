@@ -1,0 +1,488 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Water Stream C Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.propertyValue : object.activeWaterStream // Also used in startup for setting range and oscillation parameters
+private alias object.value1        : object.oscillation
+private alias object.value2        : object.hitboxLeft
+private alias object.value3        : object.hitboxRight
+private alias object.value4        : object.hitboxTop
+private alias object.value5        : object.hitboxBottom
+
+// Previous Object Aliases
+private alias object.propertyValue : prevObject.active
+
+// Player Aliases
+private alias object.state       : player.state
+private alias object.xpos        : player.xpos
+private alias object.ypos        : player.ypos
+private alias object.xvel        : player.xvel
+private alias object.yvel        : player.yvel
+private alias object.speed       : player.speed
+private alias object.animation   : player.animation
+private alias object.controlMode : player.controlMode
+private alias object.left        : player.left
+private alias object.right       : player.right
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    // Water streams are activated through a chain, originated from a blank object or a fan
+    if prevObject[-1].active == true
+        object.activeWaterStream = true
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxLeft, object.hitboxTop, object.hitboxRight, object.hitboxBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                if player[currentPlayer].state != Player_State_Hurt
+                    if player[currentPlayer].state != Player_State_Death
+                        if player[currentPlayer].state != Player_State_Drown
+                            if player[currentPlayer].state != Player_State_Static
+                                player.waterStream = true
+
+                                player[currentPlayer].state = Player_State_WaterCurrent
+                                player[currentPlayer].animation = ANI_FANROTATE
+
+                                temp0 = player[currentPlayer].xpos
+                                temp0 -= object.xpos
+
+                                temp1 = player[currentPlayer].ypos
+                                temp1 -= object.ypos
+
+                                ATan2(temp2, temp0, temp1)
+                                temp2 += object.oscillation
+
+                                Cos256(player[currentPlayer].xvel, temp2)
+                                Sin256(player[currentPlayer].yvel, temp2)
+                                player[currentPlayer].xvel <<= 10
+                                player[currentPlayer].yvel <<= 10
+                                player[currentPlayer].speed = player[currentPlayer].xvel
+                            end if
+                        end if
+                    end if
+                end if
+            else
+                if player[currentPlayer].state == Player_State_WaterCurrent
+                    if player.waterStream == false
+                        if player[currentPlayer].left == true
+                            player[currentPlayer].xvel = -0x20000
+                        end if
+
+                        if player[currentPlayer].right == true
+                            player[currentPlayer].xvel = 0x20000
+                        end if
+
+                        player[currentPlayer].speed = player[currentPlayer].xvel
+                        player[currentPlayer].state = Player_State_Air
+                        player[currentPlayer].controlMode = currentPlayer
+                        player[currentPlayer].animation = ANI_WALKING
+                    end if
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectStartup
+    foreach (TypeName[Water Stream C], arrayPos0, ALL_ENTITIES)
+        switch object[arrayPos0].propertyValue
+        case 0
+            object[arrayPos0].oscillation = 192
+            object[arrayPos0].hitboxLeft = -96
+            object[arrayPos0].hitboxRight = 96
+            object[arrayPos0].hitboxTop = -96
+            object[arrayPos0].hitboxBottom = 96
+            break
+
+        case 1
+            object[arrayPos0].oscillation = 64
+            object[arrayPos0].hitboxLeft = -96
+            object[arrayPos0].hitboxRight = 96
+            object[arrayPos0].hitboxTop = -96
+            object[arrayPos0].hitboxBottom = 96
+            break
+
+        case 2
+            object[arrayPos0].oscillation = 192
+            object[arrayPos0].hitboxLeft = -128
+            object[arrayPos0].hitboxRight = 128
+            object[arrayPos0].hitboxTop = -128
+            object[arrayPos0].hitboxBottom = 128
+            break
+
+        case 3
+            object[arrayPos0].oscillation = 64
+            object[arrayPos0].hitboxLeft = -128
+            object[arrayPos0].hitboxRight = 128
+            object[arrayPos0].hitboxTop = -128
+            object[arrayPos0].hitboxBottom = 128
+            break
+
+        case 4
+            object[arrayPos0].oscillation = 64
+            object[arrayPos0].hitboxLeft = -160
+            object[arrayPos0].hitboxRight = 0
+            object[arrayPos0].hitboxTop = -96
+            object[arrayPos0].hitboxBottom = 64
+            break
+
+        case 5
+            object[arrayPos0].oscillation = 192
+            object[arrayPos0].hitboxLeft = 0
+            object[arrayPos0].hitboxRight = 96
+            object[arrayPos0].hitboxTop = -96
+            object[arrayPos0].hitboxBottom = 0
+            break
+
+        case 6
+            object[arrayPos0].oscillation = 64
+            object[arrayPos0].hitboxLeft = -96
+            object[arrayPos0].hitboxRight = 0
+            object[arrayPos0].hitboxTop = 0
+            object[arrayPos0].hitboxBottom = 96
+            break
+
+        case 7
+            object[arrayPos0].oscillation = 64
+            object[arrayPos0].hitboxLeft = -96
+            object[arrayPos0].hitboxRight = 0
+            object[arrayPos0].hitboxTop = -96
+            object[arrayPos0].hitboxBottom = 0
+            break
+
+        case 8
+            object[arrayPos0].oscillation = 192
+            object[arrayPos0].hitboxLeft = 0
+            object[arrayPos0].hitboxRight = 128
+            object[arrayPos0].hitboxTop = -128
+            object[arrayPos0].hitboxBottom = 0
+            break
+
+        case 9
+            object[arrayPos0].oscillation = 64
+            object[arrayPos0].hitboxLeft = -128
+            object[arrayPos0].hitboxRight = 0
+            object[arrayPos0].hitboxTop = -128
+            object[arrayPos0].hitboxBottom = 128
+            break
+
+        case 10
+            object[arrayPos0].oscillation = 192
+            object[arrayPos0].hitboxLeft = 0
+            object[arrayPos0].hitboxRight = 128
+            object[arrayPos0].hitboxTop = -128
+            object[arrayPos0].hitboxBottom = 128
+            break
+        end switch
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value, activeRange
+            checkResult = object.propertyValue
+            checkResult %= 11
+            break
+
+        case 0 // streamRange
+            checkResult = object.propertyValue
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value, activeRange
+            object.propertyValue = editor.variableValue
+            object.propertyValue %= 11
+            break
+
+        case 0 // streamRange
+            object.propertyValue = editor.variableValue
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    LoadSpriteSheet("Global/Display.gif")
+    temp6 = object.spriteSheet
+
+    LoadSpriteSheet("Players/Sonic3.gif")
+    temp7 = object.spriteSheet
+
+    object.spriteSheet = temp6
+    DrawSprite(0)
+
+    if editor.showGizmos == true
+        DrawLine(object.xpos, object.ypos, object[-1].xpos, object.ypos, 0, 255, 255)
+        DrawLine(object[-1].xpos, object.ypos, object[-1].xpos, object[-1].ypos, 0, 255, 255)
+    end if
+
+    object.spriteSheet = temp7
+
+    object.inkEffect = INK_ALPHA
+    object.alpha = 128
+
+    // Hitbox
+    switch object.propertyValue
+    case 0
+    case 1
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp0 -= 0x600000
+            temp1 = object.ypos
+            temp1 -= 0x600000
+            DrawRectOutline(temp0, temp1, 0xC0, 0xC0, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 -= 0x300000
+        temp6 = object.ypos
+        break
+
+    case 2
+    case 3
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp0 -= 0x800000
+            temp1 = object.ypos
+            temp1 -= 0x800000
+            DrawRectOutline(temp0, temp1, 0x100, 0x100, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 -= 0x300000
+        temp6 = object.ypos
+        break
+
+    case 4
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp0 -= 0xA00000
+            temp1 = object.ypos
+            temp1 -= 0x600000
+            DrawRectOutline(temp0, temp1, 0xA0, 0xA0, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 -= 0x500000
+        temp6 = object.ypos
+        break
+
+    case 5
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp1 = object.ypos
+            temp1 -= 0x600000
+            DrawRectOutline(temp0, temp1, 0x60, 0x60, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 += 0x300000
+        temp6 = object.ypos
+        temp6 -= 0x200000
+        break
+
+    case 6
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp0 -= 0x600000
+            temp1 = object.ypos
+            DrawRectOutline(temp0, temp1, 0x60, 0x60, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 -= 0x300000
+        temp6 = object.ypos
+        temp6 += 0x300000
+        break
+
+    case 7
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp0 -= 0x600000
+            temp1 = object.ypos
+            temp1 -= 0x600000
+            DrawRectOutline(temp0, temp1, 0x60, 0x60, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 -= 0x300000
+        temp6 = object.ypos
+        temp6 -= 0x300000
+        break
+    case 8
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp1 = object.ypos
+            temp1 -= 0x800000
+            DrawRectOutline(temp0, temp1, 0x80, 0x80, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 += 0x400000
+        temp6 = object.ypos
+        temp6 -= 0x400000
+        break
+
+    case 9
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp0 -= 0x800000
+            temp1 = object.ypos
+            temp1 -= 0x800000
+            DrawRectOutline(temp0, temp1, 0x80, 0x100, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 -= 0x500000
+        temp6 = object.ypos
+        break
+
+    case 10
+        if editor.showGizmos == true
+            temp0 = object.xpos
+            temp1 = object.ypos
+            temp1 -= 0x800000
+            DrawRectOutline(temp0, temp1, 0x80, 0x100, 255, 255, 0, 255)
+        end if
+
+        temp5 = object.xpos
+        temp5 += 0x500000
+        temp6 = object.ypos
+        break
+    end switch
+
+    DrawLine(object.xpos, object.ypos, temp5, temp6, 255, 0, 0)
+    DrawSpriteFX(1, FX_INK, temp5, temp6)
+
+    // Direction
+    switch object.propertyValue
+    case 1
+    case 3
+    case 4
+    case 6
+    case 7
+    case 9
+        temp0 = temp5
+        temp2 = temp0
+        temp2 -= 0x200000
+        temp1 = temp6
+        temp1 += 0x200000
+        temp3 = temp1
+        temp3 -= 0x100000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        temp0 = temp2
+        temp1 = temp3
+        temp3 -= 0x200000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        temp2 += 0x200000
+        temp1 = temp3
+        temp3 -= 0x100000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        temp0 = temp2
+        temp2 += 0x200000
+        temp1 = temp3
+        temp3 += 0x100000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        temp0 = temp2
+        temp1 = temp3
+        temp3 += 0x200000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        // temp0 = temp2
+        // temp2 -= 0x200000
+        // temp1 = temp3
+        // temp3 += 0x100000
+        // DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+        break
+
+    case 0
+    case 2
+    case 5
+    case 8
+    case 10
+        temp0 = temp5
+        temp2 = temp0
+        temp2 += 0x200000
+        temp1 = temp6
+        temp1 += 0x200000
+        temp3 = temp1
+        temp3 -= 0x100000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        temp0 = temp2
+        temp1 = temp3
+        temp3 -= 0x200000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        temp2 -= 0x200000
+        temp1 = temp3
+        temp3 -= 0x100000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        temp0 = temp2
+        temp2 -= 0x200000
+        temp1 = temp3
+        temp3 += 0x100000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        temp0 = temp2
+        temp1 = temp3
+        temp3 += 0x200000
+        DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+
+        // temp0 = temp2
+        // temp2 += 0x200000
+        // temp1 = temp3
+        // temp3 += 0x100000
+        // DrawArrow(temp0, temp1, temp2, temp3, 128, 128, 255)
+        break
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-8, -8, 16, 16, 173, 67)        // #0 - "T" Icon
+
+    LoadSpriteSheet("Players/Sonic3.gif")
+    SpriteFrame(-28, -12, 56, 24, 199, 75)      // #1 - Sonic Fan Rotate frame 0
+    SpriteFrame(-24, -12, 48, 24, 207, 125)     // #2 - Sonic Fan Rotate frame 1
+    SpriteFrame(-28, -12, 56, 24, 199, 100)     // #3 - Sonic Fan Rotate frame 2
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "activeRange")
+    AddEditorVariable("streamRange")
+    SetActiveVariable("streamRange")
+    AddEnumVariable("-96, 96, -96, 96, Counter-clockwise", 0)
+    AddEnumVariable("-96, 96, -96, 96, Clockwise", 1)
+    AddEnumVariable("-128, 128, -128, 128, Counter-clockwise", 2)
+    AddEnumVariable("-128, 128, -128, 128, Clockwise", 3)
+    AddEnumVariable("-160, 0, -96, 64, Clockwise", 4)
+    AddEnumVariable("0, 96, -96, 0, Counter-clockwise", 5)
+    AddEnumVariable("-96, 0, 0, 96, Clockwise", 6)
+    AddEnumVariable("-96, 0, -96, 0, Clockwise", 7)
+    AddEnumVariable("0, 128, -128, 0, Counter-clockwise", 8)
+    AddEnumVariable("-128, 0, -128, 128, Clockwise", 9)
+    AddEnumVariable("0, 128, -128, 128, Counter-clockwise", 10)
+end event

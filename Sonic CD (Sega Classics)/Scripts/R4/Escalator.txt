@@ -1,0 +1,213 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Escalator Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.stood
+private alias object.value2 : object.speed
+private alias object.value3 : object.duration
+
+// Player Aliases
+private alias object.xpos           : player.xpos
+private alias object.pushing        : player.pushing
+private alias object.tileCollisions : player.tileCollisions
+private alias object.value1         : player.timer
+
+// HUD Aliases
+private alias object.propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : ESCALATOR_IDLE
+private alias 1 : ESCALATOR_ASCEND
+private alias 2 : ESCALATOR_STOPPED
+private alias 3 : ESCALATOR_RESTORE
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case ESCALATOR_ASCEND
+        if object.timer > 0
+            object.timer--
+            object.xpos += object.speed
+            object.ypos -= object.speed
+        else
+            object.state++
+        end if
+        break
+
+    case ESCALATOR_STOPPED
+        if object.outOfBounds == true
+            object.state = ESCALATOR_RESTORE
+            object.xpos -= 0xA00000
+            object.ypos += 0xA00000
+        end if
+        break
+
+    case ESCALATOR_RESTORE
+        if object.outOfBounds == true
+            object.state = ESCALATOR_IDLE
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        switch object.state
+        case ESCALATOR_IDLE
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_TOP
+                object.state = ESCALATOR_ASCEND
+                object.timer = object.duration
+                object.priority = PRIORITY_ACTIVE
+                
+                player[currentPlayer].tileCollisions = false
+
+                // Bug Details (?):
+                // In the RSDKv3 version of the game, this'd be setting Object.OnObject
+                // (or, object.stood here) - these are aliases of object.value1.
+
+                // However in the RSDKv4 version, this instead sets player[currentPlayer]'s value1,
+                // which PlayerObject uses as its timer.
+                
+                // Fix: Replace the line below with `object.stood = true`
+                player[currentPlayer].timer = true
+            else
+                if object.stood == true
+                    player[currentPlayer].tileCollisions = true
+                end if
+
+                object.stood = false
+            end if
+            break
+
+        case ESCALATOR_ASCEND
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_TOP
+                player[currentPlayer].xpos += object.speed
+                player[currentPlayer].tileCollisions = false
+                
+                object.stood = true
+                
+                BoxCollisionTest(C_SOLID, object.entityPos, 20, -32, 32, -16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                player[currentPlayer].pushing = false
+            else
+                if object.stood == true
+                    player[currentPlayer].tileCollisions = true
+                end if
+
+                object.stood = false
+            end if
+            break
+
+        case ESCALATOR_STOPPED
+            player[currentPlayer].pushing = false
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_TOP
+                player[currentPlayer].tileCollisions = false
+
+                object.stood = true
+            else
+                if object.stood == true
+                    player[currentPlayer].tileCollisions = true
+                end if
+
+                object.stood = false
+            end if
+            break
+        end switch
+    next
+end event
+
+
+event ObjectDraw
+    if object.state < ESCALATOR_RESTORE
+        DrawSprite(0)
+    end if
+end event
+
+
+event ObjectStartup
+    switch HUD[9].currentTimePeriod
+    case TIME_PRESENT
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects.gif")
+        SpriteFrame(-16, -16, 32, 32, 130, 1)  // #0 - Escalator
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 150)  // #0 - Escalator
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 183)  // #0 - Escalator
+        break
+    end switch
+
+    foreach (TypeName[Escalator], arrayPos0, ALL_ENTITIES)
+        // okay so this is really weird, but the reason that i didn't
+        // include the object slot in the alias is because... of the two
+        // different HUD slots being used in the same function!?
+        // This should be slot 9, as that's where the HUD is in the RSDKv4
+        // version of the game
+        if HUD[24].currentTimePeriod < TIME_GOOD_FUTURE // past/present
+            object[arrayPos0].speed = 0x10000
+            object[arrayPos0].duration = 160
+        else
+            object[arrayPos0].speed = 0x20000
+            object[arrayPos0].duration = 80
+        end if
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+
+    switch checkResult
+    case TIME_PRESENT
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects.gif")
+        SpriteFrame(-16, -16, 32, 32, 130, 1)   // #0 - Escalator
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 150)   // #0 - Escalator
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 183)   // #0 - Escalator
+        break
+    end switch
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

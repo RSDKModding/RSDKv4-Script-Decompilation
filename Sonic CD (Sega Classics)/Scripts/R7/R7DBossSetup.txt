@@ -1,0 +1,301 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: R7 Setup Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.activePalette
+
+// Player Aliases
+private alias object.xpos          : player.xpos
+private alias object.ypos          : player.ypos
+private alias object.speed         : player.speed
+private alias object.collisionMode : player.collisionMode
+
+// Reserved Object Slot Aliases
+private alias 21 : SLOT_R7SETUP
+
+// Tile Info
+private alias 0 : TILEINFO_INDEX
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function R7Setup_GetLoopTileInfo
+
+// ========================
+// Tables
+// ========================
+
+private table R7Setup_unused1
+end table
+
+private table R7Setup_unused2
+end table
+
+private table R7Setup_unused3
+end table
+
+// ========================
+// Function Definitions
+// ========================
+
+public function R7Setup_GetLoopTileInfo
+	// Gets info from out of bounds chunks, located past the signpost
+
+	// Precondition:
+	//   - temp0 is the chunk ID of the chunk currently being checked against
+
+	temp3 = player[SLOT_PLAYER1].xpos
+	temp3 >>= 16
+	temp3 &= 255
+	temp3 += 0x4000
+	temp0 -= 16
+	temp0 >>= 2
+	temp0 <<= 8
+
+	temp4 = player[SLOT_PLAYER1].ypos
+	temp4 >>= 16
+	temp4 &= 255
+	temp4 += temp0
+
+	Get16x16TileInfo(temp0, temp3, temp4, TILEINFO_INDEX)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.timer++
+	if object.timer == 5
+		object.timer = 0
+		object.activePalette++
+		object.activePalette %= 6
+		SetActivePalette(object.activePalette, 0, 240)
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Manage stage layers
+
+		// Get the chunk ID of the chunk the player's currently in
+		temp1 = player[currentPlayer].xpos
+		temp1 >>= 23
+		temp2 = player[currentPlayer].ypos
+		temp2 >>= 23
+		GetTileLayerEntry(temp0, 0, temp1, temp2)
+
+		// If possible, jump to its corresponding entry over here now
+		switch temp0
+		case 16
+		case 17
+		case 18
+		case 19
+			// Loop chunks, opening on left side
+			CallFunction(R7Setup_GetLoopTileInfo)
+			if player[currentPlayer].collisionMode == CMODE_FLOOR
+				if temp0 == 1001
+					temp1 &= 1022
+					temp2 &= 1022
+					SetTileLayerEntry(20, 0, temp1, temp2)
+					temp1++
+					SetTileLayerEntry(21, 0, temp1, temp2)
+					temp1--
+					temp2++
+					SetTileLayerEntry(22, 0, temp1, temp2)
+					temp1++
+					SetTileLayerEntry(23, 0, temp1, temp2)
+				end if
+			else
+				if player[currentPlayer].speed > 0
+					if temp0 == 1003
+						temp1 &= 1022
+						temp2 &= 1022
+						SetTileLayerEntry(20, 0, temp1, temp2)
+						temp1++
+						SetTileLayerEntry(21, 0, temp1, temp2)
+						temp1--
+						temp2++
+						SetTileLayerEntry(22, 0, temp1, temp2)
+						temp1++
+						SetTileLayerEntry(23, 0, temp1, temp2)
+					end if
+				end if
+			end if
+			break
+
+		case 20
+		case 21
+		case 22
+		case 23
+			// Loop chunks, opening on right side
+			CallFunction(R7Setup_GetLoopTileInfo)
+			if player[currentPlayer].collisionMode == CMODE_FLOOR
+				if temp0 == 1000
+					temp1 &= 1022
+					temp2 &= 1022
+					SetTileLayerEntry(16, 0, temp1, temp2)
+					temp1++
+					SetTileLayerEntry(17, 0, temp1, temp2)
+					temp1--
+					temp2++
+					SetTileLayerEntry(18, 0, temp1, temp2)
+					temp1++
+					SetTileLayerEntry(19, 0, temp1, temp2)
+				end if
+			else
+				if player[currentPlayer].speed < 0
+					if temp0 == 1002
+						temp1 &= 1022
+						temp2 &= 1022
+						SetTileLayerEntry(16, 0, temp1, temp2)
+						temp1++
+						SetTileLayerEntry(17, 0, temp1, temp2)
+						temp1--
+						temp2++
+						SetTileLayerEntry(18, 0, temp1, temp2)
+						temp1++
+						SetTileLayerEntry(19, 0, temp1, temp2)
+					end if
+				end if
+			end if
+			break
+
+		case 24
+		case 25
+		case 26
+		case 27
+			// Wavy chunks, opening on left side... or at least they should be
+			// However!
+			// These don't exist in Act 3, so this function call is actually checking against blank chunks...
+			CallFunction(R7Setup_GetLoopTileInfo)
+			if temp0 == 1001
+				temp1 &= 1022
+				temp2 &= 1022
+				SetTileLayerEntry(28, 0, temp1, temp2)
+				temp1++
+				SetTileLayerEntry(29, 0, temp1, temp2)
+				temp1--
+				temp2++
+				SetTileLayerEntry(30, 0, temp1, temp2)
+				temp1++
+				SetTileLayerEntry(31, 0, temp1, temp2)
+			end if
+			break
+
+		case 28
+		case 29
+		case 30
+		case 31
+			// Wavy chunks, opening on right side, but see note above
+			// Same story here
+			CallFunction(R7Setup_GetLoopTileInfo)
+			if temp0 == 1000
+				temp1 &= 1022
+				temp2 &= 1022
+				SetTileLayerEntry(24, 0, temp1, temp2)
+				temp1++
+				SetTileLayerEntry(25, 0, temp1, temp2)
+				temp1--
+				temp2++
+				SetTileLayerEntry(26, 0, temp1, temp2)
+				temp1++
+				SetTileLayerEntry(27, 0, temp1, temp2)
+			end if
+			break
+		end switch
+	next
+end event
+
+
+event ObjectDraw
+	// Find the XPos to draw the lamp at, since it's supposed to have parallax and loop around the stage
+	object.xpos = screen.xoffset
+	object.xpos /= 420
+	object.xpos *= 420
+	object.xpos += 320
+	object.xpos *= 3
+	object.xpos >>= 1
+	temp0 = screen.xoffset
+	temp0 *= 3
+	temp0 >>= 1
+	object.xpos -= temp0
+	object.ypos = 520
+
+	// And now find the YPos to draw it at, there's also vertical parallax too
+	temp0 = screen.yoffset
+	temp0 *= 23
+	temp0 >>= 4
+	object.ypos -= temp0
+
+	DrawSpriteScreenXY(0, object.xpos, object.ypos)
+	DrawSpriteScreenXY(1, object.xpos, object.ypos)
+	DrawSpriteScreenXY(2, object.xpos, object.ypos)
+	DrawSpriteScreenXY(3, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects2.gif")
+	
+	// Place the Setup object into slot 21, make it always active, and give it a high draworder so that it's in front of Sonic
+	object[SLOT_R7SETUP].type = TypeName[R7 Setup]
+	object[SLOT_R7SETUP].priority = PRIORITY_ACTIVE
+	object[SLOT_R7SETUP].drawOrder = 5
+
+	// Lamp Post Head
+	SpriteFrame(-24, -24, 48, 24, 173, 26)
+
+	// Lamp Post Post
+	SpriteFrame(-8, 0, 16, 224, 222, 26)
+	SpriteFrame(-8, 224, 16, 224, 222, 26)
+	SpriteFrame(-8, 448, 16, 224, 222, 26)
+
+	// Set initial stage bounds
+	stage.curXBoundary2 -= 288
+
+	// Setup the stage's palette cycle
+	CopyPalette(0, 0, 1, 0, 255)
+	CopyPalette(0, 0, 2, 0, 255)
+	CopyPalette(0, 0, 3, 0, 255)
+	CopyPalette(0, 0, 4, 0, 255)
+	CopyPalette(0, 0, 5, 0, 255)
+
+	temp0 = 0
+	temp1 = 0
+	temp2 = 16
+	while temp0 < 6
+		LoadPalette("R7D_PalCycle.act", temp0, 160, temp1, temp2)
+		temp0++
+		temp1 += 16
+		temp2 += 16
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects2.gif")
+	SpriteFrame(-24, -24, 48, 24, 173, 26)
+	SpriteFrame(-8, 0, 16, 224, 222, 26)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

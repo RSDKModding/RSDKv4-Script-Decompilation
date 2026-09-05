@@ -1,0 +1,211 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: VOBlocks3 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.ypos    : player.ypos
+private alias object.gravity : player.gravity
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.angle = oscillation
+    object.angle += object.propertyValue
+    object.angle <<= 1
+
+    Sin(object.collisionOffset.y, object.angle)
+    object.collisionOffset.y *= 0x2800
+    object.collisionOffset.y += object.ypos
+    object.collisionOffset.y &= -0x10000 // Truncate the value
+    object.collisionOffset.y -= object.drawPos.y
+
+    temp0 = object.ypos
+    object.ypos = object.drawPos.y
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_SOLID, object.entityPos, -32, -96, 32, 96, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        switch checkResult
+        case COL_TOP
+            player[currentPlayer].ypos += object.collisionOffset.y
+            break
+
+        case COL_BOTTOM
+            if player[currentPlayer].gravity == GRAVITY_GROUND
+                CallFunction(Player_Kill)
+            end if
+            break
+        end switch
+    next
+
+    object.ypos = temp0
+end event
+
+
+event ObjectDraw
+    Sin(object.drawPos.y, object.angle)
+    object.drawPos.y *= 0x2800
+    object.drawPos.y += object.ypos
+    object.drawPos.y &= -0x10000 // Truncate the value
+
+    DrawSpriteXY(0, object.xpos, object.drawPos.y)
+    DrawSpriteXY(1, object.xpos, object.drawPos.y)
+    DrawSpriteXY(2, object.xpos, object.drawPos.y)
+    DrawSpriteXY(3, object.xpos, object.drawPos.y)
+    DrawSpriteXY(4, object.xpos, object.drawPos.y)
+    DrawSpriteXY(5, object.xpos, object.drawPos.y)
+    DrawSpriteXY(6, object.xpos, object.drawPos.y)
+    DrawSpriteXY(7, object.xpos, object.drawPos.y)
+    DrawSpriteXY(8, object.xpos, object.drawPos.y)
+    DrawSpriteXY(9, object.xpos, object.drawPos.y)
+    DrawSpriteXY(10, object.xpos, object.drawPos.y)
+    DrawSpriteXY(11, object.xpos, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        break
+    end switch
+
+    // R4 Blocks
+    SpriteFrame(-32, -96, 32, 32, temp0, temp1)
+    SpriteFrame(0, -96, 32, 32, temp2, temp1)
+    SpriteFrame(-32, -64, 32, 32, temp2, temp1)
+    SpriteFrame(0, -64, 32, 32, temp0, temp1)
+    SpriteFrame(-32, -32, 32, 32, temp2, temp1)
+    SpriteFrame(0, -32, 32, 32, temp0, temp1)
+    SpriteFrame(-32, 0, 32, 32, temp0, temp1)
+    SpriteFrame(0, 0, 32, 32, temp2, temp1)
+    SpriteFrame(-32, 32, 32, 32, temp2, temp1)
+    SpriteFrame(0, 32, 32, 32, temp0, temp1)
+    SpriteFrame(-32, 64, 32, 32, temp0, temp1)
+    SpriteFrame(0, 64, 32, 32, temp2, temp1)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    temp1 = oscillation
+    temp1 += object.propertyValue
+    temp1 <<= 1
+
+    Sin(temp0, temp1)
+    temp0 *= 0x2800
+    temp0 += object.ypos
+    temp0 &= 0xFFFF0000 // Truncate the value
+
+    DrawSpriteXY(0, object.xpos, temp0)
+    DrawSpriteXY(1, object.xpos, temp0)
+    DrawSpriteXY(2, object.xpos, temp0)
+    DrawSpriteXY(3, object.xpos, temp0)
+    DrawSpriteXY(4, object.xpos, temp0)
+    DrawSpriteXY(5, object.xpos, temp0)
+    DrawSpriteXY(6, object.xpos, temp0)
+    DrawSpriteXY(7, object.xpos, temp0)
+    DrawSpriteXY(8, object.xpos, temp0)
+    DrawSpriteXY(9, object.xpos, temp0)
+    DrawSpriteXY(10, object.xpos, temp0)
+    DrawSpriteXY(11, object.xpos, temp0)
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+
+    switch checkResult
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        break
+    end switch
+
+    // R4 Blocks
+    SpriteFrame(-32, -96, 32, 32, temp0, temp1)
+    SpriteFrame(0, -96, 32, 32, temp2, temp1)
+    SpriteFrame(-32, -64, 32, 32, temp2, temp1)
+    SpriteFrame(0, -64, 32, 32, temp0, temp1)
+    SpriteFrame(-32, -32, 32, 32, temp2, temp1)
+    SpriteFrame(0, -32, 32, 32, temp0, temp1)
+    SpriteFrame(-32, 0, 32, 32, temp0, temp1)
+    SpriteFrame(0, 0, 32, 32, temp2, temp1)
+    SpriteFrame(-32, 32, 32, 32, temp2, temp1)
+    SpriteFrame(0, 32, 32, 32, temp0, temp1)
+    SpriteFrame(-32, 64, 32, 32, temp0, temp1)
+    SpriteFrame(0, 64, 32, 32, temp2, temp1)
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "startAngle")
+end event

@@ -1,0 +1,328 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Bata Pyon Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.xvel
+private alias object.value2        : object.yvel
+private alias object.value3        : object.originPos.x
+private alias object.value4        : object.originPos.y
+private alias object.value5        : object.turnTimer
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : BATAPYON_JUMP
+private alias 1 : BATAPYON_BOUNCE
+private alias 2 : BATAPYON_BAD_RECOIL_1
+private alias 3 : BATAPYON_BAD_RECOIL_2
+private alias 4 : BATAPYON_BAD_RECOIL_3
+private alias 5 : BATAPYON_BAD_RECOIL_4
+private alias 6 : BATAPYON_BAD_BOUNCE
+private alias 7 : BATAPYON_RESET
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BataPyon_DebugDraw
+reserve function BataPyon_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value BataPyon_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function BataPyon_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= BataPyon_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function BataPyon_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= BataPyon_startDebugID
+    CreateTempObject(TypeName[Bata Pyon], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.outOfBounds == true
+        object.state = BATAPYON_RESET
+        object.direction = FACING_RIGHT
+
+        object.xpos = object.originPos.x
+        object.ypos = object.originPos.y
+
+        object.xvel = -0xA000
+        object.yvel = 0x80000
+
+        object.turnTimer = 0
+    end if
+
+    switch object.state
+    case BATAPYON_JUMP
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+        object.yvel += 0x2000
+
+        ObjectTileCollision(CSIDE_ROOF, 0, -18, 0)
+        if checkResult == true
+            object.yvel = 0
+        end if
+
+        if object.yvel > 0
+            ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+            if checkResult == true
+                if object.quality == QUALITY_GOOD
+                    object.state = BATAPYON_BOUNCE
+                    object.priority = PRIORITY_ACTIVE
+                    object.turnTimer++
+                    if object.turnTimer == 8
+                        object.turnTimer = 0
+                        object.direction++
+                        object.direction &= FACING_LEFT
+                        FlipSign(object.xvel)
+                    end if
+                else
+                    object.state = BATAPYON_BAD_RECOIL_1
+                    object.priority = PRIORITY_ACTIVE
+                    object.turnTimer++
+                    if object.turnTimer == 4
+                        object.turnTimer = 0
+                        object.direction++
+                        object.direction &= FACING_LEFT
+                        FlipSign(object.xvel)
+                    end if
+                end if
+            end if
+        end if
+
+        if object.xvel > 0
+            ObjectTileCollision(CSIDE_LWALL, 16, 0, 0)
+            if checkResult == true
+                object.turnTimer = 0
+                object.direction = FACING_RIGHT
+                FlipSign(object.xvel)
+            end if
+        else
+            ObjectTileCollision(CSIDE_RWALL, -16, 0, 0)
+            if checkResult == true
+                object.turnTimer = 0
+                object.direction = FACING_LEFT
+                FlipSign(object.xvel)
+            end if
+        end if
+
+        object.frame = object.quality
+        object.frame <<= 1
+        if object.yvel < 0
+            object.frame++
+        end if
+        break
+
+    case BATAPYON_BOUNCE
+        object.xpos += object.xvel
+        object.ypos -= 0x120000
+        object.yvel = -0x60000
+
+        object.state = BATAPYON_JUMP
+
+        object.frame = object.quality
+        object.frame <<= 1
+
+        if object.yvel < 0
+            object.frame++
+        end if
+        break
+
+    case BATAPYON_BAD_RECOIL_1
+        if object.timer < 3
+            object.timer++
+        else
+            object.state++
+            object.frame = 3
+            object.ypos -= 0x120000
+        end if
+        break
+
+    case BATAPYON_BAD_RECOIL_2
+        if object.timer < 6
+            object.timer++
+        else
+            object.state++
+            object.frame = 2
+            object.ypos += 0x120000
+        end if
+        break
+
+    case BATAPYON_BAD_RECOIL_3
+        if object.timer < 10
+            object.timer++
+        else
+            object.state++
+            object.frame = 3
+            object.ypos -= 0x120000
+        end if
+        break
+
+    case BATAPYON_BAD_RECOIL_4
+        if object.timer < 15
+            object.timer++
+        else
+            object.state++
+            object.frame = 2
+            object.ypos += 0x120000
+        end if
+        break
+
+    case BATAPYON_BAD_BOUNCE
+        if object.timer < 20
+            object.timer++
+        else
+            object.timer = 0
+            object.frame = 3
+            object.ypos -= 0x120000
+            object.yvel = -0x50000
+
+            object.state = BATAPYON_JUMP
+        end if
+        break
+
+    case BATAPYON_RESET
+        if object.outOfBounds == true
+            object.state = BATAPYON_JUMP
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+    if object.state < BATAPYON_RESET
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -14, -12, 14, 12, currentPlayer, object[currentPlayer].value41, object[currentPlayer].value39, object[currentPlayer].value42, object[currentPlayer].value40)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    if object.state < BATAPYON_RESET
+        DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    // Good
+    SpriteFrame(-16, -18, 32, 40, 34, 134)  // #0 - Pata Byon
+    SpriteFrame(-16, -18, 32, 56, 67, 167)  // #1 - Pata Byon Jump
+
+    // Bad
+    SpriteFrame(-16, -18, 32, 40, 34, 175)  // #2 - Pata Byon
+    SpriteFrame(-16, -18, 32, 56, 100, 167) // #3 - Pata Byon Jump
+
+    foreach (TypeName[Bata Pyon], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+
+        object[arrayPos0].xvel = -0xA000
+        object[arrayPos0].yvel = 0x80000
+    next
+
+    temp0 = 0
+    BataPyon_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Bata Pyon], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(BataPyon_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(BataPyon_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-16, -18, 32, 40, 34, 134)  // #0 - Pata Byon
+    SpriteFrame(-16, -18, 32, 40, 34, 175)  // #1 - Pata Byon
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

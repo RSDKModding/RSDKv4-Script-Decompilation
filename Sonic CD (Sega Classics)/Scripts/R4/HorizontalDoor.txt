@@ -1,0 +1,163 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Horizontal Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// Bug Details: 
+// This should be aliased as object[9], because this version of the game has the HUD reserved at that slot.
+// Instead, we are incorrectly using the RSDKv3 version's reserved slot
+
+// Fix:
+// Adjust this alias to use object[9] instead of object[24]
+
+// HUD Aliases
+private alias object[24].propertyValue : HUD.currentTimePeriod
+
+// Push Button alias
+private alias object.propertyValue : pushButton.pressed
+
+// Property Values
+// At startup is used to set it's direction, so 0 is facing right, 1 facing left
+private alias 0 : CLOSED_DOOR
+private alias 1 : OPEN_DOOR
+
+// Push Button Property Values
+private alias 1 : PUSHBUTTON_PRESSED
+
+// Time Periods
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HorizontalDoor_DebugDraw
+reserve function HorizontalDoor_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function HorizontalDoor_DebugDraw
+    DrawSprite(0)
+end function
+
+
+public function HorizontalDoor_DebugSpawn
+    CreateTempObject(TypeName[Horizontal Door], CLOSED_DOOR, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.propertyValue
+    case CLOSED_DOOR
+        if object.timer > 0
+            object.timer -= 0x80000
+            if object.direction == FACING_RIGHT
+                object.xpos += 0x80000
+            else
+                object.xpos -= 0x80000
+            end if
+        end if
+
+        if pushButton[-1].pressed == true
+            object.propertyValue = OPEN_DOOR
+        end if
+        break
+
+    case OPEN_DOOR
+        if object.timer < 0x800000
+            object.timer += 0x80000
+            if object.direction == FACING_RIGHT
+                object.xpos -= 0x80000
+            else
+                object.xpos += 0x80000
+            end if
+        end if
+
+        temp0 = object.ypos
+        temp0 -= 0x300000
+        if player[SLOT_PLAYER1].ypos < temp0
+            object.propertyValue = CLOSED_DOOR
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_SOLID, object.entityPos, -64, -8, 64, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult > COL_NONE
+            object.collisionMode = CMODE_FLOOR
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    // Past or Present
+    if HUD.currentTimePeriod < TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects.gif")
+        SpriteFrame(-64, -8, 128, 16, 18, 69)   // #0 - Horizontal Door
+    else
+        LoadSpriteSheet("R4/Objects3.gif")
+        SpriteFrame(-64, -8, 128, 16, 62, 211)  // #0 - Horizontal Door
+    end if
+
+    foreach (TypeName[Horizontal Door], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].priority = PRIORITY_XBOUNDS
+        object[arrayPos0].direction = object[arrayPos0].propertyValue
+        object[arrayPos0].propertyValue = CLOSED_DOOR
+    next
+
+    SetTableValue(TypeName[Horizontal Door], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(HorizontalDoor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(HorizontalDoor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    object.direction = object.propertyValue
+    object.direction &= 1
+    DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+
+    // Past or Present
+    if checkResult < TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects.gif")
+        SpriteFrame(-64, -8, 128, 16, 18, 69)   // #0 - Horizontal Door
+    else
+        LoadSpriteSheet("R4/Objects3.gif")
+        SpriteFrame(-64, -8, 128, 16, 62, 211)  // #0 - Horizontal Door
+    end if
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "direction")
+end event

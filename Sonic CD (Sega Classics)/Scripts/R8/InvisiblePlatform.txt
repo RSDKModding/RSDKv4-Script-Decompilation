@@ -1,0 +1,359 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Inv Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.firstPlatTimer
+private alias object.value1 : object.firstPlatMaxTimer
+private alias object.value2 : object.firstPlatFrame
+
+private alias object.value3 : object.secondPlatTimer
+private alias object.value4 : object.secondPlatMaxTimer
+private alias object.value5 : object.secondPlatFrame
+
+private alias object.value6 : object.thirdPlatTimer
+private alias object.value7 : object.thirdPlatMaxTimer
+private alias object.value8 : object.thirdPlatFrame
+
+// Property Values
+private alias 0 : ONE_BLOCK
+private alias 1 : TWO_BLOCKS // Seems unused in the game
+private alias 2 : THREE_BLOCK_STAIR
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function InvPlatform_SetMaxTimer
+
+// ========================
+// Function Definitions
+// ========================
+
+public function InvPlatform_SetMaxTimer
+    switch temp0
+    case 0
+        temp1 = 60
+        break
+
+    case 1
+    case 3
+    case 5
+    case 7
+    case 9
+    case 11
+    case 14
+    case 16
+    case 18
+    case 20
+    case 22
+    case 24
+        temp1 = 5
+        break
+
+    case 2
+    case 4
+    case 6
+    case 8
+    case 10
+    case 12
+    case 15
+    case 17
+    case 19
+    case 21
+    case 23
+    case 25
+        temp1 = 3
+        break
+
+    case 13
+        temp1 = 160
+        break
+
+    end switch
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.firstPlatTimer < object.firstPlatMaxTimer
+        object.firstPlatTimer++
+    else
+        object.firstPlatTimer = 0
+        object.firstPlatFrame++
+        object.firstPlatFrame %= 26
+        temp0 = object.firstPlatFrame
+        CallFunction(InvPlatform_SetMaxTimer)
+        object.firstPlatMaxTimer = temp1
+    end if
+
+    if object.propertyValue == THREE_BLOCK_STAIR
+        if object.secondPlatTimer < object.secondPlatMaxTimer
+            object.secondPlatTimer++
+        else
+            object.secondPlatTimer = 0
+            object.secondPlatFrame++
+            object.secondPlatFrame %= 26
+            temp0 = object.secondPlatFrame
+            CallFunction(InvPlatform_SetMaxTimer)
+            object.secondPlatMaxTimer = temp1
+        end if
+
+        if object.thirdPlatTimer < object.thirdPlatMaxTimer
+            object.thirdPlatTimer++
+        else
+            object.thirdPlatTimer = 0
+            object.thirdPlatFrame++
+            object.thirdPlatFrame %= 26
+            temp0 = object.thirdPlatFrame
+            CallFunction(InvPlatform_SetMaxTimer)
+            object.thirdPlatMaxTimer = temp1
+        end if
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        switch object.propertyValue
+        case ONE_BLOCK
+            if object.firstPlatFrame == 13
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            end if
+            break
+
+        case TWO_BLOCKS
+            if object.firstPlatFrame == 13
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 48, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            end if
+            break
+
+        case THREE_BLOCK_STAIR
+            if object.firstPlatFrame == 13
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            end if
+
+            if object.secondPlatFrame == 13
+                BoxCollisionTest(C_PLATFORM, object.entityPos, 16, 0, 48, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            end if
+
+            if object.thirdPlatFrame == 13
+                BoxCollisionTest(C_PLATFORM, object.entityPos, 48, 16, 80, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            end if
+            break
+
+        end switch
+    next
+end event
+
+
+event ObjectDraw
+    switch object.propertyValue
+    case ONE_BLOCK
+        DrawSprite(object.firstPlatFrame)
+        break
+
+    case TWO_BLOCKS
+        temp0 = object.xpos
+        DrawSpriteXY(object.firstPlatFrame, temp0, object.ypos)
+
+        temp0 += 0x200000
+        DrawSpriteXY(object.firstPlatFrame, temp0, object.ypos)
+        break
+
+    case THREE_BLOCK_STAIR
+        temp0 = object.xpos
+        temp1 = object.ypos
+        DrawSpriteXY(object.firstPlatFrame, temp0, temp1)
+
+        temp0 += 0x200000
+        temp1 += 0x100000
+        DrawSpriteXY(object.secondPlatFrame, temp0, temp1)
+
+        temp0 += 0x200000
+        temp1 += 0x100000
+        DrawSpriteXY(object.thirdPlatFrame, temp0, temp1)
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects2.gif")
+
+    SpriteFrame(-4, -16, 0, 0, 190, 223)    //  #0  - Blank
+
+    // 1/3 width
+    SpriteFrame(-4, -16, 8, 32, 190, 223)   //  #1  - Vanishing Platform
+    SpriteFrame(-4, -16, 8, 32, 223, 223)   //  #2  - Solid Platform
+    SpriteFrame(-4, -16, 8, 32, 190, 223)   //  #3  - Vanishing Platform
+    SpriteFrame(-4, -16, 8, 32, 223, 223)   //  #4  - Solid Platform
+
+    // 2/3 width
+    SpriteFrame(-8, -16, 16, 32, 190, 223)  //  #5  - Vanishing Platform
+    SpriteFrame(-8, -16, 16, 32, 223, 223)  //  #6  - Solid Platform
+    SpriteFrame(-8, -16, 16, 32, 190, 223)  //  #7  - Vanishing Platform
+    SpriteFrame(-8, -16, 16, 32, 223, 223)  //  #8  - Solid Platform
+
+    // Full width
+    SpriteFrame(-16, -16, 32, 32, 190, 223) //  #9  - Vanishing Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #10 - Solid Platform
+    SpriteFrame(-16, -16, 32, 32, 190, 223) //  #11 - Vanishing Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #12 - Solid Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #13 - Solid Platform
+    SpriteFrame(-16, -16, 32, 32, 190, 223) //  #14 - Vanishing Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #15 - Solid Platform
+    SpriteFrame(-16, -16, 32, 32, 190, 223) //  #16 - Vanishing Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #17 - Solid Platform
+
+    // 2/3 width
+    SpriteFrame(-8, -16, 16, 32, 190, 223)  //  #18 - Vanishing Platform
+    SpriteFrame(-8, -16, 16, 32, 223, 223)  //  #19 - Solid Platform
+    SpriteFrame(-8, -16, 16, 32, 190, 223)  //  #20 - Vanishing Platform
+    SpriteFrame(-8, -16, 16, 32, 223, 223)  //  #21 - Solid Platform
+
+    // 1/3 width
+    SpriteFrame(-4, -16, 8, 32, 190, 223)   //  #22 - Vanishing Platform
+    SpriteFrame(-4, -16, 8, 32, 223, 223)   //  #23 - Solid Platform
+    SpriteFrame(-4, -16, 8, 32, 190, 223)   //  #24 - Vanishing Platform
+    SpriteFrame(-4, -16, 8, 32, 223, 223)   //  #25 - Solid Platform
+
+    foreach (TypeName[Inv Platform], arrayPos0, ALL_ENTITIES)
+        switch object[arrayPos0].propertyValue
+        case ONE_BLOCK
+        case TWO_BLOCKS
+            object[arrayPos0].firstPlatMaxTimer = 60
+            break
+
+        case THREE_BLOCK_STAIR
+            object[arrayPos0].firstPlatMaxTimer = 60
+            object[arrayPos0].secondPlatMaxTimer = 108
+            object[arrayPos0].thirdPlatMaxTimer = 156
+            break
+
+        end switch
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult %= 3
+            break
+
+        case 0 // type
+            checkResult = object.propertyValue
+            checkResult %= 3
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue %= 3
+            break
+
+        case 0 // type
+            object.propertyValue = editor.variableValue
+            object.propertyValue %= 3
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    switch object.propertyValue
+    case ONE_BLOCK
+        DrawSprite(9)
+        break
+
+    case TWO_BLOCKS
+        temp0 = object.xpos
+        DrawSpriteXY(9, temp0, object.ypos)
+
+        temp0 += 0x200000
+        DrawSpriteXY(9, temp0, object.ypos)
+        break
+
+    case THREE_BLOCK_STAIR
+        temp0 = Object.xpos
+        temp1 = Object.ypos
+        DrawSpriteXY(9, temp0, temp1)
+
+        temp0 += 0x200000
+        temp1 += 0x100000
+        DrawSpriteXY(9, temp0, temp1)
+
+        temp0 += 0x200000
+        temp1 += 0x100000
+        DrawSpriteXY(9, temp0, temp1)
+        break
+
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects2.gif")
+
+    SpriteFrame(-4, -16, 0, 0, 190, 223)    //  #0  - Blank
+
+    // 1/3 width
+    SpriteFrame(-4, -16, 8, 32, 190, 223)   //  #1  - Vanishing Platform
+    SpriteFrame(-4, -16, 8, 32, 223, 223)   //  #2  - Solid Platform
+    SpriteFrame(-4, -16, 8, 32, 190, 223)   //  #3  - Vanishing Platform
+    SpriteFrame(-4, -16, 8, 32, 223, 223)   //  #4  - Solid Platform
+
+    // 2/3 width
+    SpriteFrame(-8, -16, 16, 32, 190, 223)  //  #5  - Vanishing Platform
+    SpriteFrame(-8, -16, 16, 32, 223, 223)  //  #6  - Solid Platform
+    SpriteFrame(-8, -16, 16, 32, 190, 223)  //  #7  - Vanishing Platform
+    SpriteFrame(-8, -16, 16, 32, 223, 223)  //  #8  - Solid Platform
+
+    // Full width
+    SpriteFrame(-16, -16, 32, 32, 190, 223) //  #9  - Vanishing Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #10 - Solid Platform
+    SpriteFrame(-16, -16, 32, 32, 190, 223) //  #11 - Vanishing Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #12 - Solid Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #13 - Solid Platform
+    SpriteFrame(-16, -16, 32, 32, 190, 223) //  #14 - Vanishing Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #15 - Solid Platform
+    SpriteFrame(-16, -16, 32, 32, 190, 223) //  #16 - Vanishing Platform
+    SpriteFrame(-16, -16, 32, 32, 223, 223) //  #17 - Solid Platform
+
+    // 2/3 width
+    SpriteFrame(-8, -16, 16, 32, 190, 223)  //  #18 - Vanishing Platform
+    SpriteFrame(-8, -16, 16, 32, 223, 223)  //  #19 - Solid Platform
+    SpriteFrame(-8, -16, 16, 32, 190, 223)  //  #20 - Vanishing Platform
+    SpriteFrame(-8, -16, 16, 32, 223, 223)  //  #21 - Solid Platform
+
+    // 1/3 width
+    SpriteFrame(-4, -16, 8, 32, 190, 223)   //  #22 - Vanishing Platform
+    SpriteFrame(-4, -16, 8, 32, 223, 223)   //  #23 - Solid Platform
+    SpriteFrame(-4, -16, 8, 32, 190, 223)   //  #24 - Vanishing Platform
+    SpriteFrame(-4, -16, 8, 32, 223, 223)   //  #25 - Solid Platform
+
+    AddEditorVariable("type")
+    SetActiveVariable("type")
+    AddEnumVariable("1 Block", ONE_BLOCK)
+    AddEnumVariable("2 Blocks", TWO_BLOCKS)
+    AddEnumVariable("3-Block Stair", THREE_BLOCK_STAIR)
+end event

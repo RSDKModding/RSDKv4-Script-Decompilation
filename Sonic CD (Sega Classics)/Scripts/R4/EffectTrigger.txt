@@ -1,0 +1,417 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Effect Trigger Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.xvel      : player.xvel
+private alias object.yvel      : player.yvel
+private alias object.animation : player.animation
+
+// Level Property Values
+private alias 0  : SET_BG_LAYER
+private alias 1  : SWAP_BACKGROUND
+private alias 2  : WATER_HEIGHT
+private alias 13 : WATER_HEIGHT_2    // not sure if this is used
+
+// Pipe Property Values
+private alias 4  : PIPE_BOTTOM_ENTRY
+private alias 5  : PIPE_TOP_ENTRY
+private alias 6  : PIPE_TURN_LEFT
+private alias 7  : PIPE_TURN_RIGHT
+private alias 8  : PIPE_TURN_UP
+private alias 9  : PIPE_TURN_DOWN
+private alias 10 : UNUSED
+private alias 11 : UNUSED_2
+private alias 12 : PIPE_EXIT_PIPE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.propertyValue
+    case SET_BG_LAYER
+        if player[SLOT_PLAYER1].xpos < 0x2800000 // X - 640 in map coords
+            stage[0].activeLayer = 2
+
+            object.type = TypeName[Blank Object]
+            object[19].type = TypeName[Blank Object]
+        end if
+        break
+
+    case SWAP_BACKGROUND
+        if player[SLOT_PLAYER1].ypos > object.ypos
+            stage[0].activeLayer = 1
+            object[19].type = TypeName[Blank Object]
+        else
+            stage[0].activeLayer = 2
+            object[19].type = TypeName[Blank Object]
+        end if
+        break
+
+    case WATER_HEIGHT
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            stage.newWaterLevel = 0x2640000 // Y - 612 in map coords
+        else
+            stage.newWaterLevel = 0x2840000 // Y - 644 in map coords
+        end if
+        break
+
+    case PIPE_BOTTOM_ENTRY
+        BoxCollisionTest(C_TOUCH, object.entityPos, -10, -16, 10, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    warp.timer = 0
+
+                    player[SLOT_PLAYER1].state = Player_State_WaterCurrent
+                    player[SLOT_PLAYER1].animation = ANI_FANROTATE
+
+                    player[SLOT_PLAYER1].xvel = 0
+                    player[SLOT_PLAYER1].yvel = -0x40000
+
+                    if player[SLOT_PLAYER1].xpos < object.xpos
+                        player[SLOT_PLAYER1].xpos += 0x10000
+                    else
+                        player[SLOT_PLAYER1].xpos -= 0x10000
+                    end if
+                end if
+            end if
+        else
+            if player[SLOT_PLAYER1].state == Player_State_WaterCurrent
+                BoxCollisionTest(C_TOUCH, object.entityPos, -64, -16, -32, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    player[SLOT_PLAYER1].state = Player_State_Air
+                    player[SLOT_PLAYER1].animation = ANI_WALKING
+                end if
+
+                BoxCollisionTest(C_TOUCH, object.entityPos, 32, -16, 64, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    player[SLOT_PLAYER1].state = Player_State_Air
+                    player[SLOT_PLAYER1].animation = ANI_WALKING
+                end if
+            end if
+        end if
+        break
+
+    case PIPE_TOP_ENTRY
+        BoxCollisionTest(C_TOUCH, object.entityPos, -10, -16, 10, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    warp.timer = 0
+
+                    player[SLOT_PLAYER1].state = Player_State_WaterCurrent
+                    player[SLOT_PLAYER1].animation = ANI_FANROTATE
+
+                    player[SLOT_PLAYER1].xvel = 0
+                    player[SLOT_PLAYER1].yvel = 0x40000
+
+                    if player[SLOT_PLAYER1].xpos < object.xpos
+                        player[SLOT_PLAYER1].xpos += 0x10000
+                    else
+                        player[SLOT_PLAYER1].xpos -= 0x10000
+                    end if
+                end if
+            end if
+        else
+            if player[SLOT_PLAYER1].state == Player_State_WaterCurrent
+                BoxCollisionTest(C_TOUCH, object.entityPos, -64, -16, -32, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    player[SLOT_PLAYER1].state = Player_State_Ground
+                    player[SLOT_PLAYER1].animation = ANI_WALKING
+                end if
+
+                BoxCollisionTest(C_TOUCH, object.entityPos, 32, -16, 64, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    player[SLOT_PLAYER1].state = Player_State_Ground
+                    player[SLOT_PLAYER1].animation = ANI_WALKING
+                end if
+            end if
+        end if
+        break
+
+    case PIPE_TURN_LEFT
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    player[SLOT_PLAYER1].xvel = -0x40000
+                    player[SLOT_PLAYER1].animation = ANI_FANROTATE
+                end if
+            end if
+        end if
+        break
+
+    case PIPE_TURN_RIGHT
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    player[SLOT_PLAYER1].xvel = 0x40000
+                    player[SLOT_PLAYER1].animation = ANI_FANROTATE
+                end if
+            end if
+        end if
+        break
+
+    case PIPE_TURN_UP
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    player[SLOT_PLAYER1].yvel = -0x40000
+                    player[SLOT_PLAYER1].animation = ANI_FANROTATE
+                end if
+            end if
+        end if
+        break
+
+    case PIPE_TURN_DOWN
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == 1
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    player[SLOT_PLAYER1].yvel = 0x40000
+                    player[SLOT_PLAYER1].animation = ANI_FANROTATE
+                end if
+            end if
+        end if
+        break
+
+    case UNUSED
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    player[SLOT_PLAYER1].xvel = 0
+                end if
+            end if
+        end if
+        break
+
+    case UNUSED_2
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    player[SLOT_PLAYER1].yvel = 0
+                end if
+            end if
+        end if
+        break
+
+    case PIPE_EXIT_PIPE
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[SLOT_PLAYER1].state != Player_State_Death
+                if player[SLOT_PLAYER1].state != Player_State_Drown
+                    player[SLOT_PLAYER1].yvel = 0x40000
+                    player[SLOT_PLAYER1].state = Player_State_Air
+                    player[SLOT_PLAYER1].animation = ANI_WALKING
+                end if
+            end if
+        end if
+        break
+
+    case WATER_HEIGHT_2
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            stage.newWaterLevel = 0x7800000 // Y - 1920 in map coords
+        else
+            stage.newWaterLevel = 0x5340000 // Y - 1332 in map coords
+        end if
+        break
+    end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // effect
+            checkResult = object.propertyValue
+            checkResult %= 14
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // effect
+            object.propertyValue = editor.variableValue
+            object.propertyValue %= 14
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    LoadSpriteSheet("Global/Display.gif")
+    temp5 = object.spriteSheet
+
+    LoadSpriteSheet("Players/Sonic3.gif")
+    temp6 = object.spriteSheet
+
+    object.inkEffect = INK_ALPHA
+    object.alpha = 198
+
+    temp0 = object.xpos
+    temp0 -= 0x300000
+    temp1 = object.xpos
+    temp1 += 0x300000
+    temp2 = object.ypos
+    temp2 -= 0x300000
+    temp3 = object.ypos
+    temp3 += 0x300000
+
+    switch object.propertyValue
+    case SET_BG_LAYER
+    case SWAP_BACKGROUND
+    case WATER_HEIGHT
+    case WATER_HEIGHT_2
+        object.spriteSheet = temp5
+        temp1 = object.ypos
+        temp1 -= 0x80000
+        temp2 = object.ypos
+        temp2 += 0x80000
+        temp0 = object.xpos
+        temp0 -= 0x80000
+        DrawSpriteXY(1, temp0, temp1)
+        DrawSpriteXY(1, temp0, temp2)
+
+        temp0 = object.xpos
+        temp0 += 0x80000
+        DrawSpriteXY(1, temp0, temp1)
+        DrawSpriteXY(1, temp0, temp2)
+        break
+
+    case PIPE_BOTTOM_ENTRY
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp3, 255, 0, 0)
+
+        object.spriteSheet = temp5
+        DrawSpriteXY(1, object.xpos, object.ypos)
+
+        temp4 = object.xpos
+        temp4 -= 0x100000
+        DrawSpriteXY(1, temp4, object.ypos)
+
+        temp4 = object.xpos
+        temp4 += 0x100000
+        DrawSpriteXY(1, temp4, object.ypos)
+        break
+
+    case PIPE_TOP_ENTRY
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp3, 255, 0, 0)
+
+        object.spriteSheet = temp5
+        DrawSpriteXY(1, object.xpos, object.ypos)
+        temp4 = object.xpos
+        temp4 -= 0x100000
+        DrawSpriteXY(1, temp4, object.ypos)
+        temp4 = object.xpos
+        temp4 += 0x100000
+        DrawSpriteXY(1, temp4, object.ypos)
+        break
+
+    case PIPE_TURN_LEFT
+        DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, 0, 0)
+
+        object.spriteSheet = temp6
+        DrawSpriteFX(4, FX_INK, object.xpos, object.ypos)
+        break
+
+    case PIPE_TURN_RIGHT
+        DrawArrow(object.xpos, object.ypos, temp1, object.ypos, 255, 0, 0)
+
+        object.spriteSheet = temp6
+        DrawSpriteFX(2, FX_INK, object.xpos, object.ypos)
+        break
+
+    case PIPE_TURN_UP
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp2, 255, 0, 0)
+
+        object.spriteSheet = temp6
+        DrawSpriteFX(3, FX_INK, object.xpos, object.ypos)
+        break
+
+    case PIPE_TURN_DOWN
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp3, 255, 0, 0)
+
+        object.spriteSheet = temp6
+        DrawSpriteFX(3, FX_INK, object.xpos, object.ypos)
+        break
+
+    case UNUSED
+    case UNUSED_2
+        DrawSpriteFX(4, FX_INK, object.xpos, object.ypos)
+        break
+
+    case PIPE_EXIT_PIPE
+        object.spriteSheet = temp6
+        DrawSpriteFX(3, FX_INK, object.xpos, object.ypos)
+
+        object.spriteSheet = temp5
+        temp2 = object.ypos
+        temp2 -= 0x100000
+        DrawSpriteXY(1, object.xpos, temp2)
+        temp4 = object.xpos
+        temp4 -= 0x100000
+        DrawSpriteXY(1,  temp4, temp2)
+        temp4 = object.xpos
+        temp4 += 0x100000
+        DrawSpriteXY(1,  temp4, temp2)
+        temp2 = object.ypos
+        temp2 += 0x300000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp2, 255, 0, 0)
+        break
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-16, -16, 32, 32, 1, 143)       // #0 - "Script" Icon
+    SpriteFrame(-8, -8, 16, 16, 173,  67)       // #1 - "T" Icon
+
+    LoadSpriteSheet("Players/Sonic3.gif")
+    SpriteFrame(-28, -12, 56, 24, 199, 75)      // #2 - Sonic Fan Rotate frame 0
+    SpriteFrame(-24, -12, 48, 24, 207, 125)     // #3 - Sonic Fan Rotate frame 1
+    SpriteFrame(-28, -12, 56, 24, 199, 100)     // #4 - Sonic Fan Rotate frame 2
+
+    AddEditorVariable("effect")
+    SetActiveVariable("effect")
+    AddEnumVariable("Set background layer", SET_BG_LAYER)
+    AddEnumVariable("Swap backgrounds", SWAP_BACKGROUND)
+    AddEnumVariable("Set water height", WATER_HEIGHT)
+    AddEnumVariable("Stream entry (Bottom)", PIPE_BOTTOM_ENTRY)
+    AddEnumVariable("Stream entry (Top)", PIPE_TOP_ENTRY)
+    AddEnumVariable("Stream turn (Left)", PIPE_TURN_LEFT)
+    AddEnumVariable("Stream turn (Right)", PIPE_TURN_RIGHT)
+    AddEnumVariable("Stream turn (Up)", PIPE_TURN_UP)
+    AddEnumVariable("Stream turn (Down)", PIPE_TURN_DOWN)
+    AddEnumVariable("Stop horizontal speed", UNUSED)
+    AddEnumVariable("Stop vertical speed", UNUSED_2)
+    AddEnumVariable("Exit stream", PIPE_EXIT_PIPE)
+    AddEnumVariable("Set water height (Bottom of level)", WATER_HEIGHT_2)
+end event

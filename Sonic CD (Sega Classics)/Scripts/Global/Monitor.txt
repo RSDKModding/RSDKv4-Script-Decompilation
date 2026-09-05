@@ -1,0 +1,369 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Monitor Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0  : object.contentsPos.y
+private alias object.value1  : object.timer
+
+// Monitor states
+private alias 0 : MONITOR_STATE_IDLE
+private alias 1 : MONITOR_STATE_FALL
+
+// Contents Types
+private alias 0  : MONITOR_BLANK
+private alias 1  : MONITOR_RINGS
+private alias 2  : MONITOR_SHIELD_BLUE
+private alias 3  : MONITOR_INVINCIBILITY
+private alias 4  : MONITOR_SPEEDSHOES
+private alias 5  : MONITOR_1UP_SONIC
+private alias 6  : MONITOR_1UP_TAILS
+private alias 7  : MONITOR_TIME
+private alias 8  : MONITOR_SUPER
+private alias 9  : MONITOR_SHIELD_LIGHTNING
+private alias 10 : MONITOR_SHIELD_FIRE
+private alias 11 : MONITOR_SHIELD_BUBBLE
+private alias 12 : MONITOR_EGGMAN
+private alias 13 : MONITOR_DEBUG_SHIELD
+private alias 14 : MONITOR_DEBUG_TIMESTONES
+private alias 14 : MONITOR_COUNT
+
+// Broken monitor states
+private alias 0 : MONITOR_STATE_RISE
+
+// Player Aliases
+private alias object.state          : player.state
+private alias object.controlMode    : player.controlMode
+private alias object.propertyValue  : player.character
+private alias object.yvel           : player.yvel
+private alias object.gravity        : player.gravity
+private alias object.animation      : player.animation
+private alias object.collisionPlane : player.collisionPlane
+private alias object.value15        : player.isSidekick
+private alias object.value16        : debugMode.currentSelection
+private alias object.value24        : player.gravityStrength
+private alias object.value41        : player.hitboxLeft
+private alias object.value39        : player.hitboxTop
+private alias object.value42        : player.hitboxRight
+private alias object.value40        : player.hitboxBottom
+
+// Path ID Aliases
+private alias 0 : PATH_A
+
+// Shield Type Aliases
+private alias 2 : SHIELDTYPE_S3_S1
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Monitor_DebugDraw
+reserve function Monitor_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+public value Monitor_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function Monitor_DebugDraw
+    DrawSprite(0)
+
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Monitor_startDebugID
+    if temp0 == MONITOR_1UP_SONIC
+        temp0 += stage.playerListPos
+    else
+        if temp0 > MONITOR_1UP_SONIC
+            temp0++
+        end if
+    end if
+
+    DrawSprite(temp0)
+end function
+
+
+public function Monitor_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Monitor_startDebugID
+    if temp0 == MONITOR_1UP_SONIC
+        temp0 += stage.playerListPos
+    else
+        if temp0 > MONITOR_1UP_SONIC
+            temp0++
+        end if
+    end if
+
+    CreateTempObject(TypeName[Monitor], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == MONITOR_STATE_FALL
+        object.yvel += 0x3800
+        object.ypos += object.yvel
+        if object.yvel >= 0
+            ObjectTileCollision(CSIDE_FLOOR, 0, 16, PATH_A)
+            if checkResult == true
+                object.yvel  = 0
+                object.state = MONITOR_STATE_IDLE
+            end if
+        end if
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if player[currentPlayer].collisionPlane == object.collisionPlane
+            CheckGreater(player[currentPlayer].yvel, -1)
+            temp0 = checkResult
+
+            CheckEqual(player[currentPlayer].gravity, GRAVITY_GROUND)
+            temp0 |= checkResult
+
+            if temp0 == true
+                CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
+                temp0 = checkResult
+
+                if temp0 == true
+                    if player[currentPlayer].isSidekick == false
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+                        if checkResult == true
+                            object.state = MONITOR_STATE_IDLE
+                            CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+                            object[tempObjectPos].drawOrder = 4
+                            player[currentPlayer].yvel += player[currentPlayer].gravityStrength
+                            player[currentPlayer].yvel += player[currentPlayer].gravityStrength
+                            FlipSign(player[currentPlayer].yvel)
+
+                            object.type = TypeName[Broken Monitor]
+                            if object.priority != PRIORITY_XBOUNDS_DESTROY
+                                object.priority = PRIORITY_ACTIVE
+                            end if
+
+                            object.alpha = 0xFF
+                            object.contentsPos.y = object.ypos
+                            object.timer = -0x30000
+
+                            PlaySfx(SfxName[Destroy], false)
+                        end if
+                    else
+                        BoxCollisionTest(C_SOLID, object.entityPos, -15, -14, 15, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    end if
+                else
+                    BoxCollisionTest(C_SOLID, object.entityPos, -15, -14, 15, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                end if
+            else
+                BoxCollisionTest(C_SOLID, object.entityPos, -15, -16, 15, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == COL_BOTTOM
+                    object.state = MONITOR_STATE_FALL
+                    object.yvel  = -0x20000
+                    player[currentPlayer].yvel = 0x20000
+                end if
+            end if
+        end if
+    next
+
+    object.frame++
+    if object.frame > 17
+        object.frame = 0
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+
+    switch object.frame
+    case 0
+    case 1
+        break
+
+    case 6
+    case 7
+        DrawSprite(15)
+        break
+
+    case 12
+    case 13
+        DrawSprite(16)
+        break
+
+    default
+        DrawSprite(object.propertyValue)
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items.gif")
+
+    SpriteFrame(-16, -16, 32, 32, 18, 1)  // #0  - Base monitor sprite
+    SpriteFrame(-8, -9, 16, 14, 18, 49)   // #1  - MONITOR_RINGS
+    SpriteFrame(-8, -9, 16, 14, 35, 49)   // #2  - MONITOR_SHIELD_BLUE
+    SpriteFrame(-8, -9, 16, 14, 18, 64)   // #3  - MONITOR_INVINCIBILITY
+    SpriteFrame(-8, -9, 16, 14, 35, 64)   // #4  - MONITOR_SPEEDSHOES
+    SpriteFrame(-8, -9, 16, 14, 18, 79)   // #5  - MONITOR_1UP_SONIC
+    SpriteFrame(-8, -9, 16, 14, 35, 79)   // #6  - MONITOR_1UP_TAILS
+    SpriteFrame(-8, -9, 16, 14, 18, 94)   // #7  - MONITOR_TIME
+    SpriteFrame(-8, -9, 16, 14, 35, 94)   // #8  - MONITOR_SUPER
+    SpriteFrame(-8, -9, 16, 14, 18, 109)  // #9  - MONITOR_SHIELD_LIGHTNING
+    SpriteFrame(-8, -9, 16, 14, 35, 109)  // #10 - MONITOR_SHIELD_FIRE
+    SpriteFrame(-8, -9, 16, 14, 18, 124)  // #11 - MONITOR_SHIELD_BUBBLE
+    SpriteFrame(-8, -9, 16, 14, 35, 124)  // #12 - MONITOR_EGGMAN
+    SpriteFrame(-8, -9, 16, 14, 18, 139)  // #13 - MONITOR_DEBUG_SHIELD
+    SpriteFrame(-8, -9, 16, 14, 35, 139)  // #14 - MONITOR_DEBUG_TIMESTONES
+    SpriteFrame(-8, -9, 16, 14, 18, 34)   // #15 - Static 1
+    SpriteFrame(-8, -9, 16, 14, 35, 34)   // #16 - Static 2
+
+    temp0 = 0
+    Monitor_startDebugID = DebugMode_ObjCount
+    Monitor_startDebugID--
+    while temp0 < 14
+        temp2 = true
+        if temp0 >= 4
+            if temp0 <= 5
+                temp1 = temp0
+                temp1 -= 4
+                if stage.playerListPos != temp1
+                    temp2 = false
+                end if
+            end if
+        end if
+
+        if temp2 == true
+            SetTableValue(TypeName[Monitor], DebugMode_ObjCount, DebugMode_TypesTable)
+            SetTableValue(Monitor_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+            SetTableValue(Monitor_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+            DebugMode_ObjCount++
+        end if
+
+        temp0++
+    loop
+
+    foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+        if object[arrayPos0].propertyValue > MONITOR_SHIELD_LIGHTNING
+            object[arrayPos0].propertyValue -= MONITOR_SHIELD_FIRE
+            object[arrayPos0].drawOrder = 1
+            object[arrayPos0].collisionPlane = 1
+        end if
+    next
+
+    if stage.playerListPos == PLAYER_TAILS_A
+        foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+            if object[arrayPos0].propertyValue == MONITOR_1UP_SONIC
+                object[arrayPos0].propertyValue = MONITOR_1UP_TAILS
+            end if
+        next
+    end if
+
+    if options.shieldType < SHIELDTYPE_S3_S1 // Are S3 shields disabled?
+        foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+            if object[arrayPos0].propertyValue >= MONITOR_SHIELD_LIGHTNING
+                if object[arrayPos0].propertyValue <= MONITOR_SHIELD_BUBBLE
+                    object[arrayPos0].propertyValue = MONITOR_SHIELD_BLUE
+                end if
+            end if
+        next
+    end if
+
+    if options.gameMode == MODE_TIMEATTACK
+        // Delete every life monitor
+        foreach (TypeName[Monitor], arrayPos0, ALL_ENTITIES)
+            if object[arrayPos0].propertyValue == MONITOR_1UP_SONIC
+                object[arrayPos0].type = TypeName[Blank Object]
+            end if
+        next
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // property value
+            checkResult = object.propertyValue
+            break
+            
+        case 0 // contents
+            checkResult = object.propertyValue
+            break
+            
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // property value
+            object.propertyValue = editor.variableValue
+            break
+            
+        case 0 // contents
+            object.propertyValue = editor.variableValue
+            break
+            
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items.gif")
+
+    SpriteFrame(-16, -16, 32, 32, 18, 1)  // #0  - Base monitor sprite
+    SpriteFrame(-8, -9, 16, 14, 18, 49)   // #1  - MONITOR_RINGS
+    SpriteFrame(-8, -9, 16, 14, 35, 49)   // #2  - MONITOR_SHIELD_BLUE
+    SpriteFrame(-8, -9, 16, 14, 18, 64)   // #3  - MONITOR_INVINCIBILITY
+    SpriteFrame(-8, -9, 16, 14, 35, 64)   // #4  - MONITOR_SPEEDSHOES
+    SpriteFrame(-8, -9, 16, 14, 18, 79)   // #5  - MONITOR_1UP_SONIC
+    SpriteFrame(-8, -9, 16, 14, 35, 79)   // #6  - MONITOR_1UP_TAILS
+    SpriteFrame(-8, -9, 16, 14, 18, 94)   // #7  - MONITOR_TIME
+    SpriteFrame(-8, -9, 16, 14, 35, 94)   // #8  - MONITOR_SUPER
+    SpriteFrame(-8, -9, 16, 14, 18, 109)  // #9  - MONITOR_SHIELD_LIGHTNING
+    SpriteFrame(-8, -9, 16, 14, 35, 109)  // #10 - MONITOR_SHIELD_FIRE
+    SpriteFrame(-8, -9, 16, 14, 18, 124)  // #11 - MONITOR_SHIELD_BUBBLE
+    SpriteFrame(-8, -9, 16, 14, 35, 124)  // #12 - MONITOR_EGGMAN
+    SpriteFrame(-8, -9, 16, 14, 18, 139)  // #13 - MONITOR_DEBUG_SHIELD
+    SpriteFrame(-8, -9, 16, 14, 35, 139)  // #14 - MONITOR_DEBUG_TIMESTONES
+    SpriteFrame(-8, -9, 16, 14, 18, 34)   // #15 - Static 1
+    SpriteFrame(-8, -9, 16, 14, 35, 34)   // #16 - Static 2
+    
+    AddEditorVariable("contents")
+    SetActiveVariable("contents")
+    AddEnumVariable("None", MONITOR_BLANK)
+    AddEnumVariable("10 Rings", MONITOR_RINGS)
+    AddEnumVariable("Blue Shield", MONITOR_SHIELD_BLUE)
+    AddEnumVariable("Invincibility", MONITOR_INVINCIBILITY)
+    AddEnumVariable("Speed Shoes", MONITOR_SPEEDSHOES)
+    AddEnumVariable("1UP (Sonic)", MONITOR_1UP_SONIC)
+    AddEnumVariable("1UP (Tails)", MONITOR_1UP_TAILS)
+    AddEnumVariable("Time", MONITOR_TIME)
+    AddEnumVariable("Super", MONITOR_SUPER)
+    AddEnumVariable("Lightning Shield", MONITOR_SHIELD_LIGHTNING)
+    AddEnumVariable("Fire Shield", MONITOR_SHIELD_FIRE)
+    AddEnumVariable("Bubble Shield", MONITOR_SHIELD_BUBBLE)
+    AddEnumVariable("Eggman", MONITOR_EGGMAN)
+    AddEnumVariable("Shields Toggle", MONITOR_DEBUG_SHIELD)
+    AddEnumVariable("Timestones Toggle", MONITOR_DEBUG_TIMESTONES)
+end event

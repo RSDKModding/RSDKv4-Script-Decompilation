@@ -1,0 +1,409 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Kabasira Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.originPos.x
+private alias object.value2 : object.originPos.y
+private alias object.value3 : object.drawPos.x
+private alias object.value4 : object.drawPos.y
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States 0-1 are never used, aside from state 0 being the default state
+private alias 2 : KABASIRA_INACTIVE
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Kabasira_DebugDraw
+reserve function Kabasira_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Kabasira_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Kabasira_DebugDraw
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Kabasira_startDebugID
+	if temp0 == 0
+		DrawSprite(0) // Good quality
+	else
+		DrawSprite(2) // Bad quality
+	end if
+end function
+
+
+private function Kabasira_DebugSpawn
+	temp0 = debugMode[0].currentSelection
+	temp0 -= Kabasira_startDebugID
+	CreateTempObject(TypeName[Kabasira], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.outOfBounds == true
+		// The object is out of bounds, reset it
+		object.state = KABASIRA_INACTIVE
+		object.timer = 0
+
+		// Neutral angle, right between 512 and 000
+		object.angle = 256
+
+		// The object never seems to refrence its direction, nor does it use FX_FLIP, so I believe this is effectively unused?
+		object.direction = FACING_RIGHT
+
+		// Move it back to its starting position
+		// (Although, normally there's a check to make sure the starting position is OOB too to prevent visible teleporting, why isn't there a check like that this time?)
+		object.xpos = object.originPos.x
+		object.ypos = object.originPos.y
+	end if
+
+	// Good variant of the object, able to attack
+	if object.propertyValue == QUALITY_GOOD
+		object.angle += 2
+		object.angle &= 511
+		object.frame = object.animationTimer
+		object.frame >>= 3
+		object.animationTimer++
+		object.animationTimer &= 15
+
+		if object.timer == 0
+			object.timer = 240
+
+			// Shoot a shot at the player
+			PlaySfx(SfxName[Shot], false)
+
+			// Different shot subtypes based on the player's position relative to the Kabasira
+			if player[SLOT_PLAYER1].xpos > object.xpos
+				CreateTempObject(TypeName[Kabasira Shot], 0, object.xpos, object.ypos)
+			else
+				CreateTempObject(TypeName[Kabasira Shot], 1, object.xpos, object.ypos)
+			end if
+
+			object[tempObjectPos].inkEffect = INK_ALPHA
+			object[tempObjectPos].alpha = 192
+
+			// Find the X velocity to send the shot at
+			temp0 = player[SLOT_PLAYER1].xpos
+			temp0 -= object.xpos
+
+			// Find the Y velocity to send the shot at
+			temp1 = player[SLOT_PLAYER1].ypos
+			temp1 -= object.ypos
+
+			ATan2(temp2, temp0, temp1)
+
+			Cos256(object[tempObjectPos].xvel, temp2)
+			Sin256(object[tempObjectPos].yvel, temp2)
+			object[tempObjectPos].xvel <<= 9
+			object[tempObjectPos].yvel <<= 9
+		else
+			object.timer--
+		end if
+	else
+		// Peaceful variant of the object, no attacking the player needed so just float around
+		object.angle++
+		object.angle &= 511
+
+		object.frame = object.animationTimer
+		object.frame >>= 4
+
+		object.animationTimer++
+		object.animationTimer &= 31
+	end if
+
+	Cos(object.ypos, object.angle)
+	object.ypos <<= 13
+	object.ypos += object.originPos.y
+
+	temp0 = object.angle
+	temp0 <<= 1
+
+	Sin(object.xpos, temp0)
+	object.xpos *= 0xA00
+	object.xpos += object.originPos.x
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Check if the player's touched the head
+		BoxCollisionTest(C_TOUCH, object.entityPos, -6, -6, 6, 6, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+		if checkResult == true
+			CallFunction(Player_BadnikBreak)
+		end if
+	next
+
+	// Check if this badnik should be a flower
+	CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+	if object.state < KABASIRA_INACTIVE
+		// First, draw each body part
+		temp0 = 0
+		temp1 = 488
+		temp3 = object.angle
+		temp3 += 464
+		temp3 &= 511
+
+		object.alpha = 64
+
+		while temp0 < 4
+			temp2 = object.angle
+			temp2 += temp1
+			temp2 &= 511
+			temp2 /= 42
+			temp2 %= 12
+
+			Cos(object.drawPos.y, temp3)
+			object.drawPos.y <<= 13
+			object.drawPos.y += object.originPos.y
+
+			temp4 = temp3
+			temp4 <<= 1
+
+			Sin(object.drawPos.x, temp4)
+			object.drawPos.x *= 0xA00
+			object.drawPos.x += object.originPos.x
+
+			switch temp2
+			case 0
+			case 6
+				DrawSpriteFX(temp2, FX_INK, object.drawPos.x, object.drawPos.y)
+				DrawSpriteFX(0, FX_INK, object.drawPos.x, object.drawPos.y)
+				temp2 = 6
+				temp2 += object.frame
+				break
+
+			case 1
+			case 7
+				DrawSpriteFX(temp2, FX_INK, object.drawPos.x, object.drawPos.y)
+				DrawSpriteFX(1, FX_INK, object.drawPos.x, object.drawPos.y)
+				temp2 = 8
+				temp2 += object.frame
+				break
+			case 2
+			case 8
+				DrawSpriteFX(temp2, FX_INK, object.drawPos.x, object.drawPos.y)
+				DrawSpriteFX(2, FX_INK, object.drawPos.x, object.drawPos.y)
+				temp2 = 10
+				temp2 += object.frame
+				break
+
+			case 3
+			case 9
+				DrawSpriteFX(3, FX_INK, object.drawPos.x, object.drawPos.y)
+				temp2 = 12
+				temp2 += object.frame
+				DrawSpriteFX(temp2, FX_INK, object.drawPos.x, object.drawPos.y)
+				break
+
+			case 4
+			case 10
+				temp2 = 14
+				temp2 += object.frame
+				DrawSpriteFX(temp2, FX_INK, object.drawPos.x, object.drawPos.y)
+				DrawSpriteFX(4, FX_INK, object.drawPos.x, object.drawPos.y)
+				break
+
+			case 5
+			case 11
+				temp2 = 16
+				temp2 += object.frame
+				DrawSpriteFX(temp2, FX_INK, object.drawPos.x, object.drawPos.y)
+				DrawSpriteFX(5, FX_INK, object.drawPos.x, object.drawPos.y)
+				break
+			end switch
+
+			temp0++
+			temp1 += 8
+			temp3 += 12
+			temp3 &= 511
+			object.alpha += 32
+		loop
+
+		// Draw the head & wings
+		// Different sprites & priority for the Kabasira's different directions
+		temp0 = object.angle
+		temp0 += 8
+		temp0 &= 511
+		temp0 /= 42
+		temp0 %= 12
+		switch temp0
+		case 0
+		case 6
+			DrawSpriteXY(0, object.drawPos.x, object.drawPos.y)
+			temp2 = 6
+			temp2 += object.frame
+			DrawSpriteXY(temp2, object.drawPos.x, object.drawPos.y)
+			break
+
+		case 1
+		case 7
+			DrawSpriteXY(1, object.drawPos.x, object.drawPos.y)
+			temp2 = 8
+			temp2 += object.frame
+			DrawSpriteXY(temp2, object.drawPos.x, object.drawPos.y)
+			break
+
+		case 2
+		case 8
+			DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+			temp2 = 10
+			temp2 += object.frame
+			DrawSpriteXY(temp2, object.drawPos.x, object.drawPos.y)
+			break
+
+		case 3
+		case 9
+			DrawSpriteXY(3, object.drawPos.x, object.drawPos.y)
+			temp2 = 12
+			temp2 += object.frame
+			DrawSpriteXY(temp2, object.drawPos.x, object.drawPos.y)
+			break
+
+		case 4
+		case 10
+			temp2 = 14
+			temp2 += object.frame
+			DrawSpriteXY(temp2, object.drawPos.x, object.drawPos.y)
+			DrawSpriteXY(4, object.drawPos.x, object.drawPos.y)
+			break
+
+		case 5
+		case 11
+			temp2 = 16
+			temp2 += object.frame
+			DrawSpriteXY(temp2, object.drawPos.x, object.drawPos.y)
+			DrawSpriteXY(5, object.drawPos.x, object.drawPos.y)
+			break
+		end switch
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Kabasira Body Frames
+	SpriteFrame(-8, -8, 16, 16, 133, 100)
+	SpriteFrame(-8, -8, 16, 16, 150, 100)
+	SpriteFrame(-8, -8, 16, 16, 167, 100)
+	SpriteFrame(-8, -8, 16, 16, 184, 100)
+	SpriteFrame(-8, -8, 16, 16, 99, 100)
+	SpriteFrame(-8, -8, 16, 16, 116, 100)
+
+	// Kabasira Wing Frames
+	SpriteFrame(-8, -6, 8, 8, 243, 101)
+	SpriteFrame(-8, -6, 8, 8, 243, 110)
+	SpriteFrame(-12, -6, 24, 8, 218, 101)
+	SpriteFrame(-12, -6, 24, 8, 218, 110)
+	SpriteFrame(-8, -6, 16, 8, 218, 92)
+	SpriteFrame(-8, -6, 16, 8, 235, 92)
+	SpriteFrame(0, -6, 8, 8, 240, 74)
+	SpriteFrame(0, -6, 8, 8, 240, 83)
+	SpriteFrame(-8, -6, 16, 8, 218, 92)
+	SpriteFrame(-8, -6, 16, 8, 235, 92)
+	SpriteFrame(-12, -6, 24, 8, 218, 101)
+	SpriteFrame(-12, -6, 24, 8, 218, 110)
+
+	// Setup all Kabasira objects in the level
+	foreach (TypeName[Kabasira], arrayPos0, ALL_ENTITIES)
+		// Store the starting Positions since the Kabasira moves around
+		object[arrayPos0].originPos.x = object[arrayPos0].xpos
+		object[arrayPos0].originPos.y = object[arrayPos0].ypos
+
+		// Kabasira's tail has a fade effect, so give it the INK_ALPHA effect
+		object[arrayPos0].inkEffect = INK_ALPHA
+
+		// Give it 2 seconds of starting idle time before it starts to shoot
+		object[arrayPos0].timer = 120
+	next
+
+	temp0 = 0
+	Kabasira_startDebugID = DebugMode_ObjCount
+	while temp0 < 2
+		SetTableValue(TypeName[Kabasira], DebugMode_ObjCount, DebugMode_TypesTable)
+		SetTableValue(Kabasira_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+		SetTableValue(Kabasira_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+		DebugMode_ObjCount++
+		temp0++
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Condition
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Condition
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(1)
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 116, 100)
+	SpriteFrame(-8, -6, 8, 8, 243, 101)
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good", QUALITY_GOOD)
+	AddEnumVariable("Bad", QUALITY_BAD)
+end event

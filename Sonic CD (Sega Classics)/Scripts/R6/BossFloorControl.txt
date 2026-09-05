@@ -1,0 +1,387 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Floor Control Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.xvel
+private alias object.value3 : object.rubbleTimer
+private alias object.value4 : object.rubbleYPos
+private alias object.value5 : object.targetFloor
+private alias object.value6 : object.currentFloor
+private alias object.value7 : object.platformTimer
+private alias object.scale  : object.spikeAmount
+
+private alias object[-7].ypos : bossCamera.ypos
+private alias object[-6].ypos : firstElectrode.ypos
+private alias object[-1].xpos : boss.xpos
+private alias object[-1].ypos : boss.ypos
+
+private alias object.type   : bossPlat.type
+private alias object.ypos   : bossPlat.ypos
+private alias object.yvel   : bossPlat.yvel
+private alias object.value2 : bossPlat.fallSpeed
+private alias object.value5 : bossPlat.fcEntityPos
+
+private alias object.xpos   : floorRubble.xpos
+private alias object.xvel   : floorRubble.xvel
+private alias object.yvel   : floorRubble.yvel
+private alias object.value2 : floorRubble.fallSpeed
+
+// Player Aliases
+private alias object.state  : player.state
+private alias object.xpos   : player.xpos
+private alias object.ypos   : player.ypos
+private alias object.value1 : player.timer
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : FLOORCONTROL_INACTIVE
+private alias 1 : FLOORCONTROL_SETUP_CRUMBLE
+private alias 2 : FLOORCONTROL_SPAWN_FALL_OBJS
+private alias 3 : FLOORCONTROL_ELEC_ARC
+private alias 4 : FLOORCONTROL_TILE_SWAP
+private alias 5 : FLOORCONTROL_COOLDOWN
+
+// Time Periods
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function FloorControl_SpawnRubble
+reserve function FloorControl_SpawnPlatFarLeft
+reserve function FloorControl_SpawnPlatLeft
+reserve function FloorControl_SpawnPlatRight
+reserve function FloorControl_SpawnPlatFarRight
+
+// ========================
+// Function Definitions
+// ========================
+
+public function FloorControl_SpawnRubble
+    CreateTempObject(TypeName[Floor Rubble], 0, boss.xpos, object.rubbleYPos)
+    Rand(floorRubble[tempObjectPos].xpos, 160)
+    floorRubble[tempObjectPos].xpos -= 80
+    floorRubble[tempObjectPos].xpos <<= 16
+    floorRubble[tempObjectPos].xpos += object[-1].xpos
+
+    Rand(floorRubble[tempObjectPos].xvel, 0x500)
+    temp0 = floorRubble[tempObjectPos].xvel
+    floorRubble[tempObjectPos].xvel -= 640
+    floorRubble[tempObjectPos].xvel <<= 8
+    floorRubble[tempObjectPos].yvel = 0x10000
+    floorRubble[tempObjectPos].fallSpeed = 0x800
+    temp0 &= 0xFFF
+    floorRubble[tempObjectPos].fallSpeed += temp0
+end function
+
+
+public function FloorControl_SpawnPlatFarLeft
+    switch object.targetFloor
+    case 0
+        arrayPos0 = 2
+        break
+
+    case 1
+        arrayPos0 = 5
+        break
+
+    case 2
+        arrayPos0 = 11
+        break
+    end switch
+
+    bossPlat[+arrayPos0].type = TypeName[Boss Platform]
+    bossPlat[+arrayPos0].ypos = object.rubbleYPos
+    bossPlat[+arrayPos0].yvel = 0
+
+    bossPlat[+arrayPos0].fallSpeed   = 0xB00
+    bossPlat[+arrayPos0].fcEntityPos = object.entityPos
+end function
+
+
+public function FloorControl_SpawnPlatLeft
+    switch object.targetFloor
+    case 0
+        arrayPos0 = 3
+        break
+
+    case 1
+        arrayPos0 = 6
+        break
+
+    case 2
+        arrayPos0 = 12
+        break
+    end switch
+
+    bossPlat[+arrayPos0].type = TypeName[Boss Platform]
+    bossPlat[+arrayPos0].ypos = object.rubbleYPos
+    bossPlat[+arrayPos0].yvel = 0
+
+    bossPlat[+arrayPos0].fallSpeed   = 0xB00
+    bossPlat[+arrayPos0].fcEntityPos = object.entityPos
+end function
+
+
+public function FloorControl_SpawnPlatRight
+    switch object.targetFloor
+    case 0
+        arrayPos0 = 1
+        break
+
+    case 1
+        arrayPos0 = 7
+        break
+
+    case 2
+        arrayPos0 = 10
+        break
+    end switch
+
+    bossPlat[+arrayPos0].type = TypeName[Boss Platform]
+    bossPlat[+arrayPos0].ypos = object.rubbleYPos
+    bossPlat[+arrayPos0].yvel = 0
+
+    bossPlat[+arrayPos0].fallSpeed   = 0xB00
+    bossPlat[+arrayPos0].fcEntityPos = object.entityPos
+end function
+
+
+public function FloorControl_SpawnPlatFarRight
+    switch object.targetFloor
+    case 0
+        arrayPos0 = 4
+        break
+
+    case 1
+        arrayPos0 = 8
+        break
+
+    case 2
+        arrayPos0 = 9
+        break
+    end switch
+
+    bossPlat[+arrayPos0].type = TypeName[Boss Platform]
+    bossPlat[+arrayPos0].ypos = object.rubbleYPos
+    bossPlat[+arrayPos0].yvel = 0
+
+    bossPlat[+arrayPos0].fallSpeed   = 0xB00
+    bossPlat[+arrayPos0].fcEntityPos = object.entityPos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if player[currentPlayer].state == Player_State_Fly
+            if player[currentPlayer].timer < 360
+                player[currentPlayer].timer = 360
+            end if
+        end if
+    next
+
+    temp0 = bossCamera.ypos
+    temp0 += 0x800000
+    temp0 -= player[SLOT_PLAYER1].ypos
+    temp0 >>= 25
+
+    if temp0 < object.currentFloor
+        // Restore the chunks to their turned off versions
+        switch object.targetFloor
+        case 0
+            SetTileLayerEntry(500, 0, 20, 9)
+            SetTileLayerEntry(501, 0, 21, 9)
+            SetTileLayerEntry(506, 0, 22, 9)
+
+        case 1
+            SetTileLayerEntry(500, 0, 20, 5)
+            SetTileLayerEntry(501, 0, 21, 5)
+            SetTileLayerEntry(502, 0, 22, 5)
+
+        end switch
+
+        object.currentFloor = object.targetFloor
+    end if
+
+    switch object.state
+    case FLOORCONTROL_SETUP_CRUMBLE
+        if object.timer < 90
+            object.timer++
+        else
+            object.targetFloor = bossCamera.ypos
+            object.targetFloor -= boss.ypos
+            object.targetFloor >>= 25
+            switch object.targetFloor
+            case 0
+                object.rubbleYPos = 0x58C0000
+                object.spikeAmount = 0
+                break
+
+            case 1
+                object.rubbleYPos = 0x38C0000
+                object.spikeAmount = 0
+                break
+
+            case 2
+                object.rubbleYPos = 0x18C0000
+                object.spikeAmount = 6
+                if player[SLOT_PLAYER1].xpos > boss.xpos
+                    object.xvel = 0xA00000
+                else
+                    object.xvel = -0xA00000
+                end if
+                break
+            end switch
+
+            PlaySfx(SfxName[Crumble], false)
+
+            object.timer = 0
+            object.rubbleTimer = 24
+            object.platformTimer = 0
+
+            object.state++
+        end if
+        break
+
+    case FLOORCONTROL_SPAWN_FALL_OBJS
+        object.platformTimer++
+        if object.platformTimer == 128
+            CallFunction(FloorControl_SpawnPlatFarLeft)
+        end if
+
+        if object.platformTimer == 148
+            CallFunction(FloorControl_SpawnPlatLeft)
+        end if
+
+        if object.platformTimer == 168
+            CallFunction(FloorControl_SpawnPlatRight)
+        end if
+
+        if object.platformTimer == 188
+            CallFunction(FloorControl_SpawnPlatFarRight)
+        end if
+
+        temp0 = object.platformTimer
+        temp0 &= 3
+        if temp0 == 0
+            screen.shakeY = 2
+        end if
+
+        if object.spikeAmount > 0
+            temp0 = object.platformTimer
+            temp0 %= 35
+            if temp0 == 0
+                object.spikeAmount--
+                CreateTempObject(TypeName[Boss Spike], 0, 0xAC00000, object.rubbleYPos)
+                object[tempObjectPos].xpos += object.xvel
+                if object.xvel > 0
+                    object.xvel -= 0x200000
+                else
+                    object.xvel += 0x200000
+                end if
+            end if
+        end if
+
+        object.timer++
+        if object.timer == 16
+            object.timer = 0
+            CallFunction(FloorControl_SpawnRubble)
+            if object.rubbleTimer > 0
+                object.rubbleTimer--
+            else
+                object.state++
+            end if
+        end if
+        break
+
+    case FLOORCONTROL_ELEC_ARC
+        if object.timer == 30
+            PlaySfx(SfxName[Electricity], false)
+            object.targetFloor = bossCamera.ypos
+            object.targetFloor -= player[SLOT_PLAYER1].ypos
+            object.targetFloor >>= 25
+            if object.currentFloor < object.targetFloor
+                object.currentFloor = object.targetFloor
+                CreateTempObject(TypeName[Electric Arc], 0, boss.xpos, firstElectrode.ypos)
+                temp0 = object.targetFloor
+                temp0 <<= 25
+                temp0 += 0x20000
+                object[tempObjectPos].ypos -= temp0
+                object[tempObjectPos].direction = FACING_LEFT
+                object[tempObjectPos].drawOrder = 4
+            end if
+        end if
+
+        object.timer++
+        if object.timer == 60
+            object.timer = 0
+            object.state++
+        end if
+        break
+
+    case FLOORCONTROL_TILE_SWAP
+        object.timer++
+        if object.timer == 60
+            object.timer = 0
+            object.state++
+            if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+                Copy16x16Tile(739, 827)
+            else
+                Copy16x16Tile(810, 863)
+            end if
+        else
+            temp0 = object.timer
+            temp0 >>= 1
+            temp0 %= 5
+            if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+                temp0 += 826
+                Copy16x16Tile(739, temp0)
+            else
+                temp0 += 862
+                Copy16x16Tile(810, temp0)
+            end if
+        end if
+        break
+
+    case FLOORCONTROL_COOLDOWN
+        object.timer++
+        if object.timer == 420
+            object.timer = 0
+            object.state = FLOORCONTROL_ELEC_ARC
+        end if
+        break
+    end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-16, -16, 32, 32, 1, 143) // #0 - "Script" Icon
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

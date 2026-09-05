@@ -1,0 +1,321 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Spike Ball Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+
+// Can be either X or Y-based, depending on the Object's Property Value
+private alias object.value2 : object.velocity
+
+// Timers
+// (These count towards the "Time" values, at which point states switch)
+private alias object.value0 : object.pauseTimer
+private alias object.value1 : object.moveTimer
+
+// Durations
+// (How long, in frames, the SpikeBall will do the action for)
+private alias object.value4 : object.shootTime
+private alias object.value5 : object.retractTime
+private alias object.value6 : object.pauseTime
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : SPIKEBALL_H_MOVERIGHT
+private alias 1 : SPIKEBALL_H_PAUSERIGHT
+private alias 2 : SPIKEBALL_H_MOVELEFT
+private alias 3 : SPIKEBALL_H_PAUSELEFT
+
+private alias 4 : SPIKEBALL_V_MOVEDOWN
+private alias 5 : SPIKEBALL_V_PAUSEDOWN
+private alias 6 : SPIKEBALL_V_MOVEUP
+private alias 7 : SPIKEBALL_V_PAUSEUP
+
+// Property Values
+private alias 0 : SPIKEBALL_TYPE_H
+private alias 1 : SPIKEBALL_TYPE_V
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+
+	// Horizontal Spike Ball States
+	case SPIKEBALL_H_MOVERIGHT
+		if object.moveTimer < object.shootTime
+			object.moveTimer++
+			object.xpos += object.velocity
+		else
+			object.state++
+		end if
+		break
+
+	case SPIKEBALL_H_PAUSERIGHT
+		if object.pauseTimer < object.pauseTime
+			object.pauseTimer++
+		else
+			object.pauseTimer = 0
+			object.state++
+		end if
+		break
+
+	case SPIKEBALL_H_MOVELEFT
+		if object.moveTimer > object.retractTime
+			object.moveTimer--
+			object.xpos -= object.velocity
+		else
+			object.state++
+		end if
+		break
+
+	case SPIKEBALL_H_PAUSELEFT
+		if object.pauseTimer < object.pauseTime
+			object.pauseTimer++
+		else
+			object.pauseTimer = 0
+			object.state = 0
+		end if
+		break
+
+	// Vertical Spike Ball States
+	case SPIKEBALL_V_MOVEDOWN
+		if object.moveTimer < object.shootTime
+			object.moveTimer++
+			object.ypos += object.velocity
+		else
+			object.state++
+		end if
+		break
+
+	case SPIKEBALL_V_PAUSEDOWN
+		if object.pauseTimer < object.pauseTime
+			object.pauseTimer++
+		else
+			object.pauseTimer = 0
+			object.state++
+		end if
+		break
+
+	case SPIKEBALL_V_MOVEUP
+		if object.moveTimer > object.retractTime
+			object.moveTimer--
+			object.ypos -= object.velocity
+		else
+			object.state++
+		end if
+		break
+
+	case SPIKEBALL_V_PAUSEUP
+		if object.pauseTimer < object.pauseTime
+			object.pauseTimer++
+		else
+			object.pauseTimer = 0
+			object.state = SPIKEBALL_V_MOVEDOWN
+		end if
+		break
+
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			CallFunction(Player_Hit)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Spike Ball Frame
+	SpriteFrame(-16, -16, 32, 32, 1, 199)
+
+	foreach (TypeName[Spike Ball], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == SPIKEBALL_TYPE_V
+			object[arrayPos0].state = SPIKEBALL_V_MOVEDOWN
+
+			switch HUD.currentTimePeriod
+			case TIME_PRESENT
+				object[arrayPos0].velocity    = 0x20000
+				object[arrayPos0].shootTime   = 16
+				object[arrayPos0].retractTime = -16
+				object[arrayPos0].pauseTime   = 40
+				break
+
+			case TIME_PAST
+				object[arrayPos0].velocity    = 0x40000
+				object[arrayPos0].shootTime   = 8
+				object[arrayPos0].retractTime = -8
+				object[arrayPos0].pauseTime   = 60
+				break
+
+			case TIME_GOOD_FUTURE
+			case TIME_BAD_FUTURE
+				object[arrayPos0].velocity    = 0x10000
+				object[arrayPos0].shootTime   = 32
+				object[arrayPos0].retractTime = -32
+				object[arrayPos0].pauseTime   = 20
+				break
+
+			end switch
+		else
+			switch HUD.currentTimePeriod
+			case TIME_PRESENT
+				object[arrayPos0].velocity    = 0x20000
+				object[arrayPos0].shootTime   = 24
+				object[arrayPos0].retractTime = -24
+				object[arrayPos0].pauseTime   = 40
+				break
+
+			case TIME_PAST
+				object[arrayPos0].velocity    = 0x40000
+				object[arrayPos0].shootTime   = 12
+				object[arrayPos0].retractTime = -12
+				object[arrayPos0].pauseTime   = 60
+				break
+
+			case TIME_GOOD_FUTURE
+			case TIME_BAD_FUTURE
+				object[arrayPos0].velocity    = 0x10000
+				object[arrayPos0].shootTime   = 48
+				object[arrayPos0].retractTime = -48
+				object[arrayPos0].pauseTime   = 20
+				break
+
+			end switch
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		CallFunction(EditorHelpers_FindTimePeriod)
+
+		object.inkEffect = INK_BLEND
+
+		if object.propertyValue == SPIKEBALL_TYPE_V
+			switch checkResult
+			case TIME_PRESENT
+				object.velocity    = 0x20000
+				object.shootTime   = 16
+				object.retractTime = -16
+				object.pauseTime   = 40
+				break
+
+			case TIME_PAST
+				object.velocity    = 0x40000
+				object.shootTime   = 8
+				object.retractTime = -8
+				object.pauseTime   = 60
+				break
+
+			case TIME_GOOD_FUTURE
+			case TIME_BAD_FUTURE
+				object.velocity    = 0x10000
+				object.shootTime   = 32
+				object.retractTime = -32
+				object.pauseTime   = 20
+				break
+
+			end switch
+
+			temp0 = object.velocity
+			temp0 *= object.shootTime
+
+			temp1 = object.velocity
+			temp1 *= object.retractTime
+
+			temp0 += object.ypos
+			temp1 += object.ypos
+
+			DrawSpriteFX(0, FX_INK, object.xpos, temp0)
+			DrawSpriteFX(0, FX_INK, object.xpos, temp1)
+
+			DrawLine(object.xpos, temp0, object.xpos, temp1, 255, 255, 255)
+		else
+			switch checkResult
+			case TIME_PRESENT
+				object.velocity    = 0x20000
+				object.shootTime   = 24
+				object.retractTime = -24
+				object.pauseTime   = 40
+				break
+
+			case TIME_PAST
+				object.velocity    = 0x40000
+				object.shootTime   = 12
+				object.retractTime = -12
+				object.pauseTime   = 60
+				break
+
+			case TIME_GOOD_FUTURE
+			case TIME_BAD_FUTURE
+				object.velocity    = 0x10000
+				object.shootTime   = 48
+				object.retractTime = -48
+				object.pauseTime   = 20
+				break
+
+			end switch
+
+			temp0 = object.velocity
+			temp0 *= object.shootTime
+
+			temp1 = object.velocity
+			temp1 *= object.retractTime
+
+			temp0 += object.xpos
+			temp1 += object.xpos
+
+			DrawSpriteFX(0, FX_INK, temp0, object.ypos)
+			DrawSpriteFX(0, FX_INK, temp1, object.ypos)
+
+			DrawLine(temp0, object.ypos, temp1, object.ypos, 255, 255, 255)
+
+		end if
+
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 199)
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Horizontal", SPIKEBALL_TYPE_H)
+	AddEnumVariable("Vertical", SPIKEBALL_TYPE_V)
+end event

@@ -1,0 +1,141 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: BG Swapper Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Layer Aliases, correspond to BG layers in the scene file
+private alias 1 : LAYER_INSIDE
+private alias 2 : LAYER_OUTSIDE
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.propertyValue == 0
+		// Inside to the left of the BG Swapper object, outside to the right
+		if player[SLOT_PLAYER1].xpos > object.xpos
+			stage[0].activeLayer = LAYER_OUTSIDE
+		else
+			stage[0].activeLayer = LAYER_INSIDE
+		end if
+	else
+		if player[SLOT_PLAYER1].xpos > object.xpos
+			stage[0].activeLayer = LAYER_INSIDE
+		else
+			stage[0].activeLayer = LAYER_OUTSIDE
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	// In this setup, we're gonna find what the initial BG should be when starting the level
+	// This is based on seeing what BG Swapper checkpoints the player spawns between
+
+	// temp0 is ixpos of first BG Swapper
+	//    (Default of 64 chunks in)
+	// temp1 is ixpos of last BG Swapper
+	//    (Default of level's start itself)
+	temp0 = 0x4000
+	temp1 = 0
+
+	// (We can use ixpos because the last few bytes of the BG Swapper's position aren't important)
+
+	// Cycle throuh all BG Swapper Objects in the level
+	foreach (TypeName[BG Swapper], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].ixpos < temp0
+			temp0 = object[arrayPos0].ixpos
+		end if
+
+		if object[arrayPos0].ixpos > temp1
+			temp1 = object[arrayPos0].ixpos
+		end if
+
+		object[arrayPos0].priority = PRIORITY_XBOUNDS
+	next
+
+	// Get the Player's truncated xpos
+	// In this case, we can't use ixpos because Player position is too important to shave the last few bits off of
+	temp2 = player[SLOT_PLAYER1].xpos
+	temp2 >>= 16
+
+	// See which BG Swappers the player is inbetween and set the Background accordingly
+	if temp2 > temp0
+		if temp2 > temp1
+			stage[0].activeLayer = LAYER_INSIDE
+		else
+			stage[0].activeLayer = LAYER_OUTSIDE
+		end if
+	else
+		stage[0].activeLayer = LAYER_INSIDE
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Type
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Type
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	editor.drawingOverlay = true
+
+	// draw a cool little line behind the Trigger icon
+	temp0  = object.ypos
+	temp0 -= 0x80000
+
+	DrawRectWorld(object.xpos, temp0, 1, 16, 255, 255, 255, 255)
+
+	editor.drawingOverlay = false
+
+	// and then draw the Trigger icon, atop the line
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 173, 67) // #0 - Trigger icon
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Inside on left, outside on right", 0)
+	AddEnumVariable("Outside on left, inside on right", 1)
+end event

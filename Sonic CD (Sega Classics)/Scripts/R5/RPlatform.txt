@@ -1,0 +1,246 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: R Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.altAngle
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RPlatform_DebugDraw
+reserve function RPlatform_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function RPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function RPlatform_DebugSpawn
+	CreateTempObject(TypeName[R Platform], 5, object.xpos, object.ypos)
+	object[tempObjectPos].state = 1 // Full range
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case 1
+		// Full range version of the Platform, moving counter-clockwise
+		object.angle -= 2
+		if object.angle < 0
+			// Wrap around
+			object.angle += 512
+		end if
+		break
+
+	case 2
+		// Bottom half version of the Platform, swinging around the bottom 180 degrees
+		object.altAngle += 2
+		object.altAngle &= 511
+
+		Sin(object.angle, object.altAngle)
+
+		object.angle >>= 2
+		object.angle += 128
+		break
+
+	case 3
+		// Top half version of the Platform, swinging around the top 180 degrees
+		object.altAngle += 2
+		object.altAngle &= 511
+
+		Sin(object.angle, object.altAngle)
+		FlipSign(object.angle)
+
+		object.angle >>= 2
+		object.angle += 384
+		object.angle &= 511
+		break
+
+	end switch
+
+	// Radius value
+	temp1 = object.propertyValue
+	temp1++
+	temp1 <<= 4
+
+	Cos(object.collisionOffset.x, object.angle)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x <<= 7
+	object.collisionOffset.x += object.xpos
+	object.collisionOffset.x &= -0x10000 // Truncate the value
+	object.collisionOffset.x -= object.drawPos.x
+
+	Sin(object.collisionOffset.y, object.angle)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y <<= 7
+	object.collisionOffset.y += object.ypos
+	object.collisionOffset.y &= -0x10000 // Truncate the value
+	object.collisionOffset.y -= object.drawPos.y
+
+	// Backup the Object's base position
+	temp0 = object.xpos
+	temp1 = object.ypos
+
+	// Move the Object to its Platform's position
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Act as a Platform for the player
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			// Move the Player along with the Platform
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+
+			// The Platform is a Conveyor Belt as well, so move the Player in accordance with that too
+			if conveyorBelt.flag == 0
+				player[currentPlayer].xpos += conveyorBelt.speed
+			else
+				player[currentPlayer].xpos -= conveyorBelt.speed
+			end if
+		end if
+	next
+
+	// And now restore the Object back to its base position
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	// Draw the Post Frame
+	DrawSprite(0)
+
+	// Draw all the Chains
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.propertyValue
+		Cos(temp2, object.angle)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, object.angle)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+
+	Cos(object.drawPos.x, object.angle)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 7
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= -0x10000 // Truncate the value
+
+	Sin(object.drawPos.y, object.angle)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 7
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 1, 1)    // #0 - Post Frame
+	SpriteFrame(-8, -8, 16, 16, 18, 1)   // #1 - Chain Frame
+	SpriteFrame(-32, -8, 64, 16, 1, 208) // #2 - Conveyor Platform Frame
+
+	SetTableValue(TypeName[R Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(RPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(RPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	// Draw the Post Frame
+	DrawSprite(0)
+
+	// Draw all the Chains
+	temp0 = 0
+	temp1 = 16
+	while temp0 < 5
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+
+	Cos(temp2, 128)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+	temp2 &= -0x10000 // Truncate the value
+
+	Sin(temp3, 128)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+	temp3 &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(2, temp2, temp3)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 1, 1)    // #0 - Post Frame
+	SpriteFrame(-8, -8, 16, 16, 18, 1)   // #1 - Chain Frame
+	SpriteFrame(-32, -8, 64, 16, 1, 208) // #2 - Conveyor Platform Frame
+
+	AddEditorVariable("range")
+	SetActiveVariable("range")
+	// 0 technically exists as a "Static" type but it isn't used in the game so
+	AddEnumVariable("Full Rotation", 1)
+	AddEnumVariable("Bottom Half", 2)
+	AddEnumVariable("Top Half", 3)
+end event

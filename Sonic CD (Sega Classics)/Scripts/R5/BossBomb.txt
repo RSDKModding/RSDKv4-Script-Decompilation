@@ -1,0 +1,219 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Bomb Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.xvel
+private alias object.value2 : object.yvel
+private alias object.value3 : object.gravity
+
+// Boss Platform Aliases
+private alias object.value3 : object.beltSpeed
+
+// Player Aliases
+private alias object.value0 : player.timer
+private alias object.state  : player.state
+
+// States
+private alias 0 : BOSSBOMB_CARRIED
+private alias 1 : BOSSBOMB_ACTIVE
+
+// Property Values
+private alias 0 : BOMB
+private alias 1 : BOMB_FRAGMENT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.propertyValue == BOMB
+		// Object is a Bomb
+		if object.state == BOSSBOMB_ACTIVE
+			// Make the Bomb fall at a rate of 2px per frame
+			object.ypos += 0x20000
+
+			// See if the Bomb's touched the ground yet
+			ObjectTileCollision(CSIDE_FLOOR, 0, 10, 0)
+
+			if checkResult == true
+				if object.timer < 4
+					// There's a short delay between hitting the ground and actually exploding
+					object.timer++
+				else
+					PlaySfx(SfxName[Impact1], false)
+
+					// Now that the Bomb's supposed to explode, create all of the Bomb Fragments
+
+					// Create the first Bomb Fragment, with starting values of:
+					// - Offset of 4px left, 4px up
+					// - XVelocity of 0.625px left per frame
+					// - YVelocity of 4px up per frame
+					// - Gravity acceleration of 0.1875px
+					CreateTempObject(TypeName[Boss Bomb], BOMB_FRAGMENT, object.xpos, object.ypos)
+					object[tempObjectPos].xpos -= 0x40000
+					object[tempObjectPos].ypos -= 0x40000
+					object[tempObjectPos].xvel = -0xA000
+					object[tempObjectPos].yvel = -0x40000
+					object[tempObjectPos].gravity = 0x3000
+
+					// And then the next Fragment, with initial values of:
+					// - Offset of 4px right, 4px up
+					// - XVelocity of 0.625px right per frame
+					// - YVelocity of 4px up per frame
+					// - Gravity acceleration of 0.1875px
+					CreateTempObject(TypeName[Boss Bomb], BOMB_FRAGMENT, object.xpos, object.ypos)
+					object[tempObjectPos].xpos += 0x40000
+					object[tempObjectPos].ypos -= 0x40000
+					object[tempObjectPos].xvel = 0xA000
+					object[tempObjectPos].yvel = -0x40000
+					object[tempObjectPos].gravity = 0x3000
+
+					// And another!
+					// This one's initial values are:
+					// - Offset of 4px left, 4px down
+					// - XVelocity of 1.25px left per frame
+					// - YVelocity of 2.25px up per frame
+					// - Gravity acceleration of 0.09375px
+					CreateTempObject(TypeName[Boss Bomb], BOMB_FRAGMENT, object.xpos, object.ypos)
+					object[tempObjectPos].xpos -= 0x40000
+					object[tempObjectPos].ypos += 0x40000
+					object[tempObjectPos].xvel = -0x14000
+					object[tempObjectPos].yvel = -0x24000
+					object[tempObjectPos].gravity = 0x1800
+
+					// Last but certainly not least, give this final Fragment
+					// some pretty good starting values of:
+					// - Offset of 4px right, 4px down
+					// - XVelocity of 1.25px left per frame
+					// - YVelocity of 2.25px up per frame
+					// - Gravity acceleration of 0.09375px
+					CreateTempObject(TypeName[Boss Bomb], BOMB_FRAGMENT, object.xpos, object.ypos)
+					object[tempObjectPos].xpos += 0x40000
+					object[tempObjectPos].ypos += 0x40000
+					object[tempObjectPos].xvel = 0x14000
+					object[tempObjectPos].yvel = -0x24000
+					object[tempObjectPos].gravity = 0x1800
+
+					// This main Boss Bomb Object doesn't actually explode and unload -
+					// instead, upon landing on the ground and exploding, it resets itself
+					// and the same Object is used for future explosions
+
+					object.state = BOSSBOMB_CARRIED
+					object.timer = 0
+
+					// Return back to the Boss Top's Position
+					object.xpos = object[+2].xpos
+					object.ypos = object[+2].ypos
+				end if
+			end if
+		end if
+	else
+		// Bomb Fragment
+
+		// Update the Fragment's horizontal movements
+		object.xpos += object.xvel
+
+		// Apply Gravity to the Fragment
+		// -> Each piece has different Gravity values, which is why
+		//    this is an Object Value and not a constant value
+		object.yvel += object.gravity
+
+		// And then, actually apply Y movement
+		object.ypos += object.yvel
+
+		if object.outOfBounds == true
+			// If no longer needed, unload the Object
+			object.type = TypeName[Blank Object]
+		end if
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.state == BOSSBOMB_ACTIVE
+			// Check Interaction with the Player
+			BoxCollisionTest(C_TOUCH, object.entityPos, -10, -10, 10, 10, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				// Explode if the Player's timer is 0
+				if player[currentPlayer].timer == 0
+					object.state = BOSSBOMB_CARRIED
+
+					// Explode, creating the Explosion as a Temp Object rather than in this Object
+					// slot because the Bomb should remain
+					CreateTempObject(TypeName[Explosion], 0, object.xpos, object.ypos)
+
+					// Move the Bomb back to the Boss Top's Position
+					object.xpos = object[+2].xpos
+					object.ypos = object[+2].ypos
+
+					PlaySfx(SfxName[Explosion], false)
+				end if
+
+				// And now, only after checking the Player's rings, see if we should hurt the Player
+				CallFunction(Player_Hit)
+
+				// If the Player was indeed hurt...
+				if player[currentPlayer].state == Player_State_GotHit
+					// ...then reset the Boss Platform's Speed Value
+					object[+5].beltSpeed = 0xC000
+				end if
+			end if
+		else
+			if object.propertyValue == BOMB_FRAGMENT
+				BoxCollisionTest(C_TOUCH, object.entityPos, -7, -7, 7, 7, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					// Similarly to above
+					if player[currentPlayer].timer == 0
+						object.state = BOSSBOMB_CARRIED
+						CreateTempObject(TypeName[Explosion], 0, object.xpos, object.ypos)
+						object.type = TypeName[Blank Object]
+						PlaySfx(SfxName[Explosion], false)
+					end if
+
+					CallFunction(Player_Hit)
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.propertyValue)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R5/Objects2.gif")
+
+	// Bomb Frame
+	SpriteFrame(-12, -12, 24, 24, 75, 113)
+
+	// Bomb Fragment Frame
+	SpriteFrame(-8, -8, 16, 16, 131, 138)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R5/Objects2.gif")
+	SpriteFrame(-12, -12, 24, 24, 75, 113)
+
+	// Although used by the Object, only the normal Boss Bomb Object should ever be placed in a scene
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

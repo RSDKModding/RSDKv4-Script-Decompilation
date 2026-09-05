@@ -1,0 +1,314 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Amy Rose Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.frameTimer
+private alias object.value1 : object.leftLimit
+private alias object.value2 : object.rightLimit
+private alias object.value4 : object.heartTimer
+
+// Metal Sonic Aliases
+private alias object[+1].value0   : metal.timer
+private alias object[+1].state    : metal.state
+private alias object[+1].priority : metal.priority
+
+// Player Aliases
+private alias object.type : player.type
+private alias object.xpos : player.xpos
+
+// States
+private alias 0 : AMY_IDLE
+private alias 1 : AMY_CHASE
+private alias 2 : AMY_AWAIT_RIGHT
+private alias 3 : AMY_AWAIT_LEFT
+private alias 4 : AMY_KIDNAP // Set by MetalSonic
+
+// Metal Sonic States
+private alias 0 : METALSONIC_WAIT
+private alias 1 : METALSONIC_APPROACH
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.priority = PRIORITY_ACTIVE
+
+    if player[SLOT_PLAYER1].xpos < object.xpos
+        object.direction = FACING_LEFT
+    else
+        object.direction = FACING_RIGHT
+    end if
+
+    switch object.state
+    case AMY_IDLE
+        temp0 = object.frameTimer
+        temp0 /= 10
+        temp0 += 11
+        object.frame = temp0
+
+        object.frameTimer++
+        if object.frameTimer > 139
+            object.frameTimer = 0
+        end if
+
+        if player[SLOT_PLAYER1].type != TypeName[Debug Mode]
+            BoxCollisionTest(C_TOUCH, object.entityPos, -96, -360, 96, 360, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.xvel = 0
+                object.state = AMY_CHASE
+                object.frame = 4
+                object.frameTimer = 0
+            end if
+        end if
+        break
+
+    case AMY_CHASE
+        object.frameTimer++
+
+        switch object.frame
+        case 4
+        case 6
+            if object.frameTimer == 4
+                object.frameTimer = 0
+                object.frame++
+            end if
+            break
+
+        case 5
+        case 7
+            if object.frameTimer == 3
+                object.frameTimer = 0
+                object.frame++
+            end if
+            break
+
+        end switch
+
+        if object.frame > 7
+            object.frame = 4
+        end if
+
+        if object.direction == FACING_RIGHT
+            if object.xvel < 0x20000
+                object.xvel += 0x2000
+            end if
+
+            if object.xpos < object.rightLimit
+                object.xpos += object.xvel
+            else
+                object.xvel = 0
+                object.xpos = object.rightLimit
+                object.state = AMY_AWAIT_RIGHT
+                object.frame = 0
+                object.frameTimer = 0
+            end if
+        else
+            if object.xvel > -0x20000
+                object.xvel -= 0x2000
+            end if
+
+            if object.xpos > object.leftLimit
+                object.xpos += object.xvel
+            else
+                object.xvel = 0
+                object.xpos = object.leftLimit
+                object.state = AMY_AWAIT_LEFT
+                object.frame = 0
+                object.frameTimer = 0
+            end if
+        end if
+        break
+
+    case AMY_AWAIT_RIGHT
+        object.frameTimer++
+        if object.frameTimer == 12
+            object.frameTimer = 0
+            object.frame++
+        end if
+
+        if object.frame > 3
+            object.frame = 0
+        end if
+
+        if metal.state == METALSONIC_WAIT
+            if metal.timer < 60
+                metal.timer++
+            else
+                metal.timer = 0
+                metal.state = METALSONIC_APPROACH
+                metal.priority = PRIORITY_ACTIVE
+            end if
+        end if
+        break
+
+    case AMY_AWAIT_LEFT
+        object.frameTimer++
+        if object.frameTimer == 12
+            object.frameTimer = 0
+            object.frame++
+        end if
+
+        if object.frame > 3
+            object.frame = 0
+        end if
+
+        if object.direction == FACING_RIGHT
+            object.state = AMY_CHASE
+            object.frame = 4
+            object.frameTimer = 0
+        end if
+        break
+
+    case AMY_KIDNAP
+        object.frameTimer++
+        if object.frameTimer > 13
+            object.frameTimer = 0
+            object.frame++
+            if object.frame > 9
+                object.frame = 8
+            end if
+        end if
+        break
+
+    end switch
+
+    object.heartTimer++
+    if object.state < AMY_KIDNAP
+        if object.heartTimer > 41
+            CreateTempObject(TypeName[Love Heart], 0, object.xpos, object.ypos)
+            object[tempObjectPos].iypos -= 6
+            object[tempObjectPos].inkEffect = INK_ALPHA
+            object[tempObjectPos].alpha = 255
+            object.heartTimer = 0
+        end if
+    end if
+
+    if object.gravity == GRAVITY_GROUND
+        ObjectTileGrip(CSIDE_FLOOR, 0, 19, 0)
+    else
+        object.yvel += 0x4000
+        object.ypos += object.yvel
+        ObjectTileCollision(CSIDE_FLOOR, 0, 19, 0)
+        if checkResult == true
+            object.yvel = 0
+            object.gravity = GRAVITY_GROUND
+        end if
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects3.gif")
+
+    foreach (TypeName[Amy Rose], arrayPos0, ALL_ENTITIES)
+        CheckEqual(warp.xpos, 0)
+        temp0 = checkResult
+
+        CheckLower(lampPostID, 32)
+        temp0 &= checkResult
+
+        CheckEqual(stage.playerListPos, PLAYER_SONIC_A)
+        temp0 &= checkResult
+
+        CheckLower(options.gameMode, MODE_TIMEATTACK)
+        temp0 &= checkResult
+
+        if temp0 == 1
+            object[arrayPos0].state = AMY_AWAIT_LEFT
+            object[arrayPos0].leftLimit  = 0x780000
+            object[arrayPos0].rightLimit = 0x3BC0000
+            object[arrayPos0].drawOrder = 4
+        else
+			// Remove Amy
+            object[arrayPos0].type = TypeName[Blank Object]
+            arrayPos0++
+
+			// Remove Metal
+            object[arrayPos0].type = TypeName[Blank Object]
+            arrayPos0++
+
+			// Remove Spikes
+            object[arrayPos0].type = TypeName[Blank Object]
+            arrayPos0++
+
+            object[arrayPos0].type = TypeName[Blank Object]
+            arrayPos0++
+
+            object[arrayPos0].type = TypeName[Blank Object]
+        end if
+    next
+
+	// Idle
+    SpriteFrame(-11, -20, 22, 40, 34, 208)  // #0  - Amy Idle Frame 0
+    SpriteFrame(-11, -20, 22, 40, 57, 208)  // #1  - Amy Idle Frame 1
+    SpriteFrame(-11, -20, 22, 40, 34, 208)  // #2  - Amy Idle Frame 2
+    SpriteFrame(-11, -20, 22, 40, 126, 167) // #3  - Amy Idle Frame 3
+
+	// Walking
+    SpriteFrame(-15, -20, 30, 40, 68, 167)  // #4  - Amy Walking Frame 0
+    SpriteFrame(-10, -20, 21, 40, 206, 208) // #5  - Amy Walking Frame 1
+    SpriteFrame(-13, -20, 26, 40, 99, 167)  // #6  - Amy Walking Frame 2
+    SpriteFrame(-10, -20, 21, 40, 206, 208) // #7  - Amy Walking Frame 3
+
+	// Kidnapped
+    SpriteFrame(0, -16, 24, 40, 1, 170)     // #8  - Amy Kidnap Frame 0
+    SpriteFrame(0, -16, 24, 40, 1, 211)     // #9  - Amy Kidnap Frame 1
+
+	// Jumping
+    SpriteFrame(-12, -20, 24, 40, 107, 208) // #10 - Amy Jumping Frame 1
+
+	// Looking for Sonic
+	// Amy Looking Frame "0"
+    SpriteFrame(-12, -20, 22, 40, 158, 208)
+    SpriteFrame(-12, -20, 22, 40, 158, 208)
+    SpriteFrame(-12, -20, 22, 40, 158, 208)
+    SpriteFrame(-12, -20, 22, 40, 158, 208)
+    SpriteFrame(-12, -20, 22, 40, 158, 208)
+
+	// Amy Looking Frame "1"
+    SpriteFrame(-14, -20, 25, 40, 132, 208)
+    SpriteFrame(-14, -20, 25, 40, 132, 208)
+    SpriteFrame(-14, -20, 25, 40, 132, 208)
+
+	// Amy Looking Frame "2"
+    SpriteFrame(-12, -20, 22, 40, 158, 208)
+    SpriteFrame(-12, -20, 22, 40, 158, 208)
+    SpriteFrame(-12, -20, 22, 40, 158, 208)
+
+	// Amy Looking Frame "3"
+    SpriteFrame(-14, -20, 25, 40, 132, 208)
+    SpriteFrame(-14, -20, 25, 40, 132, 208)
+    SpriteFrame(-14, -20, 25, 40, 132, 208)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	object.direction = FACING_LEFT
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R3/Objects3.gif")
+	SpriteFrame(-11, -20, 22, 40, 34, 208) // #0  - Amy Idle Frame 0
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

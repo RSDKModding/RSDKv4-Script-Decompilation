@@ -1,0 +1,158 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Rise Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.stood
+private alias object.value1 : object.timer
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.originPos.y
+private alias object.value4 : object.riseTimer
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// States
+private alias 0 : RISEPLATFORM_IDLE
+private alias 1 : RISEPLATFORM_CRUMBLE
+private alias 2 : RISEPLATFORM_RISE
+private alias 3 : RISEPLATFORM_FLOAT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case RISEPLATFORM_IDLE
+		object.collisionOffset.y = 0
+		if object.stood == true
+			object.state = RISEPLATFORM_CRUMBLE
+			object.priority = PRIORITY_ACTIVE
+			object.yvel = -0x40000
+			object.riseTimer = 0
+		end if
+		break
+
+	case RISEPLATFORM_CRUMBLE
+		object.collisionOffset.y = 0
+		if object.riseTimer < 8
+			object.riseTimer++
+		else
+			object.riseTimer = 0
+			object.state = RISEPLATFORM_RISE
+		end if
+
+		if object.outOfBounds == true
+			object.ypos = object.originPos.y
+			object.state = RISEPLATFORM_IDLE
+			object.timer = 0
+		end if
+		break
+
+	case RISEPLATFORM_RISE
+		if object.yvel < 0
+			object.yvel += 0x2000
+		else
+			object.state = RISEPLATFORM_FLOAT
+			object.yvel = 0
+		end if
+
+		object.collisionOffset.y = 0
+
+		if object.outOfBounds == true
+			object.ypos = object.originPos.y
+			object.state = RISEPLATFORM_IDLE
+			object.timer = 0
+		end if
+		break
+
+	case RISEPLATFORM_FLOAT
+		if object.stood == true
+			if object.timer < 16
+				object.timer++
+				temp0 = object.timer
+				temp0 &= 3
+				if temp0 == 3
+					object.collisionOffset.y = 0x10000
+				else
+					object.collisionOffset.y = 0
+				end if
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			if object.timer > 0
+				object.timer--
+				temp0 = object.timer
+				temp0 &= 3
+				if temp0 == 3
+					object.collisionOffset.y = -0x10000
+				else
+					object.collisionOffset.y = 0
+				end if
+			else
+				object.collisionOffset.y = 0
+			end if
+		end if
+
+		if object.outOfBounds == true
+			object.ypos = object.originPos.y
+			object.state = RISEPLATFORM_IDLE
+			object.timer = 0
+		end if
+		break
+	end switch
+
+	object.stood = false
+	object.ypos += object.yvel
+	
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -9, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			object.stood = true
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+
+	object.ypos += object.collisionOffset.y
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 101, 109) // #0 - Rise Platform
+
+	foreach (TypeName[Rise Platform], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].originPos.y = object[arrayPos0].ypos
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 101, 109) // #0 - Rise Platform
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

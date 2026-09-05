@@ -1,0 +1,88 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tails Barrier Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.xpos           : player.xpos
+private alias object.xvel           : player.xvel
+private alias object.speed          : player.speed
+private alias object.collisionLeft  : player.collisionLeft
+private alias object.collisionRight : player.collisionRight
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        // This collision box is only for the first layer
+        if pathSwap.flag == 0
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                // The player is to the left of the barrier, push the player out to the left
+                if player[currentPlayer].xpos < object.xpos
+                    player[currentPlayer].xpos = player[currentPlayer].collisionLeft
+                    player[currentPlayer].xpos <<= 16
+                    player[currentPlayer].xpos += object.xpos
+                    player[currentPlayer].xpos -= 0x100000 // moving the player 16 pixels left
+                else
+                    // Player's to the right of the barrier, puch them to the right instead
+                    player[currentPlayer].xpos = player[currentPlayer].collisionRight
+                    player[currentPlayer].xpos <<= 16
+                    player[currentPlayer].xpos += object.xpos
+                    player[currentPlayer].xpos += 0x100000 // move the player 16 pixels right
+                end if
+
+                player[currentPlayer].speed = 0
+                player[currentPlayer].xvel  = 0
+            end if
+        end if
+    next
+end event
+
+
+event ObjectStartup
+    if stage.playerListPos == PLAYER_SONIC_A
+        // I have no idea what this is doing to be honest
+        // It's formatted like an object setup but... there's no setup actually happening...
+        // And the fact it's only for Sonic too for whatever reason... certainly strange
+        arrayPos0 = 32
+        while arrayPos0 < 1056
+            // something???
+            // Given that the name of the object is "*Tails* Barrier" though, perhaps it was just gonna unload itself here?
+            arrayPos0++
+        loop
+    end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+    
+    // Draw the hitbox for the object
+
+    temp0 = object.ixpos
+    temp0 -= 16
+    temp1 = object.iypos
+    temp1 -= 14
+    DrawRectOutline(temp0, temp1, 32, 30, 255, 255, 255, 255)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-16, -14, 32, 30, 1, 145) // "Script" Icon - I don't feel like it's an ideal fit here, but I can't think of anything else...
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

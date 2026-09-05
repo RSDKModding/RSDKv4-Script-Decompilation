@@ -1,0 +1,172 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: H Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.collisionOffset.x
+
+// Player Aliases
+private alias object.state : player.state
+private alias object.xpos  : player.xpos
+
+// Property Values
+private alias 0 : START_MOVING_LEFT
+private alias 1 : START_MOVING_RIGHT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.angle = oscillation
+    object.angle <<= 1
+    if object.propertyValue == START_MOVING_RIGHT
+        object.angle += 256
+    end if
+
+    Sin(object.collisionOffset.x, object.angle)
+    object.collisionOffset.x <<= 13
+    object.collisionOffset.x += object.xpos
+    object.collisionOffset.x &= -0x10000 // Truncate the value
+    object.collisionOffset.x -= object.drawPos.x
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        temp0 = object.xpos
+        object.xpos = object.drawPos.x
+        BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -12, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[currentPlayer].xpos += object.collisionOffset.x
+            if player[currentPlayer].state == Player_State_SpinningTop
+                player[currentPlayer].state = Player_State_Ground
+            end if
+        end if
+
+        object.xpos = temp0
+    next
+end event
+
+
+event ObjectDraw
+    Sin(object.drawPos.x, object.angle)
+    object.drawPos.x <<= 13
+    object.drawPos.x += object.xpos
+    object.drawPos.x &= -0x10000 // Truncate the value
+    DrawSpriteXY(0, object.drawPos.x, object.ypos)
+    DrawSpriteXY(1, object.drawPos.x, object.ypos)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-24, -16, 48, 32, 1, 84)  // #0 - Horizontal Platform
+    SpriteFrame(-8, 16, 16, 16, 35, 117)  // #1 - Platform Light
+
+    foreach (TypeName[H Platform], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].drawOrder = 4
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		case 0 // startDir
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		case 0 // startDir
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(1)
+
+    switch object.propertyValue
+    case START_MOVING_LEFT
+        temp1 = 255
+        temp2 = 255
+        temp3 = 128
+        temp4 = 0
+        break
+
+    case START_MOVING_RIGHT
+        temp1 = 128
+        temp2 = 0
+        temp3 = 255
+        temp4 = 255
+        break
+    end switch
+
+    temp0 = object.xpos
+    temp0 -= 0x490000
+    temp5 = object.ypos
+    temp5 -= 0x100000
+    if object.propertyValue == START_MOVING_LEFT
+        DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, temp3, temp4, 0)
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            DrawRectOutline(temp0, temp5, 0x90, 0x30, 255, 255, 255, 255)
+            temp0 = object.xpos
+            temp0 += 0x490000
+            DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, temp1, temp2, 0)
+            editor.drawingOverlay = false
+        end if
+    else
+        temp0 = object.xpos
+        temp0 += 0x490000
+        DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, temp1, temp2, 0)
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp0 = object.xpos
+            temp0 -= 0x490000
+            DrawRectOutline(temp0, temp5, 0x90, 0x30, 255, 255, 255, 255)
+            DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, temp3, temp4, 0)
+            editor.drawingOverlay = false
+        end if
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-24, -16, 48, 32, 1, 84)  // #0 - Horizontal Platform
+    SpriteFrame(-8, 16, 16, 16, 35, 117)  // #1 - Platform Light
+
+    AddEditorVariable("startDir")
+    SetActiveVariable("startDir")
+    AddEnumVariable("Left", START_MOVING_LEFT)
+    AddEnumVariable("Right", START_MOVING_RIGHT)
+end event

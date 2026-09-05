@@ -1,0 +1,331 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Seesaw Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.spikeBallYPos
+private alias object.value4 : object.spikeBallFrame
+private alias object.value5 : object.seesawFrame
+private alias object.value6 : object.stood
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// States
+private alias 0 : SEESAW_IDLE
+private alias 1 : SEESAW_SWING_DOWN
+private alias 2 : SEESAW_SWING_UP
+private alias 3 : SEESAW_SPIKEBALL_LAND
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case SEESAW_SWING_DOWN
+        switch object.seesawFrame
+        case 0
+            if object.timer < 2
+                object.timer++
+            else
+                object.timer = 0
+                object.seesawFrame++
+                object.collisionOffset.y = 0x100000
+            end if
+            break
+
+        case 1
+            if object.timer < 6
+                object.timer++
+                object.frame = 1
+            else
+                object.timer = 0
+                object.seesawFrame++
+                object.collisionOffset.y = 0x100000
+            end if
+            break
+
+        case 2
+            if object.timer < 6
+                object.timer++
+                object.frame = 2
+            else
+                object.timer = 0
+                object.seesawFrame++
+                object.collisionOffset.y = 0x180000
+            end if
+            break
+
+        case 3
+            if object.timer < 6
+                object.timer++
+                object.frame = 3
+            else
+                object.timer = 0
+                object.seesawFrame++
+                object.collisionOffset.y = 0x100000
+            end if
+            break
+
+        case 4
+            if object.timer < 11
+                object.timer++
+                object.frame = 4
+            else
+                object.timer = 0
+                object.seesawFrame++
+            end if
+            break
+
+        case 5
+            if object.stood == false
+                object.state = SEESAW_SWING_UP
+                object.seesawFrame = 0
+            end if
+            break
+
+        end switch
+
+        object.spikeBallYPos += object.yvel
+        object.yvel += 0x4000
+        temp0 = object.ypos
+        temp0 += 0x40000
+        if object.spikeBallYPos > temp0
+            object.spikeBallYPos = temp0
+            object.frame = 4
+            object.state = SEESAW_SPIKEBALL_LAND
+        end if
+
+        if object.yvel > 0
+            object.spikeBallFrame = 12
+        else
+            if object.yvel > -0x90000
+                object.spikeBallFrame = 11
+            end if
+        end if
+        break
+
+    case SEESAW_SWING_UP
+        switch object.seesawFrame
+        case 0
+            if object.timer < 11
+                object.frame = 3
+                object.timer++
+            else
+                object.timer = 0
+                object.seesawFrame++
+            end if
+            break
+
+        case 1
+            if object.timer < 11
+                object.frame = 2
+                object.timer++
+            else
+                object.timer = 0
+                object.seesawFrame++
+            end if
+            break
+
+        case 2
+            if object.timer < 11
+                object.frame = 1
+                object.timer++
+            else
+                object.timer = 0
+                object.seesawFrame++
+            end if
+            break
+
+        case 3
+            if object.timer < 11
+                object.frame = 2
+                object.timer++
+            else
+                object.timer = 0
+                object.seesawFrame = 0
+            end if
+            break
+
+        end switch
+
+        object.spikeBallYPos += object.yvel
+        object.yvel += 0x4000
+        temp0 = object.ypos
+        temp0 += 0x40000
+        if object.spikeBallYPos > temp0
+            object.spikeBallYPos = temp0
+            object.frame = 4
+            object.state = SEESAW_SPIKEBALL_LAND
+        end if
+
+        if object.yvel > 0
+            object.spikeBallFrame = 12
+        else
+            if object.yvel > -0x90000
+                object.spikeBallFrame = 11
+            end if
+        end if
+
+        if object.stood == true
+            object.state = SEESAW_SWING_DOWN
+            object.timer = 0
+            object.seesawFrame = object.frame
+        end if
+        break
+
+    end switch
+
+    object.stood = false
+
+    if object.outOfBounds == true
+        object.state = SEESAW_IDLE
+        object.spikeBallYPos = object.ypos
+        object.spikeBallFrame = 10
+        object.frame = 0
+        object.timer = 0
+        object.seesawFrame = 0
+        object.collisionOffset.y = 0
+        object.priority = PRIORITY_BOUNDS
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state == SEESAW_IDLE
+            BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -56, 40, -36, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.state = SEESAW_SWING_DOWN
+                object.priority = PRIORITY_ACTIVE
+                object.yvel = -0xC0000
+            end if
+        else
+            switch object.frame
+            case 0
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -56, 40, -36, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                break
+
+            case 1
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -40, 40, -20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                break
+
+            case 2
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -24, 40, -4, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                break
+
+            case 3
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -40, 0, 40, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                break
+
+            case 4
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -40, 16, 40, 36, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                break
+
+            end switch
+
+            if object.state < SEESAW_SPIKEBALL_LAND
+                if checkResult == true
+                    object.stood = true
+                    if object.collisionOffset.y > 0
+                        player[currentPlayer].ypos += object.collisionOffset.y
+                        object.collisionOffset.y = 0
+                        object.frame++
+                    end if
+                end if
+            end if
+
+            if object.spikeBallFrame > 11
+                temp0 = object.ypos
+                object.ypos = object.spikeBallYPos
+                BoxCollisionTest(C_TOUCH, object.entityPos, -24, -24, 24, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    CallFunction(Player_Hit)
+                end if
+                object.ypos = temp0
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    if object.drawOrder == 3
+        if object.spikeBallFrame < 11
+            DrawSpriteXY(object.spikeBallFrame, object.xpos, object.spikeBallYPos)
+            DrawSprite(object.frame)
+            DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+        else
+            DrawSprite(object.frame)
+            DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+            DrawSpriteXY(object.spikeBallFrame, object.xpos, object.spikeBallYPos)
+        end if
+
+        SetDrawListEntityRef(object.entityPos, 4, screen[4].drawListSize)
+        screen[4].drawListSize++
+        object.drawOrder = 4
+    else
+        temp0 = object.frame
+        temp0 += 5
+        DrawSprite(temp0)
+        object.drawOrder = 3
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects.gif")
+
+    SpriteFrame(-40, -56, 40, 112, 66, 1)   // #0  - SeeSaw
+    SpriteFrame(-40, -40, 40, 96, 107, 1)   // #1  - SeeSaw BG move frame 0
+    SpriteFrame(-24, -24, 24, 80, 123, 17)  // #2  - SeeSaw BG move frame 1
+    SpriteFrame(-40, -32, 40, 88, 148, 1)   // #3  - SeeSaw BG move frame 2
+    SpriteFrame(-40, -40, 40, 96, 189, 1)   // #4  - SeeSaw BG move frame 3
+
+    SpriteFrame(-40, -56, 80, 24, 175, 98)  // #5  - SeeSaw front platform Top
+    SpriteFrame(-40, -40, 80, 24, 175, 98)  // #6  - SeeSaw front platform Middle Top
+    SpriteFrame(-40, -24, 80, 24, 175, 98)  // #7  - SeeSaw front platform Middle
+    SpriteFrame(-40, 0, 80, 24, 175, 98)    // #8  - SeeSaw front platform Middle Bottom
+    SpriteFrame(-40, 16, 80, 24, 175, 98)   // #9  - SeeSaw front platform Bottom
+
+    SpriteFrame(-16, -16, 32, 32, 1, 213)   // #10 - SpikeBall BG
+    SpriteFrame(-24, -24, 48, 48, 1, 164)   // #11 - SpikeBall halfway
+    SpriteFrame(-28, -32, 56, 64, 1, 99)    // #12 - SpikeBall FG
+
+    foreach (TypeName[Seesaw], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].direction = FACING_LEFT
+        object[arrayPos0].spikeBallYPos = object[arrayPos0].ypos
+        object[arrayPos0].spikeBallFrame = 10
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    object.direction = FACING_LEFT
+    DrawSpriteXY(2, object.xpos, object.ypos)
+    DrawSprite(0)
+    DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+    DrawSprite(1)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects.gif")
+
+    SpriteFrame(-40, -56, 40, 112, 66, 1)   // #0 - SeeSaw
+    SpriteFrame(-40, -56, 80, 24, 175, 98)  // #1 - SeeSaw front platform Top
+    SpriteFrame(-16, -16, 32, 32, 1, 213)   // #2 - SpikeBall BG
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

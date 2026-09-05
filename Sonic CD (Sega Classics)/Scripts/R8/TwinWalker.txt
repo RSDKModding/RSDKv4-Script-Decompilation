@@ -1,0 +1,264 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Twin Walker Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+private alias object.value6 : object.originPos.x
+private alias object.value7 : object.originPos.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// States
+private alias 0 : TWINWALKER_IDLE
+private alias 1 : TWINWALKER_STEP
+private alias 2 : TWINWALKER_RESET
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.outOfBounds == true
+		object.state = TWINWALKER_RESET
+
+		object.xpos = object.originPos.x
+		object.ypos = object.originPos.y
+
+		object.drawPos.x = object.originPos.x
+		object.drawPos.x -= 0x400000
+
+		object.drawPos.y = object.originPos.y
+
+		object.angle = 256
+	end if
+
+	switch object.state
+	case TWINWALKER_IDLE
+		Cos(object.collisionOffset.x, object.angle)
+		object.collisionOffset.x *= 0x2000
+		object.collisionOffset.x += object.xpos
+		object.collisionOffset.x &= -0x10000 // Truncate the value
+		object.collisionOffset.x -= object.drawPos.x
+
+		Sin(object.collisionOffset.y, object.angle)
+		object.collisionOffset.y *= 0x2000
+		object.collisionOffset.y += object.ypos
+		object.collisionOffset.y &= -0x10000 // Truncate the value
+		object.collisionOffset.y -= object.drawPos.y
+		break
+
+	case TWINWALKER_STEP
+		object.angle += 4
+		object.angle &= 511
+
+		Cos(object.collisionOffset.x, object.angle)
+		object.collisionOffset.x *= 0x2000
+		object.collisionOffset.x += object.xpos
+		object.collisionOffset.x &= -0x10000 // Truncate the value
+
+		Sin(object.collisionOffset.y, object.angle)
+		object.collisionOffset.y *= 0x2000
+		object.collisionOffset.y += object.ypos
+		object.collisionOffset.y &= -0x10000 // Truncate the value
+
+		temp0 = object.xpos
+		temp1 = object.ypos
+
+		object.xpos = object.collisionOffset.x
+		object.ypos = object.collisionOffset.y
+
+		ObjectTileCollision(CSIDE_FLOOR, 0, 40, 0)
+		if checkResult == true
+			object.drawPos.x = temp0
+			object.drawPos.y = temp1
+
+			object.collisionOffset.x = 0
+			object.collisionOffset.y = 0
+
+			object.angle += 252
+			object.angle &= 511
+			Cos(temp0, object.angle)
+			temp0 *= 0x2000
+			temp0 += object.xpos
+			temp0 &= -0x10000 // Truncate the value
+			temp0 -= object.drawPos.x
+
+			object.xpos -= temp0
+			object.state = TWINWALKER_IDLE
+		else
+			object.xpos = temp0
+			object.ypos = temp1
+
+			object.collisionOffset.x -= object.drawPos.x
+			object.collisionOffset.y -= object.drawPos.y
+		end if
+		break
+
+	case TWINWALKER_RESET
+		if object.outOfBounds == true
+			object.state = TWINWALKER_IDLE
+			object.priority = PRIORITY_BOUNDS
+		end if
+		break
+
+	end switch
+
+	if object.state < TWINWALKER_RESET
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -40, 24, -24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			
+			temp0 = object.xpos
+			temp1 = object.ypos
+
+			object.xpos = object.drawPos.x
+			object.ypos = object.drawPos.y
+
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -40, 24, -24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				player[currentPlayer].xpos += object.collisionOffset.x
+				player[currentPlayer].ypos += object.collisionOffset.y
+
+				temp2 = object.drawPos.x
+				temp2 -= object.originPos.x
+				if temp2 < 0x2800000
+					if object.state == TWINWALKER_IDLE
+						object.state = TWINWALKER_STEP
+						object.priority = PRIORITY_ACTIVE
+					end if
+				end if
+			end if
+
+			object.xpos = temp0
+			object.ypos = temp1
+		next
+	end if
+end event
+
+
+event ObjectDraw
+	if object.state < TWINWALKER_RESET
+		temp1 = 64
+
+		Cos(object.drawPos.x, object.angle)
+		object.drawPos.x *= temp1
+		object.drawPos.x <<= 7
+		object.drawPos.x += object.xpos
+		object.drawPos.x &= -0x10000 // Truncate the value
+		
+		Sin(object.drawPos.y, object.angle)
+		object.drawPos.y *= temp1
+		object.drawPos.y <<= 7
+		object.drawPos.y += object.ypos
+		object.drawPos.y &= -0x10000 // Truncate the value
+
+		DrawSpriteXY(0, object.drawPos.x, object.drawPos.y)
+		DrawSpriteXY(1, object.drawPos.x, object.drawPos.y)
+		DrawSprite(0)
+		DrawSprite(1)
+
+		temp0 = 0
+		temp1 = 8
+		while temp0 < 7
+			Cos(temp2, object.angle)
+			temp2 *= temp1
+			temp2 <<= 7
+			temp2 += object.xpos
+			temp2 &= -0x10000 // Truncate the value
+
+			Sin(temp3, object.angle)
+			temp3 *= temp1
+			temp3 <<= 7
+			temp3 += object.ypos
+			temp3 &= -0x10000 // Truncate the value
+			
+			DrawSpriteXY(1, temp2, temp3)
+			temp0++
+			temp1 += 8
+		loop
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-24, -40, 48, 80, 51, 1) // #0 - Twin Walker Leg
+	SpriteFrame(-4, -4, 8, 8, 19, 67)    // #1 - Twin Walker Chain
+
+	foreach (TypeName[Twin Walker], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].drawPos.x = object[arrayPos0].xpos
+		object[arrayPos0].xpos += 0x400000
+		object[arrayPos0].drawPos.y = object[arrayPos0].ypos
+		object[arrayPos0].angle = 256
+		object[arrayPos0].originPos.x = object[arrayPos0].xpos
+		object[arrayPos0].originPos.y = object[arrayPos0].ypos
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	temp1 = 64
+
+	Cos(temp2, 256)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.xpos
+	temp2 &= -0x10000 // Truncate the value
+
+	Sin(temp3, 256)
+	temp3 *= temp1
+	temp3 <<= 7
+	temp3 += object.ypos
+	temp3 &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(0, temp2, temp3)
+	DrawSpriteXY(1, temp2, temp3)
+	DrawSprite(0)
+	DrawSprite(1)
+	temp0 = 0
+	temp1 = 8
+	while temp0 < 7
+		Cos(temp2, 256)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		temp2 &= -0x10000 // Truncate the value
+
+		Sin(temp3, 256)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		temp3 &= -0x10000 // Truncate the value
+
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+		temp1 += 8
+	loop
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	SpriteFrame(-24, -40, 48, 80, 51, 1) // #0 - Twin Walker Leg
+	SpriteFrame(-4, -4, 8, 8, 19, 67)    // #1 - Twin Walker Chain
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

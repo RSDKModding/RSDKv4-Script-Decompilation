@@ -1,0 +1,229 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: BGEffects Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value2 : object.prevAngle
+private alias object.value3 : object.fansTimer
+private alias object.value4 : object.crunchersTimer
+private alias object.value5 : object.fansSprite
+private alias object.value6 : object.crunchersSprite
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Animate the Fan tiles throughout the level
+	object.fansTimer++
+	if object.fansTimer > 2
+		object.fansTimer = 0
+		object.fansSprite++
+		object.fansSprite %= 3
+		switch object.fansSprite
+		case 0
+			// Fans are 4x4 tiles, comprised of 8 unique tiles, so
+			// 8 individual tiles need to be updated to change the entire sprite
+			Copy16x16Tile(174, 472)
+			Copy16x16Tile(175, 473)
+			Copy16x16Tile(176, 474)
+			Copy16x16Tile(177, 475)
+			Copy16x16Tile(183, 476)
+			Copy16x16Tile(184, 477)
+			Copy16x16Tile(185, 478)
+			Copy16x16Tile(186, 479)
+			break
+
+		case 1
+			Copy16x16Tile(174, 480)
+			Copy16x16Tile(175, 481)
+			Copy16x16Tile(176, 482)
+			Copy16x16Tile(177, 483)
+			Copy16x16Tile(183, 484)
+			Copy16x16Tile(184, 485)
+			Copy16x16Tile(185, 486)
+			Copy16x16Tile(186, 487)
+			break
+
+		case 2
+			Copy16x16Tile(174, 488)
+			Copy16x16Tile(175, 489)
+			Copy16x16Tile(176, 490)
+			Copy16x16Tile(177, 491)
+			Copy16x16Tile(183, 492)
+			Copy16x16Tile(184, 493)
+			Copy16x16Tile(185, 494)
+			Copy16x16Tile(186, 495)
+			break
+
+		end switch
+	end if
+
+	// Animate the Crunching tiles in the level
+	object.crunchersTimer++
+	if object.crunchersTimer > 5
+		object.crunchersTimer = 0
+		object.crunchersSprite++
+		object.crunchersSprite &= 3
+		switch object.crunchersSprite
+		case 0
+			// Crunchers are 2x2 tiles, each tile unique,
+			// so 4 tiles need to be updated in order to completely change their sprite
+			Copy16x16Tile(76, 496)
+			Copy16x16Tile(77, 497)
+			Copy16x16Tile(82, 500)
+			Copy16x16Tile(83, 501)
+			break
+
+		case 1
+			Copy16x16Tile(76, 498)
+			Copy16x16Tile(77, 499)
+			Copy16x16Tile(82, 502)
+			Copy16x16Tile(83, 503)
+			break
+
+		case 2
+			Copy16x16Tile(76, 504)
+			Copy16x16Tile(77, 505)
+			Copy16x16Tile(82, 508)
+			Copy16x16Tile(83, 509)
+			break
+
+		case 3
+			Copy16x16Tile(76, 506)
+			Copy16x16Tile(77, 507)
+			Copy16x16Tile(82, 510)
+			Copy16x16Tile(83, 511)
+			break
+
+		end switch
+	end if
+
+	// Find the difference between the current scoll position and the last scroll position
+	temp1 = object.prevAngle
+	temp2 = tileLayer[0].angle
+
+	// Account for looping before doing the actual calculations
+	if temp1 < temp2
+		temp3 = temp2
+		temp3 -= temp1
+		if temp3 > 256
+			temp1 += 512
+		end if
+	else
+		temp3 = temp1
+		temp3 -= temp2
+		if temp3 > 256
+			temp2 += 512
+		end if
+	end if
+
+	// The actual finding of the difference
+	temp0 = temp1
+	temp0 -= temp2
+
+	// Store the current scroll pos for use next frame
+	object.prevAngle = tileLayer[0].angle
+
+	// Move the other BG layers based on the difference found
+	temp1 = 0x10000
+	temp2 = 0x20000
+
+	temp1 *= temp0
+	hParallax[0].scrollPos += temp1
+
+	temp2 *= temp0
+	hParallax[2].scrollPos += temp2
+
+	// Make it only move 96 pixels max, otherwise wrap around
+	hParallax[2].scrollPos %= 0x600000
+
+	// And move the third layer to match
+	hParallax[3].scrollPos = hParallax[2].scrollPos
+	hParallax[3].scrollPos >>= 16
+
+	// Now, update the pseudo-3d-ness of the BG red bars using deformation
+	// Process is done from the bottom of the screen -> upwards
+
+	// - arrayPos0 is the current line, starting off as the number of lines to change
+	// - temp2 is the starting offset
+	// - temp3 gets applied to the offset after every line in order to make the top of the screen move less drastically to the bottom
+
+	arrayPos0 = 128
+	temp2 = 0x4000
+	temp3 = 0
+	while arrayPos0 > -1
+		temp4 = hParallax[3].scrollPos
+		temp4 *= temp2
+		temp4 >>= 14
+
+		stage[arrayPos0].deformationData2 = temp4
+		temp2 -= temp3
+		temp3++
+
+		arrayPos0--
+	loop
+end event
+
+
+event ObjectStartup
+	// Set the stage's bounds
+	stage.curXBoundary1 = 0x3000000 // left bounds:  768 pixels
+	stage.curXBoundary2 = 0xD000000 // right bounds: 3328 pixels
+	stage.curYBoundary1 = 0x3000000 // upper bounds: 768 pixels
+	stage.curYBoundary2 = 0xD000000 // lower bounds: 3328 pixels
+
+	// Set starting scroll positions
+
+	// Make the first parallax layer start at 176 pixels from its base position
+	hParallax[0].scrollPos = 0xB00000
+
+	// Set the other starting scroll position, but with respect to the screen's size to make it start in the right place
+	temp0 = screen.xsize
+	temp0 -= 320
+	temp0 <<= 15
+
+	// Base position of 96 pixels
+	hParallax[1].scrollPos = 0x600000
+
+	// And then subtract from that as needed
+	hParallax[1].scrollPos -= temp0
+	foreach (TypeName[BG Effects], arrayPos0, ALL_ENTITIES)
+		// Make it always active
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		// It should the first object to have its draw code run
+		object[arrayPos0].drawOrder = 0
+
+		// Set the starting angle... but why is this 192? All other ones are 368 instead...
+		object[arrayPos0].prevAngle = 192
+
+		// Set the scale for the object to draw at
+		// (This would be used for RSDKv3's hardware rendering, but we aren't using that here...)
+		object[arrayPos0].scale = 0x600
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,265 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Wing Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value3 : object.rotDrawXPos
+private alias object.value4 : object.rotDrawYPos
+private alias object.value5 : object.attached // Used by Egg Mobile
+private alias object.value6 : object.visibleFrame
+private alias object.value7 : object.eggMobileEntity
+
+// Player Aliases
+private alias object.state : player.state
+
+// States
+private alias 0 : BOSSWING_BLANK // State used while attached on the Egg Mobile
+private alias 1 : BOSSWING_DETACH
+private alias 2 : BOSSWING_FALL_VERTICAL
+private alias 3 : BOSSWING_DROP_GROUNDED
+private alias 4 : BOSSWING_VANISH
+private alias 5 : BOSSWING_FALL_DIAGONAL
+
+// Eggman Animations
+private alias 2 : EGGANI_LAUGH
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSWING_DETACH
+        object.ypos -= object.yvel
+        break
+
+    case BOSSWING_FALL_VERTICAL
+        object.ypos += object.yvel
+        if object.timer < 30
+            object.timer++
+            object.xpos += object.xvel
+        else
+            if object.rotation == 0
+                ObjectTileCollision(CSIDE_FLOOR, 0, 32, 0)
+            else
+                ObjectTileCollision(CSIDE_FLOOR, 0, 16, 0)
+            end if
+
+            if checkResult == true
+                object.state = BOSSWING_DROP_GROUNDED
+                object.timer = 0
+                PlaySfx(SfxName[Impact 1], false)
+            else
+                object.xpos += object.xvel
+            end if
+        end if
+        break
+
+    case BOSSWING_DROP_GROUNDED
+        if object.timer < 30
+            object.timer++
+        else
+            object.timer = 0
+            object.visibleFrame = object.frame
+            object.state++
+        end if
+        break
+
+    case BOSSWING_VANISH
+        if object.timer < 60
+            object.timer++
+        else
+            object.timer = 0
+            object.state = BOSSWING_BLANK
+            object.type  = TypeName[Blank Object]
+        end if
+
+        temp0 = object.timer
+        temp0 &= 1
+        if temp0 == 0
+            object.frame = 5
+        else
+            object.frame = object.visibleFrame
+        end if
+        break
+
+    case BOSSWING_FALL_DIAGONAL
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+
+        object.rotation += 508
+        object.rotation &= 511
+
+        object.yvel += 0x3000
+
+        if object.timer < 120
+            object.timer++
+        else
+            object.priority = PRIORITY_BOUNDS
+            object.timer    = 0
+            object.state    = BOSSWING_BLANK
+            object.type     = TypeName[Blank Object]
+        end if
+
+        temp0 = object.timer
+        temp0 &= 1
+        if temp0 == 0
+            object.frame = 5
+        else
+            object.frame = 0
+        end if
+        break
+
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state < BOSSWING_VANISH
+            temp0 = 0
+            temp1 = object.xpos
+            temp2 = object.ypos
+            BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            temp0 = checkResult
+
+            Sin(object.xpos, object.rotation)
+            object.xpos *= -0x100000
+            object.xpos >>= 9
+            object.xpos += temp1
+
+            Cos(object.ypos, object.rotation)
+            object.ypos *= 0x100000
+            object.ypos >>= 9
+            object.ypos += temp2
+
+            BoxCollisionTest(C_TOUCH, object.entityPos, -10, -10, 10, 10, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            temp0 |= checkResult
+
+            Sin(object.xpos, object.rotation)
+            object.xpos *= 0x100000
+            object.xpos >>= 9
+
+            object.xpos += temp1
+            Cos(object.ypos, object.rotation)
+            object.ypos *= -0x100000
+            object.ypos >>= 9
+
+            object.ypos += temp2
+            BoxCollisionTest(C_TOUCH, object.entityPos, -15, -15, 15, 15, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            temp0 |= checkResult
+
+            object.xpos = temp1
+            object.ypos = temp2
+
+            if temp0 == true
+                CallFunction(Player_Hit)
+                if player[currentPlayer].state == Player_State_GotHit
+                    arrayPos0 = object.eggMobileEntity
+                    object[arrayPos0].animation = EGGANI_LAUGH
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    temp6 = object.xpos
+    temp7 = object.ypos
+
+    if object.rotation == 256
+        temp6 -= 0x10000
+    end if
+
+    if object.rotation == 384
+        temp7 -= 0x10000
+    end if
+
+    switch object.frame
+    case 0
+    case 1
+    case 2
+        DrawSpriteFX(object.frame, FX_ROTATE, temp6, temp7)
+
+        Sin(object.rotDrawXPos, object.rotation)
+        object.rotDrawXPos *= -0x200000
+        object.rotDrawXPos >>= 9
+        object.rotDrawXPos += object.xpos
+
+        Cos(object.rotDrawYPos, object.rotation)
+        object.rotDrawYPos *= 0x200000
+        object.rotDrawYPos >>= 9
+        object.rotDrawYPos += object.ypos
+
+        DrawSpriteXY(3, object.rotDrawXPos, object.rotDrawYPos)
+        break
+
+    case 3 // Set by EggMobile
+        DrawSpriteFX(0, FX_ROTATE, temp6, temp7)
+        break
+
+    case 4 // Set by EggMobile
+        DrawSpriteFX(2, FX_ROTATE, temp6, temp7)
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects3.gif")
+
+    SpriteFrame(-24, -32, 48, 64, 156, 1)   // #0 - Boss Wing facing front
+    SpriteFrame(-16, -32, 32, 64, 205, 1)   // #1 - Boss Wing facing 45°
+    SpriteFrame(-8, -32, 16, 64, 238, 1)    // #2 - Boss Wing facing side
+
+    SpriteFrame(-8, -8, 16, 16, 90, 18)     // #3 - Boss Wing body attachment
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    temp6 = object.xpos
+    temp7 = object.ypos
+
+    if object.Rotation == 256
+        temp6 -= 0x10000
+    end if
+
+    if object.Rotation == 384
+        temp7 -= 0x10000
+    end if
+
+    DrawSpriteXY(0, object.xpos, object.ypos)
+
+    Sin(temp0, 0)
+    temp0 *= -0x200000
+    temp0 >>= 9
+    temp0 += object.xpos
+
+    Cos(temp1, 0)
+    temp1 *= 0x200000
+    temp1 >>= 9
+    temp1 += object.ypos
+
+    DrawSpriteXY(1, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects3.gif")
+
+    SpriteFrame(-24, -32, 48, 64, 156, 1)   // #0 - Boss Wing facing front
+    SpriteFrame(-8, -8, 16, 16, 90, 18)     // #1 - Boss Wing body attachment
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

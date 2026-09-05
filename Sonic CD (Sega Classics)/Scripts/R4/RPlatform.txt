@@ -1,0 +1,237 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: RPlatform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+
+// For the button mounted atop this Object, either true or false
+private alias object.propertyValue : object.stood
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RPlatform_DebugDraw
+reserve function RPlatform_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function RPlatform_DebugDraw
+    DrawSprite(2)
+end function
+
+
+public function RPlatform_DebugSpawn
+    CreateTempObject(TypeName[RPlatform], false, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.angle += 2
+    object.angle &= 511
+
+    temp1 = 96
+
+    Cos(object.collisionOffset.x, object.angle)
+    object.collisionOffset.x *= temp1
+    object.collisionOffset.x <<= 7
+    object.collisionOffset.x += object.xpos
+    object.collisionOffset.x &= -0x10000 // Truncate the value
+    object.collisionOffset.x -= object.drawPos.x
+
+    Sin(object.collisionOffset.y, object.angle)
+    object.collisionOffset.y *= temp1
+    object.collisionOffset.y <<= 7
+    object.collisionOffset.y += object.ypos
+    object.collisionOffset.y &= -0x10000 // Truncate the value
+    object.collisionOffset.y -= object.drawPos.y
+
+    // Backup the Object's base position
+    temp0 = object.xpos
+    temp1 = object.ypos
+
+    // Move to where the Object's Platform is
+    object.xpos = object.drawPos.x
+    object.ypos = object.drawPos.y
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        // Check to see if the Player is riding on it
+        BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            // Move the Player along with the Platform
+            player[currentPlayer].xpos += object.collisionOffset.x
+            player[currentPlayer].ypos += object.collisionOffset.y
+        end if
+
+        if object.stood == false
+            BoxCollisionTest(C_SOLID, object.entityPos, 0, -24, 32, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_TOP
+                // The Player is on the button
+                if object.stood == false
+                    PlaySfx(SfxName[Switch], false)
+                end if
+
+                object.stood = true
+
+                // Move the Player along with the Platform
+                player[currentPlayer].ypos += 0x80000
+                player[currentPlayer].xpos += object.collisionOffset.x
+                player[currentPlayer].ypos += object.collisionOffset.y
+            else
+                object.stood = false
+            end if
+        else
+            BoxCollisionTest(C_SOLID, object.entityPos, 0, -16, 32, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_TOP
+                object.stood = true
+
+                player[currentPlayer].xpos += object.collisionOffset.x
+                player[currentPlayer].ypos += object.collisionOffset.y
+            else
+                object.stood = false
+            end if
+        end if
+    next
+
+    // Move the Object back to its base position
+    object.xpos = temp0
+    object.ypos = temp1
+end event
+
+
+event ObjectDraw
+    // First, draw the Object's Joint
+    DrawSprite(2)
+
+    // Then, draw all the Chains connecting the Platform to its Joint
+    temp0 = 0
+    temp1 = 16
+    while temp0 < 5
+        Cos(temp2, object.angle)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, object.angle)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += object.ypos
+
+        DrawSpriteXY(3, temp2, temp3)
+        temp0++
+        temp1 += 16
+    loop
+
+    // And now, find the positions to draw the Platform at
+    Cos(object.drawPos.x, object.angle)
+    object.drawPos.x *= temp1
+    object.drawPos.x <<= 7
+    object.drawPos.x += object.xpos
+    object.drawPos.x &= -0x10000 // Truncate the value
+
+    Sin(object.drawPos.y, object.angle)
+    object.drawPos.y *= temp1
+    object.drawPos.y <<= 7
+    object.drawPos.y += object.ypos
+    object.drawPos.y &= -0x10000 // Truncate the value
+
+    // Finally, draw the Platform itself
+    DrawSpriteXY(4, object.drawPos.x, object.drawPos.y)
+
+    // But wait! There's a button that rides the Platform, so draw that too!
+    DrawSpriteXY(object.stood, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects.gif")
+
+    SpriteFrame(0, -24, 32, 16, 130, 35)    // #0 - Push Button
+    SpriteFrame(0, -24, 32, 16, 130, 52)    // #1 - Push Button Pressed
+    SpriteFrame(-8, -8, 16, 16, 163, 52)    // #2 - Platform Joint
+    SpriteFrame(-8, -8, 16, 16, 180, 52)    // #3 - Platform Chain
+    SpriteFrame(-32, -8, 64, 16, 147, 69)   // #4 - Platform
+
+    SetTableValue(TypeName[RPlatform], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(RPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(RPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(2)
+
+	temp0 = 0
+	temp1 = 16
+	while temp0 < 5
+		Cos(temp2, 128)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+		
+		Sin(temp3, 128)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		
+		DrawSpriteXY(3, temp2, temp3)
+		temp0++
+		temp1 += 16
+	loop
+
+	Cos(object.drawPos.x, 128)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 7
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= 0xFFFF0000 // Truncate the value
+	
+	Sin(object.drawPos.y, 128)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 7
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= 0xFFFF0000 // Truncate the value
+
+	DrawSpriteXY(4, object.drawPos.x, object.drawPos.y)
+
+	DrawSpriteXY(object.stood, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects.gif")
+    
+    SpriteFrame(0, -24, 32, 16, 130, 35)    // #0 - Push Button
+    SpriteFrame(0, -24, 32, 16, 130, 52)    // #1 - Push Button Pressed
+    SpriteFrame(-8, -8, 16, 16, 163, 52)    // #2 - Platform Joint
+    SpriteFrame(-8, -8, 16, 16, 180, 52)    // #3 - Platform Chain
+    SpriteFrame(-32, -8, 64, 16, 147, 69)   // #4 - Platform
+
+    // Although used by the Object, it shouldn't be set from the editor
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

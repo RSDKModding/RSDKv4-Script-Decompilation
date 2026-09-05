@@ -1,0 +1,618 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Eggman Mobile Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.targetYPos
+private alias object.value3        : object.thrusterAnimation
+private alias object.value4        : object.frameTimer
+private alias object.value5        : object.spikesAnimation
+private alias object.value6        : object.eggmanAnimation
+private alias object.value7        : object.faceFrame
+private alias object.propertyValue : object.faceTimer
+private alias object.scale         : object.triggerElecArc
+
+// Player Aliases
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.xvel      : player.xvel
+private alias object.yvel      : player.yvel
+private alias object.speed     : player.speed
+private alias object.animation : player.animation
+
+// Floor Control aliases
+private alias object[+1].type   : floorControl.type
+private alias object[+1].state  : floorControl.state
+private alias object[+1].value0 : floorControl.timer
+
+// Boss Barrier 2 alias
+private alias object[-1].state : bossBarrier2.state
+
+// Fade Screen aliases
+private alias object.value1 : fadeScreen.eggMobileEntityPos
+
+// Steam Cloud aliases
+private alias object.ypos : steamCloud.ypos
+private alias object.xvel : steamCloud.xvel
+private alias object.yvel : steamCloud.yvel
+
+// States
+private alias 0  : R6_EGG_IDLE
+private alias 1  : R6_EGG_START
+private alias 2  : R6_EGG_INTRO
+private alias 3  : R6_EGG_SET_ROUTE_1
+private alias 4  : R6_EGG_ASCEND_1
+private alias 5  : R6_EGG_SET_ROUTE_2
+private alias 6  : R6_EGG_ASCEND_2
+private alias 7  : R6_EGG_SET_ROUTE_3
+private alias 8  : R6_EGG_ASCEND_3
+private alias 9  : R6_EGG_ROOF_DRILL
+private alias 10 : R6_EGG_DESTROYED
+private alias 11 : R6_EGG_PANICKING
+private alias 12 : R6_EGG_ESCAPE
+
+// FloorControl States
+private alias 0 : FLOORCONTROL_INACTIVE
+private alias 1 : FLOORCONTROL_SETUP_CRUMBLE
+private alias 3 : FLOORCONTROL_ELEC_ARC
+private alias 4 : FLOORCONTROL_TILE_SWAP
+
+// Boss Barrier States
+private alias 2 : BOSSBARRIER2_OPEN
+
+// Eggman Animations
+private alias 0 : EGGANI_IDLE
+private alias 1 : EGGANI_HURT
+private alias 2 : EGGANI_DEFEAT
+private alias 3 : EGGANI_PANIC
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function EggmanMobile_Descend
+reserve function EggmanMobile_Move
+reserve function EggmanMobile_Route_Floor1
+reserve function EggmanMobile_Route_Floor2
+reserve function EggmanMobile_Steam
+
+// ========================
+// Function Definitions
+// ========================
+
+public function EggmanMobile_Descend
+    object.ypos += object.yvel
+    object.yvel -= 256
+    if object.ypos >= object.targetYPos
+        object.ypos = object.targetYPos
+        object.yvel = 0
+        object.thrusterAnimation = 0
+        object.frameTimer = 0
+        object.state++
+    end if
+end function
+
+
+public function EggmanMobile_Move
+    object.ypos += object.yvel
+    object.yvel -= 0x1000
+    if object.ypos <= object.targetYPos
+        object.ypos = object.targetYPos
+        object.yvel = 0
+        object.thrusterAnimation = 0
+        object.frameTimer = 0
+        object.spikesAnimation = 0
+        object.animationTimer = 0
+        object.animationSpeed = 0
+        object.state++
+    end if
+end function
+
+
+public function EggmanMobile_Route_Floor1
+    temp0 = object.ypos
+    temp0 += 0x780000
+    if player[SLOT_PLAYER1].ypos < temp0
+        if floorControl.state < FLOORCONTROL_TILE_SWAP
+            floorControl.state = FLOORCONTROL_INACTIVE
+            floorControl.timer = 0
+            if object.faceTimer > 0
+                object.timer = 1200
+            end if
+        else
+            if floorControl.timer > 270
+                floorControl.state = FLOORCONTROL_INACTIVE
+                floorControl.timer = 0
+            else
+                object.timer &= 511
+            end if
+        end if
+
+        if object.timer < 1200
+            if object.timer == 0
+                object.spikesAnimation = 1
+                PlaySfx(SfxName[Buzzsaw], false)
+            end if
+
+            object.timer += 4
+            temp0 = object.timer
+            temp0 &= 511
+            Sin(object.ypos, temp0)
+            object.ypos <<= 9
+            object.ypos += object.targetYPos
+        else
+            object.timer = 0
+            object.yvel = -0x10000
+
+            object.thrusterAnimation = 1
+            object.frameTimer = 0
+
+            floorControl.state = FLOORCONTROL_SETUP_CRUMBLE
+            object.state++
+        end if
+    end if
+end function
+
+
+public function EggmanMobile_Route_Floor2
+    temp0 = object.ypos
+    temp0 += 0x780000
+    if player[SLOT_PLAYER1].ypos < temp0
+        object.triggerElecArc = true
+        if floorControl.state < FLOORCONTROL_TILE_SWAP
+            floorControl.state = FLOORCONTROL_INACTIVE
+            floorControl.timer = 0
+            if object.faceTimer > 0
+                object.timer = 1200
+            end if
+        else
+            if floorControl.timer > 270
+                floorControl.state = FLOORCONTROL_INACTIVE
+                floorControl.timer = 0
+            else
+                object.timer &= 511
+            end if
+        end if
+
+        if object.timer < 1200
+            if object.timer == 0
+                object.spikesAnimation = 1
+                PlaySfx(SfxName[Buzzsaw], false)
+            end if
+
+            object.timer += 4
+            temp0 = object.timer
+            temp0 &= 511
+            Sin(object.ypos, temp0)
+            object.ypos <<= 9
+            object.ypos += object.targetYPos
+        else
+            object.timer = 0
+            object.yvel = -0x10000
+
+            object.thrusterAnimation = 1
+            object.frameTimer = 0
+
+            floorControl.state = FLOORCONTROL_SETUP_CRUMBLE
+
+            object.triggerElecArc = 0
+            object.state++
+        end if
+    else
+        if object.outOfBounds == true
+            object.spikesAnimation = 0
+            object.animationTimer = 0
+            object.animationSpeed = 0
+        end if
+
+        if floorControl.state < FLOORCONTROL_ELEC_ARC
+            if object.triggerElecArc == true
+                floorControl.state = FLOORCONTROL_ELEC_ARC
+                floorControl.timer = 0
+            end if
+        end if
+    end if
+end function
+
+
+public function EggmanMobile_Steam
+    if object.animationTimer == 0
+        PlaySfx(SfxName[Explosion], false)
+    end if
+
+    if object.animationTimer < 12
+        CreateTempObject(TypeName[Steam Cloud], 0, object.xpos, object.ypos)
+
+        steamCloud[tempObjectPos].ypos -= 0x480000
+
+        Rand(steamCloud[tempObjectPos].xvel, 512)
+        steamCloud[tempObjectPos].xvel -= 256
+        steamCloud[tempObjectPos].xvel <<= 10
+
+        Rand(steamCloud[tempObjectPos].yvel, 256)
+        steamCloud[tempObjectPos].yvel *= -0x400
+    end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case R6_EGG_IDLE
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            object.state++
+            object.triggerElecArc = false
+        end if
+        break
+
+    case R6_EGG_START
+        object.timer++
+        if object.timer == 120
+            object.timer = 0
+
+            object.yvel = 0x30000
+            object.targetYPos = 0x6200000
+
+            object.thrusterAnimation = 1
+            object.frameTimer = 0
+
+            object.state++
+        end if
+        break
+
+    case R6_EGG_INTRO
+        CallFunction(EggmanMobile_Descend)
+        break
+
+    case R6_EGG_SET_ROUTE_1
+        CallFunction(EggmanMobile_Route_Floor1)
+        if object.state > R6_EGG_SET_ROUTE_1
+            object.targetYPos = 0x4280000
+        end if
+        break
+
+    case R6_EGG_ASCEND_1
+        CallFunction(EggmanMobile_Move)
+        break
+
+    case R6_EGG_SET_ROUTE_2
+        CallFunction(EggmanMobile_Route_Floor2)
+        if object.state > R6_EGG_SET_ROUTE_2
+            object.targetYPos = 0x2280000
+        end if
+        break
+
+    case R6_EGG_ASCEND_2
+        CallFunction(EggmanMobile_Move)
+        break
+
+    case R6_EGG_SET_ROUTE_3
+        CallFunction(EggmanMobile_Route_Floor2)
+        if object.state > R6_EGG_SET_ROUTE_3
+            object.targetYPos = 0x1300000
+        end if
+        break
+
+    case R6_EGG_ASCEND_3
+        CallFunction(EggmanMobile_Move)
+        break
+
+    case R6_EGG_ROOF_DRILL
+        if object.timer == 0
+            object.xpos += 0x20000
+        else
+            object.xpos -= 0x20000
+        end if
+
+        object.timer++
+        object.timer &= 1
+        break
+
+    case R6_EGG_DESTROYED
+        object.ypos += object.yvel
+        object.yvel += 0x1000
+
+        player[SLOT_PLAYER1].speed = 0
+
+        if object.timer == 0
+            object.xpos += 0x20000
+        else
+            object.xpos -= 0x20000
+        end if
+
+        object.timer++
+        object.timer &= 1
+
+        if object.ypos >= 0x2A00000
+            object.ypos = 0x2A00000
+            object.timer = 0
+            object.yvel = 0
+
+            object.eggmanAnimation = EGGANI_PANIC
+
+            SetTileLayerEntry(500, 0, 20, 5)
+            SetTileLayerEntry(501, 0, 21, 5)
+            SetTileLayerEntry(506, 0, 22, 5)
+
+            object.state++
+        end if
+
+        if player[SLOT_PLAYER1].xpos > object.targetYPos
+            player[SLOT_PLAYER1].xpos = object.targetYPos
+            player[SLOT_PLAYER1].xpos += 0x500000
+        else
+            player[SLOT_PLAYER1].xpos = object.targetYPos
+            player[SLOT_PLAYER1].xpos -= 0x500000
+        end if
+
+        CallFunction(EggmanMobile_Steam)
+        break
+
+    case R6_EGG_PANICKING
+        player[SLOT_PLAYER1].speed = 0
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            player[SLOT_PLAYER1].xpos = object.xpos
+            player[SLOT_PLAYER1].xpos += 0x500000
+        else
+            player[SLOT_PLAYER1].xpos = object.xpos
+            player[SLOT_PLAYER1].xpos -= 0x500000
+        end if
+
+        CallFunction(EggmanMobile_Steam)
+        object.timer++
+
+        if object.timer == 180
+            bossBarrier2.state = BOSSBARRIER2_OPEN
+        end if
+
+        if object.timer == 240
+            object.state++
+            object.spikesAnimation = 3
+            CreateTempObject(TypeName[Fade Screen], 0, object.xpos, object.ypos)
+            fadeScreen[tempObjectPos].eggMobileEntityPos = object.entityPos
+        end if
+        break
+
+    case R6_EGG_ESCAPE
+        player[SLOT_PLAYER1].speed = 0
+        if player[SLOT_PLAYER1].xpos > object.xpos
+            player[SLOT_PLAYER1].xpos = object.xpos
+            player[SLOT_PLAYER1].xpos += 0x500000
+        else
+            player[SLOT_PLAYER1].xpos = object.xpos
+            player[SLOT_PLAYER1].xpos -= 0x500000
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -22, 40, 22, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            CallFunction(Player_Hit)
+        end if
+
+        if player[currentPlayer].animation != ANI_HURT
+            if object.faceTimer == 0
+                BoxCollisionTest(C_TOUCH, object.entityPos, -64, -48, 64, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                temp0 = checkResult
+
+				BoxCollisionTest(C_TOUCH, object.entityPos, -32, 16, 32, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                temp0 |= checkResult
+
+				if temp0 == true
+                    if player[currentPlayer].animation == ANI_JUMPING
+                        object.faceTimer = 120
+
+                        FlipSign(player[currentPlayer].speed)
+                        player[currentPlayer].speed >>= 1
+
+                        FlipSign(player[currentPlayer].yvel)
+                        player[currentPlayer].yvel >>= 1
+
+                        player[currentPlayer].xvel = player[currentPlayer].speed
+
+                        if object.state < R6_EGG_ROOF_DRILL
+                            PlaySfx(SfxName[Boss Hit], false)
+                            object.eggmanAnimation = EGGANI_HURT
+                            object.frame = 0
+                        else
+                            object.state = R6_EGG_DESTROYED
+
+                            object.spikesAnimation = 2
+                            object.animationTimer = 0
+                            object.eggmanAnimation = EGGANI_DEFEAT
+                            object.faceFrame = 0
+                            object.frame = 0
+
+                            object.targetYPos = object.xpos
+
+                            floorControl.type = TypeName[Blank Object]
+
+                            Copy16x16Tile(810, 863)
+
+                            PlaySfx(SfxName[Explosion], false)
+                        end if
+                    else
+                        CallFunction(Player_Hit)
+                    end if
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+
+    switch object.eggmanAnimation
+    case EGGANI_IDLE
+        temp0 = object.faceFrame
+        temp0 /= 10
+        temp0 += 2
+
+        object.faceFrame++
+        object.faceFrame %= 20
+
+        object.direction = object.frame
+        object.direction /= 25
+
+        object.frame++
+        object.frame %= 50
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case EGGANI_HURT
+        object.direction = object.frame
+        object.direction /= 10
+
+        object.frame++
+        object.frame %= 20
+        DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+
+        if object.faceTimer > 0
+            object.faceTimer--
+        else
+            object.eggmanAnimation = EGGANI_IDLE
+            object.faceFrame = 0
+            object.frame = 0
+        end if
+        break
+
+    case EGGANI_DEFEAT
+        DrawSprite(5)
+        break
+
+    case EGGANI_PANIC
+        object.direction = object.frame
+        object.direction /= 25
+
+        object.frame++
+        object.frame %= 50
+        DrawSpriteFX(6, FX_FLIP, object.xpos, object.ypos)
+        break
+    end switch
+
+    switch object.spikesAnimation
+    case 0
+        DrawSprite(7)
+        break
+
+    case 1
+        temp0 = object.animationTimer
+        temp0 >>= 7
+        temp0 += 7
+        DrawSprite(temp0)
+
+        object.animationTimer += object.animationSpeed
+        object.animationTimer &= 511
+
+        if object.animationSpeed < 128
+            object.animationSpeed++
+        end if
+        break
+
+    case 2
+        temp0 = object.animationTimer
+        temp0 /= 3
+        if temp0 < 4
+            temp0 += 11
+            DrawSprite(temp0)
+        end if
+
+        object.animationTimer++
+        object.animationTimer %= 30
+        break
+    end switch
+
+    switch object.thrusterAnimation
+    case 0
+        temp0 = object.frameTimer
+        temp0 >>= 1
+        temp0 += 19
+        DrawSprite(temp0)
+
+        object.frameTimer++
+        object.frameTimer &= 3
+        break
+
+    case 1
+        temp0 = object.frameTimer
+        temp0 /= 3
+        temp0 += 15
+        DrawSprite(temp0)
+
+        object.frameTimer++
+        object.frameTimer %= 12
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects2.gif")
+
+    // Egg Razor
+    SpriteFrame(-64, -48, 128, 96, 66, 1)   // #0  - Egg Razor Machine
+    SpriteFrame(-64, -16, 128, 32, 66, 98)  // #1  - Egg Razor Destroyed
+
+    // Eggman
+    SpriteFrame(-24, -21, 48, 24, 116, 131) // #2  - Eggman Idle Frame 0
+    SpriteFrame(-24, -21, 48, 24, 116, 156) // #3  - Eggman Idle Frame 1
+    SpriteFrame(-24, -21, 48, 24, 116, 181) // #4  - Eggman Hurt
+    SpriteFrame(-28, -37, 48, 40, 124, 215) // #5  - Eggman Defeat
+    SpriteFrame(-24, -29, 48, 32, 1, 219)   // #6  - Eggman Worry
+
+    // Egg Razor Spikes
+    SpriteFrame(-16, -80, 32, 32, 195, 1)   // #7  - Spikes Frame 0
+    SpriteFrame(-16, -80, 32, 32, 195, 34)  // #8  - Spikes Frame 1
+    SpriteFrame(-16, -80, 32, 32, 195, 67)  // #9  - Spikes Frame 2
+    SpriteFrame(-16, -80, 32, 32, 195, 100) // #10 - Spikes Frame 3
+
+    // Egg Razor Steam
+    SpriteFrame(-12, -80, 24, 32, 228, 51)  // #11 - Steam Frame 0
+    SpriteFrame(-12, -80, 24, 32, 228, 84)  // #12 - Steam Frame 1
+    SpriteFrame(-12, -80, 24, 32, 231, 117) // #13 - Steam Frame 2
+    SpriteFrame(-12, -80, 24, 32, 231, 150) // #14 - Steam Frame 3
+
+    // Egg Razor Thruster
+    SpriteFrame(-16, 48, 32, 32, 198, 133)  // #15 - Thruster Frame 0
+    SpriteFrame(-16, 48, 32, 24, 206, 199)  // #16 - Thruster Frame 1
+    SpriteFrame(-16, 48, 32, 32, 198, 166)  // #17 - Thruster Frame 2
+    SpriteFrame(-16, 48, 32, 24, 206, 224)  // #18 - Thruster Frame 3
+    SpriteFrame(-16, 48, 32, 24, 206, 199)  // #19 - Thruster Frame 4
+    SpriteFrame(-16, 48, 32, 24, 206, 224)  // #20 - Thruster Frame 5
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(1)
+    DrawSprite(2)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects2.gif")
+
+    SpriteFrame(-64, -48, 128, 96, 66, 1)   // #0  - Egg Razor Machine
+    SpriteFrame(-24, -21, 48, 24, 116, 131) // #2  - Eggman Idle Frame 0
+    SpriteFrame(-16, -80, 32, 32, 195, 1)   // #7  - Spikes Frame 0
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

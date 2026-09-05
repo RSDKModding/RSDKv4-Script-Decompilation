@@ -1,0 +1,183 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Horz Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.stood
+private alias object.value1 : object.timer
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.drawPos.x
+private alias object.value4 : object.collisionOffset.x
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// Property Values
+private alias 0 : START_MOVING_LEFT
+private alias 1 : START_MOVING_RIGHT
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function HorzPlatform_DebugDraw
+reserve function HorzPlatform_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function HorzPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function HorzPlatform_DebugSpawn
+	CreateTempObject(TypeName[Horz Platform], START_MOVING_LEFT, object.xpos, object.ypos)
+	object[tempObjectPos].xpos &= -0x10000
+	object[tempObjectPos].ypos &= -0x10000
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle = oscillation
+	object.angle <<= 1
+	if object.propertyValue == START_MOVING_RIGHT
+		object.angle += 256
+	end if
+
+	Cos(object.collisionOffset.x, object.angle)
+	object.collisionOffset.x *= 0x1800
+	object.collisionOffset.x += object.xpos
+	object.collisionOffset.x &= -0x10000 // Truncate the value
+	object.collisionOffset.x -= object.drawPos.x
+
+	if object.stood == true
+		// Loss a bit of height when stepped
+		if object.timer < 16
+			object.timer++
+			temp0 = object.timer
+			temp0 &= 3
+			if temp0 == 3
+				object.collisionOffset.y = 0x10000
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			object.collisionOffset.y = 0
+		end if
+	else
+		// Restore original YPos
+		if object.timer > 0
+			object.timer--
+			temp0 = object.timer
+			temp0 &= 3
+			if temp0 == 3
+				object.collisionOffset.y = -0x10000
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			object.collisionOffset.y = 0
+		end if
+	end if
+
+	object.stood = false
+
+	temp0 = object.xpos
+	object.xpos = object.drawPos.x
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -9, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			object.stood = true
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+
+	object.xpos = temp0
+end event
+
+
+event ObjectDraw
+	Cos(object.drawPos.x, object.angle)
+	object.drawPos.x *= 0x1800
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= -0x10000
+
+	object.ypos += object.collisionOffset.y
+	DrawSpriteXY(0, object.drawPos.x, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 101, 109) // #0 - Horizontal Platform
+
+	SetTableValue(TypeName[Horz Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(HorzPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(HorzPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		case 0 // type
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		case 0 // type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 101, 109) // #0 - Horizontal Platform
+	
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Left", 0)
+	AddEnumVariable("Right", 1)
+end event

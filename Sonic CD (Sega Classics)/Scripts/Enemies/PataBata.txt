@@ -1,0 +1,254 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: PataBata Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.oscillation
+private alias object.value1        : object.originPos.y
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : PATABATA_FLY_DOWN
+private alias 1 : PATABATA_FLY_UP
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function PataBata_DebugDraw
+reserve function PataBata_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value PataBata_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function PataBata_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= PataBata_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(5) // Bad quality
+    end if
+end function
+
+
+private function PataBata_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= PataBata_startDebugID
+    CreateTempObject(TypeName[PataBata], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].originPos.y = object[tempObjectPos].ypos
+    object[tempObjectPos].oscillation = 0x400
+    object[tempObjectPos].frame = object[tempObjectPos].quality
+    object[tempObjectPos].frame *= 20
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.quality == QUALITY_GOOD
+        object.frame++
+        if object.frame > 39
+            object.frame = 0
+        end if
+
+        switch object.state
+        case PATABATA_FLY_DOWN
+            Sin(object.ypos, object.oscillation)
+            object.ypos <<= 12
+            object.ypos += object.originPos.y
+            object.xpos -= 0x8000
+
+            object.oscillation -= 4
+            if object.oscillation == 0
+                object.state = PATABATA_FLY_UP
+                object.direction = FACING_LEFT
+            end if
+            break
+
+        case PATABATA_FLY_UP
+            Sin(object.ypos, object.oscillation)
+            FlipSign(object.ypos)
+            object.ypos <<= 12
+            object.ypos += object.originPos.y
+            object.xpos += 0x8000
+
+            object.oscillation += 4
+            if object.oscillation == 0x800
+                object.state = PATABATA_FLY_DOWN
+                object.direction = FACING_RIGHT
+            end if
+            break
+        end switch
+    else
+        object.frame++
+        if object.frame > 39
+            object.frame = 20
+        end if
+
+        switch object.state
+        case PATABATA_FLY_DOWN
+            Sin(object.ypos, object.oscillation)
+            object.ypos <<= 11
+            object.ypos += object.originPos.y
+            object.xpos -= 0x4000
+
+            object.oscillation -= 2
+            if object.oscillation == 0
+                object.state = PATABATA_FLY_UP
+                object.direction = FACING_LEFT
+            end if
+            break
+
+        case PATABATA_FLY_UP
+            Sin(object.ypos, object.oscillation)
+            FlipSign(object.ypos)
+            object.ypos <<= 11
+            object.ypos += object.originPos.y
+            object.xpos += 0x4000
+
+            object.oscillation += 2
+            if object.oscillation == 0x800
+                object.state = PATABATA_FLY_DOWN
+                object.direction = FACING_RIGHT
+            end if
+            break
+        end switch
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        end if
+    next
+
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    if object.quality == QUALITY_GOOD
+        temp0 = object.frame
+        temp0 >>= 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+    else
+        temp0 = object.frame
+        temp0 >>= 2
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects.gif")
+
+    foreach (TypeName[PataBata], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+        object[arrayPos0].oscillation = 0x400
+        object[arrayPos0].frame = object[arrayPos0].quality
+        object[arrayPos0].frame *= 20
+    next
+
+    // Good PataBata
+    SpriteFrame(-16, -16, 32, 32, 1, 51)    // #0 - PataBata Fly Frame 0
+    SpriteFrame(-16, -8, 32, 16, 1, 84)     // #1 - PataBata Fly Frame 1
+    SpriteFrame(-16, -16, 32, 32, 117, 1)   // #2 - PataBata Fly Frame 2
+    SpriteFrame(-16, -8, 32, 16, 1, 84)     // #3 - PataBata Fly Frame 3
+    SpriteFrame(-16, -16, 32, 32, 1, 51)    // #4 - PataBata Fly Frame 4
+
+    // Bad PataBata
+    SpriteFrame(-16, -16, 32, 32, 150, 1)   // #5 - PataBata Fly Frame 0
+    SpriteFrame(-16, -8, 32, 16, 1, 84)     // #6 - PataBata Fly Frame 1
+    SpriteFrame(-16, -16, 32, 32, 183, 1)   // #7 - PataBata Fly Frame 2
+    SpriteFrame(-16, -8, 32, 16, 1, 84)     // #8 - PataBata Fly Frame 3
+    SpriteFrame(-16, -16, 32, 32, 150, 1)   // #9 - PataBata Fly Frame 4
+
+    temp0 = 0
+    PataBata_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[PataBata], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(PataBata_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(PataBata_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // type
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // type
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects.gif")
+
+    SpriteFrame(-16, -16, 32, 32, 1, 51)    // #0 - PataBata Fly Frame 0, Good Quality
+    SpriteFrame(-16, -16, 32, 32, 150, 1)   // #5 - PataBata Fly Frame 0, Bad Quality
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

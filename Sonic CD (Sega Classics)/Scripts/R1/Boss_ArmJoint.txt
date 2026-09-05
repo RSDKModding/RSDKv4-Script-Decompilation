@@ -1,0 +1,152 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Arm Joint Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.xvel   : object.offset.x
+private alias object.yvel   : object.offset.y
+private alias object.value0 : object.shoulderEntity
+private alias object.value4 : object.charging
+
+// States
+private alias 0 : BOSSARMJOINT_SETUP
+private alias 1 : BOSSARMJOINT_REPOSITION_F
+private alias 2 : BOSSARMJOINT_HANDLE_F_JOINT
+private alias 3 : BOSSARMJOINT_REPOSITION_B
+private alias 4 : BOSSARMJOINT_HANDLE_B_JOINT
+private alias 5 : BOSSARMJOINT_DESTROYED
+
+// Boss Shoulder Aliases
+private alias object.xpos : shoulder.XPos
+private alias object.ypos : shoulder.YPos
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BossArmJoint_HandleMovement
+
+// ========================
+// Function Definitions
+// ========================
+
+public function BossArmJoint_HandleMovement
+	temp0 = object.angle
+	temp0 += 64
+
+	Sin256(temp6, temp0)
+	temp6 <<= 12
+
+	Cos256(temp7, temp0)
+	temp7 <<= 12
+
+	arrayPos0 = object.shoulderEntity
+
+	object.xpos = shoulder[arrayPos0].xpos
+	object.xpos += temp7
+
+	object.ypos = shoulder[arrayPos0].ypos
+	object.ypos += temp6
+
+	// Right Arm Joint
+	if object.drawOrder == 2
+		object.xpos -= 0xA0000
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BOSSARMJOINT_SETUP
+		// Left Arm Joint
+		if object.drawOrder == 3
+			// Delay the left arm joint a bit
+			object.angle = 128
+		end if
+
+		object.state = BOSSARMJOINT_REPOSITION_B
+		// [Fallthrough]
+
+	case BOSSARMJOINT_REPOSITION_F
+		object.angle -= 2
+		if object.angle <= 0
+			object.state = BOSSARMJOINT_HANDLE_F_JOINT
+			object.angle = 0
+			SetBit(object.charging, 0, true)
+		end if
+
+		CallFunction(BossArmJoint_HandleMovement)
+		break
+
+	case BOSSARMJOINT_HANDLE_F_JOINT
+		CallFunction(BossArmJoint_HandleMovement)
+		break
+
+	case BOSSARMJOINT_REPOSITION_B
+		object.angle += 2
+		if object.angle >= 48
+			object.state = BOSSARMJOINT_HANDLE_B_JOINT
+			object.angle = 48
+			SetBit(object.charging, 0, true)
+		end if
+
+		CallFunction(BossArmJoint_HandleMovement)
+		break
+
+	case BOSSARMJOINT_HANDLE_B_JOINT
+		CallFunction(BossArmJoint_HandleMovement)
+		break
+
+	case BOSSARMJOINT_DESTROYED
+		object.offset.x += 0x600
+		object.offset.y += 0x1F00
+
+		object.xpos += object.offset.x
+		object.ypos += object.offset.y
+
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+			object.priority = PRIORITY_BOUNDS
+		end if
+		break
+	end switch
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R1/Objects3.gif")
+	SpriteFrame(-8, -8, 16, 16, 124, 34) // #0 - Arm Joint
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R1/Objects3.gif")
+	SpriteFrame(-8, -8, 16, 16, 124, 34) // #0 - Arm Joint
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

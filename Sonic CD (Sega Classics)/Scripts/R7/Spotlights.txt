@@ -1,0 +1,660 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Spotlights Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+
+// There are several different types of spotlights that appear in the stage
+private alias object.value0 : object.spotlightType
+// 0 - Pair of two primary ones
+//     - Using SSZ1A's, it's the two big green ones
+// 1 - Single primary one
+//     - Using SSZ1A's, it's a single green one
+// 2 - Pair of two secondary ones
+//     - Using SSZ1A's, it's the two yellow ones
+// 3 - Single small primary one
+//     - Using SSZ1A's, it's a single small green one
+// 4 - Pair of primary and secondary
+//     - Using SSZ1A's, the pair of a small green one with a big yellow one
+// Then it loops back
+
+// Position for where the checkpoint should progress to its next version
+private alias object.value1 : object.checkpoint
+
+// The colors the Spotlight should use
+// Just like everything else, these colors are in RRGGBB
+private alias object.value2 : object.primaryBaseColor
+private alias object.value3 : object.secondaryBaseColor
+private alias object.value4 : object.primaryDisplayColor
+private alias object.value5 : object.secondaryDisplayColor
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Face Buffer Flags
+private alias 3 : FACE_FLAG_COLOURED_2D
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Spotlights_UpdateCorner
+
+// ========================
+// Function Definitions
+// ========================
+
+public function Spotlights_UpdateCorner
+	// Called individually for each corner in a spotlight to update it
+	
+	// Preconditions:
+	//   - arrayPos0 is the ID of the vertex that should be changes
+	//   - temp0 is the X multiplier for how much extra this vertex should move
+	//   - temp1 is the Y multiplier for how much extra this vertex should move
+	//      (These last two values are here since spotlights aren't uniform in width - they can be skewed to uneven dimensions as well)
+
+	Sin(temp2, object.rotation)
+	temp2 *= temp1
+
+	Cos(temp3, object.rotation)
+	temp3 *= temp0
+
+	vertexBuffer[arrayPos0].x = temp2
+	vertexBuffer[arrayPos0].x -= temp3
+	vertexBuffer[arrayPos0].x >>= 9
+	vertexBuffer[arrayPos0].x += object.xpos
+
+	Cos(temp2, object.rotation)
+	temp2 *= temp1
+
+	Sin(temp3, object.rotation)
+	temp3 *= temp0
+
+	vertexBuffer[arrayPos0].y = temp2
+	vertexBuffer[arrayPos0].y += temp3
+	vertexBuffer[arrayPos0].y >>= 9
+	vertexBuffer[arrayPos0].y += 256
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp0 = oscillation
+	temp0 <<= 2
+
+	// Get some smooth arc movement values
+
+	Sin(temp1, temp0)
+	temp1 >>= 5
+	temp1 += 64
+
+	Cos(temp2, temp0)
+	temp2 >>= 5
+	temp2 += 64
+
+	// Make the spotlight colors oscillate
+
+	object.primaryDisplayColor = temp1
+	object.primaryDisplayColor <<= 24
+	object.primaryDisplayColor += object.primaryBaseColor
+
+	object.secondaryDisplayColor = temp2
+	object.secondaryDisplayColor <<= 24
+	object.secondaryDisplayColor += object.secondaryBaseColor
+
+	// Check if the current spotlight type should be switched
+
+	temp0 = screen.xoffset
+	temp0 += screen.xcenter
+	if temp0 > object.checkpoint
+		temp0 -= object.checkpoint
+		if temp0 > 440
+			// Move the next checkpoint ahead
+			object.checkpoint += 880
+
+			// Trigger the next spotlight type to start
+			object.spotlightType++
+
+			if object.spotlightType > 4
+				// Loop back
+				object.spotlightType = 0
+			end if
+		end if
+	else
+		temp0 -= object.checkpoint
+		if temp0 < -440
+			// Move the next checkpoint back
+			object.checkpoint -= 880
+
+			// Trigger the next spotlight type to start
+			object.spotlightType--
+
+			if object.spotlightType < 0
+				// Loop ahead
+				object.spotlightType = 4
+			end if
+		end if
+	end if
+
+	// Scroll the spotlight
+	object.xpos = object.checkpoint
+	object.xpos -= screen.xoffset
+
+	// Different handlings for the different types of spotlights
+	switch object.spotlightType
+	case 0
+		// Pair of two primary spotlights
+
+		// Make these spotlights draw above the rest of the stage & its objects
+		object.drawOrder = 5
+
+		// 2 rectangles means 8 vertices and 2 faces
+		scene3D.vertexCount = 8
+		scene3D.faceCount = 2
+
+		// 1st Spotlight offset - move it a bit to the left
+		object.xpos -= 48
+
+		// Mirror the face color to match the targetted color
+		faceBuffer[0].color = object.primaryDisplayColor
+		faceBuffer[1].color = object.primaryDisplayColor
+
+		// First do spotlight 1 (the left one)
+		
+		// Get the base rotation for the spotlight
+		temp0 = oscillation
+		temp0 <<= 1
+		Sin(object.rotation, temp0)
+		if object.rotation > 0
+			// Enforce that the spotlight never goes towards the left
+			FlipSign(object.rotation)
+		end if
+
+		object.rotation /= 10
+		object.rotation += 512
+
+		// And now move all the vertexes for it
+
+		// Top right
+		arrayPos0 = 0
+		temp0 = -16
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Top left
+		arrayPos0++
+		temp0 = 16
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom right
+		arrayPos0++
+		temp0 = -8
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom left
+		arrayPos0++
+		temp0 = 8
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		arrayPos0++
+
+		// And now update the other spotlight (to the right)
+		
+		// Move the second spotlight to the right
+		// (48 px from the base spotlight position)
+		object.xpos += 96
+
+		temp0 = oscillation
+		temp0 <<= 1
+		Sin(object.rotation, temp0)
+		object.rotation /= 10
+		object.rotation += 512
+
+		// Top right
+		temp0 = -16
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Top left
+		arrayPos0++
+		temp0 = 16
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom right
+		arrayPos0++
+		temp0 = -8
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom left
+		arrayPos0++
+		temp0 = 8
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		arrayPos0++
+		break
+
+	case 1
+		// Single primary spotlight
+		
+		// Make this object draw in the background
+		object.drawOrder = 2
+
+		// 1 rectangle means 4 vertices and 1 face
+		scene3D.vertexCount = 4
+		scene3D.faceCount = 1
+
+		// Set its color to what it should be
+		faceBuffer[0].color = object.primaryDisplayColor
+
+		// Handle spotlight movement
+		temp0 = oscillation
+		temp0 <<= 1
+		Sin(object.rotation, temp0)
+		object.rotation >>= 3
+		object.rotation += 512
+
+		// Top right
+		arrayPos0 = 0
+		temp0 = -16
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Top left
+		arrayPos0++
+		temp0 = 16
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom right
+		arrayPos0++
+		temp0 = -8
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom left
+		arrayPos0++
+		temp0 = 8
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		arrayPos0++
+		break
+
+	case 2
+		// Two secondary spotlights
+
+		// Make it draw above everything else again
+		object.drawOrder = 5
+
+
+		// 2 spotlight rectangles means 8 vertices and 2 faces
+		scene3D.vertexCount = 8
+		scene3D.faceCount = 2
+
+		// Set the display colors...
+		faceBuffer[0].color = object.secondaryDisplayColor
+		faceBuffer[1].color = object.secondaryDisplayColor
+
+		// ...and then apply the spotlight offset...
+		object.xpos -= 48
+
+		// ..but then set the colors again? Why is this done twice?
+		faceBuffer[0].color = object.secondaryDisplayColor
+		faceBuffer[1].color = object.secondaryDisplayColor
+
+		// Make the spotlight move
+		temp0 = oscillation
+		temp0 <<= 1
+		Sin(object.rotation, temp0)
+		object.rotation >>= 4
+		object.rotation += 500
+
+		// Move all the vertexes as needed
+		
+		// Top right
+		arrayPos0 = 0
+		temp0 = -20
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Top left
+		arrayPos0++
+		temp0 = 20
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom right
+		arrayPos0++
+		temp0 = -10
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom left
+		arrayPos0++
+		temp0 = 10
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		arrayPos0++
+
+		// Do spotlight 2 now, starting with its small X offset
+		object.xpos += 96
+
+		temp0 = oscillation
+		temp0 += 32
+		temp0 <<= 1
+		Sin(object.rotation, temp0)
+		object.rotation >>= 3
+		object.rotation += 508
+
+		// Top right
+		temp0 = -16
+		temp1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Top left
+		arrayPos0++
+		temp0 = 16
+		temp1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom right
+		arrayPos0++
+		temp0 = -8
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom left
+		arrayPos0++
+		temp0 = 8
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		arrayPos0++
+		break
+
+	case 3
+		// Single small primary spotlight
+		
+		// This version should draw above everything else as well
+		object.drawOrder = 5
+
+		// 1 spotlight rectangle has four corners and one face
+		scene3D.vertexCount = 4
+		scene3D.faceCount = 1
+
+		faceBuffer[0].color = object.primaryDisplayColor
+
+		// Bounce the spotlight as needed
+		temp0 = 512
+		temp0 -= oscillation
+		temp0 *= 3
+		Sin(object.rotation, temp0)
+		object.rotation /= 12
+		object.rotation += 520
+
+		// Top right
+		arrayPos0 = 0
+		temp0 = -12
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Top left
+		arrayPos0++
+		temp0 = 12
+		temp1 = -384
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom right
+		arrayPos0++
+		temp0 = -4
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom left
+		arrayPos0++
+		temp0 = 4
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		arrayPos0++
+		break
+
+	case 4
+		// A pair of primary and secondary spotlights
+		
+		// This variant should draw in the BG
+		object.drawOrder = 2
+
+		// 2 rectangles means that there should be 8 vertices and 2 faces
+		scene3D.vertexCount = 8
+		scene3D.faceCount = 2
+
+		object.xpos -= 48
+
+		faceBuffer[0].color = object.primaryDisplayColor
+		faceBuffer[1].color = object.secondaryDisplayColor
+
+		// First do spotlight 1
+
+		// Update its rotation
+		temp0 = oscillation
+		temp0 += 64
+		temp0 <<= 2
+		Sin(object.rotation, temp0)
+		object.rotation /= 20
+		object.rotation += 496
+
+		// Top right
+		arrayPos0 = 0
+		temp0 = -14
+		temp1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Top left
+		arrayPos0++
+		temp0 = 14
+		temp1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom right
+		arrayPos0++
+		temp0 = -4
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom left
+		arrayPos0++
+		temp0 = 4
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		arrayPos0++
+
+		// Do spotlight 2 now
+		
+		// Total shift of 48 from its starting position, keeping the above subtraction of 48 in mind
+		object.xpos += 96
+
+		// Rotate the spotlight
+		temp0 = oscillation
+		temp0 <<= 1
+		Sin(object.rotation, temp0)
+		object.rotation >>= 4
+		object.rotation += 520
+
+		// Top right
+		temp0 = -24
+		temp1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Top left
+		arrayPos0++
+		temp0 = 24
+		temp1 = -420
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom right
+		arrayPos0++
+		temp0 = -16
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		// Bottom left
+		arrayPos0++
+		temp0 = 16
+		temp1 = 0
+		CallFunction(Spotlights_UpdateCorner)
+
+		arrayPos0++
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	// The spotlights are all 3d, so instead of drawing sprites, draw the entire 3d scene instead
+	Draw3DScene()
+end event
+
+
+event ObjectStartup
+	// Reset the 3d stuff
+	MatrixTranslateXYZ(MAT_WORLD, 0, 0, 0)
+	MatrixTranslateXYZ(MAT_VIEW, 0, 0, 0)
+
+	// Setup the first spotlight
+	faceBuffer[0].a = 0
+	faceBuffer[0].b = 1
+	faceBuffer[0].c = 2
+	faceBuffer[0].d = 3
+	faceBuffer[0].flag = FACE_FLAG_COLOURED_2D
+
+	// Setup the second spotlight
+	faceBuffer[1].a = 4
+	faceBuffer[1].b = 5
+	faceBuffer[1].c = 6
+	faceBuffer[1].d = 7
+	faceBuffer[1].flag = FACE_FLAG_COLOURED_2D
+
+	// Loop through all obejcts in the stage and setup all Spotlights objects
+	foreach (TypeName[Spotlights], arrayPos0, ALL_ENTITIES)
+		// Spotlights should always be active
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		// The default draw priority for a spotlight should be above the stage & objects but below the HUD
+		object[arrayPos0].drawOrder = 5
+
+		// And set up the initial starting checkpoint value as well
+		object[arrayPos0].checkpoint = screen.xcenter
+		
+		// Setup the Spotlight's colors based on the current time period
+		switch HUD.currentTimePeriod
+		case TIME_PRESENT
+			// Present gets standard colors - set the primary spotlight to green
+			object[arrayPos0].primaryBaseColor = 128
+			object[arrayPos0].primaryBaseColor <<= 16
+			temp0 = 224
+			temp0 <<= 8
+			object[arrayPos0].primaryBaseColor += temp0
+			object[arrayPos0].primaryBaseColor += 128
+
+			// Set the secondary spotlight to yellow
+			object[arrayPos0].secondaryBaseColor = 224
+			object[arrayPos0].secondaryBaseColor <<= 16
+			temp0 = 224
+			temp0 <<= 8
+			object[arrayPos0].secondaryBaseColor += temp0
+			object[arrayPos0].secondaryBaseColor += 0
+			break
+
+		case TIME_GOOD_FUTURE
+			// The Good Future gets nice and bright colors - primary spotlight is brown
+			object[arrayPos0].primaryBaseColor = 192
+			object[arrayPos0].primaryBaseColor <<= 16
+			temp0 = 128
+			temp0 <<= 8
+			object[arrayPos0].primaryBaseColor += temp0
+			object[arrayPos0].primaryBaseColor += 0
+
+			// And the secondary spotlight is blue
+			object[arrayPos0].secondaryBaseColor = 0
+			object[arrayPos0].secondaryBaseColor <<= 16
+			temp0 = 192
+			temp0 <<= 8
+			object[arrayPos0].secondaryBaseColor += temp0
+			object[arrayPos0].secondaryBaseColor += 224
+			break
+
+		case TIME_BAD_FUTURE
+			// Bad Future gets cool and fancy colors, primary spotlight is pink
+			object[arrayPos0].primaryBaseColor = 224
+			object[arrayPos0].primaryBaseColor <<= 16
+			temp0 = 64
+			temp0 <<= 8
+			object[arrayPos0].primaryBaseColor += temp0
+			object[arrayPos0].primaryBaseColor += 128
+
+			// And secondary spotlight is purple
+			object[arrayPos0].secondaryBaseColor = 224
+			object[arrayPos0].secondaryBaseColor <<= 16
+			temp0 = 128
+			temp0 <<= 8
+			object[arrayPos0].secondaryBaseColor += temp0
+			object[arrayPos0].secondaryBaseColor += 192
+			break
+
+		end switch
+	next
+
+	// Set the initial screen offset, this is used in calculations for cycling spotlights
+	screen.xoffset = player[SLOT_PLAYER1].xpos
+	screen.xoffset >>= 16
+	screen.xoffset -= screen.xcenter
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143) // "Script" Icon
+
+	// This object uses 3d, so there's not really any good way to show it in the editor...
+	// It's normally placed out of bounds though, so it doesn't matter too much anyway
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

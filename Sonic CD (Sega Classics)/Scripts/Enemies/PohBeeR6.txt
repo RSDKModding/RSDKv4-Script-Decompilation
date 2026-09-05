@@ -1,0 +1,414 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Poh Bee Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.originPos.x
+private alias object.value2        : object.currentFrame
+private alias object.value3        : object.shootingCooldown
+private alias object.value4        : object.frameIncrease
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// PohBee Bullet Aliases
+private alias object.direction : pohBeeBullet.direction
+private alias object.xpos      : pohBeeBullet.xpos
+private alias object.ypos      : pohBeeBullet.ypos
+private alias object.xvel      : pohBeeBullet.xvel
+private alias object.yvel      : pohBeeBullet.yvel
+
+// States
+private alias 0 : POHBEE_MOVING_LEFT
+private alias 1 : POHBEE_TURN_RIGHT
+private alias 2 : POHBEE_MOVING_RIGHT
+private alias 3 : POHBEE_TURN_LEFT
+private alias 4 : POHBEE_SHOOTING_LEFT
+private alias 5 : POHBEE_SHOOTING_RIGHT
+private alias 6 : POHBEE_RESET
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function PohBee_DebugDraw
+reserve function PohBee_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value PohBee_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function PohBee_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= PohBee_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function PohBee_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= PohBee_startDebugID
+    CreateTempObject(TypeName[Poh Bee], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.outOfBounds == true
+        object.state = POHBEE_RESET
+        object.timer = 0
+        object.direction = FACING_RIGHT
+
+        object.xpos = object.originPos.x
+
+        object.currentFrame = 0
+        object.shootingCooldown = 0
+        object.frameIncrease = 0
+    end if
+
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case POHBEE_MOVING_LEFT
+            object.priority = PRIORITY_ACTIVE
+            if object.shootingCooldown > 0
+                object.shootingCooldown--
+            end if
+
+            if object.timer < 512
+                object.timer++
+                object.xpos -= 0x10000
+            else
+                object.state = POHBEE_TURN_RIGHT
+                object.timer = 0
+            end if
+            break
+
+        case POHBEE_MOVING_RIGHT
+            object.priority = PRIORITY_ACTIVE
+            if object.shootingCooldown > 0
+                object.shootingCooldown--
+            end if
+
+            if object.timer < 60
+                if object.timer == 30
+                    object.direction = FACING_LEFT
+                end if
+
+                object.timer++
+            else
+                object.state = POHBEE_MOVING_RIGHT
+            end if
+            break
+
+        case POHBEE_MOVING_RIGHT
+            object.priority = PRIORITY_ACTIVE
+            if object.shootingCooldown > 0
+                object.shootingCooldown--
+            end if
+
+            if object.timer < 512
+                object.timer++
+                object.xpos += 0x10000
+            else
+                object.state = POHBEE_TURN_LEFT
+                object.timer = 0
+            end if
+            break
+
+        case POHBEE_TURN_LEFT
+            object.priority = PRIORITY_ACTIVE
+            if object.shootingCooldown > 0
+                object.shootingCooldown--
+            end if
+
+            if object.timer < 60
+                if object.timer == 30
+                    object.direction = FACING_RIGHT
+                end if
+
+                object.timer++
+            else
+                object.state = POHBEE_MOVING_LEFT
+            end if
+            break
+
+        case POHBEE_SHOOTING_LEFT
+            object.priority = PRIORITY_ACTIVE
+            if object.shootingCooldown < 92
+                object.shootingCooldown++
+                if object.shootingCooldown == 30
+                    object.frameIncrease = 4
+                end if
+
+                if object.shootingCooldown == 64
+                    CreateTempObject(TypeName[Poh Bee Shot], 0, object.xpos, object.ypos)
+                    pohBeeBullet[tempObjectPos].xpos -= 0xF0000
+                    pohBeeBullet[tempObjectPos].ypos += 0x1B0000
+                    pohBeeBullet[tempObjectPos].xvel = -0x20000
+                    pohBeeBullet[tempObjectPos].yvel = 0x20000
+                    PlaySfx(SfxName[Shot], false)
+                end if
+            else
+                object.state = POHBEE_MOVING_LEFT
+                object.frameIncrease = 0
+                object.shootingCooldown = 60
+            end if
+            break
+
+        case POHBEE_SHOOTING_RIGHT
+            object.priority = PRIORITY_ACTIVE
+            if object.shootingCooldown < 92
+                object.shootingCooldown++
+                if object.shootingCooldown == 30
+                    object.frameIncrease = 4
+                end if
+
+                if object.shootingCooldown == 64
+                    // Bug Details:
+                    // This should be creating a Poh Bee Shot object, not Blank Object
+                    CreateTempObject(TypeName[Blank Object], 0, object.xpos, object.ypos)
+                    pohBeeBullet[tempObjectPos].direction = FACING_LEFT
+                    pohBeeBullet[tempObjectPos].xpos += 0xF0000
+                    pohBeeBullet[tempObjectPos].ypos += 0x1B0000
+                    pohBeeBullet[tempObjectPos].xvel = 0x20000
+                    pohBeeBullet[tempObjectPos].yvel = 0x20000
+                    PlaySfx(SfxName[Shot], false)
+                end if
+            else
+                object.state = POHBEE_MOVING_RIGHT
+                object.frameIncrease = 0
+                object.shootingCooldown = 60
+            end if
+            break
+
+        case POHBEE_RESET
+            if object.outOfBounds == true
+                object.state = POHBEE_MOVING_LEFT
+                object.priority = PRIORITY_BOUNDS
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case POHBEE_MOVING_LEFT
+            object.priority = PRIORITY_ACTIVE
+            if object.timer < 1024
+                object.timer++
+                object.xpos -= 0x8000
+            else
+                object.state = POHBEE_TURN_RIGHT
+                object.timer = 0
+            end if
+            break
+
+        case POHBEE_TURN_RIGHT
+            object.priority = PRIORITY_ACTIVE
+            if object.timer < 60
+                if object.timer == 30
+                    object.direction = FACING_LEFT
+                end if
+
+                object.timer++
+            else
+                object.state = POHBEE_MOVING_RIGHT
+            end if
+            break
+
+        case POHBEE_MOVING_RIGHT
+            object.priority = PRIORITY_ACTIVE
+            if object.timer < 1024
+                object.timer++
+                object.xpos += 0x8000
+            else
+                object.state = POHBEE_TURN_LEFT
+                object.timer = 0
+            end if
+            break
+
+        case POHBEE_TURN_LEFT
+            object.priority = PRIORITY_ACTIVE
+            if object.timer < 60
+                if object.timer == 30
+                    object.direction = FACING_RIGHT
+                end if
+
+                object.timer++
+            else
+                object.state = POHBEE_MOVING_LEFT
+            end if
+            break
+
+        case POHBEE_RESET
+            if object.outOfBounds == true
+                object.state = POHBEE_MOVING_LEFT
+                object.priority = PRIORITY_BOUNDS
+            end if
+            break
+        end switch
+    end if
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.quality == QUALITY_GOOD
+            if object.state < POHBEE_SHOOTING_LEFT
+                if object.shootingCooldown == 0
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -96, -64, 96, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        if object.xpos > player[currentPlayer].xpos
+                            object.direction = FACING_RIGHT
+                            object.state = POHBEE_SHOOTING_LEFT
+                        else
+                            object.direction = FACING_LEFT
+                            object.state = POHBEE_SHOOTING_RIGHT
+                        end if
+                    end if
+                end if
+            end if
+        end if
+
+        if object.state < POHBEE_RESET
+            BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    if object.state < POHBEE_RESET
+        if object.quality == QUALITY_GOOD
+            object.currentFrame++
+            object.currentFrame &= 3
+
+            object.frame = object.currentFrame
+            object.frame >>= 1
+            object.frame += object.frameIncrease
+        else
+            object.currentFrame++
+            object.currentFrame &= 3
+
+            object.frame = object.currentFrame
+            object.frame >>= 1
+            object.frame += 2
+        end if
+
+        DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    // Good
+    SpriteFrame(-24, -20, 48, 32, 148, 75)  // #0 - PohBee Fly frame 0
+    SpriteFrame(-24, -16, 48, 28, 148, 108) // #1 - PohBee Fly frame 1
+
+    // Bad
+    SpriteFrame(-24, -20, 48, 32, 99, 133)  // #2 - PohBee Fly frame 0
+    SpriteFrame(-24, -16, 48, 28, 148, 137) // #3 - PohBee Fly frame 1
+
+    // Shooting
+    SpriteFrame(-24, -20, 48, 40, 197, 91)  // #4 - PohBee Shoot frame 0
+    SpriteFrame(-24, -16, 48, 36, 197, 132) // #5 - PohBee Shoot frame 1
+
+    foreach (TypeName[Poh Bee], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+    next
+
+    temp0 = 0
+    PohBee_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Poh Bee], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(PohBee_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(PohBee_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // type
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // type
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-24, -20, 48, 32, 148, 75)  // #0 - PohBee Fly, Good quality
+    SpriteFrame(-24, -20, 48, 32, 99, 133)  // #2 - PohBee Fly, Bad quality
+
+    AddEditorVariable("Condition")
+    SetActiveVariable("Condition")
+    AddEnumVariable("Good", QUALITY_GOOD)
+    AddEnumVariable("Bad", QUALITY_BAD)
+end event

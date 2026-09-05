@@ -1,0 +1,115 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: EBarrier Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.yvel : player.yvel
+
+// States
+private alias 0 : EBARRIER_IDLE
+private alias 1 : EBARRIER_HIT
+private alias 2 : EBARRIER_DESTROYED
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case EBARRIER_HIT
+        if object.ypos > 0x5100000
+            object.ypos -= 0x28000
+        else
+            object.ypos = 0x5100000
+            object.state = EBARRIER_DESTROYED
+        end if
+
+        object.frame++
+        object.frame %= 9
+        break
+
+    case EBARRIER_DESTROYED
+        temp0 = object.timer
+        temp0 &= 3
+        if temp0 == 0
+            Rand(temp0, 96)
+            temp0 -= 48
+            temp0 <<= 16
+            temp0 += object.xpos
+
+            Rand(temp1, 40)
+            temp1 -= 20
+            temp1 <<= 16
+            temp1 += object.ypos
+
+            CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+            PlaySfx(SfxName[Explosion], false)
+        end if
+
+        object.timer++
+        if object.timer == 120
+            object.type = TypeName[Blank Object]
+        end if
+        break
+
+    end switch
+
+    if object.state == EBARRIER_IDLE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -48, -16, 48, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.state = EBARRIER_HIT
+                player[currentPlayer].yvel = 0
+                PlaySfx(SfxName[Explosion], false)
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(3)
+
+    temp0 = object.frame
+    temp0 /= 3
+    DrawSprite(temp0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects2.gif")
+    SpriteFrame(-64, -16, 32, 32, 134, 0) // #0 - Gear Frame 0
+    SpriteFrame(-64, -16, 32, 32, 167, 0) // #1 - Gear Frame 1
+    SpriteFrame(-64, -16, 32, 32, 200, 0) // #2 - Gear Frame 2
+    SpriteFrame(-48, -16, 96, 32, 1, 67)  // #3 - Eggman Barrier
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects2.gif")
+
+    SpriteFrame(-64, -16, 32, 32, 134, 0) // #0 - Gear Frame 0
+    SpriteFrame(-48, -16, 96, 32, 1, 67)  // #1 - Eggman Barrier
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

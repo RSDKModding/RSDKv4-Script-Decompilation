@@ -1,0 +1,373 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Rotating Log Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Property Values
+private alias 0 : CHILD_OBJECT
+private alias 1 : PARENT_OBJECT
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RotatingLog_DebugDraw
+reserve function RotatingLog_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function RotatingLog_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function RotatingLog_DebugSpawn
+	CreateTempObject(TypeName[Rotating Log], PARENT_OBJECT, object.xpos, object.ypos)
+	object[tempObjectPos].angle    = 504
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+
+	CreateTempObject(TypeName[Rotating Log], CHILD_OBJECT, object.xpos, object.ypos)
+	object[tempObjectPos].angle    = 8
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+
+	CreateTempObject(TypeName[Rotating Log], CHILD_OBJECT, object.xpos, object.ypos)
+	object[tempObjectPos].angle    = 120
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+
+	CreateTempObject(TypeName[Rotating Log], CHILD_OBJECT, object.xpos, object.ypos)
+	object[tempObjectPos].angle    = 136
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+
+	CreateTempObject(TypeName[Rotating Log], CHILD_OBJECT, object.xpos, object.ypos)
+	object[tempObjectPos].angle    = 248
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+
+	CreateTempObject(TypeName[Rotating Log], CHILD_OBJECT, object.xpos, object.ypos)
+	object[tempObjectPos].angle    = 264
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+
+	CreateTempObject(TypeName[Rotating Log], CHILD_OBJECT, object.xpos, object.ypos)
+	object[tempObjectPos].angle    = 376
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+
+	CreateTempObject(TypeName[Rotating Log], CHILD_OBJECT, object.xpos, object.ypos)
+	object[tempObjectPos].angle    = 392
+	object[tempObjectPos].priority = PRIORITY_XBOUNDS_DESTROY
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle++
+	object.angle &= 511
+
+	// Radius value
+	temp1 = 96
+
+	// Get the X change for the platform
+	Cos(object.collisionOffset.x, object.angle)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x <<= 7
+	object.collisionOffset.x += object.xpos
+	object.collisionOffset.x &= -0x10000 // Truncate the value
+	object.collisionOffset.x -= object.drawPos.x
+
+	// And then get the Y change for the platform
+	Sin(object.collisionOffset.y, object.angle)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y <<= 7
+	object.collisionOffset.y += object.ypos
+	object.collisionOffset.y &= -0x10000 // Truncate the value
+	object.collisionOffset.y -= object.drawPos.y
+
+	// Backup the Object's base position
+	temp0 = object.xpos
+	temp1 = object.ypos
+
+	// And move the object to where the Log Platform actually is
+	object.xpos = object.drawPos.x
+	object.ypos = object.drawPos.y
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Test to see if the Player's on the Log
+		BoxCollisionTest(C_SOLID, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			// Move them along if needed
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+
+	// Restore the Object to its base position
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	// Radius value
+	temp1 = 96
+
+	// Get the X Position of the Log
+	Cos(object.drawPos.x, object.angle)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 7
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= -0x10000 // Truncate the value
+
+	// Get the Y Position of the Log
+	Sin(object.drawPos.y, object.angle)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 7
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(0, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R5/Objects.gif")
+
+	// Rotating Log Frames
+	// Uses separate sprites for each time zone
+	switch HUD.currentTimePeriod
+	case TIME_PRESENT
+		SpriteFrame(-8, -8, 16, 16, 35, 1)
+		break
+
+	case TIME_PAST
+		SpriteFrame(-8, -8, 16, 16, 67, 174)
+		break
+
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 174)
+		break
+
+	case TIME_BAD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 158)
+		break
+
+	end switch
+
+	// Cycle through all Rotating Log objects in the level
+	foreach (TypeName[Rotating Log], arrayPos0, ALL_ENTITIES)
+		// See if the object is a Leading Log
+		if object[arrayPos0].propertyValue == PARENT_OBJECT
+			// Set the starting angle of the next 7 Logs, as well as the current one
+			arrayPos1 = arrayPos0
+
+			object[arrayPos1].angle = 504
+			arrayPos1++
+
+			object[arrayPos1].angle = 8
+			arrayPos1++
+
+			object[arrayPos1].angle = 120
+			arrayPos1++
+
+			object[arrayPos1].angle = 136
+			arrayPos1++
+
+			object[arrayPos1].angle = 248
+			arrayPos1++
+
+			object[arrayPos1].angle = 264
+			arrayPos1++
+
+			object[arrayPos1].angle = 376
+			arrayPos1++
+
+			object[arrayPos1].angle = 392
+		end if
+	next
+
+	SetTableValue(TypeName[Rotating Log], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(RotatingLog_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(RotatingLog_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // isLeader
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // isLeader
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		if object.propertyValue == 1
+			temp0 = 504
+		else
+			GetObjectType(temp1, "Rotating Log")
+			arrayPos0 = object.entityPos
+			temp0 = 0
+
+			temp2 = false
+
+			while temp2 == false
+				if temp0 == 8
+					temp2 = true
+				end if
+
+				arrayPos0--
+				temp0++
+
+				CheckEqual(object[arrayPos0].Type, temp1)
+				temp2 = checkResult
+
+				CheckEqual(object[arrayPos0].propertyValue, true)
+				temp2 &= checkResult
+			loop
+
+			switch temp0
+			case 1
+				temp0 = 392
+				break
+
+			case 2
+				temp0 = 376
+				break
+
+			case 3
+				temp0 = 264
+				break
+
+			case 4
+				temp0 = 248
+				break
+
+			case 5
+				temp0 = 136
+				break
+
+			case 6
+				temp0 = 120
+				break
+
+			case 7
+				temp0 = 8
+				break
+
+			// should never get here!
+			case 0
+			default
+				temp0 = 504
+				break
+
+			end switch
+		end if
+
+		// Get the X Position of the Log
+		Cos(temp1, temp0)
+		temp1 *= 96
+		temp1 <<= 7
+		temp1 += object.xpos
+		temp1 &= 0xFFFF0000 // Truncate the value
+
+		// Get the Y Position of the Log
+		Sin(temp2, temp0)
+		temp2 *= 96
+		temp2 <<= 7
+		temp2 += object.ypos
+		temp2 &= 0xFFFF0000 // Truncate the value
+
+		object.inkEffect = INK_BLEND
+
+		DrawSpriteFX(0, FX_INK, temp1, temp2)
+
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R5/Objects.gif")
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	// Rotating Log Frames
+	// Uses separate sprites for each time zone
+	switch checkResult
+	case TIME_PRESENT
+		SpriteFrame(-8, -8, 16, 16, 35, 1)
+		break
+
+	case TIME_PAST
+		SpriteFrame(-8, -8, 16, 16, 67, 174)
+		break
+
+	case TIME_GOOD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 174)
+		break
+
+	case TIME_BAD_FUTURE
+		SpriteFrame(-8, -8, 16, 16, 83, 158)
+		break
+
+	end switch
+
+	AddEditorVariable("isLeader")
+	SetActiveVariable("isLeader")
+	AddEnumVariable("false", 0)
+	AddEnumVariable("true",  1)
+end event

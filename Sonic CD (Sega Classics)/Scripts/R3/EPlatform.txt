@@ -1,0 +1,147 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: EPlatform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0	: object.hitboxLeft
+private alias object.value1	: object.hitboxRight
+private alias object.value2	: object.length
+private alias object.value3	: object.musicFade
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// States
+private alias 0 : EPLATFORM_IDLE
+private alias 1 : EPLATFORM_EXTEND_LARGE
+private alias 2 : EPLATFORM_EXTEND_SHORT
+private alias 3 : EPLATFORM_BLANK
+
+// Property Values
+private alias 6 : EPLATFORM_SHORT
+private alias 8 : EPLATFORM_LARGE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case EPLATFORM_IDLE
+        if object.propertyValue == EPLATFORM_LARGE // check if it's the platform used by Eggman
+            BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, -48, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.state = EPLATFORM_EXTEND_LARGE
+                stage.newYBoundary2 = object.iypos
+                stage.newYBoundary2 += 24
+            end if
+        else
+            temp0 = object.hitboxRight
+            temp0 += 32
+            temp0 <<= 16
+            temp0 += object.xpos
+            if player[SLOT_PLAYER1].xpos > temp0
+                object.state = EPLATFORM_EXTEND_SHORT
+                object.priority = PRIORITY_ACTIVE
+            end if
+        end if
+        break
+
+    case EPLATFORM_EXTEND_LARGE
+        if object.length < object.propertyValue
+            object.length++
+            object.hitboxLeft -= 16
+        else
+            object.state = EPLATFORM_BLANK
+        end if
+        break
+
+    case EPLATFORM_EXTEND_SHORT
+        if object.length < object.propertyValue
+            object.length++
+            object.hitboxLeft -= 16
+        end if
+
+		// Start the boss music
+        if object.musicFade < 100
+            object.musicFade++
+            music.volume--
+        else
+            PlayMusic(4)
+            object.state = EPLATFORM_BLANK
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_PLATFORM, object.entityPos, object.hitboxLeft, -16, object.hitboxRight, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+    next
+end event
+
+
+event ObjectDraw
+    temp0 = 0
+    temp1 = object.hitboxRight
+    temp1 <<= 16
+    temp1 -= 0x80000
+    temp1 += object.xpos
+    while temp0 < object.length
+        DrawSpriteXY(0, temp1, object.ypos)
+        temp0++
+        temp1 -= 0x100000
+    loop
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects2.gif")
+
+    foreach (TypeName[EPlatform], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].hitboxRight = object[arrayPos0].propertyValue
+        object[arrayPos0].hitboxRight <<= 3
+        object[arrayPos0].hitboxLeft = object[arrayPos0].hitboxRight
+    next
+
+    SpriteFrame(-8, -16, 16, 32, 117, 0)    // #0 - Eggman Platform
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+
+    temp0 = object.propertyValue
+    temp0 <<= 3
+    temp1 = temp0
+
+    temp2 = 0
+    temp3 = temp0
+    temp3 <<= 16
+    temp3 -= 0x80000
+    temp3 += object.xpos
+    while temp2 < object.propertyValue
+        DrawSpriteXY(0, temp3, object.ypos)
+        temp2++
+        temp3 -= 0x100000
+    loop
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects2.gif")
+    SpriteFrame(-8, -16, 16, 32, 117, 0)    // #0 - Eggman Platform
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

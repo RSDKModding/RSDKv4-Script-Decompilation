@@ -1,0 +1,195 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: BGEffects Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value2 : object.prevAngle
+private alias object.value3 : object.fansTimer
+private alias object.value4 : object.crunchersTimer
+private alias object.value5 : object.fansSprite
+private alias object.value6 : object.crunchersSprite
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Animate the Fans in the level
+	object.fansTimer++
+	if object.fansTimer > 2
+		object.fansTimer = 0
+		object.fansSprite++
+		object.fansSprite %= 3
+		switch object.fansSprite
+		case 0
+			// Fans are 4x4 tiles, comprised of 8 unique tiles, so
+			// 8 individual tiles need to be updated to change the entire sprite
+			Copy16x16Tile(296, 520)
+			Copy16x16Tile(297, 521)
+			Copy16x16Tile(298, 522)
+			Copy16x16Tile(299, 523)
+			Copy16x16Tile(300, 524)
+			Copy16x16Tile(301, 525)
+			Copy16x16Tile(302, 526)
+			Copy16x16Tile(303, 527)
+			break
+
+		case 1
+			Copy16x16Tile(296, 528)
+			Copy16x16Tile(297, 529)
+			Copy16x16Tile(298, 530)
+			Copy16x16Tile(299, 531)
+			Copy16x16Tile(300, 532)
+			Copy16x16Tile(301, 533)
+			Copy16x16Tile(302, 534)
+			Copy16x16Tile(303, 535)
+			break
+
+		case 2
+			Copy16x16Tile(296, 536)
+			Copy16x16Tile(297, 537)
+			Copy16x16Tile(298, 538)
+			Copy16x16Tile(299, 539)
+			Copy16x16Tile(300, 540)
+			Copy16x16Tile(301, 541)
+			Copy16x16Tile(302, 542)
+			Copy16x16Tile(303, 543)
+			break
+
+		end switch
+	end if
+
+	// Animate the Crunchers in the level
+	object.crunchersTimer++
+	if object.crunchersTimer > 5
+		object.crunchersTimer = 0
+		object.crunchersSprite++
+		object.crunchersSprite &= 3
+		switch object.crunchersSprite
+		case 0
+			// Crunchers are 2x2 tiles, so 4 tiles need to be updated
+			// in order to completely change their sprite
+			Copy16x16Tile(189, 544)
+			Copy16x16Tile(190, 545)
+			Copy16x16Tile(191, 548)
+			Copy16x16Tile(192, 549)
+			break
+
+		case 1
+			Copy16x16Tile(189, 546)
+			Copy16x16Tile(190, 547)
+			Copy16x16Tile(191, 550)
+			Copy16x16Tile(192, 551)
+			break
+
+		case 2
+			Copy16x16Tile(189, 552)
+			Copy16x16Tile(190, 553)
+			Copy16x16Tile(191, 556)
+			Copy16x16Tile(192, 557)
+			break
+
+		case 3
+			Copy16x16Tile(189, 554)
+			Copy16x16Tile(190, 555)
+			Copy16x16Tile(191, 558)
+			Copy16x16Tile(192, 559)
+			break
+
+		end switch
+	end if
+
+	// Handle the palette animation
+	object.animationTimer++
+	if object.animationTimer > 7
+		object.animationTimer = 0
+		RotatePalette(0, 202, 205, true)
+	end if
+
+	// Find the difference between the current scroll pos and last scroll pos
+	temp1 = object.prevAngle
+	temp2 = tileLayer[0].angle
+	if temp1 < temp2
+		temp3 = temp2
+		temp3 -= temp1
+		if temp3 > 256
+			// Account for looping
+			temp1 += 512
+		end if
+	else
+		temp3 = temp1
+		temp3 -= temp2
+		if temp3 > 256
+			// Account for looping
+			temp2 += 512
+		end if
+	end if
+
+	temp0 = temp1
+	temp0 -= temp2
+
+	// Store the current angle for calculations next frame
+	object.prevAngle = tileLayer[0].angle
+
+	// Move the other BG layers in accordance with the difference found
+	temp1 = 0x40000
+	temp2 = 0x30000
+	temp3 = 0x10000
+	temp4 = 0x20000
+
+	temp1 *= temp0
+	temp2 *= temp0
+	temp3 *= temp0
+	temp4 *= temp0
+
+	hParallax[1].scrollPos += temp1
+	hParallax[2].scrollPos += temp2
+	hParallax[3].scrollPos += temp3
+	hParallax[4].scrollPos += temp4
+end event
+
+
+event ObjectStartup
+	// Set the stage's bounds
+	stage.curXBoundary1 = 0x3400000 // left bounds:  832 pixels
+	stage.curXBoundary2 = 0xCC00000 // right bounds: 3264 pixels
+	stage.curYBoundary1 = 0x3400000 // upper bounds: 832 pixels
+	stage.curYBoundary2 = 0xCC00000 // lower bounds: 3264 pixels
+
+	// Setup all BGEffects in the level
+	foreach (TypeName[BG Effects], arrayPos0, ALL_ENTITIES)
+		// Set the object to always active
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		// Make the object among the first to have its draw code be run
+		object[arrayPos0].drawOrder = 0
+
+		// Set the starting angle
+		// (Assuming Sonic starts facing left)
+		object[arrayPos0].prevAngle = 368
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

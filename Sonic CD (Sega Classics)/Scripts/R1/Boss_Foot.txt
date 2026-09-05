@@ -1,0 +1,337 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Foot Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.xvel   : object.offset.x
+private alias object.yvel   : object.offset.y
+private alias object.value0 : object.legsEntity
+private alias object.value1 : object.bodyEntity
+private alias object.value4 : object.legSide
+private alias object.value6 : object.velocity.x
+private alias object.value7 : object.velocity.y
+
+// Leg Joint Aliases
+private alias object.xpos   : legJoint.xpos
+private alias object.ypos   : legJoint.ypos
+private alias object.value0 : legJoint.bodyEntity
+private alias object.value4 : legJoint.legJointSide
+private alias object.value5 : legJointR.offset.y
+private alias object.value1 : legJointR.legREntity
+
+// Legs Aliases
+private alias object.xpos   : legs.xpos
+private alias object.ypos   : legs.ypos
+private alias object.value0 : legs.legJointEntity
+private alias object.value4 : legs.legSide
+
+private alias object.value1 : legR.footREntity
+
+// Body Aliases
+private alias object.xpos   : body.xpos
+private alias object.ypos   : body.ypos
+private alias object.value0 : body.faceEntity
+private alias object.value1 : body.legJointREntity
+
+// Face Aliases
+private alias object.xpos           : face.xpos
+private alias object.ypos           : face.ypos
+private alias object.animation      : face.animation
+private alias object.animationTimer : face.FaceTimer
+
+// Foot Aliases
+private alias object.xpos : footR.xpos
+private alias object.ypos : footR.ypos
+
+// Player Aliases
+private alias object.value7 : player.invincibleTimer
+
+// States
+private alias 0 : BOSSFOOT_SETUP
+private alias 1 : BOSSFOOT_STEP
+private alias 2 : BOSSFOOT_HANDLE_STEP
+private alias 3 : BOSSFOOT_STEP_OPPOSITE
+private alias 4 : BOSSFOOT_HANDLE_STEP_OPPOSITE
+private alias 5 : BOSSFOOT_LANDING
+private alias 6 : BOSSFOOT_DESTROYED
+
+// Eggman Animations
+private alias 2 : EGGANI_LAUGH
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BossFoot_HandleMovement
+reserve function BossFoot_StepEarthQuake
+reserve function BossFoot_SaveFootPosition
+reserve function BossFoot_Unused
+
+// ========================
+// Function Definitions
+// ========================
+
+public function BossFoot_HandleMovement
+    arrayPos0 = object.legsEntity
+
+    object.xpos = legs[arrayPos0].xpos
+    object.xpos -= 0xB0000
+    object.xpos += object.velocity.x
+
+    object.ypos = legs[arrayPos0].ypos
+    object.ypos += 0xE0000
+    object.ypos += object.velocity.y
+end function
+
+
+public function BossFoot_StepEarthQuake
+    SetBit(object.legSide, 4, 1)
+
+    arrayPos0 = object.legsEntity
+    SetBit(legs[arrayPos0].legSide, 4, 1)
+
+    arrayPos1 = legs[arrayPos0].legJointEntity
+    SetBit(legJoint[arrayPos1].legJointSide, 4, 1)
+
+    screen.shakeY = 4
+
+    arrayPos0 = object.bodyEntity
+    arrayPos0++
+    if legJointR[arrayPos0].offset.y > 2
+        arrayPos0--
+        object[arrayPos0].ypos -= 0x18000
+
+        arrayPos0--
+        object[arrayPos0].ypos -= 0x18000
+    end if
+
+    PlaySfx(SfxName[Mech Step], false)
+end function
+
+
+public function BossFoot_SaveFootPosition
+    GetBit(temp0, object.legSide, 4)
+    if temp0 == false
+        CallFunction(BossFoot_HandleMovement)
+    else
+        GetBit(temp0, object.legSide, 5)
+        if temp0 == true
+            temp6 = object.offset.x
+            temp7 = object.offset.y
+
+            if object.state != BOSSFOOT_STEP_OPPOSITE
+                FlipSign(temp6)
+                FlipSign(temp7)
+            end if
+
+            arrayPos0 = object.legsEntity
+            legs[arrayPos0].xpos -= temp6
+            legs[arrayPos0].ypos += temp7
+
+            arrayPos1 = legs[arrayPos0].legJointEntity
+            legJoint[arrayPos1].xpos -= temp6
+            legJoint[arrayPos1].ypos += temp7
+
+            arrayPos0 = legJoint[arrayPos1].bodyEntity
+            body[arrayPos0].xpos -= temp6
+            body[arrayPos0].ypos += temp7
+
+            arrayPos1 = body[arrayPos0].faceEntity
+            face[arrayPos1].xpos -= temp6
+            face[arrayPos1].ypos += temp7
+        end if
+    end if
+end function
+
+
+public function BossFoot_Unused
+    temp0 = object.ypos
+    ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+    if checkResult == true
+        GetBit(temp0, object.legSide, 5)
+        if temp0 == true
+            temp0 -= object.ypos
+
+            arrayPos0 = object.legsEntity
+            legs[arrayPos0].ypos -= temp0
+
+            arrayPos1 = legs[arrayPos0].legJointEntity
+            legJoint[arrayPos1].ypos -= temp0
+
+            arrayPos0 = legJoint[arrayPos1].bodyEntity
+            body[arrayPos1].ypos -= temp0
+
+            arrayPos1 = body[arrayPos0].faceEntity
+            face[arrayPos1].ypos -= temp0
+        end if
+    end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSFOOT_SETUP
+        object.offset.x = 0x4000
+        object.offset.y = 0x8000
+
+        object.velocity.x = -0x80000
+        object.velocity.y = 0x100000
+
+        SetBit(object.legSide, 0, 1)
+        CallFunction(BossFoot_HandleMovement)
+        object.state = BOSSFOOT_HANDLE_STEP
+        break
+
+    case BOSSFOOT_STEP
+        object.velocity.x -= object.offset.x
+        object.velocity.y += object.offset.y
+
+        temp1 = true
+        GetBit(temp0, object.legSide, 4)
+
+        checkResult = temp0
+        GetBit(temp0, object.legSide, 7)
+
+        checkResult &= temp0
+        if checkResult == true
+            if object.velocity.y >= 0xC0000
+                SetBit(object.legSide, 0, 1)
+                object.state = BOSSFOOT_HANDLE_STEP
+                temp1 = false
+            end if
+        else
+            if object.velocity.y >= 0x100000
+                SetBit(object.legSide, 0, 1)
+                object.state = BOSSFOOT_HANDLE_STEP
+                temp1 = false
+            end if
+        end if
+
+        if temp1 == true
+            CallFunction(BossFoot_SaveFootPosition)
+            ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+            if checkResult == true
+                CallFunction(BossFoot_StepEarthQuake)
+            end if
+        end if
+        break
+
+    case BOSSFOOT_HANDLE_STEP
+        GetBit(temp0, object.legSide, 4)
+        if temp0 == false
+            CallFunction(BossFoot_HandleMovement)
+            ObjectTileCollision(CSIDE_FLOOR, 0, 20, 0)
+            if checkResult == true
+                CallFunction(BossFoot_StepEarthQuake)
+            end if
+        end if
+        break
+
+    case BOSSFOOT_STEP_OPPOSITE
+        object.velocity.x += object.offset.x
+        object.velocity.y -= object.offset.y
+
+        if object.velocity.y <= 0
+            object.velocity.x = 0
+            object.velocity.y = 0
+            SetBit(object.legSide, 0, 1)
+            object.state = BOSSFOOT_HANDLE_STEP_OPPOSITE
+        end if
+
+        CallFunction(BossFoot_SaveFootPosition)
+        break
+
+    case BOSSFOOT_HANDLE_STEP_OPPOSITE
+        CallFunction(BossFoot_HandleMovement)
+        break
+
+    case BOSSFOOT_LANDING
+        arrayPos0 = object.bodyEntity
+        arrayPos1 = body[arrayPos0].legJointREntity
+
+        arrayPos0 = legJointR[arrayPos1].legREntity
+        arrayPos1 = legR[arrayPos0].footREntity
+
+        object.xpos = footR[arrayPos1].xpos
+        object.xpos -= 0xA0000
+        object.ypos = footR[arrayPos1].ypos
+        break
+
+    case BOSSFOOT_DESTROYED
+        GetBit(temp0, object.legSide, 4)
+        if temp0 == false
+            object.offset.x -= 0x660
+        else
+            object.offset.x += 0x660
+        end if
+
+        object.offset.y += 0x1660
+
+        object.xpos += object.offset.x
+        object.ypos += object.offset.y
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+
+    if object.state < BOSSFOOT_DESTROYED
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if player[currentPlayer].invincibleTimer == 0
+                BoxCollisionTest(C_TOUCH, object.entityPos, -28, -20, 26, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    arrayPos0 = object.legsEntity
+                    arrayPos1 = legs[arrayPos0].legJointEntity
+
+                    arrayPos0 = legJoint[arrayPos1].bodyEntity
+                    arrayPos1 = body[arrayPos0].faceEntity
+
+                    face[arrayPos1].animation = EGGANI_LAUGH
+                    face[arrayPos1].faceTimer = 180
+                    CallFunction(Player_Hit)
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-32, -20, 58, 40, 1, 66) // #0 - EGG-HVC-001 Foot
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-32, -20, 58, 40, 1, 66) // #0 - EGG-HVC-001 Foot
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,393 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Minomusi Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.originPos.y
+private alias object.value2        : object.spikeTimer
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : MINOMUSI_DETECT_PLAYER
+private alias 1 : MINOMUSI_DROP
+
+// Good Quality States
+private alias 2  : MINOMUSI_GOOD_SPIKE_ANIM_1
+private alias 3  : MINOMUSI_GOOD_SPIKE_ANIM_2
+private alias 4  : MINOMUSI_GOOD_SPIKE_ANIM_3
+private alias 5  : MINOMUSI_GOOD_SPIKE_ANIM_4
+private alias 6  : MINOMUSI_GOOD_SPIKE_ANIM_5
+private alias 7  : MINOMUSI_GOOD_SPIKE_ANIM_6
+private alias 8  : MINOMUSI_GOOD_SPIKE_ANIM_7
+private alias 9  : MINOMUSI_GOOD_SPIKE_ANIM_8
+private alias 10 : MINOMUSI_GOOD_SPIKE_ANIM_9
+private alias 11 : MINOMUSI_GOOD_RETIRE
+
+// Bad Quality States
+private alias 2 : MINOMUSI_BAD_FLIP
+private alias 3 : MINOMUSI_BAD_FLIP_2
+private alias 4 : MINOMUSI_BAD_RETIRE
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Minomusi_DebugDraw
+reserve function Minomusi_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Minomusi_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Minomusi_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Minomusi_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function Minomusi_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Minomusi_startDebugID
+    CreateTempObject(TypeName[Minomusi], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.outOfBounds == true
+        object.state = MINOMUSI_DETECT_PLAYER
+        object.timer = 0
+        object.spikeTimer = 0
+        object.ypos = object.originPos.y
+        object.priority = PRIORITY_BOUNDS
+    end if
+
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case MINOMUSI_DETECT_PLAYER
+            object.frame = 0
+            if object.timer > 0
+                object.timer--
+            end if
+            break
+
+        case MINOMUSI_DROP
+            if object.timer < 12
+                object.ypos += 0x80000
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_1
+            if object.spikeTimer < 30
+                object.spikeTimer++
+            else
+                object.spikeTimer = 0
+                object.state++
+                object.frame = 3
+            end if
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_2
+            object.state++
+            object.frame = 4
+            PlaySfx(SfxName[Spikes], false)
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_3
+            if object.spikeTimer < 3
+                object.spikeTimer++
+            else
+                object.spikeTimer = 0
+                object.state++
+                object.frame = 3
+            end if
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_4
+            object.state++
+            object.frame = 0
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_5
+            object.state++
+            object.frame = 3
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_6
+            object.state++
+            object.frame = 4
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_7
+            if object.spikeTimer < 30
+                object.spikeTimer++
+            else
+                object.spikeTimer = 0
+                object.state++
+                object.frame = 3
+            end if
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_8
+            object.frame = 0
+            if object.timer < 2
+                object.state = MINOMUSI_GOOD_SPIKE_ANIM_1
+                object.timer++
+            else
+                object.state++
+                object.timer = 0
+            end if
+            break
+
+        case MINOMUSI_GOOD_SPIKE_ANIM_9
+            if object.timer < 20
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case MINOMUSI_GOOD_RETIRE
+            if object.timer < 12
+                object.ypos -= 0x80000
+                object.timer++
+            else
+                object.timer = 120
+                object.state = MINOMUSI_DETECT_PLAYER
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case MINOMUSI_DETECT_PLAYER
+            object.frame = 1
+            if object.timer > 0
+                object.timer--
+            end if
+            break
+
+        case MINOMUSI_DROP
+            object.frame = 1
+            if object.timer < 12
+                object.ypos += 0x80000
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case MINOMUSI_BAD_FLIP
+            if object.spikeTimer < 10
+                object.spikeTimer++
+            else
+                object.spikeTimer = 0
+                object.state++
+                object.frame = 2
+            end if
+            break
+
+        case MINOMUSI_BAD_FLIP_2
+            if object.spikeTimer < 10
+                object.spikeTimer++
+            else
+                object.spikeTimer = 0
+                object.frame = 1
+                object.timer++
+                if object.timer == 3
+                    object.timer = 0
+                    object.state++
+                else
+                    object.state = MINOMUSI_BAD_FLIP
+                end if
+            end if
+            break
+
+        case MINOMUSI_BAD_RETIRE
+            if object.timer < 48
+                object.ypos -= 0x20000
+                object.timer++
+            else
+                object.timer = 120
+                object.state = MINOMUSI_DETECT_PLAYER
+            end if
+            break
+        end switch
+    end if
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -8, -6, 8, 22, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        end if
+
+        if object.quality == QUALITY_GOOD
+            if object.type == TypeName[Minomusi]
+                if object.frame > 2
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -17, -4, 17, 20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        CallFunction(Player_Hit)
+                    end if
+                end if
+            end if
+        end if
+
+        if object.state == MINOMUSI_DETECT_PLAYER
+            if object.timer == 0
+                BoxCollisionTest(C_TOUCH, object.entityPos, -64, 0, 64, 128, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.state = MINOMUSI_DROP
+                    object.priority = PRIORITY_ACTIVE
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    temp0 = object.ypos
+    temp0 -= object.originPos.y
+    temp0 >>= 19
+    temp0 += 5
+    DrawSpriteXY(temp0, object.xpos, object.originPos.y)
+
+    DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    // Good
+    SpriteFrame(-8, -8, 16, 32, 82, 134)    // #0  - Minomusi
+
+    // Bad
+    SpriteFrame(-8, -8, 16, 32, 17, 184)    // #1  - Minomusi frame 0
+    SpriteFrame(-8, -8, 16, 32, 1, 184)     // #2  - Minomusi frame 1
+
+    // Spike Attack
+    SpriteFrame(-12, -8, 24, 32, 133, 166)  // #3  - Minomusi Spiked frame 0
+    SpriteFrame(-16, -8, 32, 32, 1, 151)    // #4  - Minomusi Spiked frame 1
+
+    // String
+    SpriteFrame(-4, 16, 8, 0, 246, 91)      // #5  - Minomusi String frame 0
+    SpriteFrame(-4, 16, 8, 8, 246, 91)      // #6  - Minomusi String frame 1
+    SpriteFrame(-4, 16, 8, 16, 246, 91)     // #7  - Minomusi String frame 2
+    SpriteFrame(-4, 16, 8, 24, 246, 91)     // #8  - Minomusi String frame 3
+    SpriteFrame(-4, 16, 8, 32, 246, 91)     // #9  - Minomusi String frame 4
+    SpriteFrame(-4, 16, 8, 40, 246, 91)     // #10 - Minomusi String frame 5
+    SpriteFrame(-4, 16, 8, 48, 246, 91)     // #11 - Minomusi String frame 6
+    SpriteFrame(-4, 16, 8, 56, 246, 91)     // #12 - Minomusi String frame 7
+    SpriteFrame(-4, 16, 8, 64, 246, 91)     // #13 - Minomusi String frame 8
+    SpriteFrame(-4, 16, 8, 72, 246, 91)     // #14 - Minomusi String frame 9
+    SpriteFrame(-4, 16, 8, 72, 246, 91)     // #15 - Minomusi String frame 10
+    SpriteFrame(-4, 16, 8, 72, 246, 91)     // #16 - Minomusi String frame 11
+    SpriteFrame(-4, 16, 8, 72, 246, 91)     // #17 - Minomusi String frame 12
+
+    foreach (TypeName[Minomusi], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+
+    temp0 = 0
+    Minomusi_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Minomusi], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Minomusi_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Minomusi_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-8, -8, 16, 32, 82, 134)    // #0  - Minomusi, Good quality
+    SpriteFrame(-8, -8, 16, 32, 17, 184)    // #1  - Minomusi, Bad quality
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

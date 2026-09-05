@@ -1,0 +1,398 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Falling Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.stood
+private alias object.value1 : object.dipTimer
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.timer
+private alias object.value4 : object.originPos.y
+
+// States
+private alias 0 : FALLPLATFORM_FLOAT
+private alias 1 : FALLPLATFORM_SUSPEND
+private alias 2 : FALLPLATFORM_FALLING
+private alias 3 : FALLPLATFORM_OFFSCREEN
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.stood == true
+        if object.state == FALLPLATFORM_FLOAT
+            object.state = FALLPLATFORM_SUSPEND
+        end if
+
+        if object.dipTimer < 16
+			// Sink down
+            object.dipTimer++
+
+            temp0 = object.dipTimer
+            temp0 &= 3
+            if temp0 == 3
+				// Dip a pixel down
+                object.collisionOffset.y = 0x10000
+            else
+                object.collisionOffset.y = 0
+            end if
+        else
+            object.collisionOffset.y = 0
+        end if
+    else
+        if object.dipTimer > 0
+			// Move back up
+            object.dipTimer--
+
+            temp0 = object.dipTimer
+            temp0 &= 3
+            if temp0 == 3
+				// Recover a pixel upwards again
+                object.collisionOffset.y = -0x10000
+            else
+                object.collisionOffset.y = 0
+            end if
+        else
+            object.collisionOffset.y = 0
+        end if
+    end if
+
+    object.stood = false
+
+    switch object.state
+    case FALLPLATFORM_SUSPEND
+        if object.timer < 30
+			// Hold for a moment before starting to fall
+            object.timer++
+        else
+			// Fall away!
+            object.yvel  = 0
+            object.timer = 0
+            object.state = FALLPLATFORM_FALLING
+
+			// Make this Object always active, needed for its respawn process
+            object.priority = PRIORITY_ACTIVE
+        end if
+        break
+
+    case FALLPLATFORM_FALLING
+		// If the Object yet hasn't reached a Y Velocity of 4 pixels per frame,
+		// then accelerate at a rate of 0.125 pixels per frame
+        if object.yvel < 0x40000
+            object.yvel += 0x2000
+        end if
+
+		// Move the Platform
+		// (Via increasing its move value)
+        object.collisionOffset.y += object.yvel
+
+		// Has the Object fallen out of range now?
+        if object.outOfBounds == true
+            object.ypos  = object.originPos.y
+            object.state = FALLPLATFORM_OFFSCREEN
+            object.yvel  = 0
+        end if
+        break
+
+    case FALLPLATFORM_OFFSCREEN
+        if object.outOfBounds == true
+			// Now that the Platform is out of the Player's view, reset all the way back to normal
+            object.state    = FALLPLATFORM_FLOAT
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+
+    end switch
+
+    if object.state < FALLPLATFORM_OFFSCREEN
+		// Support for different Platform sizes
+		// This also supports Conveyor Platforms, in a way, but the Player isn't moved along the Conveyor
+		switch object.propertyValue
+        case 0
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                // Small Platform
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.stood = true
+                    player[currentPlayer].ypos += object.collisionOffset.y
+                end if
+            next
+            break
+
+        case 1
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                // Medium-sized Platform
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.stood = true
+                    player[currentPlayer].ypos += object.collisionOffset.y
+                end if
+            next
+            break
+
+        case 2
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                // Large Platform
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -48, -16, 48, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.stood = true
+                    player[currentPlayer].ypos += object.collisionOffset.y
+                end if
+            next
+            break
+
+        case 3
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                // Small Conveyor Platform
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.stood = true
+                    player[currentPlayer].ypos += object.collisionOffset.y
+                end if
+            next
+            break
+
+        case 4
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                // Medium-sized Conveyor Platform
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.stood = true
+                    player[currentPlayer].ypos += object.collisionOffset.y
+                end if
+            next
+            break
+
+        case 5
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                // Large Conveyor Platform
+				BoxCollisionTest(C_PLATFORM, object.entityPos, -48, -16, 48, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    object.stood = true
+                    player[currentPlayer].ypos += object.collisionOffset.y
+                end if
+            next
+            break
+
+        end switch
+    end if
+
+    object.ypos += object.collisionOffset.y
+end event
+
+
+event ObjectDraw
+    if object.state < FALLPLATFORM_OFFSCREEN
+        switch object.propertyValue
+        case 0
+        case 1
+        case 2
+			// Normal Platform
+            DrawSprite(object.propertyValue)
+            break
+
+        case 3
+			// Small Conveyor Platform
+            DrawSprite(0)
+            DrawSprite(3)
+            break
+
+        case 4
+			// Medium-sized Coneyor Platform
+            DrawSprite(1)
+            DrawSprite(4)
+            break
+
+        case 5
+			// Large Conveyor Platform
+            DrawSprite(2)
+            DrawSprite(5)
+            break
+
+        end switch
+    end if
+end event
+
+
+event ObjectStartup
+	// All the Time Periods get unique platform sprites
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadSpriteSheet("R5/Objects.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 51)
+        SpriteFrame(-32, -16, 64, 32, 34, 51)
+        SpriteFrame(-48, -16, 96, 32, 1, 84)
+        SpriteFrame(-16, -16, 32, 16, 65, 208)
+        SpriteFrame(-32, -16, 64, 16, 1, 208)
+        SpriteFrame(-48, -16, 96, 16, 1, 191)
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 170)
+        SpriteFrame(-32, -16, 64, 32, 34, 170)
+        SpriteFrame(-48, -16, 96, 32, 1, 203)
+        SpriteFrame(-16, -16, 32, 16, 223, 148)
+        SpriteFrame(-32, -16, 64, 16, 159, 148)
+        SpriteFrame(-48, -16, 96, 16, 159, 131)
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 170)
+        SpriteFrame(-32, -16, 64, 32, 34, 170)
+        SpriteFrame(-48, -16, 96, 32, 1, 203)
+        SpriteFrame(-16, -16, 32, 16, 223, 182)
+        SpriteFrame(-32, -16, 64, 16, 159, 182)
+        SpriteFrame(-48, -16, 96, 16, 159, 165)
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 170)
+        SpriteFrame(-32, -16, 64, 32, 34, 170)
+        SpriteFrame(-48, -16, 96, 32, 1, 203)
+        SpriteFrame(-16, -16, 32, 16, 223, 216)
+        SpriteFrame(-32, -16, 64, 16, 159, 216)
+        SpriteFrame(-48, -16, 96, 16, 159, 199)
+        break
+
+    end switch
+
+	// Loop through all Objects in the Stage and find all Falling Platforms
+    foreach (TypeName[Falling Platform], arrayPos0, ALL_ENTITIES)
+		// Store the Falling Platform's starting Position, needed for when it'll respawn
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = Object.propertyValue
+			break
+
+		case 0 // Type
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Type
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	if object.propertyValue >= 3
+		temp0 = -3
+		temp0 += object.propertyValue
+		DrawSprite(temp0)
+	end if
+	
+	DrawSprite(object.propertyValue)
+	
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+		
+		// Draw an arrow pointing down to show that this Platform is of the falling type
+		temp0 = object.ypos
+		temp0 += 0x300000
+		DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, 255, 255)
+		
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+
+	// All the Time Periods get unique platform sprites
+    switch checkResult
+    case TIME_PRESENT
+        LoadSpriteSheet("R5/Objects.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 51)
+        SpriteFrame(-32, -16, 64, 32, 34, 51)
+        SpriteFrame(-48, -16, 96, 32, 1, 84)
+        SpriteFrame(-16, -16, 32, 16, 65, 208)
+        SpriteFrame(-32, -16, 64, 16, 1, 208)
+        SpriteFrame(-48, -16, 96, 16, 1, 191)
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 170)
+        SpriteFrame(-32, -16, 64, 32, 34, 170)
+        SpriteFrame(-48, -16, 96, 32, 1, 203)
+        SpriteFrame(-16, -16, 32, 16, 223, 148)
+        SpriteFrame(-32, -16, 64, 16, 159, 148)
+        SpriteFrame(-48, -16, 96, 16, 159, 131)
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 170)
+        SpriteFrame(-32, -16, 64, 32, 34, 170)
+        SpriteFrame(-48, -16, 96, 32, 1, 203)
+        SpriteFrame(-16, -16, 32, 16, 223, 182)
+        SpriteFrame(-32, -16, 64, 16, 159, 182)
+        SpriteFrame(-48, -16, 96, 16, 159, 165)
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -16, 32, 32, 1, 170)
+        SpriteFrame(-32, -16, 64, 32, 34, 170)
+        SpriteFrame(-48, -16, 96, 32, 1, 203)
+        SpriteFrame(-16, -16, 32, 16, 223, 216)
+        SpriteFrame(-32, -16, 64, 16, 159, 216)
+        SpriteFrame(-48, -16, 96, 16, 159, 199)
+        break
+
+    end switch
+    
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Small", 0)
+	AddEnumVariable("Medium", 1)
+	AddEnumVariable("Large", 2)
+	AddEnumVariable("Small Conveyor", 3)
+	AddEnumVariable("Medium Conveyor", 4)
+	AddEnumVariable("Large Conveyor", 5)
+end event

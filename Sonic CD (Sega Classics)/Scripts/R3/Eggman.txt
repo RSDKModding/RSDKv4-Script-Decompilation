@@ -1,0 +1,175 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Eggman Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.frameTimer
+private alias object.value1 : object.timer
+
+// Boss Body Aliases
+private alias object[+1].value5 : bossBody.damageTimer
+private alias object[+1].state  : bossBody.state
+
+// States
+private alias 0 : EGGMAN_IDLE
+private alias 1 : EGGMAN_HURT
+private alias 2 : EGGMAN_NERVOUS
+private alias 3 : EGGMAN_FLEE
+
+// BossBody Aliases
+private alias 5 : BOSSBODY_DRAG_EGGMAN_2
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case EGGMAN_IDLE
+        object.frameTimer++
+        object.frameTimer %= 40
+        break
+
+    case EGGMAN_HURT
+        if object.timer < 41
+            object.timer++
+        else
+            object.timer = 0
+            object.frameTimer = 0
+
+            if bossBody.state < BOSSBODY_DRAG_EGGMAN_2
+                object.state = EGGMAN_IDLE
+            else
+                object.state = EGGMAN_NERVOUS
+            end if
+        end if
+        break
+
+    case EGGMAN_NERVOUS
+        object.frameTimer++
+        object.frameTimer &= 31
+        break
+
+    case EGGMAN_FLEE
+        object.frameTimer++
+        object.frameTimer &= 7
+        break
+
+    end switch
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case EGGMAN_IDLE
+        DrawSprite(4)
+
+        temp0 = object.frameTimer
+        temp0 /= 10
+        DrawSprite(temp0)
+        break
+
+    case EGGMAN_HURT
+        temp1 = object.timer
+        temp1 <<= 8
+        temp1 /= 40
+
+        Sin(temp0, temp1)
+        temp0 <<= 11
+        FlipSign(temp0)
+        temp0 += object.ypos
+
+        temp1 = object.timer
+        temp1 &= 15
+        temp1 >>= 3
+        temp1 += 7
+        DrawSpriteXY(temp1, object.xpos, temp0)
+
+        temp0 = bossBody.damageTimer
+        temp0 &= 1
+        temp0 += 4
+        DrawSprite(temp0)
+
+        DrawSprite(6)
+        break
+
+    case EGGMAN_NERVOUS
+        temp0 = object.frameTimer
+        temp0 >>= 4
+        temp0 += 9
+        DrawSprite(temp0)
+        break
+
+    case EGGMAN_FLEE
+        temp0 = object.frameTimer
+        temp0 >>= 2
+        temp0 += 11
+        DrawSprite(temp0)
+
+        object.xpos += 0x40000
+
+        if object.outOfBounds == true
+            ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects2.gif")
+
+    // Eggman Idle
+    SpriteFrame(-24, -56, 48, 24, 1, 166)   // #0  - Eggman Idle Frame 0
+    SpriteFrame(-24, -56, 48, 24, 50, 166)  // #1  - Eggman Idle Frame 1
+    SpriteFrame(-24, -56, 48, 24, 148, 174) // #2  - Eggman Idle Frame 2
+    SpriteFrame(-24, -56, 48, 24, 99, 166)  // #3  - Eggman Idle Frame 3
+
+    // Egg Tilter Controller
+    SpriteFrame(-24, -32, 48, 16, 148, 107) // #4  - Egg Tilter Controller
+    SpriteFrame(-24, -32, 48, 16, 148, 124) // #5  - Egg Tilter Controller Flicker
+
+    // Egg Mobile window
+    SpriteFrame(-16, -48, 32, 16, 84, 50)   // #6  - Egg Mobile Window
+
+    // Eggman Hurt
+    SpriteFrame(-32, -67, 56, 64, 199, 134) // #7  - Eggman Hurt Frame 0
+    SpriteFrame(-23, -67, 56, 64, 199, 69)  // #8  - Eggman Hurt Frame 1
+
+    // Eggman Nervous
+    SpriteFrame(-24, -56, 48, 56, 197, 199) // #9  - Eggman Nervous Frame 0
+    SpriteFrame(-24, -56, 48, 56, 147, 199) // #10 - Eggman Nervous Frame 1
+
+    // Eggman Flee
+    SpriteFrame(-16, -56, 72, 64, 1, 191)   // #11 - Eggman Flee Frame 0
+    SpriteFrame(-16, -56, 72, 64, 74, 191)  // #12 - Eggman Flee Frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+	DrawSprite(2)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects2.gif")
+
+    SpriteFrame(-24, -56, 48, 24, 1, 166)   // #0 - Eggman Idle Frame 0
+    SpriteFrame(-24, -32, 48, 16, 148, 107) // #1 - Egg Tilter Controller
+    SpriteFrame(-16, -48, 32, 16, 84, 50)   // #2 - Egg Mobile Window
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

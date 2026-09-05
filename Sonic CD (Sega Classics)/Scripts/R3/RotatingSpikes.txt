@@ -1,0 +1,305 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Rotating Spikes Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.angle
+private alias object.value2 : object.spawnedSpikes
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Property Values
+private alias 0 : MAXSPIKES_RIGHT
+private alias 1 : MAXSPIKES_LEFT
+private alias 2 : TWO_SPIKES_RIGHT
+private alias 3 : TWO_SPIKES_LEFT
+
+// Time Periods
+private alias 1 : TIME_PAST
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function RotatingSpikes_DebugDraw
+reserve function RotatingSpikes_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function RotatingSpikes_DebugDraw
+    DrawSprite(0)
+end function
+
+
+public function RotatingSpikes_DebugSpawn
+    CreateTempObject(TypeName[Rotating Spikes], MAXSPIKES_RIGHT, object.xpos, object.ypos)
+
+    switch object[tempObjectPos].propertyValue
+    case MAXSPIKES_RIGHT
+        object[tempObjectPos].speed = 2
+
+        if HUD.currentTimePeriod > TIME_PAST // In the future it has 4 spikes
+            object[tempObjectPos].spawnedSpikes = 4
+        else
+            object[tempObjectPos].spawnedSpikes = 3
+        end if
+        break
+
+    case MAXSPIKES_LEFT
+        object[tempObjectPos].speed = -2
+
+        if HUD.currentTimePeriod > TIME_PAST // In the future it has 4 spikes
+            object[tempObjectPos].spawnedSpikes = 4
+        else
+            object[tempObjectPos].spawnedSpikes = 3
+        end if
+        break
+
+    case TWO_SPIKES_RIGHT
+        object[tempObjectPos].speed = 2
+        object[tempObjectPos].spawnedSpikes = 2
+        break
+
+    case TWO_SPIKES_LEFT
+        object[tempObjectPos].speed = -2
+        object[tempObjectPos].spawnedSpikes = 2
+        break
+
+    end switch
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.angle += object.speed
+    if object.angle < 0
+        object.angle += 512
+    end if
+
+    object.angle &= 511
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        temp0 = 0
+        temp1 = 16
+        temp2 = object.xpos
+        temp3 = object.ypos
+        while temp0 < object.spawnedSpikes
+            Cos(object.xpos, object.angle)
+            object.xpos *= temp1
+            object.xpos <<= 7
+            object.xpos += temp2
+
+            Sin(object.ypos, object.angle)
+            object.ypos *= temp1
+            object.ypos <<= 7
+            object.ypos += temp3
+
+            BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CallFunction(Player_Hit)
+            end if
+
+            temp0++
+            temp1 += 16
+        loop
+
+        object.xpos = temp2
+        object.ypos = temp3
+    next
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+
+    temp0 = 0
+    temp1 = 16
+    while temp0 < object.spawnedSpikes
+        Cos(temp2, object.angle)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, object.angle)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += object.ypos
+
+        DrawSpriteXY(1, temp2, temp3)
+
+        temp0++
+        temp1 += 16
+    loop
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects.gif")
+
+    foreach (TypeName[Rotating Spikes], arrayPos0, ALL_ENTITIES)
+        switch object[arrayPos0].propertyValue
+        case MAXSPIKES_RIGHT
+            object[arrayPos0].speed = 2
+            if HUD.currentTimePeriod > TIME_PAST // In the future it has 4 spikes
+                object[arrayPos0].spawnedSpikes = 4
+            else
+                object[arrayPos0].spawnedSpikes = 3
+            end if
+            break
+
+        case MAXSPIKES_LEFT
+            object[arrayPos0].speed = -2
+            if HUD.currentTimePeriod > TIME_PAST // In the future it has 4 spikes
+                object[arrayPos0].spawnedSpikes = 4
+            else
+                object[arrayPos0].spawnedSpikes = 3
+            end if
+            break
+
+        case TWO_SPIKES_RIGHT
+            object[arrayPos0].speed = 2
+            object[arrayPos0].spawnedSpikes = 2
+            break
+
+        case TWO_SPIKES_LEFT
+            object[arrayPos0].speed = -2
+            object[arrayPos0].spawnedSpikes = 2
+            break
+
+        end switch
+    next
+
+    SpriteFrame(-8, -8, 16, 16, 181, 143) // #0 - Spike Joint
+    SpriteFrame(-8, -8, 16, 16, 181, 160) // #1 - Spike
+
+    SetTableValue(TypeName[Rotating Spikes], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(RotatingSpikes_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(RotatingSpikes_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 3
+            break
+
+        case 0 // spikeType
+            checkResult = object.propertyValue
+            checkResult &= 3
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 3
+            break
+
+        case 0 // spikeType
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 3
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+
+	temp0 = 0
+	if object.propertyValue > MAXSPIKES_LEFT
+		temp1 = 2
+	else
+		CheckCurrentStageFolder("B")
+		if checkResult == true
+			temp1 = 3
+		else
+			temp1 = 4
+		end if
+	end if
+
+	temp2 = object.xpos
+	temp3 = object.ypos
+	while temp0 < temp1
+		temp2 += 0x100000
+		temp3 += 0x100000
+		DrawSpriteXY(1, temp2, temp3)
+		temp0++
+	loop
+
+	if editor.showGizmos == true
+		switch object.propertyValue
+		case MAXSPIKES_RIGHT
+		case TWO_SPIKES_RIGHT
+			temp0 = object.ixpos
+			temp0 += 32
+			temp0 <<= 16
+
+			temp1 = object.iypos
+			temp1 += 32
+			temp1 <<= 16
+			DrawArrow(temp0, object.ypos, object.xpos, temp1, 255, 255, 255, 0)
+			break
+
+		case MAXSPIKES_LEFT
+		case TWO_SPIKES_LEFT
+			temp0 = object.ixpos
+			temp0 += 32
+			temp0 <<= 16
+
+			temp1 = object.iypos
+			temp1 += 32
+			temp1 <<= 16
+			DrawArrow(object.xpos, temp1, temp0, object.ypos, 255, 255, 255, 0)
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 181, 143)   // #0 - Spike Joint
+    SpriteFrame(-8, -8, 16, 16, 181, 160)   // #1 - Spike
+
+    CheckCurrentStageFolder("B")
+    AddEditorVariable("spikeType")
+    SetActiveVariable("spikeType")
+
+    if checkResult == true
+        AddEnumVariable("3 Spikes Clock-wise", MAXSPIKES_RIGHT)
+        AddEnumVariable("3 Spikes Counter Clock-wise", MAXSPIKES_LEFT)
+    else
+        AddEnumVariable("4 Spikes Clock-wise", MAXSPIKES_RIGHT)
+        AddEnumVariable("4 Spikes Counter Clock-wise", MAXSPIKES_LEFT)
+    end if
+
+    AddEnumVariable("2 Spikes Clock-wise", TWO_SPIKES_RIGHT)
+    AddEnumVariable("2 Spikes Counter Clock-wise", TWO_SPIKES_LEFT)
+end event

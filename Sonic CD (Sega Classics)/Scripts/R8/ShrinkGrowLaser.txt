@@ -1,0 +1,222 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: S G Laser Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.drawPos.y
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.xpos      : player.xpos
+private alias object.yvel      : player.yvel
+private alias object.speed     : player.speed
+private alias object.gravity   : player.gravity
+private alias object.animation : player.animation
+
+// States
+private alias 0 : SGLASER_SHOOT_LASER
+private alias 1 : SGLASER_LASER
+private alias 2 : SGLASER_SPLASH
+
+// Property Values
+private alias 0 : GIMMICK_SHRINK_LASER
+private alias 1 : GIMMICK_GROW_LASER
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case SGLASER_SHOOT_LASER
+        if object.timer < 24
+            temp0 = object.timer
+            temp0 &= 3
+            if temp0 == 0
+                CreateTempObject(TypeName[S G Laser], object.propertyValue, object.xpos, object.ypos)
+                object[tempObjectPos].state = SGLASER_LASER
+            end if
+        end if
+
+        if object.timer == 0
+            BoxCollisionTest(C_TOUCH, object.entityPos, -96, -128, 96, 128, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                if object.propertyValue == GIMMICK_SHRINK_LASER
+                    PlaySfx(SfxName[Jump], false)
+                else
+                    PlaySfx(SfxName[Jump], false)
+                end if
+            end if
+        end if
+
+        object.timer++
+        object.timer &= 31
+        break
+
+    case SGLASER_LASER
+        object.ypos += 0x40000
+        ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+        if checkResult == true
+            object.drawPos.y = object.ypos
+            object.state++
+        end if
+        break
+
+    case SGLASER_SPLASH
+        if object.timer < 4
+            object.ypos += 0x40000
+            object.timer++
+        else
+            object.type = TypeName[Blank Object]
+        end if
+        break
+
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state > SGLASER_SHOOT_LASER // Check that this is the laser and not the machine
+            if object.propertyValue == Player_miniFlag
+                if player[currentPlayer].state != Player_State_SizeChange
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -4, -8, 4, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        player[currentPlayer].state = Player_State_SizeChange
+                        player[currentPlayer].animation = ANI_SIZE_CHANGE
+                        player[currentPlayer].yvel = -0x40000
+                        player[currentPlayer].gravity = GRAVITY_AIR
+                        if player[currentPlayer].xpos > object.xpos
+                            player[currentPlayer].speed = 0x20000
+                        else
+                            player[currentPlayer].speed = -0x20000
+                        end if
+                    end if
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case SGLASER_SHOOT_LASER
+        DrawSprite(object.propertyValue)
+        break
+
+    case SGLASER_LASER
+        if object.animationTimer < 2
+            temp0 = 2
+            temp0 += object.propertyValue
+            DrawSprite(temp0)
+        else
+            DrawSprite(4)
+        end if
+
+        object.animationTimer++
+        object.animationTimer &= 3
+        break
+
+    case SGLASER_SPLASH
+        if object.animationTimer < 2
+            temp0 = 2
+            temp0 += object.propertyValue
+            DrawSprite(temp0)
+            temp0 += 3
+            DrawSpriteXY(temp0, object.xpos, object.drawPos.y)
+        else
+            DrawSprite(4)
+            DrawSpriteXY(7, object.xpos, object.drawPos.y)
+        end if
+
+        object.animationTimer++
+        object.animationTimer &= 3
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects2.gif")
+
+    Player_miniFlag = false
+    if stage.playerListPos == PLAYER_SONIC_A
+        LoadAnimation("MiniSonic.ani")
+    else
+        LoadAnimation("MiniTails.ani")
+    end if
+
+    SpriteFrame(-8, -12, 16, 24, 151, 144)  // #0 - Shrink Grow Machine Red
+    SpriteFrame(-8, -12, 16, 24, 168, 144)  // #1 - Shrink Grow Machine Blue
+
+    SpriteFrame(-4, -8, 8, 16, 82, 196)     // #2 - Laser Red
+    SpriteFrame(-4, -8, 8, 16, 91, 196)     // #3 - Laser Blue
+    SpriteFrame(-4, -8, 8, 16, 100, 196)    // #4 - Laser White
+
+    SpriteFrame(-8, 0, 16, 8, 169, 169)     // #5 - Laser Splash Red
+    SpriteFrame(-8, 0, 16, 8, 134, 178)     // #6 - Laser Splash Blue
+    SpriteFrame(-8, 0, 16, 8, 152, 169)     // #7 - Laser Splash White
+
+    foreach (TypeName[S G Laser], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].drawOrder = 4
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		case 0 // laserType
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		case 0 // laserType
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+	SpriteFrame(-8, -12, 16, 24, 151, 144)	// #0 - Shrink Grow Machine Red
+	SpriteFrame(-8, -12, 16, 24, 168, 144)	// #1 - Shrink Grow Machine Blue
+
+	AddEditorVariable("laserType")
+	SetActiveVariable("laserType")
+	AddEnumVariable("Shrink Laser", GIMMICK_SHRINK_LASER)
+	AddEnumVariable("Growth Laser", GIMMICK_GROW_LASER)
+end event

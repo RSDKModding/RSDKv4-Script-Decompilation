@@ -1,0 +1,220 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Eggman Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : EGGMAN_IDLE
+private alias 1 : EGGMAN_CONTROL
+private alias 2 : EGGMAN_DAMAGED
+private alias 3 : EGGMAN_PANICK_JUMP
+private alias 4 : EGGMAN_PANICK_IDLE
+private alias 5 : EGGMAN_PANICK_CONTROL
+private alias 6 : EGGMAN_FLEE
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// This Object is managed entirely by other Objects, the only thing this Object does is draw (and flee at the end)
+    switch object.state
+    case EGGMAN_IDLE
+		// Draw his Idle Frame
+        DrawSprite(0)
+        break
+
+    case EGGMAN_CONTROL
+		// Similarly to above, just draw his Controlling Frame here
+        DrawSprite(1)
+        break
+
+    case EGGMAN_DAMAGED
+		// Get the Sprite to use
+        temp0 = object.frame
+        temp0 >>= 3
+        temp0 += 2
+        DrawSprite(temp0)
+
+		// Animate Robotnik
+        object.frame++
+        object.frame &= 15
+
+		// Draw his floating Sweat Frame if needed
+        if object.timer < 4
+            temp0 += 8
+            DrawSprite(temp0)
+        end if
+
+        object.timer++
+        object.timer &= 7
+        break
+
+    case EGGMAN_PANICK_JUMP
+		// Get the Frame Robotnik should use
+        temp0 = object.frame
+        temp0 &= 15
+        temp0 >>= 3
+
+		// Sprite Frame ID Offset of 4
+        temp0 += 4
+        DrawSprite(temp0)
+
+		// Animate the Object
+        object.frame++
+
+		// And then draw the Sweat Frame, but only if needed
+        if object.timer < 4
+            temp0 += 6
+            DrawSprite(temp0)
+        end if
+
+		// Animate Robotnik, along with his Sweat
+        object.timer++
+        object.timer &= 7
+
+        if object.frame == 48
+			// Stop jumping for a moment and go back to looking normal
+            object.timer = 0
+            object.frame = 0
+            object.state = EGGMAN_PANICK_IDLE
+        end if
+        break
+
+    case EGGMAN_PANICK_IDLE
+		// Draw the normal Idle Frame
+        DrawSprite(0)
+        if object.timer < 20
+            object.timer++
+        else
+			// Go back to jumping around
+            object.timer = 0
+            object.state = EGGMAN_PANICK_JUMP
+        end if
+        break
+
+    case EGGMAN_PANICK_CONTROL
+		// Due to an oversight, this state isn't seen very much
+		// (Once this state goes to EGGMAN_PANICK_JUMP, it goes back to EGGMAN_PANICK_IDLE afterwards instead of here)
+		// (And that is, this state is only entered in the first place if Robotnik's doing his Control pose when he enters his damage dance)
+		
+		// Draw his normal Control Frame
+        DrawSprite(1)
+
+		// Update animation
+        if object.timer < 20
+            object.timer++
+        else
+            object.timer = 0
+            object.frame = 0
+            object.state = EGGMAN_PANICK_JUMP
+        end if
+        break
+
+    case EGGMAN_FLEE
+		// Draw the main Robotnik Running Sprite
+        temp0 = object.frame
+        temp0 /= 6
+        temp0 += 6
+        DrawSprite(temp0)
+
+		// Robotnik should be continuously animating here, his legs gotta keep moving!
+        object.frame++
+        object.frame %= 24
+
+		// Get the Sweat Frame Sprite ID to use
+        temp0 = object.timer
+        temp0 /= 6
+        temp0 += 12
+
+		// And then see if the Frame should even be drawn at all
+        temp1 = object.timer
+        temp1 %= 6
+
+        if temp1 < 3
+			// Flip the sprite around, so that it appears behind Robotnik
+            object.direction = FACING_LEFT
+
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+			// And then restore normal Object Direction
+			// -> This doesn't matter anyway though, as no other parts of this Object use Object.Direction in any way
+            object.direction = FACING_RIGHT
+        end if
+
+        object.timer++
+        object.timer %= 12
+
+		// Object movement in the ObjectDraw event... I can't say I'm in support of this...
+		// Regardless, move at a rate of 1px per frame
+        object.xpos += 0x10000
+
+        if object.outOfBounds == true
+            ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+        end if
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R5/Objects2.gif")
+
+	// Idle Frame
+    SpriteFrame(-24, -24, 40, 56, 174, 181)
+
+	// Controlling Frame
+    SpriteFrame(-24, -24, 40, 56, 215, 181)
+
+	// Shock Frames
+	// (Used when the machine is initially falling to start the fight)
+    SpriteFrame(-24, -24, 48, 48, 158, 18)
+    SpriteFrame(-24, -24, 48, 48, 207, 18)
+
+	// Panick Frames
+	// (Used whenever Robotnik's fumbling around on hot ground)
+    SpriteFrame(-24, -24, 48, 56, 158, 67)
+    SpriteFrame(-24, -24, 48, 56, 207, 67)
+
+	// Run Frames
+    SpriteFrame(-32, -25, 64, 48, 66, 138)
+    SpriteFrame(-32, -23, 48, 56, 150, 124)
+    SpriteFrame(-32, -21, 56, 56, 199, 124) // huh? what happened to his mustache here..?
+    SpriteFrame(-32, -23, 48, 56, 150, 124)
+
+	// Damage - Sweat Frames
+    SpriteFrame(-24, -40, 48, 16, 158, 1)
+    SpriteFrame(-24, -40, 48, 16, 207, 1)
+
+	// Panick - Sweat frames
+    SpriteFrame(-20, -40, 0, 0, 158, 1)
+    SpriteFrame(-20, -40, 48, 16, 158, 1)
+    SpriteFrame(-20, -40, 48, 16, 207, 1)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R5/Objects2.gif")
+	SpriteFrame(-24, -24, 40, 56, 215, 181)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

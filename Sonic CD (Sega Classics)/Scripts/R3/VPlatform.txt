@@ -1,0 +1,188 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Vertical Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.ypos : player.ypos
+
+// Property Values
+private alias 0 : START_MOVING_DOWN
+private alias 1 : START_MOVING_UP
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function VPlatform_DebugDraw
+reserve function VPlatform_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function VPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function VPlatform_DebugSpawn
+	CreateTempObject(TypeName[V Platform], START_MOVING_DOWN, object.xpos, object.ypos)
+	object[tempObjectPos].ypos &= -0x10000 // Truncate the value
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle = oscillation
+	object.angle *= 3
+	if object.propertyValue == START_MOVING_UP
+		object.angle += 256
+	end if
+
+	Sin(object.collisionOffset.y, object.angle)
+	object.collisionOffset.y *= 0x2700
+	object.collisionOffset.y += object.ypos
+	object.collisionOffset.y &= -0x10000 // Truncate the value
+	object.collisionOffset.y -= object.drawPos.y
+
+	temp0 = object.ypos
+	object.ypos = object.drawPos.y
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == COL_TOP
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+	object.ypos = temp0
+end event
+
+
+event ObjectDraw
+	Sin(object.drawPos.y, object.angle)
+	object.drawPos.y *= 0x2700
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(0, object.xpos, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R3/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 100, 1) // #0 - Vertical Platform
+
+	SetTableValue(TypeName[V Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(VPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(VPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		case 0 // Type
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		case 0 // Type
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+
+	switch object.propertyValue
+	case START_MOVING_DOWN
+		temp1 = 255
+		temp2 = 255
+		temp3 = 128
+		temp4 = 0
+		break
+
+	case START_MOVING_UP
+		temp1 = 128
+		temp2 = 0
+		temp3 = 255
+		temp4 = 255
+		break
+
+	end switch
+
+	temp0 = object.ypos
+	temp0 -= 0x620000
+	temp5 = object.xpos
+	temp5 -= 0x200000
+	if object.PropertyValue == START_MOVING_DOWN
+		if editor.showGizmos == true
+			editor.drawingOverlay = true
+			DrawRectOutline(temp5, temp0, 0x40, 0xC4, 255, 255, 255, 255)
+			DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, temp1, temp2, 0)
+			editor.drawingOverlay = false
+		end if
+	else
+		DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, temp1, temp2, 0)
+	end if
+
+	temp0 = object.ypos
+	temp0 += 0x620000
+	if object.PropertyValue == START_MOVING_UP
+		if editor.showGizmos == true
+			editor.drawingOverlay = true
+			DrawRectOutline(temp5, temp0, 0x40, 0xC4, 255, 255, 255, 255)
+			DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, temp3, temp4, 0)
+			editor.drawingOverlay = false
+		end if
+	else
+		DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, temp3, temp4, 0)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R3/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 100, 1) // #0 - Vertical Platform
+	
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Down", START_MOVING_DOWN)
+	AddEnumVariable("Up", START_MOVING_UP)
+end event

@@ -1,0 +1,894 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Face Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0  : object.oscillation
+private alias object.value1  : object.bodyEntity
+private alias object.value2  : object.shoulderEntity
+private alias object.value3  : object.hit
+private alias object.value4  : object.bitHolder
+private alias object.value5  : object.newXBoundary1Value
+private alias object.value6  : object.newXBoundary2Value
+private alias object.value7  : object.savedXBoundary2
+private alias object.value8  : object.savedYBoundary2
+private alias object.value9  : object.timer
+private alias object.value10 : object.frameTimer
+
+private alias object.animationTimer : object.faceTimer
+
+// Player Aliases
+private alias object.state          : player.state
+private alias object.xpos           : player.xpos
+private alias object.ypos           : player.ypos
+private alias object.xvel           : player.xvel
+private alias object.yvel           : player.yvel
+private alias object.speed          : player.speed
+private alias object.animation      : player.animation
+private alias object.collisionRight : player.collisionRight
+private alias object.value7         : player.invincibleTimer
+
+private alias 3 : ANI_HURT_A
+
+// EGG-HVC-001 Body Aliases
+private alias object[+1].ixpos : bossBody.ixpos
+private alias object[+1].iypos : bossBody.iypos
+private alias object[+1].ypos  : bossBody.ypos
+private alias object[+1].state : bossBody.state
+private alias object.value0    : body.faceEntity
+private alias object.value1    : body.legJointREntity
+private alias object.value2    : body.legJointLEntity
+
+// Value4 is used to check key events, forward/backward movement and currently active leg
+private alias object.value4 : body.bitHolder
+private alias object.value5 : body.chargeStart
+private alias object.state  : body.state
+
+// General Aliases
+private alias object.priority  : bossPart.priority
+private alias object.drawOrder : bossPart.drawOrder
+private alias object.value0    : bossPart.prevEntity
+private alias object.value1    : bossPart.nextEntity
+
+// HVC-001 Boss Right Leg Joint Aliases
+private alias object[+2].ypos : bossLegJointR.ypos
+
+// HVC-001 Boss Right Leg Aliases
+private alias object[+3].ypos   : bossLegR.ypos
+private alias object[+3].value7 : bossLegR.velocity.y
+
+// HVC-001 Boss Right Foot Aliases
+private alias object[+4].value7 : bossFootR.velocity.y
+
+// HVC-001 Boss Left Leg Joint Aliases
+private alias object[+5].ypos : bossLegJointL.YPos
+
+// HVC-001 Boss Left Leg Aliases
+private alias object[+6].value7 : bossLegL.velocity.y
+
+// HVC-001 Boss Left Foot Aliases
+private alias object[+7].value7 : bossFootL.velocity.y
+
+// HVC-001 Boss Shoulder Aliases
+private alias object[+8].ypos : bossShoulder.ypos
+private alias object.value0   : shoulder.faceEntity
+private alias object.value1   : shoulder.armJointLEntity
+private alias object.value2   : shoulder.armJointREntity
+
+// HVC-001 Boss Left Arm Joint Aliases
+private alias object[+9].ypos : bossArmJointL.ypos
+
+// HVC-001 Boss Left Arm Aliases
+private alias object[+10].ypos : bossArmL.ypos
+
+// HVC-001 Boss Left Bumper Joint Aliases
+private alias object[+11].ypos : bossBumperL.ypos
+
+// HVC-001 Boss Right Arm Joint Aliases
+private alias object[+12].ypos : bossArmJointR.ypos
+
+// HVC-001 Boss Right Arm Aliases
+private alias object[+13].ypos : bossArmR.ypos
+
+// HVC-001 Boss Right Bumper Joint Aliases
+private alias object[+14].ypos : bossBumperR.ypos
+
+private alias object.state : debris.state
+private alias object.xvel  : debris.offset.x
+private alias object.yvel  : debris.offset.y
+
+// Player Aliases
+private alias object.value7 : player.invincibleTimer
+
+// States
+private alias 0 : R1_EGGMAN_SETUP
+private alias 1 : R1_EGGMAN_WAIT_PLAYER
+private alias 2 : R1_EGGMAN_BODY_CONTROLLER
+private alias 3 : R1_EGGMAN_DEFEATED
+private alias 4 : R1_EGGMAN_BLANK
+private alias 5 : R1_EGGMAN_RESTORE_BOUNDS
+private alias 6 : R1_EGGMAN_SET_BOUNDARIES
+private alias 7 : R1_EGGMAN_SPAWN_HVC
+
+// EGG-HVC-001 Body States
+private alias 1 : BOSSBODY_DESCEND
+private alias 2 : BOSSBODY_LANDING
+private alias 5 : BOSSBODY_MOVE_BACKWARDS
+private alias 6 : BOSSBODY_PREPARE_CHARGING
+private alias 7 : BOSSBODY_DESTROYED
+
+// EGG-HVC-001 Arm Joint States
+private alias 5 : BOSSARMJOINT_DESTROYED
+
+// EGG-HVC-001 Arm States
+private alias 2 : BOSSARM_DESTROYED
+
+// EGG-HVC-001 Bumper States
+private alias 2 : BOSSBUMPER_DESTROYED
+
+// EGG-HVC-001 Leg Joint States
+private alias 12 : BOSSLEGJOINT_DESTROYED
+
+// EGG-HVC-001 Leg States
+private alias 7 : BOSSLEG_DESTROYED
+
+// EGG-HVC-001 Foot States
+private alias 6 : BOSSFOOT_DESTROYED
+
+// EGG-HVC-001 Shoulder States
+private alias 2 : BOSSSHOULDER_DESTROYED
+
+// Eggman Animations
+private alias -1 : EGGANI_NONE
+private alias  0 : EGGANI_DESTROYED
+private alias  1 : EGGANI_IDLE
+private alias  2 : EGGANI_LAUGH
+private alias  3 : EGGANI_HURT
+
+// EGG-HVC-001 Body Bit 0 Aliases
+private alias 0 : KEY_EVENT_FALSE
+private alias 1 : KEY_EVENT_TRUE
+
+// EGG-HVC-001 Body Bit 1 Aliases
+private alias 0 : MOVE_FORWARD
+private alias 1 : MOVE_BACKWARDS
+
+// EGG-HVC-001 Body Bit 6 Aliases
+private alias 0 : LEFT_LEG_ACTIVE
+private alias 1 : RIGHT_LEG_ACTIVE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function R1_Eggman_Oscillation
+
+// ========================
+// Function Definitions
+// ========================
+
+// Fake Table for Oscillation of the boss height
+public function R1_Eggman_Oscillation
+    switch object.oscillation
+    case 0
+        temp0 = 1
+        break
+    case 1
+        temp0 = 0
+        break
+    case 2
+        temp0 = 2
+        break
+    case 3
+        temp0 = 0
+        break
+    case 4
+        temp0 = 3
+        break
+    case 5
+        temp0 = 0
+        break
+    case 6
+        temp0 = 4
+        break
+    case 7
+        temp0 = 5
+        break
+    case 8
+        temp0 = 5
+        break
+    case 9
+        temp0 = 6
+        break
+    case 10
+        temp0 = 6
+        break
+    case 11
+        temp0 = 10
+        break
+    case 12
+        temp0 = 4
+        break
+    case 13
+        temp0 = 10
+        break
+    case 14
+        temp0 = 8
+        break
+    case 15
+        temp0 = 50
+        break
+    case 16
+        temp0 = 5
+        break
+    case 17
+        temp0 = 10
+        break
+    case 18
+    case 19
+        temp0 = -1
+        break
+    end switch
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case R1_EGGMAN_SETUP
+        object.animation = EGGANI_NONE
+        object.priority = PRIORITY_ACTIVE
+
+        object.bodyEntity = object.entityPos
+        object.bodyEntity += 1
+
+        object.shoulderEntity = object.entityPos
+        object.shoulderEntity += 8
+
+        object.newXBoundary1Value = bossBody.ixpos
+
+        object.newXBoundary2Value = object.newXBoundary1Value
+        object.newXBoundary2Value += 320
+
+        temp0 = screen.xcenter
+        temp0 -= 160
+        temp0 >>= 1
+        object.newXBoundary2Value += temp0
+
+        object.savedXBoundary2 = stage.curXBoundary2
+        object.savedYBoundary2 = stage.curYBoundary2
+
+        stage.newXBoundary2 = object.newXBoundary2Value
+
+        object.state = R1_EGGMAN_WAIT_PLAYER
+        break
+
+    case R1_EGGMAN_WAIT_PLAYER
+        temp0 = object.newXBoundary1Value
+        if screen.xcenter > 160
+            temp0 += 180
+        else
+            temp0 += 160
+        end if
+
+        temp0 <<= 16
+
+        if player[SLOT_PLAYER1].xpos > temp0
+            temp0 = object.ypos
+            temp0 += 0xC00000
+
+            if player[SLOT_PLAYER1].ypos > temp0
+                stage.newXBoundary1 = object.newXBoundary1Value
+                stage.curYBoundary2 = player[SLOT_PLAYER1].ypos
+                stage.curYBoundary2 >>= 16
+                stage.curYBoundary2 += 160
+
+                if stage.curYBoundary2 < 256
+                    stage.curYBoundary2 = 256
+                end if
+
+                object.state = R1_EGGMAN_SET_BOUNDARIES
+            end if
+        end if
+        break
+
+    case R1_EGGMAN_BODY_CONTROLLER
+        if object.timer > 0
+            object.timer--
+        end if
+
+        if bossBody.state > BOSSBODY_LANDING
+            if object.faceTimer > 0
+                object.faceTimer--
+            else
+                object.animation = EGGANI_IDLE
+            end if
+        end if
+
+        arrayPos0 = object.bodyEntity
+        GetBit(temp0, body[arrayPos0].bitHolder, 0)
+        if temp0 == KEY_EVENT_TRUE
+            if object[arrayPos0].state == BOSSBODY_PREPARE_CHARGING
+                // Object +15 is a blank object used to hold values
+                object.ypos          = object[+15].value0
+                bossBody.ypos        = object[+15].value1
+                bossLegJointR.ypos   = object[+15].value2
+                bossLegR.velocity.y  = object[+15].value3
+                bossLegR.ypos        = object[+15].ypos
+                bossFootR.velocity.y = object[+15].value4
+                bossLegJointL.ypos   = object[+15].value5
+                bossLegL.velocity.y  = object[+15].value6
+                bossFootL.velocity.y = object[+15].value7
+
+                GetBit(temp0, body[arrayPos0].bitHolder, 6)
+                if temp0 == LEFT_LEG_ACTIVE
+                    SetBit(body[arrayPos0].bitHolder, 6, RIGHT_LEG_ACTIVE)
+                else
+                    SetBit(body[arrayPos0].bitHolder, 6, LEFT_LEG_ACTIVE)
+                end if
+            end if
+
+            SetBit(body[arrayPos0].bitHolder, 0, KEY_EVENT_FALSE)
+            if object.oscillation == 2
+                // This may be a typo... it's supposed to be changing the [Boss Body]'s value instead I imagine
+                SetBit(object.bitHolder, 3, 1)
+            end if
+
+            SetBit(body[arrayPos0].bitHolder, 1, MOVE_FORWARD)
+            object.oscillation += 2
+            CallFunction(R1_Eggman_Oscillation)
+            if temp0 < 0
+                object.oscillation = 6
+            end if
+
+            CallFunction(R1_Eggman_Oscillation)
+            if temp0 == 6 // Go back
+                // Object +15 is a blank object used to hold values
+                object[+15].value0 = object.ypos
+                object[+15].value1 = bossBody.ypos
+                object[+15].value2 = bossLegJointR.ypos
+                object[+15].value3 = bossLegR.velocity.y
+                object[+15].ypos   = bossLegR.ypos
+                object[+15].value4 = bossFootR.velocity.y
+                object[+15].value5 = bossLegJointL.ypos
+                object[+15].value6 = bossLegL.velocity.y
+                object[+15].value7 = bossFootL.velocity.y
+            end if
+
+            if body[arrayPos0].state == BOSSBODY_MOVE_BACKWARDS
+                if temp0 == 4
+                    GetBit(temp1, body[arrayPos0].bitHolder, 6)
+                    if temp1 == LEFT_LEG_ACTIVE
+                        SetBit(body[arrayPos0].bitHolder, 6, RIGHT_LEG_ACTIVE)
+                    else
+                        SetBit(body[arrayPos0].bitHolder, 6, LEFT_LEG_ACTIVE)
+                    end if
+                end if
+            end if
+
+            body[arrayPos0].state = temp0
+            object.oscillation++
+            CallFunction(R1_Eggman_Oscillation)
+            object.oscillation--
+            body[arrayPos0].chargeStart = temp0
+        end if
+        break
+
+    case R1_EGGMAN_DEFEATED
+        if object.timer < 160
+            object.timer++
+            temp0 = object.timer
+            temp0 &= 3
+            if temp0 == 3
+                Rand(temp0, 128)
+                temp0 -= 64
+                temp0 <<= 16
+                temp0 += object.xpos
+
+                Rand(temp1, 64)
+                temp1 -= 32
+                temp1 <<= 16
+                temp1 += object.ypos
+
+                CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+                PlaySfx(SfxName[Explosion], false)
+            end if
+
+            if object.timer == 94
+                temp0 = object.entityPos
+                temp0++
+
+                player.score += 1000
+                ResetObjectEntity(temp0, TypeName[Eggman Jetpack], 0, object.xpos, object.ypos)
+
+                object.animation = EGGANI_DESTROYED
+            end if
+        end if
+        break
+
+    case R1_EGGMAN_BLANK
+        break
+
+    case R1_EGGMAN_RESTORE_BOUNDS
+        if object.timer < 120
+            music.volume--
+
+            stage.curYBoundary2 += 4
+            stage.curXBoundary2 += 6
+
+            object.timer++
+        else
+            stage.curYBoundary2 = object.savedYBoundary2
+            stage.curXBoundary2 = object.savedXBoundary2
+            PlayMusic(0)
+            object.type = TypeName[Blank Object]
+        end if
+        break
+
+    case R1_EGGMAN_SET_BOUNDARIES
+        if stage.curYBoundary2 > bossBody.iypos
+            stage.curYBoundary2 -= 2
+            stage.curYBoundary1 += 2
+        else
+            stage.curYBoundary2 = bossBody.iypos
+
+            temp0 = bossBody.iypos
+            temp0 -= screen.ysize
+            if temp0 < 0
+                temp0 = 0
+            end if
+
+            stage.newYBoundary1 = temp0
+
+            object.timer = 0
+            object.state = R1_EGGMAN_SPAWN_HVC
+        end if
+        break
+
+    case R1_EGGMAN_SPAWN_HVC
+        if object.timer < 120
+            if object.timer < 100
+                music.volume--
+            else
+                if object.timer == 100
+                    PlayMusic(4)
+                end if
+            end if
+
+            object.timer++
+        else
+            object.timer = 0
+            object.state = R1_EGGMAN_BODY_CONTROLLER
+            object.animation = EGGANI_LAUGH
+
+            arrayPos0 = object.entityPos
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Body], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+
+            body[arrayPos0].faceEntity = object.entityPos
+
+            body[arrayPos0].legJointREntity = object.entityPos
+            body[arrayPos0].legJointREntity += 2
+
+            body[arrayPos0].legJointLEntity = object.entityPos
+            body[arrayPos0].legJointLEntity += 5
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Leg Joint], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+
+            // Boss Body
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 1
+
+            // Leg R
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 3
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Leg], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+
+            // Leg Joint R
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 2
+
+            // Foot R
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 4
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Foot], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+
+            // Leg R
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 3
+
+            // Boss Body
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 1
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Leg Joint], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+            bossPart[arrayPos0].drawOrder = 2
+
+            // Boss Body
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 1
+
+            // Leg L
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 6
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Leg], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+            bossPart[arrayPos0].drawOrder = 2
+
+            // Leg Joint L
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 5
+
+            // Foot L
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 7
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Foot], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+            bossPart[arrayPos0].drawOrder = 2
+
+            // Leg L
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 6
+
+            // Boss Body
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 1
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Shoulder], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+            bossPart[arrayPos0].drawOrder = 4
+
+            shoulder[arrayPos0].faceEntity = object.entityPos
+
+            // Arm Joint L
+            shoulder[arrayPos0].armJointLEntity = object.entityPos
+            shoulder[arrayPos0].armJointLEntity += 9
+
+            // Arm Joint R
+            shoulder[arrayPos0].armJointREntity = object.entityPos
+            shoulder[arrayPos0].armJointREntity += 12
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Arm Joint], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+
+            // Shoulder
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 8
+
+            // Arm L
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 10
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Arm], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+
+            // Arm Joint L
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 9
+
+            // Bumper L
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 11
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Bumper], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+
+            // Arm L
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 10
+
+            // Boss Body
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 1
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Arm Joint], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+            bossPart[arrayPos0].drawOrder = 2
+
+            // Shoulder
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 8
+
+            // Arm R
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 13
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Arm], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+            bossPart[arrayPos0].drawOrder = 2
+
+            // Arm Joint R
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 12
+
+            // Bumper R
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 14
+
+            arrayPos0++
+
+            ResetObjectEntity(arrayPos0, TypeName[Boss Bumper], 0, object.xpos, object.ypos)
+            bossPart[arrayPos0].priority = PRIORITY_ACTIVE
+            bossPart[arrayPos0].drawOrder = 2
+
+            // Arm R
+            bossPart[arrayPos0].prevEntity = object.entityPos
+            bossPart[arrayPos0].prevEntity += 13
+
+            // Boss Body
+            bossPart[arrayPos0].nextEntity = object.entityPos
+            bossPart[arrayPos0].nextEntity += 1
+
+            arrayPos0++
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        temp0 = player[currentPlayer].collisionRight
+        temp0 <<= 16
+        temp0 += player[currentPlayer].xpos
+
+        temp1 = stage.curXBoundary2
+        temp1 <<= 16
+        if temp0 > temp1
+            player[currentPlayer].xvel = 0
+            player[currentPlayer].speed = 0
+            player[currentPlayer].xpos = temp1
+            temp0 = player[currentPlayer].collisionRight
+            temp0 <<= 16
+            player[currentPlayer].xpos -= temp0
+        end if
+
+        if object.state > R1_EGGMAN_WAIT_PLAYER
+            if player[currentPlayer].animation != ANI_HURT_A
+                if object.hit < 3
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -28, -28, 28, 28, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        if player[currentPlayer].animation == ANI_JUMPING
+                            player[currentPlayer].xvel = player[currentPlayer].xpos
+                            player[currentPlayer].xvel -= object.xpos
+                            player[currentPlayer].xvel >>= 3
+
+                            player[currentPlayer].speed = player[currentPlayer].xvel
+
+                            player[currentPlayer].yvel = player[currentPlayer].ypos
+                            player[currentPlayer].yvel -= object.ypos
+                            player[currentPlayer].yvel >>= 3
+
+                            if object.timer == 0
+                                if bossBody.state != BOSSBODY_DESCEND
+                                    PlaySfx(SfxName[Explosion], false)
+                                    switch object.hit
+                                    case 0
+                                        object.hit++
+                                        object.timer = 30
+                                        object.animation = 3
+                                        object.animationTimer = 120
+
+                                        arrayPos0 = object.shoulderEntity
+                                        arrayPos1 = shoulder[arrayPos0].armJointREntity
+                                        debris[arrayPos1].state = BOSSARMJOINT_DESTROYED
+                                        debris[arrayPos1].offset.x = 0x10000
+                                        debris[arrayPos1].offset.y = 0x20000
+
+                                        // Arm Joint R to Arm R
+                                        arrayPos0 = bossPart[arrayPos1].nextEntity
+                                        debris[arrayPos0].state = BOSSARM_DESTROYED
+                                        debris[arrayPos0].offset.x = 0
+                                        debris[arrayPos0].offset.y = 0x10000
+
+                                        // Arm R to Bumper R
+                                        arrayPos1 = bossPart[arrayPos0].nextEntity
+                                        debris[arrayPos1].state = BOSSBUMPER_DESTROYED
+                                        debris[arrayPos1].offset.x = 0
+                                        debris[arrayPos1].offset.y = -0x18000
+                                        break
+
+                                    case 1
+                                        object.hit++
+                                        object.timer = 30
+                                        object.animation = EGGANI_HURT
+                                        object.animationTimer = 120
+
+                                        arrayPos0 = object.shoulderEntity
+                                        arrayPos1 = shoulder[arrayPos0].armJointLEntity
+                                        debris[arrayPos1].state = BOSSARMJOINT_DESTROYED
+                                        debris[arrayPos1].offset.x = 0x10000
+                                        debris[arrayPos1].offset.y = 0x20000
+
+                                        // Arm Joint L to Arm L
+                                        arrayPos0 = bossPart[arrayPos1].nextEntity
+                                        debris[arrayPos0].state = BOSSARM_DESTROYED
+                                        debris[arrayPos0].offset.x = 0
+                                        debris[arrayPos0].offset.y = 0x10000
+
+                                        // ArmL to Bumper L
+                                        arrayPos1 = bossPart[arrayPos0].nextEntity
+                                        debris[arrayPos1].state = BOSSBUMPER_DESTROYED
+                                        debris[arrayPos1].offset.x = 0
+                                        debris[arrayPos1].offset.y = -0x18000
+                                        break
+
+                                    case 2
+                                        object.hit++
+                                        object.state = R1_EGGMAN_DEFEATED
+                                        object.animation = EGGANI_HURT
+
+                                        arrayPos0 = object.bodyEntity
+                                        body[arrayPos0].state = BOSSBODY_DESTROYED
+
+                                        arrayPos0 = object.shoulderEntity
+                                        debris[arrayPos0].state = BOSSSHOULDER_DESTROYED
+                                        debris[arrayPos0].offset.x = -0x10000
+                                        debris[arrayPos0].offset.y = -0x20000
+
+                                        arrayPos0 = object.bodyEntity
+                                        arrayPos1 = body[arrayPos0].legJointREntity
+                                        debris[arrayPos1].state = BOSSLEGJOINT_DESTROYED
+                                        debris[arrayPos1].offset.x = 0
+                                        debris[arrayPos1].offset.y = -0x28000
+
+                                        // Leg Joint R to Leg R
+                                        arrayPos0 = bossPart[arrayPos1].nextEntity
+                                        debris[arrayPos0].state = BOSSLEG_DESTROYED
+                                        debris[arrayPos0].offset.x = 0
+                                        debris[arrayPos0].offset.y = -0x20000
+
+                                        // Leg R to Foot R
+                                        arrayPos1 = bossPart[arrayPos0].nextEntity
+                                        debris[arrayPos1].state = BOSSFOOT_DESTROYED
+                                        debris[arrayPos1].offset.x = 0
+                                        debris[arrayPos1].offset.y = -0x23000
+
+                                        arrayPos0 = object.bodyEntity
+                                        arrayPos1 = body[arrayPos0].legJointLEntity
+                                        debris[arrayPos1].state = BOSSLEGJOINT_DESTROYED
+                                        debris[arrayPos1].offset.x = 0
+                                        debris[arrayPos1].offset.y = -0x28000
+
+                                        // Leg Joint L to Leg L
+                                        arrayPos0 = bossPart[arrayPos1].nextEntity
+                                        debris[arrayPos0].state = BOSSLEG_DESTROYED
+                                        debris[arrayPos0].offset.x = 0
+                                        debris[arrayPos0].offset.y = -0x20000
+
+                                        // Leg L to Foot L
+                                        arrayPos1 = bossPart[arrayPos0].nextEntity
+                                        debris[arrayPos1].state = BOSSFOOT_DESTROYED
+                                        debris[arrayPos1].offset.x = 0
+                                        debris[arrayPos1].offset.y = -0x23000
+                                        break
+                                    end switch
+                                end if
+                            end if
+                        else
+                            if player[currentPlayer].invincibleTimer == 0
+                                object.animation = EGGANI_LAUGH
+                                object.faceTimer = 180
+                                player[currentPlayer].state = Player_State_GotHit
+                                if player[currentPlayer].xpos > object.xpos
+                                    player[currentPlayer].speed = 0x20000
+                                else
+                                    player[currentPlayer].speed = -0x20000
+                                end if
+                            end if
+                        end if
+                    end if
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    switch object.animation
+    case EGGANI_IDLE
+        DrawSprite(0)
+        break
+
+    case EGGANI_LAUGH
+        if object.frameTimer < 8
+            object.frameTimer = 8
+        else
+            if object.frameTimer > 23
+                object.frameTimer = 8
+            end if
+        end if
+
+        object.frame = object.frameTimer
+        object.frame >>= 3
+        object.frameTimer++
+        DrawSprite(object.frame)
+        break
+
+    case EGGANI_HURT
+        if object.frameTimer < 12
+            object.frameTimer = 12
+        else
+            if object.frameTimer > 27
+                object.frameTimer = 12
+            end if
+        end if
+
+        object.frame = object.frameTimer
+        object.frame >>= 2
+        object.frameTimer++
+        DrawSprite(object.frame)
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects3.gif")
+
+    SpriteFrame(-28, -24, 40, 16, 206, 1)   // #0 - Eggman Idle
+    SpriteFrame(-28, -24, 40, 16, 206, 18)  // #1 - Eggman Laugh Frame 0
+    SpriteFrame(-28, -24, 40, 16, 206, 35)  // #2 - Eggman Laugh Frame 1
+    SpriteFrame(-28, -40, 40, 32, 124, 1)   // #3 - Eggman Hurt Frame 0
+    SpriteFrame(-28, -24, 40, 16, 206, 52)  // #4 - Eggman Hurt Frame 1
+    SpriteFrame(-28, -40, 40, 32, 165, 1)   // #5 - Eggman Hurt Frame 2
+    SpriteFrame(-28, -24, 40, 16, 206, 69)  // #6 - Eggman Hurt Frame 3
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-28, -24, 40, 16, 206, 1)  // #0 - Eggman Idle
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

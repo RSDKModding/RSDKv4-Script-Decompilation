@@ -1,0 +1,293 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Mecha Bu Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value2        : object.originPos.x
+private alias object.value3        : object.originPos.y
+private alias object.value4        : object.hornTimer
+private alias object.value5        : object.sfxTimer
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : MECHABU_FINDGROUND
+private alias 1 : MECHABU_BACKTRACK
+private alias 2 : MECHABU_ADVANCE
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function MechaBu_DebugDraw
+reserve function MechaBu_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value MechaBu_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function MechaBu_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= MechaBu_startDebugID
+    if temp0 == 0
+        DrawSprite(0)
+    else
+        DrawSprite(2)
+    end if
+end function
+
+
+private function MechaBu_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= MechaBu_startDebugID
+    CreateTempObject(TypeName[Mecha Bu], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].originPos.x = object.xpos
+    object[tempObjectPos].originPos.y = object.ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case MECHABU_FINDGROUND
+		// See if there's any ground to be found at the Bu's current position
+        ObjectTileCollision(CSIDE_FLOOR, 0, 15, 0)
+
+        if checkResult == true
+			// Floor detected, go to the normal movement states now
+            object.state = MECHABU_BACKTRACK
+        else
+			// The Bu's still in the air, so move a pixel down
+            object.ypos += 0x10000
+        end if
+        break
+
+    case MECHABU_BACKTRACK
+        if object.timer < 416
+            object.timer++
+
+			// Move 0.3125 pixels right (opposite of the direction the Bu's currently towards)
+            object.xpos += 0x5000
+        else
+			// Change direction, start going ahead now
+            object.timer = 0
+            object.state = MECHABU_ADVANCE
+        end if
+
+		// Stay with the ground even when going backwards, quite the fancy moonwalk!
+        ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+        break
+
+    case MECHABU_ADVANCE
+        if object.timer < 416
+            object.timer++
+
+			// Move 0.3125 pixels to the left (in the direction the Bu is facing)
+            object.xpos -= 0x5000
+        else
+			// Change direction once again, start going backwards
+            object.timer = 0
+            object.state = MECHABU_BACKTRACK
+        end if
+
+		// Track the ground, the Bu should always be grounded
+        ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Huh, it doesn't seem like the Mecha Bu ever reaches state 3, so this check
+		// is effectivly useless
+        if object.state < 3
+			// Check collision with the main Mecha Bu
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+
+            if object.type == TypeName[Mecha Bu]
+				// Bug Details:
+				// The BoxCollisionTest boxes here for MechaBu are swapped for both positions of its horn.
+				// As to how this happened is unclear, most likely a programming oversight.
+                if object.hornTimer > 59
+					// Timer is over 59 frames, use "Lower" Hitbox
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -30, -32, -8, 0, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        CallFunction(Player_Hit)
+                    end if
+                else
+					// Timer is under 59 frames, use "Raised" Hitbox
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -36, -16, -14, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        CallFunction(Player_Hit)
+                    end if
+                end if
+            end if
+        end if
+    next
+
+    object.sfxTimer++
+    if object.sfxTimer == 48
+        object.sfxTimer = 0
+        PlaySfx(SfxName[Buzzsaw], false)
+    end if
+
+    object.animationTimer++
+    object.animationTimer %= 6
+
+	// Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    temp0 = object.animationTimer
+    temp0 /= 3
+
+    if object.quality == QUALITY_GOOD
+		// Bug Details:
+		// MechaBu has it's saw rendering behind its body. Another programming oversight...?
+        if object.hornTimer > 59
+            temp0 += 5
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos) // Draw Raised Saw Sprite
+            DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos) // Draw Body Sprite
+            DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos) // Draw Raised Arm Sprite
+        else
+            temp0 += 2
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos) // Draw Lower Saw Sprite
+            DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos) // Draw Body Sprite
+            DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos) // Draw Lower Arm Sprite
+        end if
+
+		// Start the HornTimer, reset every 120 frames
+        object.hornTimer++
+        object.hornTimer %= 120
+    else
+        temp0 += 5
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos) // Draw Raised Saw Sprite
+        DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos) // Draw Body Sprite
+        DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos) // Draw Raised Arm Sprite
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-24, -16, 48, 32, 173, 140)	// #0 - Mecha Bu body
+
+	SpriteFrame(-23, -17, 16, 24, 156, 177)	// #1 - Mecha Bu Horn frame 0
+	SpriteFrame(-31, -32, 24, 32, 230, 1)	// #2 - Mecha Bu Saw frame 0
+	SpriteFrame(-31, -32, 24, 32, 173, 173)	// #3 - Mecha Bu Saw frame 1
+
+	SpriteFrame(-33, -8, 24, 16, 131, 177)	// #4 - Mecha Bu Horn frame 1
+	SpriteFrame(-37, -16, 24, 32, 230, 1)	// #5 - Mecha Bu Saw frame 0
+	SpriteFrame(-37, -16, 24, 32, 173, 173)	// #6 - Mecha Bu Saw frame 1
+
+	// Cycle through all Objects in the level and find all Mecha Bu entities
+    foreach (TypeName[Mecha Bu], arrayPos0, ALL_ENTITIES)
+		// Store their its starting position
+		// (These don't ever seem to be used, though?)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+
+    temp0 = 0
+    MechaBu_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Mecha Bu], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(MechaBu_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(MechaBu_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		case 0 // condition
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+
+		case 0 // condition
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	if object.propertyValue == QUALITY_GOOD
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos) // Draw Body Sprite
+		DrawSpriteFX(2, FX_FLIP, object.xpos, object.ypos) // Draw Lower Saw Sprite
+		DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos) // Draw Lower Arm Sprite
+	else
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos) // Draw Body Sprite
+		DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos) // Draw Raised Saw Sprite
+		DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos) // Draw Raised Arm Sprite
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-24, -16, 48, 32, 173, 140)	// #0 - Mecha Bu body
+
+	SpriteFrame(-23, -17, 16, 24, 156, 177)	// #1 - Mecha Bu Horn frame 0
+	SpriteFrame(-31, -32, 24, 32, 230, 1)	// #2 - Mecha Bu Saw frame 0
+	SpriteFrame(-31, -32, 24, 32, 173, 173)	// #3 - Mecha Bu Saw frame 1
+
+	SpriteFrame(-33, -8, 24, 16, 131, 177)	// #4 - Mecha Bu Horn frame 1
+	SpriteFrame(-37, -16, 24, 32, 230, 1)	// #5 - Mecha Bu Saw frame 0
+	SpriteFrame(-37, -16, 24, 32, 173, 173)	// #6 - Mecha Bu Saw frame 1
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", QUALITY_GOOD)
+	AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

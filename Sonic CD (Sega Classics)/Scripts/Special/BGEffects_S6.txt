@@ -1,0 +1,200 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: BGEffects Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.deformTimer
+private alias object.value1 : object.paletteTimer
+private alias object.value2 : object.prevAngle
+private alias object.value3 : object.fansTimer
+private alias object.value4 : object.crunchersTimer
+private alias object.value5 : object.fansSprite
+private alias object.value6 : object.crunchersSprite
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Animate the fans in the stage
+	object.fansTimer++
+	if object.fansTimer > 2
+		object.fansTimer = 0
+		object.fansSprite++
+		object.fansSprite %= 3
+		switch object.fansSprite
+		case 0
+			// Fans are 4x4 tiles, comprised of 8 unique tiles, so
+			// 8 individual tiles need to be updated to change the entire sprite
+			Copy16x16Tile(37, 348)
+			Copy16x16Tile(38, 349)
+			Copy16x16Tile(39, 350)
+			Copy16x16Tile(40, 351)
+			Copy16x16Tile(41, 352)
+			Copy16x16Tile(42, 353)
+			Copy16x16Tile(43, 354)
+			Copy16x16Tile(44, 355)
+			break
+
+		case 1
+			Copy16x16Tile(37, 356)
+			Copy16x16Tile(38, 357)
+			Copy16x16Tile(39, 358)
+			Copy16x16Tile(40, 359)
+			Copy16x16Tile(41, 360)
+			Copy16x16Tile(42, 361)
+			Copy16x16Tile(43, 362)
+			Copy16x16Tile(44, 363)
+			break
+
+		case 2
+			Copy16x16Tile(37, 364)
+			Copy16x16Tile(38, 365)
+			Copy16x16Tile(39, 366)
+			Copy16x16Tile(40, 367)
+			Copy16x16Tile(41, 368)
+			Copy16x16Tile(42, 369)
+			Copy16x16Tile(43, 370)
+			Copy16x16Tile(44, 371)
+			break
+
+		end switch
+	end if
+
+	// Animate the crunchers in the level
+	object.crunchersTimer++
+	if object.crunchersTimer > 5
+		object.crunchersTimer = 0
+		object.crunchersSprite++
+		object.crunchersSprite &= 3
+		switch object.crunchersSprite
+		case 0
+			// Crunchers are 2x2 tiles, each tile unique,
+			// so 4 tiles need to be updated in order to completely change their sprite
+			Copy16x16Tile(134, 372)
+			Copy16x16Tile(135, 373)
+			Copy16x16Tile(136, 376)
+			Copy16x16Tile(137, 377)
+			break
+
+		case 1
+			Copy16x16Tile(134, 374)
+			Copy16x16Tile(135, 375)
+			Copy16x16Tile(136, 378)
+			Copy16x16Tile(137, 379)
+			break
+
+		case 2
+			Copy16x16Tile(134, 380)
+			Copy16x16Tile(135, 381)
+			Copy16x16Tile(136, 384)
+			Copy16x16Tile(137, 385)
+			break
+
+		case 3
+			Copy16x16Tile(134, 382)
+			Copy16x16Tile(135, 383)
+			Copy16x16Tile(136, 386)
+			Copy16x16Tile(137, 387)
+			break
+
+		end switch
+	end if
+
+	// Make the background all loopy
+	object.deformTimer++
+	if object.deformTimer > 1
+		tileLayer[1].deformationOffset++
+		object.deformTimer = 0
+	end if
+
+	// Animate the stage's palette for the background
+	object.paletteTimer++
+	if object.paletteTimer > 3
+		object.paletteTimer = 0
+		RotatePalette(0, 209, 221, false)
+	end if
+
+	// Find the difference between the current angle and the last angle
+	temp1 = object.prevAngle
+	temp2 = tileLayer[0].angle
+	if temp1 < temp2
+		temp3 = temp2
+		temp3 -= temp1
+		if temp3 > 256
+			temp1 += 512
+		end if
+	else
+		temp3 = temp1
+		temp3 -= temp2
+		if temp3 > 256
+			temp2 += 512
+		end if
+	end if
+
+	temp0 = temp1
+	temp0 -= temp2
+
+	// Store the current angle for the same process next frame
+	object.prevAngle = tileLayer[0].angle
+
+	// Scroll the BG with parallax
+	temp1 = 0x02000 // An eight of a pixel, unused
+	temp2 = 0x20000 // 2 pixels
+
+	temp1 *= temp0 // There was likely some layer this corresponded to, but in the final version, only the buildings layer [1] gets moved
+	temp2 *= temp0
+
+	// Perhaps the unused value corresponded to the wave background - [0]?
+	hParallax[1].scrollPos += temp2
+end event
+
+
+event ObjectStartup
+	// Set the stage's bounds
+	// Aside from the Robotnik stage (which uses copies of these same numbers), this seems to be the only Special Stage with uneven left/right and top/bottom bounds
+	stage.curXBoundary1 = 0x2800000 // left bounds:  640 pixels
+	stage.curXBoundary2 = 0xD800000 // right bounds: 3456 pixels
+	stage.curYBoundary1 = 0x3000000 // upper bounds: 768 pixels
+	stage.curYBoundary2 = 0xD000000 // lower bounds: 3328 pixels
+
+	// Reset deformation
+	SetLayerDeformation(2, 64, 64, 0, 0, 0)
+
+	// Setup all BGEffects objects in the level
+	// (There should only ever be one though)
+	foreach (TypeName[BG Effects], arrayPos0, ALL_ENTITIES)
+		// Make the object always active, as the stage should always animate even when its animator object is out of bounds
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		// Make the object the first thing to be drawn
+		object[arrayPos0].drawOrder = 0
+
+		// And setup its starting angle too, assuming Sonic's starting facing left
+		object[arrayPos0].prevAngle = 368
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

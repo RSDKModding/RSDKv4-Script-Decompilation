@@ -1,0 +1,338 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: UFO Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.ypos   : object.zpos
+private alias object.value0 : object.targetNode
+private alias object.value1 : object.xvel
+private alias object.value2 : object.zvel
+private alias object.value3 : object.timer
+private alias object.value4 : object.screenXPos // Difference from the center of the camera (which is where Sonic is always located)
+private alias object.value5 : object.screenDepth
+
+// HUD Alias
+private alias object[4].value0 : HUD.ufosCount       // Initially set via a loop in the UFO script
+private alias object[4].value1 : HUD.timeSeconds     // Displayed time
+private alias object[4].value3 : HUD.rings
+private alias object[4].value4 : HUD.lastUFOType     // Used by UFOs for ring streak bonus
+private alias object[4].value5 : HUD.speedShoesTimer // Used to transmit between player and UFO
+private alias object[4].value6 : HUD.bonusUFONo      // "No" akin to Entity No, not as in "is there no UFO?"
+
+// UFOPowerUp Aliases
+private alias object.value0 : UFOPowerUp.explosionDir
+private alias object.value1 : UFOPowerUp.explosionXVel
+private alias object.value2 : UFOPowerUp.explosionYVel
+private alias object.value4 : UFOPowerUp.yvel
+private alias object.value5 : UFOPowerUp.screenDepth
+private alias object.value7 : UFOPowerUp.startResults
+
+// Property Value
+private alias 0 : UFO_CONTENTS_RINGS
+private alias 1 : UFO_CONTENTS_SPEEDSHOES
+private alias 2 : UFO_CONTENTS_TIME
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Update movement
+	if object.timer == 0
+		arrayPos0 = object.targetNode
+		if object[arrayPos0].type != TypeName[UFO Node]
+			object.targetNode = object.entityPos
+			object.targetNode++
+			arrayPos0 = object.targetNode
+		end if
+
+		object.xpos = object[arrayPos0].xpos
+		object.ypos = object[arrayPos0].ypos
+		object.timer = object[arrayPos0].propertyValue
+		object.timer *= 2
+
+		arrayPos0++
+		object.targetNode++
+		if object[arrayPos0].type != TypeName[UFO Node]
+			object.targetNode = object.entityPos
+			object.targetNode++
+			arrayPos0 = object.targetNode
+		end if
+
+		object.xvel = object[arrayPos0].xpos
+		object.xvel -= object.xpos
+		object.xvel /= object.timer
+
+		object.zvel = object[arrayPos0].zpos
+		object.zvel -= object.zpos
+		object.zvel /= object.timer
+	else
+		// Following a node - just update movement for now
+		object.timer--
+		object.xpos += object.xvel
+		object.zpos += object.zvel
+	end if
+
+	// Check player interaction in this (rather lengthy) process
+
+	// X difference
+	temp0 = object.xpos
+	temp0 -= tileLayer[0].xpos
+	temp0 >>= 8
+
+	// Z mutliplier
+	temp1 = object.zpos
+	temp1 -= tileLayer[0].zpos
+	temp1 >>= 8
+
+	// Calculating the X difference
+	Sin(temp2, tileLayer[0].angle)
+	temp2 *= temp1
+	Cos(temp3, tileLayer[0].angle)
+	temp3 *= temp0
+	object.screenXPos = temp2
+	object.screenXPos -= temp3
+	object.screenXPos >>= 9
+
+	// Calculating the Z difference
+	Cos(temp2, tileLayer[0].angle)
+	temp2 *= temp1
+	Sin(temp3, tileLayer[0].angle)
+	temp3 *= temp0
+	object.screenDepth = temp2
+	object.screenDepth += temp3
+	object.screenDepth >>= 9
+
+	// Long list of checks for the hitbox detection
+	// The Player has to be more than 54 pixels off the ground, but lower than 122 pixels towards the sky
+	if object[2].ypos > 0x360000
+		if object[2].ypos < 0x7A0000
+			// The UFO has to be within the 2100 range from the player, who's at a depth of 0x5800 normally
+			if object.screenDepth < 0x58C8
+				if object.screenDepth > 0x5094
+					// The UFO has to be between -0.125 and +0.125 pixels away from the screen centre
+					if object.screenXPos > -0x2000
+						if object.screenXPos < 0x2000
+							// All those checks passed, let's destroy this UFO!
+							temp0 = object.screenXPos
+							temp0 *= 192
+							temp0 /= object.screenDepth
+							temp0 += screen.xcenter
+							temp0 <<= 16
+
+							temp1 = tileLayer[0].ypos
+							temp1 >>= 8
+							temp1 -= 0x6800
+							temp1 *= 96
+							temp1 /= object.screenDepth
+							temp1 += 128
+							temp1 <<= 16
+
+							// Play the ring SFX
+							PlaySfx(SfxName[Ring L], false)
+
+							switch object.propertyValue
+							case UFO_CONTENTS_RINGS
+								// Decrease the UFO count and give some bonus rings
+								HUD.ufosCount--
+								if HUD.lastUFOType == object.propertyValue
+									// If the last UFO caught was a rings variant too, then double the player's rings rather than adding 20
+									HUD.rings <<= 1
+								else
+									HUD.rings += 20
+								end if
+								break
+
+							case UFO_CONTENTS_SPEEDSHOES
+								// Decrease the UFO count and give the player some new faster shoes
+								HUD.ufosCount--
+								HUD.speedShoesTimer = 600
+								break
+
+							case UFO_CONTENTS_TIME
+								// Add some time to the clock
+								// (Not decreasing the UFO count because time UFOs don't count towards the whole)
+								HUD.timeSeconds += 30
+								break
+
+							end switch
+
+							HUD.lastUFOType = object.propertyValue
+
+							// Create the UFO powerup icon
+							CreateTempObject(TypeName[UFO Power Up], object.propertyValue, temp0, temp1)
+							Rand(UFOPowerUp[tempObjectPos].explosionDir, 100)
+							UFOPowerUp[tempObjectPos].explosionXVel = temp0
+							UFOPowerUp[tempObjectPos].explosionYVel = temp1
+							UFOPowerUp[tempObjectPos].yvel = -0x40000
+							UFOPowerUp[tempObjectPos].screenDepth = 0x58C8
+
+							// If the last UFO was just destroyed, then signal that to the PowerUp object too
+							if HUD.ufosCount == 0
+								UFOPowerUp[tempObjectPos].startResults = true
+							end if
+
+							ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+						end if
+					end if
+				end if
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	if object.screenDepth > 256 // Don't draw if the UFO is too close to the screen
+		// Do some maths to find the position & scale the UFO should be at
+		object.scale = 0xC00000
+		object.scale /= object.screenDepth
+
+		temp0 = 768
+		temp0 -= object.scale
+		temp0 /= 6
+
+		temp1 = object.screenDepth
+		temp1 >>= 12
+
+		if temp0 > 0
+			object.scale += temp0
+			object.scale -= temp1
+		end if
+
+		temp0 = object.screenXPos
+		temp0 *= 192
+		temp0 /= object.screenDepth
+		temp0 += screen.xcenter
+
+		temp1 = tileLayer[0].ypos
+		temp1 >>= 8
+		temp1 -= 0x6800
+		temp1 *= 96
+		temp1 /= object.screenDepth
+		temp1 += 128
+
+		// Draw the UFO now
+		DrawSpriteScreenFX(object.propertyValue, FX_SCALE, temp0, temp1)
+
+		// Find the ground position
+		temp1 = tileLayer[0].ypos
+		temp1 >>= 8
+		temp1 *= 96
+		temp1 /= object.screenDepth
+		temp1 += 128
+
+		// Draw the shadow on the ground
+		DrawSpriteScreenFX(3, FX_SCALE, temp0, temp1)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Special/Objects.gif")
+
+	// UFO Frames
+	SpriteFrame(-40, -28, 80, 56, 1, 1)   // 0 - 10 Rings Variant
+	SpriteFrame(-40, -28, 80, 56, 82, 1)  // 1 - Speed Shoes Variant
+	SpriteFrame(-40, -28, 80, 56, 163, 1) // 2 - Extra Time Variant
+	SpriteFrame(-40, -8, 80, 16, 1, 117)  // 3 - UFO Shadow Frame
+
+	// Cycle through all UFO objects in the scene and set them up
+	foreach (TypeName[UFO], arrayPos0, ALL_ENTITIES)
+		// Set the UFO to always be active
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		if object[arrayPos0].propertyValue < UFO_CONTENTS_TIME
+			// Increase the UFO count
+			HUD.ufosCount++
+		else
+			// Bonus UFO Spawn point, delete the UFO for right now and store its entityPos into the HUD value
+			// (We need to make sure the Time UFO is spawned in the correct slot because of its Nodes)
+			object[arrayPos0].type = TypeName[Blank Object]
+			HUD.bonusUFONo = arrayPos0
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Contents
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Contents
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(object.propertyValue)
+
+	if editor.showGizmos == true
+		// Draw arrows to show the network of UFO nodes
+
+		editor.drawingOverlay = true
+
+		arrayPos1 = object.entityPos
+		arrayPos0 = object.entityPos
+		arrayPos0++
+
+		GetObjectType(temp0, "UFO Node")
+
+		while object[arrayPos0].type == temp0
+			DrawArrow(object[arrayPos1].xpos, object[arrayPos1].zpos, object[arrayPos0].xpos, object[arrayPos0].zpos, 0xFF, 0xFF, 0x00)
+			arrayPos0++
+			arrayPos1++
+		loop
+
+		arrayPos0 = object.entityPos
+		arrayPos0++
+		if arrayPos1 != object.entityPos
+			DrawArrow(object[arrayPos1].xpos, object[arrayPos1].zpos, object[arrayPos0].xpos, object[arrayPos0].zpos, 0xFF, 0xFF, 0x00)
+		end if
+
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Objects.gif")
+	SpriteFrame(-40, -28, 80, 56, 1, 1)
+	SpriteFrame(-40, -28, 80, 56, 82, 1)
+	SpriteFrame(-40, -28, 80, 56, 163, 1)
+
+	AddEditorVariable("Contents")
+	SetActiveVariable("Contents")
+	AddEnumVariable("10 Rings", UFO_CONTENTS_RINGS)
+	AddEnumVariable("Speed Shoes", UFO_CONTENTS_SPEEDSHOES)
+	AddEnumVariable("Extra Time", UFO_CONTENTS_TIME)
+end event

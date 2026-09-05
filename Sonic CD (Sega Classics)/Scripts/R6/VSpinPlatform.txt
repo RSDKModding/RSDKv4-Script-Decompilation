@@ -1,0 +1,247 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: V Spin Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.playerOffsetAngle
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+private alias object.value3 : object.storeYPos
+private alias object.value4 : object.kickPlayer
+private alias object.value5 : object.platAnimFrame
+private alias object.value6 : object.lightAnimFrame
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.speed     : player.speed
+private alias object.frame     : player.frame
+private alias object.animation : player.animation
+private alias object.left      : player.left
+private alias object.right     : player.right
+private alias object.jumpPress : player.jumpPress
+private alias object.value1    : player.timer
+private alias object.value35   : player.spinPlatformRadius
+private alias object.value43   : player.prevGravity
+
+// Property Values
+private alias 0 : START_MOVING_DOWN
+private alias 1 : START_MOVING_UP
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.angle = oscillation
+    object.angle <<= 1
+    if object.propertyValue == START_MOVING_DOWN
+        object.angle += 256
+    end if
+
+    Sin(object.collisionOffset.y, object.angle)
+    object.collisionOffset.y <<= 13
+    object.collisionOffset.y += object.ypos
+    object.collisionOffset.y &= -0x10000 // Truncate the value
+    object.collisionOffset.y -= object.drawPos.y
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        object.storeYPos = object.ypos
+        object.ypos = object.drawPos.y
+        BoxCollisionTest(C_PLATFORM, object.entityPos, -24, -12, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[currentPlayer].ypos += object.collisionOffset.y
+            if player[currentPlayer].state != Player_State_SpinningTop
+                player[currentPlayer].speed = 0
+
+                object.kickPlayer = true
+                player[currentPlayer].spinPlatformRadius = 0xC00
+                if player[currentPlayer].xpos > object.xpos
+                    player[currentPlayer].timer = player[currentPlayer].xpos
+                    player[currentPlayer].timer -= object.xpos
+                    object.playerOffsetAngle = 128
+                else
+                    player[currentPlayer].timer = object.xpos
+                    player[currentPlayer].timer -= player[currentPlayer].xpos
+                    object.playerOffsetAngle = 384
+                end if
+            end if
+
+            if player[currentPlayer].xpos > object.xpos
+                if player[currentPlayer].left == true
+                    player[currentPlayer].timer -= 0x800
+                end if
+
+                if player[currentPlayer].right == true
+                    player[currentPlayer].timer += 0x800
+                end if
+            else
+                if player[currentPlayer].left == true
+                    player[currentPlayer].timer += 0x800
+                end if
+
+                if player[currentPlayer].right == true
+                    player[currentPlayer].timer -= 0x800
+                end if
+            end if
+
+            player[currentPlayer].state = Player_State_SpinningTop
+            player[currentPlayer].animation = ANI_SPINNING_TOP
+
+            Sin(player[currentPlayer].xpos, object.playerOffsetAngle)
+            player[currentPlayer].xpos *= player[currentPlayer].timer
+            player[currentPlayer].xpos >>= 9
+            player[currentPlayer].xpos += object.xpos
+
+            temp0 = object.playerOffsetAngle
+            temp0 -= 128
+            temp0 /= 86
+            player[currentPlayer].frame = temp0
+
+            object.playerOffsetAngle += 8
+            if object.playerOffsetAngle > 639
+                object.playerOffsetAngle -= 512
+            end if
+
+            if player[currentPlayer].jumpPress == true
+                arrayPos1 = stage.entityPos
+                stage.entityPos = currentPlayer
+                CallFunction(Player_Action_Jump)
+                stage.entityPos = arrayPos1
+
+                player[currentPlayer].speed = player[currentPlayer].xpos
+                player[currentPlayer].speed -= object.xpos
+                player[currentPlayer].speed >>= 3
+                player[currentPlayer].state = Player_State_Air
+                player[currentPlayer].timer = 0
+                PlaySfx(SfxName[Jump], false)
+            end if
+        else
+            if object.kickPlayer == true
+                if player[currentPlayer].state == Player_State_SpinningTop
+                    if player[currentPlayer].prevGravity == GRAVITY_GROUND
+                        player[currentPlayer].state = Player_State_Ground
+                        object.kickPlayer = false
+                        player[currentPlayer].timer = 0
+                    end if
+                end if
+            end if
+        end if
+
+        object.ypos = object.storeYPos
+    next
+end event
+
+
+event ObjectDraw
+    Sin(object.drawPos.y, object.angle)
+    object.drawPos.y <<= 13
+    object.drawPos.y += object.ypos
+    object.drawPos.y &= -0x10000
+
+    temp0 = object.platAnimFrame
+    temp0 /= 10
+    object.platAnimFrame++
+    object.platAnimFrame %= 20
+    DrawSpriteXY(temp0, object.xpos, object.drawPos.y)
+
+    temp0 = object.lightAnimFrame
+    temp0 /= 10
+    temp0 += 2
+    object.lightAnimFrame++
+    object.lightAnimFrame %= 60
+    DrawSpriteXY(temp0, object.xpos, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R6/Objects.gif")
+
+    SpriteFrame(-24, -16, 48, 32, 1, 84)    // #0 - Vertical Spin Platform frame 0
+    SpriteFrame(-24, -16, 48, 32, 50, 84)   // #1 - Vertical Spin Platform frame 1
+
+    SpriteFrame(-8, 16, 16, 16, 1, 117)     // #2 - Spin Platform Light frame 0
+    SpriteFrame(-8, 16, 16, 16, 18, 117)    // #3 - Spin Platform Light frame 1
+    SpriteFrame(-8, 16, 16, 16, 35, 117)    // #4 - Spin Platform Light frame 2
+    SpriteFrame(-8, 16, 16, 16, 35, 117)    // #5 - Spin Platform Light frame 3
+    SpriteFrame(-8, 16, 16, 16, 35, 117)    // #6 - Spin Platform Light frame 4
+    SpriteFrame(-8, 16, 16, 16, 52, 117)    // #7 - Spin Platform Light frame 5
+
+    foreach (TypeName[V Spin Platform], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].drawOrder = 4
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(1)
+
+    switch object.propertyValue
+    case START_MOVING_DOWN
+        temp1 = 255
+        temp2 = 255
+        temp3 = 128
+        temp4 = 0
+        break
+
+    case START_MOVING_UP
+        temp1 = 128
+        temp2 = 0
+        temp3 = 255
+        temp4 = 255
+        break
+    end switch
+
+    temp5 = object.xpos
+    temp5 -= 0x180000
+    if object.propertyValue == START_MOVING_DOWN
+        temp0 = object.ypos
+        temp0 += 0x490000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, temp3, temp4, 0)
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp0 = object.ypos
+            temp0 -= 0x490000
+            DrawRectOutline(temp5, temp0, 0x30, 0x92, 255, 255, 255, 255)
+            DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, temp1, temp2, 0)
+            editor.drawingOverlay = false
+        end if
+    else
+        temp0 = object.ypos
+        temp0 -= 0x490000
+        DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, temp1, temp2, 0)
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            DrawRectOutline(temp5, temp0, 0x30, 0x92, 255, 255, 255, 255)
+            temp0 = object.ypos
+            temp0 += 0x490000
+            DrawArrow(object.xpos, object.ypos, object.xpos, temp0, 255, temp3, temp4, 0)
+            editor.drawingOverlay = false
+        end if
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R6/Objects.gif")
+    SpriteFrame(-24, -16, 48, 32, 1, 84)    // #0 - Vertical Spin Platform frame 0
+    SpriteFrame(-8, 16, 16, 16, 18, 117)    // #1 - Spin Platform Light frame 1
+
+    AddEditorVariable("startDir")
+    SetActiveVariable("startDir")
+    AddEnumVariable("Down", START_MOVING_DOWN)
+    AddEnumVariable("Up", START_MOVING_UP)
+end event

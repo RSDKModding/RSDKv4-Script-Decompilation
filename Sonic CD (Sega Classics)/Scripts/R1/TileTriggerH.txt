@@ -1,0 +1,129 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tile Trigger H Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.propertyValue : object.size
+
+private alias object.value0 : object.hitboxTop
+private alias object.value1 : object.hitboxBottom
+private alias object.value2 : object.chunkX
+private alias object.value3 : object.chunkY
+private alias object.value4 : object.nextChunkX
+private alias object.value5 : object.nextChunkY
+private alias object.value6 : object.startupChunk
+private alias object.value7 : object.nextChunk
+
+// Helper Aliases
+private alias object.propertyValue : helper.storedChunk // This is a blank object
+
+// Property Values
+private alias 0 : STARTUP_CHUNK
+private alias 1 : NEXT_CHUNK
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxTop, -12, object.hitboxBottom, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if helper[+1].storedChunk == STARTUP_CHUNK
+                temp0 = object.startupChunk
+            else
+                temp0 = object.nextChunk
+            end if
+
+            SetTileLayerEntry(temp0, 0, object.chunkX, object.chunkY)
+            temp0++
+
+            SetTileLayerEntry(temp0, 0, object.nextChunkX, object.chunkY)
+            temp0++
+
+            SetTileLayerEntry(temp0, 0, object.chunkX, object.nextChunkY)
+            temp0++
+
+            SetTileLayerEntry(temp0, 0, object.nextChunkX, object.nextChunkY)
+            temp0++
+        end if
+    next
+end event
+
+
+event ObjectStartup
+    arrayPos0 = 32
+    while arrayPos0 < 1056
+        if object[arrayPos0].type == TypeName[Tile Trigger H]
+            arrayPos1 = arrayPos0
+            arrayPos1++ // This should always be a blank object
+            object[arrayPos0].hitboxTop = object[arrayPos0].propertyValue
+            object[arrayPos0].hitboxTop <<= 3
+            object[arrayPos0].hitboxBottom = object[arrayPos0].hitboxTop
+            FlipSign(object[arrayPos0].hitboxTop)
+            object[arrayPos0].hitboxTop -= 8
+            object[arrayPos0].hitboxBottom += 8
+
+            object[arrayPos0].chunkX = object[arrayPos1].ixpos
+            object[arrayPos0].chunkX >>= 7
+
+            object[arrayPos0].nextChunkX = object[arrayPos0].chunkX
+            object[arrayPos0].nextChunkX++
+
+            object[arrayPos0].chunkY = object[arrayPos1].iypos
+            object[arrayPos0].chunkY >>= 7
+
+            object[arrayPos0].nextChunkY = object[arrayPos0].chunkY
+            object[arrayPos0].nextChunkY++
+            
+            GetTileLayerEntry(object[arrayPos0].startupChunk, 0, object[arrayPos0].chunkX, object[arrayPos0].chunkY)
+            
+            object[arrayPos0].nextChunk = object[arrayPos0].startupChunk
+            object[arrayPos0].nextChunk += 4
+        end if
+        arrayPos0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	temp0 = object.size
+	temp0 <<= 19
+	FlipSign(temp0)
+	temp0 += object.ypos
+	temp0 += 0x80000
+
+	temp4 = 0
+	while temp4 < object.size
+		DrawSpriteXY(0, object.xpos, temp0)
+		temp0 += 0x100000
+		temp4++
+	loop
+
+	if object.size == 0
+		DrawSprite(0)
+	end if
+
+	if editor.showGizmos == true
+		DrawArrow(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 255, 255, 0)
+	end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-8, -8, 16, 16, 173, 67) // #0 - "T" Icon
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "size")
+end event

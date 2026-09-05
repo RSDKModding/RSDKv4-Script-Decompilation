@@ -1,0 +1,591 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Water Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.constBubbleTimer
+private alias object.value2 : object.randBubbleTimer
+
+// Player Aliases
+private alias object.type           : player.type
+private alias object.state          : player.state
+private alias object.xpos           : player.xpos
+private alias object.ypos           : player.ypos
+private alias object.xvel           : player.xvel
+private alias object.yvel           : player.yvel
+private alias object.speed          : player.speed
+private alias object.gravity        : player.gravity
+private alias object.animation      : player.animation
+private alias object.drawOrder      : player.drawOrder
+private alias object.direction      : player.direction
+private alias object.tileCollisions : player.tileCollisions
+private alias object.interaction    : player.interaction
+
+private alias object.value1  : player.timer
+private alias object.value3  : player.drownTimer
+private alias object.value4  : player.drownLevel
+private alias object.value19 : player.topSpeed
+private alias object.value20 : player.acceleration
+private alias object.value21 : player.deceleration
+private alias object.value22 : player.airAcceleration
+private alias object.value23 : player.airDeceleration
+private alias object.value24 : player.gravityStrength
+private alias object.value26 : player.jumpStrength
+private alias object.value27 : player.jumpCap
+private alias object.value38 : player.shield
+
+// Air Bubble Aliases
+private alias object.xpos      : airBubble.xpos
+private alias object.ypos      : airBubble.ypos
+private alias object.yvel      : airBubble.yvel
+private alias object.angle     : airBubble.angle
+private alias object.direction : airBubble.direction
+private alias object.drawOrder : airBubble.drawOrder
+private alias object.value1    : airBubble.originPos.x
+private alias object.value2    : airBubble.targetPlayer
+
+// Countdown Bubble Aliases
+private alias object.xpos      : countdownBubble.xpos
+private alias object.yvel      : countdownBubble.yvel
+private alias object.angle     : countdownBubble.angle
+private alias object.direction : countdownBubble.direction
+private alias object.drawOrder : countdownBubble.drawOrder
+private alias object.value1    : countdownBubble.drawPos.x
+private alias object.value2    : countdownBubble.drawPos.y
+
+// Dust Puff Aliases
+private alias object.xvel      : dustPuff.xvel
+private alias object.yvel      : dustPuff.yvel
+private alias object.drawOrder : dustPuff.drawOrder
+
+// Water Splash Aliases
+private alias object.drawOrder : waterSplash.drawOrder
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Water_SpawnSmallAirBubble
+reserve function Water_SpawnCountDownBubble
+
+// ========================
+// Static Values
+// ========================
+
+public value Water_waterSlotID = 0
+public value Water_activateFlag = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function Water_SpawnSmallAirBubble
+    if object[+currentPlayer].constBubbleTimer > 0
+        object[+currentPlayer].constBubbleTimer--
+        if object[+currentPlayer].randBubbleTimer > 0
+            object[+currentPlayer].randBubbleTimer--
+        else
+            CreateTempObject(TypeName[Air Bubble], 2, player[currentPlayer].xpos, player[currentPlayer].ypos)
+            airBubble[tempObjectPos].drawOrder = 4
+            airBubble[tempObjectPos].yvel = -0x8800
+            airBubble[tempObjectPos].targetPlayer = currentPlayer
+
+            if airBubble[currentPlayer].direction == FLIP_NONE
+                airBubble[tempObjectPos].xpos += 0x60000
+            else
+                airBubble[tempObjectPos].xpos -= 0x60000
+                airBubble[tempObjectPos].angle = 256
+            end if
+
+            airBubble[tempObjectPos].originPos.x = object[tempObjectPos].xpos
+            object[+currentPlayer].randBubbleTimer = 512
+        end if
+    else
+        Rand(temp0, 3)
+        if temp0 == 1
+            Rand(object[+currentPlayer].randBubbleTimer, 16)
+            object[+currentPlayer].randBubbleTimer += 8
+        else
+            object[+currentPlayer].randBubbleTimer = 512
+        end if
+
+        object[+currentPlayer].constBubbleTimer = 60
+
+        CreateTempObject(TypeName[Air Bubble], 2, player[currentPlayer].xpos, player[currentPlayer].ypos)
+        airBubble[tempObjectPos].drawOrder = 4
+        airBubble[tempObjectPos].yvel = -0x8800
+        airBubble[tempObjectPos].targetPlayer = currentPlayer
+
+        if airBubble[currentPlayer].direction == FLIP_NONE
+            airBubble[tempObjectPos].xpos += 0x60000
+        else
+            airBubble[tempObjectPos].xpos -= 0x60000
+            airBubble[tempObjectPos].angle = 256
+        end if
+
+        airBubble[tempObjectPos].originPos.x = object[tempObjectPos].xpos
+    end if
+end function
+
+
+public function Water_SpawnCountDownBubble
+    CreateTempObject(TypeName[Countdown Bubble], temp0, player[currentPlayer].xpos, player[currentPlayer].ypos)
+    countdownBubble[tempObjectPos].drawOrder = 5
+    countdownBubble[tempObjectPos].yvel = -0x8800
+
+    // this is odd... this is drawPos.y, not "targetPlayer", likely a leftover from AirBubble spawning
+    countdownBubble[tempObjectPos].drawPos.y = currentPlayer
+
+    if countdownBubble[currentPlayer].direction == FLIP_NONE
+        countdownBubble[tempObjectPos].xpos += 0x60000
+    else
+        countdownBubble[tempObjectPos].xpos -= 0x60000
+        countdownBubble[tempObjectPos].angle = 256
+    end if
+
+    countdownBubble[tempObjectPos].drawPos.x = countdownBubble[tempObjectPos].xpos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    temp0 = player[SLOT_PLAYER1].xpos
+    temp0 >>= 16
+    temp1 = player[SLOT_PLAYER1].ypos
+    temp1 >>= 16
+
+    arrayPos0 = object.entityPos
+    // (unused) - there'd usually be an object.proccessActEffects function call to go with the arrayPos0
+    // assignment above since this is based on Sonic 1's LZ/Water
+
+    if object.ypos < stage.newWaterLevel
+        object.ypos += 0x10000
+    end if
+
+    if object.ypos > stage.newWaterLevel
+        object.ypos -= 0x10000
+    end if
+
+    temp0 = oscillation
+    temp0 <<= 1
+    Sin(stage.waterLevel, temp0)
+    stage.waterLevel <<= 10
+    stage.waterLevel += object.ypos
+    temp7 = stage.waterLevel
+    stage.waterLevel >>= 16
+
+    currentPlayer = SLOT_PLAYER1
+    while currentPlayer < playerCount
+        if player[currentPlayer].gravityStrength == 0x3800
+            CheckNotEqual(player[currentPlayer].type, TypeName[Debug Mode])
+            temp0 = checkResult
+
+            CheckNotEqual(player[currentPlayer].state, Player_State_Death)
+            temp0 &= checkResult
+
+            CheckGreater(player[currentPlayer].ypos, temp7)
+            temp0 &= checkResult
+
+            if temp0 == true
+                if player[currentPlayer].yvel > 0
+                    player[currentPlayer].yvel >>= 2
+                end if
+
+                if object.ypos < stage.newWaterLevel
+                    player[currentPlayer].yvel += 0x10000
+                end if
+
+                if player[currentPlayer].state == Player_State_Fly
+                    StopSfx(SfxName[Flying])
+                    StopSfx(SfxName[Jump])
+                end if
+
+                player[currentPlayer].xvel >>= 1
+                player[currentPlayer].speed >>= 1
+
+                CallFunction(Player_UpdatePhysicsState)
+                if player[currentPlayer].yvel != 0
+                    CreateTempObject(TypeName[Water Splash], 0, player[currentPlayer].xpos, temp7)
+                    waterSplash[tempObjectPos].drawOrder = 4
+                    PlaySfx(SfxName[Water Splash], false)
+                end if
+
+                object[+currentPlayer].constBubbleTimer = 52
+                player[currentPlayer].drownTimer = 0
+            end if
+        else
+            if player[currentPlayer].shield == SHIELD_FIRE
+                temp2 = 0
+                while temp2 < 8
+                    Rand(temp0, 32)
+                    Rand(temp1, 32)
+                    temp0 -= 16
+                    temp0 <<= 16
+                    temp0 += player[currentPlayer].xpos
+                    temp1 -= 16
+                    temp1 <<= 16
+                    temp1 += player[currentPlayer].ypos
+                    CreateTempObject(TypeName[Dust Puff], 0, temp0, temp1)
+                    dustPuff[tempObjectPos].drawOrder = player[currentPlayer].drawOrder
+                    dustPuff[tempObjectPos].drawOrder++
+                    dustPuff[tempObjectPos].xvel = player[currentPlayer].xvel
+                    dustPuff[tempObjectPos].yvel = player[currentPlayer].yvel
+                    temp2++
+                loop
+
+                player[currentPlayer].shield = SHIELD_NONE
+                arrayPos0 = currentPlayer
+                arrayPos0 += playerCount
+                CallFunction(Player_ApplyShield)
+            end if
+
+            if player[currentPlayer].shield == SHIELD_LIGHTNING
+                player[currentPlayer].shield = SHIELD_NONE
+                arrayPos0 = currentPlayer
+                arrayPos0 += playerCount
+                CallFunction(Player_ApplyShield)
+                Water_flashTimer = 4
+            end if
+
+            if player[currentPlayer].shield != SHIELD_BUBBLE
+                if player[currentPlayer].drownTimer == 0
+                    player[currentPlayer].drownLevel = 0
+                end if
+
+                switch player[currentPlayer].drownLevel
+                case 0
+                    CallFunction(Water_SpawnSmallAirBubble)
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 360
+                        if currentPlayer == 0
+                            PlaySfx(SfxName[Air Alert], false)
+                        end if
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 1
+                    CallFunction(Water_SpawnSmallAirBubble)
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 660
+                        if currentPlayer == 0
+                            PlaySfx(SfxName[Air Alert], false)
+                        end if
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 2
+                    CallFunction(Water_SpawnSmallAirBubble)
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 960
+                        if currentPlayer == 0
+                            PlaySfx(SfxName[Air Alert], false)
+                        end if
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 3
+                    CallFunction(Water_SpawnSmallAirBubble)
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 1080
+                        temp0 = 0
+                        CallFunction(Water_SpawnCountDownBubble)
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 4
+                    CallFunction(Water_SpawnSmallAirBubble)
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 1200
+                        temp0 = 1
+                        CallFunction(Water_SpawnCountDownBubble)
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 5
+                    CallFunction(Water_SpawnSmallAirBubble)
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 1320
+                        temp0 = 2
+                        CallFunction(Water_SpawnCountDownBubble)
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 6
+                    CallFunction(Water_SpawnSmallAirBubble)
+
+                    temp0 = player[currentPlayer].drownTimer
+                    temp0 &= 63
+                    if temp0 == 0
+                        PlaySfx(SfxName[Drown Alert], false)
+                    end if
+
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 1440
+                        temp0 = 3
+                        CallFunction(Water_SpawnCountDownBubble)
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 7
+                    CallFunction(Water_SpawnSmallAirBubble)
+
+                    temp0 = player[currentPlayer].drownTimer
+                    temp0 &= 63
+                    if temp0 == 0
+                        PlaySfx(SfxName[Drown Alert], false)
+                    end if
+
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 1560
+                        temp0 = 4
+                        CallFunction(Water_SpawnCountDownBubble)
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 8
+                    CallFunction(Water_SpawnSmallAirBubble)
+
+                    temp0 = player[currentPlayer].drownTimer
+                    temp0 &= 63
+                    if temp0 == 0
+                        PlaySfx(SfxName[Drown Alert], false)
+                    end if
+
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 1680
+                        temp0 = 5
+                        CallFunction(Water_SpawnCountDownBubble)
+                        player[currentPlayer].drownLevel++
+                    end if
+                    break
+
+                case 9
+                    CallFunction(Water_SpawnSmallAirBubble)
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 1800
+                        if player[currentPlayer].state != Player_State_Death
+                            if currentPlayer == SLOT_PLAYER1
+                                stage.timeEnabled       = false
+                                screen[0].cameraEnabled = false
+                            end if
+
+                            player[currentPlayer].state = Player_State_Drown
+                            player[currentPlayer].animation = ANI_DROWNING
+                            player[currentPlayer].speed = 0
+                            player[currentPlayer].xvel = 0
+                            player[currentPlayer].yvel = 0
+                            player[currentPlayer].tileCollisions = false
+                            player[currentPlayer].interaction = false
+                            player[currentPlayer].drawOrder = 5
+                            object[+currentPlayer].constBubbleTimer = 2
+                            PlaySfx(SfxName[Drowning], false)
+                            player[currentPlayer].drownLevel++
+                        end if
+                    end if
+                    break
+
+                case 10
+                    player[currentPlayer].drownTimer++
+                    if player[currentPlayer].drownTimer == 1860
+                        player[currentPlayer].drownLevel++
+                    end if
+
+                    if object[+currentPlayer].constBubbleTimer > 0
+                        object[+currentPlayer].constBubbleTimer--
+                        if object[+currentPlayer].randBubbleTimer > 0
+                            object[+currentPlayer].randBubbleTimer--
+                        else
+                            Rand(temp1, 2)
+                            temp1 += 2
+
+                            CreateTempObject(TypeName[Air Bubble], temp1, player[currentPlayer].xpos, player[currentPlayer].ypos)
+                            airBubble[tempObjectPos].drawOrder = 5
+                            airBubble[tempObjectPos].yvel = -0x8800
+                            airBubble[tempObjectPos].ypos -= 0x60000
+                            airBubble[tempObjectPos].targetPlayer = currentPlayer
+                            Rand(airBubble[tempObjectPos].angle, 256)
+                            airBubble[tempObjectPos].originPos.x = airBubble[tempObjectPos].xpos
+
+                            object[+currentPlayer].randBubbleTimer = 512
+                        end if
+                    else
+                        Rand(temp0, 5)
+                        if temp0 == 1
+                            object[+currentPlayer].randBubbleTimer = 2
+                        else
+                            object[+currentPlayer].randBubbleTimer = 512
+                        end if
+
+                        object[+currentPlayer].constBubbleTimer = 6
+
+                        Rand(temp1, 2)
+                        temp1 += 2
+
+                        CreateTempObject(TypeName[Air Bubble], temp1, player[currentPlayer].xpos, player[currentPlayer].ypos)
+                        airBubble[tempObjectPos].drawOrder = 5
+                        airBubble[tempObjectPos].yvel = -0x8800
+                        airBubble[tempObjectPos].ypos -= 0x60000
+                        airBubble[tempObjectPos].targetPlayer = currentPlayer
+                        Rand(airBubble[tempObjectPos].angle, 256)
+                        airBubble[tempObjectPos].originPos.x = airBubble[tempObjectPos].xpos
+                    end if
+                    break
+                end switch
+            end if
+
+            CheckEqual(player[currentPlayer].type, TypeName[Debug Mode])
+            temp0 = checkResult
+
+            CheckLower(player[currentPlayer].ypos, temp7)
+            temp0 |= checkResult
+
+            if temp0 == true
+                if player[currentPlayer].state != Player_State_Death
+                    player[currentPlayer].yvel <<= 1
+                    if player[currentPlayer].yvel < -0x100000
+                        player[currentPlayer].yvel = -0x100000
+                    end if
+
+                    if player[currentPlayer].state == Player_State_Fly
+                        if player[currentPlayer].timer < 480
+                            PlaySfx(SfxName[Flying], true)
+                        else
+                            PlaySfx(SfxName[Jump], true)
+                        end if
+                    end if
+
+                    CallFunction(Player_UpdatePhysicsState)
+                    if player[currentPlayer].yvel != 0
+                        temp0 = object.ypos
+                        temp0 -= player[currentPlayer].ypos
+                        if temp0 < 0xF00000
+                            CreateTempObject(TypeName[Water Splash], 0, player[currentPlayer].xpos, temp7)
+                            waterSplash[tempObjectPos].drawOrder = 4
+                            PlaySfx(SfxName[Water Splash], false)
+                        end if
+                    end if
+
+                    player[currentPlayer].drownTimer = 0
+                end if
+            end if
+        end if
+        currentPlayer++
+    loop
+
+    object.animationTimer++
+    object.animationTimer %= 96
+    object.frame = object.animationTimer
+    object.frame /= 24
+end event
+
+
+event ObjectDraw
+    temp0 = screen.xoffset
+    Sin(temp1, oscillation)
+    temp1 >>= 5
+    temp0 += temp1
+    temp0 &= 63
+    FlipSign(temp0)
+
+    temp1 = stage.waterLevel
+    temp1 -= screen.yoffset
+    DrawSpriteScreenFX(object.frame, FX_INK, temp0, temp1)
+
+    temp0 += 128
+    DrawSpriteScreenFX(object.frame, FX_INK, temp0, temp1)
+
+    temp0 += 128
+    DrawSpriteScreenFX(object.frame, FX_INK, temp0, temp1)
+
+    temp0 += 128
+    DrawSpriteScreenFX(object.frame, FX_INK, temp0, temp1)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects.gif")
+
+    foreach (TypeName[Water], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].priority  = PRIORITY_ACTIVE
+        object[arrayPos0].drawOrder = 5
+        object[arrayPos0].inkEffect = INK_ALPHA
+        object[arrayPos0].alpha     = 0xA0
+
+        stage.newWaterLevel = object[arrayPos0].ypos
+        Water_waterSlotID = arrayPos0
+        stage.waterLevel = stage.newWaterLevel
+        stage.waterLevel >>= 16
+    next
+
+    if lampPostID > 31
+        // (unused)
+    else
+        // (unused)
+    end if
+
+    Water_activateFlag = false
+
+    foreach (GROUP_PLAYERS, currentPlayer, ALL_ENTITIES)
+        player[currentPlayer].drownTimer = 0
+        if player[currentPlayer].ypos > stage.newWaterLevel
+            player[currentPlayer].yvel >>= 2
+            player[currentPlayer].xvel >>= 1
+            player[currentPlayer].speed >>= 1
+            player[currentPlayer].topSpeed >>= 1
+            player[currentPlayer].acceleration >>= 1
+            player[currentPlayer].deceleration >>= 1
+            player[currentPlayer].airAcceleration >>= 1
+            player[currentPlayer].airDeceleration >>= 1
+            player[currentPlayer].gravityStrength = 0x1000
+            if stage.playerListPos == PLAYER_KNUCKLES_A
+                player[currentPlayer].jumpStrength = 0x30000
+            else
+                player[currentPlayer].jumpStrength = 0x38000
+            end if
+            player[currentPlayer].jumpCap = -0x20000
+            arrayPos0 = Water_waterSlotID
+            arrayPos0 += currentPlayer
+            object[arrayPos0].constBubbleTimer = 52
+        end if
+    next
+
+    SpriteFrame(0, -8, 128, 16, 1, 1)
+    SpriteFrame(0, -8, 128, 16, 1, 18)
+    SpriteFrame(0, -8, 128, 16, 1, 35)
+    SpriteFrame(0, -8, 128, 16, 1, 52)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects.gif")
+    SpriteFrame(0, -8, 128, 16, 1, 1)
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

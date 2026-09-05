@@ -1,0 +1,358 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: CPlatform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.ledgeLeft
+private alias object.value1 : object.ledgeRight
+private alias object.value2 : object.timer
+private alias object.value3 : object.noBlocks
+private alias object.value4 : object.ledgeBottom
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : CPLATFORM_ACTIVE
+private alias 1 : CPLATFORM_WAIT_R
+private alias 2 : CPLATFORM_WAIT_L
+private alias 3 : CPLATFORM_CRUMBLE_L
+private alias 4 : CPLATFORM_CRUMBLE_R
+private alias 5 : CPLATFORM_RESPAWNWAIT
+private alias 6 : CPLATFORM_FALLINGBLOCK
+
+// Property Values
+private alias 1 : PLATFORM_DEBRIS_1
+private alias 2 : PLATFORM_DEBRIS_2
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CPlatform_DebugDraw
+reserve function CPlatform_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+public value CPlatform_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function CPlatform_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= CPlatform_startDebugID
+    temp2 = temp0
+
+    temp0 <<= 19
+    FlipSign(temp0)
+    temp0 += object.xpos
+    temp0 += 0x80000
+
+    temp1 = 0
+    while temp1 < temp2
+        DrawSpriteXY(0, temp0, object.ypos)
+        temp0 += 0x100000
+        temp1++
+    loop
+
+    if temp1 == 0
+        DrawSprite(0)
+    end if
+end function
+
+
+public function CPlatform_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= CPlatform_startDebugID
+
+    CreateTempObject(TypeName[CPlatform], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].noBlocks = object[tempObjectPos].propertyValue
+    object[tempObjectPos].ledgeLeft = object[tempObjectPos].propertyValue
+    object[tempObjectPos].ledgeLeft <<= 3
+    object[tempObjectPos].ledgeRight = object[tempObjectPos].ledgeLeft
+    
+	FlipSign(object[tempObjectPos].ledgeLeft)
+    object[tempObjectPos].ledgeBottom = -16
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case CPLATFORM_WAIT_R
+        if object.timer > 0
+            object.timer--
+        else
+            PlaySfx(SfxName[Crumble], false)
+            object.state = CPLATFORM_CRUMBLE_R
+        end if
+        break
+
+    case CPLATFORM_WAIT_L
+        if object.timer > 0
+            object.timer--
+        else
+            PlaySfx(SfxName[Crumble], false)
+            object.state = CPLATFORM_CRUMBLE_L
+        end if
+        break
+
+    case CPLATFORM_CRUMBLE_L
+        object.timer++
+        if object.timer == 12
+            object.timer = 0
+            if object.ledgeLeft < object.ledgeRight
+                object.noBlocks--
+                object.ledgeLeft += 16
+
+                // Start making the Fragments
+                temp0 = object.ledgeLeft
+                temp0 -= 8
+                temp0 <<= 16
+                temp0 += object.xpos
+
+                // Spawning of the First Fragment
+                CreateTempObject(TypeName[CPlatform], 0, temp0, object.ypos)
+                object[tempObjectPos].ypos -= 0x80000
+                object[tempObjectPos].yvel = -0x10000
+                object[tempObjectPos].state = CPLATFORM_FALLINGBLOCK
+                object[tempObjectPos].ledgeBottom = object.ledgeBottom
+                object[tempObjectPos].frame = PLATFORM_DEBRIS_1 // NOTE: Shouldn't this be propertyValue?
+
+                // Spawning of the Second Fragment
+                CreateTempObject(TypeName[CPlatform], 0, temp0, object.ypos)
+                object[tempObjectPos].ypos += 0x80000
+                object[tempObjectPos].state = CPLATFORM_FALLINGBLOCK
+                object[tempObjectPos].ledgeBottom = object.ledgeBottom
+                object[tempObjectPos].frame = PLATFORM_DEBRIS_2 // NOTE: Shouldn't this be propertyValue?
+            else
+                ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+            end if
+        end if
+        break
+
+    case CPLATFORM_CRUMBLE_R
+        object.timer++
+        if object.timer == 12
+            object.timer = 0
+            if object.ledgeRight > object.ledgeLeft
+                object.noBlocks--
+                object.ledgeRight -= 16
+
+                // Start making the Fragments
+                temp0 = object.ledgeRight
+                temp0 += 8
+                temp0 <<= 16
+                temp0 += object.xpos
+
+                // Create the first Fragment
+                CreateTempObject(TypeName[CPlatform], 0, temp0, object.ypos)
+                object[tempObjectPos].ypos -= 0x80000
+                object[tempObjectPos].yvel = -0x10000
+                object[tempObjectPos].state = CPLATFORM_FALLINGBLOCK
+                object[tempObjectPos].ledgeBottom = object.ledgeBottom
+                object[tempObjectPos].frame = PLATFORM_DEBRIS_1 // NOTE: Shouldn't this be propertyValue?
+
+                // Create the second Fragment
+                CreateTempObject(TypeName[CPlatform], 0, temp0, object.ypos)
+                object[tempObjectPos].ypos += 0x80000
+                object[tempObjectPos].state = CPLATFORM_FALLINGBLOCK
+                object[tempObjectPos].ledgeBottom = object.ledgeBottom
+                object[tempObjectPos].frame = PLATFORM_DEBRIS_2 // NOTE: Shouldn't this be propertyValue?
+            else
+                ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+            end if
+        end if
+        break
+
+    case CPLATFORM_RESPAWNWAIT
+        // This state acts as a buffer of sorts, so that the platform doesn't respawn while it's still visible to the player
+        // It also acts as a soft reset, of sorts
+        if object.outOfBounds == true
+            object.state = CPLATFORM_ACTIVE
+            object.noBlocks = object.propertyValue
+
+            object.ledgeLeft = object.propertyValue
+            object.ledgeLeft <<= 3
+
+            object.ledgeRight = object.ledgeLeft
+            FlipSign(object.ledgeLeft)
+
+            object.priority = PRIORITY_BOUNDS
+            object.timer = 0
+        end if
+        break
+
+    case CPLATFORM_FALLINGBLOCK
+        // Apply a gravity of 0.25 pixels per frame
+        object.yvel += 0x4000
+        if object.yvel > 0
+            object.ypos += object.yvel
+        end if
+
+        if object.outOfBounds == true
+            // Unload when no longer needed
+            object.type = TypeName[Blank Object]
+        end if
+        break
+
+    end switch
+
+    if object.state == CPLATFORM_ACTIVE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, object.ledgeLeft, object.ledgeBottom, object.ledgeRight, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.timer = 1
+                object.priority = PRIORITY_ACTIVE
+
+                if player[currentPlayer].xpos > object.xpos
+                    object.state = CPLATFORM_WAIT_R
+                else
+                    object.state = CPLATFORM_WAIT_L
+                end if
+            end if
+        next
+    else
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, object.ledgeLeft, object.ledgeBottom, object.ledgeRight, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case CPLATFORM_ACTIVE
+    case CPLATFORM_WAIT_R
+    case CPLATFORM_WAIT_L
+    case CPLATFORM_CRUMBLE_R
+        // Draw the Platform piece by piece, starting from the left
+        temp0 = 0
+        temp1 = object.ledgeLeft
+        temp1 <<= 16
+        temp1 += 0x80000
+        temp1 += object.xpos
+        while temp0 < object.noBlocks
+            DrawSpriteXY(0, temp1, object.ypos)
+            temp0++
+            temp1 += 0x100000
+        loop
+        break
+
+    case CPLATFORM_CRUMBLE_L
+        // Draw the Platform piece by piece, starting from the right
+        temp0 = 0
+        temp1 = object.ledgeRight
+        temp1 <<= 16
+        temp1 -= 0x80000
+        temp1 += object.xpos
+        while temp0 < object.noBlocks
+            DrawSpriteXY(0, temp1, object.ypos)
+            temp0++
+            temp1 -= 0x100000
+        loop
+        break
+
+    case CPLATFORM_FALLINGBLOCK
+        DrawSprite(object.frame)
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R5/Objects.gif")
+
+    // Setup the Ledge Sizes for all CPlatform Objects present in the level
+    foreach (TypeName[CPlatform], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].noBlocks = object[arrayPos0].propertyValue
+
+        object[arrayPos0].ledgeLeft = object[arrayPos0].propertyValue
+        object[arrayPos0].ledgeLeft <<= 3
+
+        object[arrayPos0].ledgeRight = object[arrayPos0].ledgeLeft
+
+        FlipSign(object[arrayPos0].ledgeLeft)
+        object[arrayPos0].ledgeBottom = -16
+    next
+
+    // Ledge Frame
+    SpriteFrame(-8, -16, 16, 32, 108, 51)
+
+    // Broken Ledge Frames
+    SpriteFrame(-8, -8, 16, 16, 108, 51)
+    SpriteFrame(-8, -8, 16, 16, 108, 67)
+
+    temp0 = 0
+    CPlatform_startDebugID = DebugMode_ObjCount
+    CPlatform_startDebugID--
+    while temp0 < 12
+        SetTableValue(TypeName[CPlatform], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(CPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(CPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+        case 0 // BlocksNo
+            checkResult = object.propertyValue
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+        case 0 // BlocksNo
+            object.propertyValue = editor.variableValue
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    temp0 = 0
+    temp1 = object.propertyValue
+    temp1 <<= 19
+    temp1 -= 0x80000
+    temp1 += object.xpos
+    while temp0 < object.propertyValue
+        DrawSpriteXY(0, temp1, object.ypos)
+        temp0++
+        temp1 -= 0x100000
+    loop
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R5/Objects.gif")
+    SpriteFrame(-8, -16, 16, 32, 108, 51)
+    
+    AddEditorVariable("BlocksNo")
+    SetActiveVariable("BlocksNo")
+end event

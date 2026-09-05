@@ -1,0 +1,196 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Clouds Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.scroll
+
+// Face Buffer flags
+private alias 0 : FACE_FLAG_TEXTURED_3D
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// The clouds move at a speed of 8 per second
+	// No good units to good here so let's just leave it at that, "8"...
+	object.scroll += 8
+
+	// Loop it around, once it reaches the end
+	object.scroll &= 0x7FF
+	
+	// Flip it around, to make the Clouds move towards the screen and not away
+	temp0 = object.scroll
+	FlipSign(temp0)
+
+	MatrixTranslateXYZ(MAT_WORLD, -512, 720, temp0)
+
+	Draw3DScene()
+end event
+
+
+event ObjectStartup
+
+	// Load the Clouds Sprite Sheet
+
+	LoadSpriteSheet("Title/Clouds.gif")
+
+	// No Sprite Frames need to be setup,
+	// since this object is doing fun 3d stuff with UV's instead
+
+	scene3D.vertexCount = 0
+	scene3D.faceCount = 0
+
+	// Note - the numbers getting set here are 0, but they're gonna be overwritten with 0 again a few lines later too
+	arrayPos0 = scene3D.vertexCount
+	arrayPos1 = scene3D.faceCount
+
+	// Reset vertexes to their starting position
+	MatrixTranslateXYZ(MAT_WORLD, 0, 0, 0)
+	MatrixRotateXYZ(MAT_WORLD, 0, 0, 0)
+	MatrixRotateXYZ(MAT_VIEW, 8, 0, 0)
+
+	// Lots of values used here...
+	// - ArrayPos0 is the index of the current Vertex
+	// - ArrarPos1 is the index of the current Face
+	// - TempValue0 is a counter for Cloud rows
+	// - TempValue1 is the X Position of the Cloud
+	// - TempValue2 is the Z Position of the Cloud
+	// - TempValue3 is a counter for Cloud columns
+	// - TempValue4 is the X corner of the cloud sprite for the vertex to use
+	// - TempValue5 is the Y corner of the cloud sprite for the vertex to use
+
+	arrayPos0 = 0
+	arrayPos1 = 0
+	temp2 = 0
+	temp3 = 0
+	temp4 = 0
+	temp5 = 0
+
+	// Make 10 Cloud columns
+	while temp3 < 10
+
+		temp0 = 0
+		temp1 = -0x2000
+		temp4 = 0
+		
+		// Make 16 Cloud rows
+		while temp0 < 16
+
+			// Setup 4 vertexes, for a face
+			// Each face is to be hold a 64x64 texture
+			
+			// Top left corner
+			vertexBuffer[arrayPos0].x = temp1
+			vertexBuffer[arrayPos0].y = 0
+			vertexBuffer[arrayPos0].z = temp2
+			vertexBuffer[arrayPos0].u = temp4
+			vertexBuffer[arrayPos0].v = temp5
+			arrayPos0++
+
+			// Bottom left corner
+			temp2 += 512
+			vertexBuffer[arrayPos0].x = temp1
+			vertexBuffer[arrayPos0].y = 0
+			vertexBuffer[arrayPos0].z = temp2
+			vertexBuffer[arrayPos0].u = temp4
+			vertexBuffer[arrayPos0].v = temp5
+			vertexBuffer[arrayPos0].v += 63
+			arrayPos0++
+
+			// Top right corner
+			temp2 -= 512
+			temp1 += 0x400
+			vertexBuffer[arrayPos0].x = temp1
+			vertexBuffer[arrayPos0].y = 0
+			vertexBuffer[arrayPos0].z = temp2
+			vertexBuffer[arrayPos0].u = temp4
+			vertexBuffer[arrayPos0].u += 63
+			vertexBuffer[arrayPos0].v = temp5
+			arrayPos0++
+
+			// Bottom right corner
+			temp2 += 512
+			vertexBuffer[arrayPos0].x = temp1
+			vertexBuffer[arrayPos0].y = 0
+			vertexBuffer[arrayPos0].z = temp2
+			vertexBuffer[arrayPos0].u = temp4
+			vertexBuffer[arrayPos0].u += 63
+			vertexBuffer[arrayPos0].v = temp5
+			vertexBuffer[arrayPos0].v += 63
+
+			temp4 += 64
+			temp4 &= 255
+			temp2 -= 512
+
+			// Move back to the index of the Top Left corner vertex
+			arrayPos0 -= 3
+
+			// Now, setup the Face's corners
+
+			// Assign the Top Left Vertex - [ArrayPos0 + 0]
+			faceBuffer[arrayPos1].a = arrayPos0
+
+			// Assign the Top Right Vertex - [ArrayPos0 + 2]
+			faceBuffer[arrayPos1].b = arrayPos0
+			faceBuffer[arrayPos1].b += 2
+
+			// Assign the Bottom Left Vertex - [ArrayPos0 + 1]
+			faceBuffer[arrayPos1].c = arrayPos0
+			faceBuffer[arrayPos1].c += 1
+
+			// Assign the Bottom Right Vertex - [ArrayPos0 + 3]
+			faceBuffer[arrayPos1].d = arrayPos0
+			faceBuffer[arrayPos1].d += 3
+
+			// And then set up the Face's Flag to be a FACE_TEXTURED_3D flag, since the Cloud sprites are to be projected onto the face and all
+			faceBuffer[arrayPos1].flag = FACE_FLAG_TEXTURED_3D
+
+			// Now, get ready for the next face
+			
+			// Bump Vertex index by 4
+			arrayPos0 += 4
+
+			// Face Vertex only needs to be bumped by 1
+			arrayPos1++
+
+			temp0++
+
+			// And then we want it all to actually render too, so bump up the 3DScene rendering values as well
+			scene3D.vertexCount += 4
+			scene3D.faceCount++
+		loop
+
+		// And now, next column
+		temp5 += 64
+		temp5 &= 255
+		temp2 += 512
+		temp3++
+
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Title/Clouds.gif")
+	SpriteFrame(-128, -128, 256, 256, 0, 0)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

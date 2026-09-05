@@ -1,0 +1,500 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Poh Bee Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.originPos.x
+private alias object.value2        : object.originPos.y
+private alias object.value4        : spikeBallN1.oscillation
+private alias object.value5        : spikeBallN2.oscillation
+private alias object.value6        : spikeBallN2.rotation
+private alias object.value7        : object.sballDistance
+private alias object.value8        : object.frameTimer
+private alias object.angle         : object.pohBeeOscillation
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : POHBEE_MOVING_RIGHT
+private alias 1 : POHBEE_MOVING_LEFT
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function PohBee_DebugDraw
+reserve function PohBee_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value PohBee_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function PohBee_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= PohBee_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(1) // Bad quality
+    end if
+end function
+
+
+private function PohBee_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= PohBee_startDebugID
+    CreateTempObject(TypeName[Poh Bee], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].originPos.x = object.xpos
+    object[tempObjectPos].originPos.y = object.ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.outOfBounds == true
+        object.xpos = object.originPos.x
+        object.timer = 0
+        object.state = POHBEE_MOVING_RIGHT
+    end if
+
+    object.rotation += 9
+    object.rotation &= 0x7FF
+
+    if object.quality == QUALITY_GOOD
+        spikeBallN2.rotation += 10
+        spikeBallN2.rotation &= 0x7FF
+
+        switch object.state
+        case POHBEE_MOVING_RIGHT
+            object.direction = FACING_LEFT
+            if object.timer < 128
+                object.timer++
+                object.xpos += 0x10000
+            else
+                object.state = POHBEE_MOVING_LEFT
+                object.timer = 0
+            end if
+            break
+
+        case POHBEE_MOVING_LEFT
+            object.direction = FACING_RIGHT
+            if object.timer < 128
+                object.timer++
+                object.xpos -= 0x10000
+            else
+                object.state = POHBEE_MOVING_RIGHT
+                object.timer = 0
+            end if
+            break
+        end switch
+
+        object.pohBeeOscillation += 8
+        object.pohBeeOscillation &= 511
+        Sin(object.ypos, object.pohBeeOscillation)
+        object.ypos <<= 12
+        object.ypos += object.originPos.y
+
+        temp0 = object.rotation
+        temp0 >>= 2
+        Sin(spikeBallN1.oscillation, temp0)
+        spikeBallN1.oscillation >>= 2
+        spikeBallN1.oscillation += 136
+        spikeBallN1.oscillation *= 120
+        spikeBallN1.oscillation >>= 7
+
+        temp0 = spikeBallN2.rotation
+        temp0 >>= 2
+        Sin(spikeBallN2.oscillation, temp0)
+        spikeBallN2.oscillation >>= 2
+        spikeBallN2.oscillation += 144
+        spikeBallN2.oscillation *= 112
+        spikeBallN2.oscillation >>= 7
+    else
+        switch object.state
+        case POHBEE_MOVING_RIGHT
+            object.direction = FACING_LEFT
+            if object.timer < 256
+                object.timer++
+                object.xpos += 0x8000
+            else
+                object.state = POHBEE_MOVING_LEFT
+                object.timer = 0
+            end if
+            break
+
+        case POHBEE_MOVING_LEFT
+            object.direction = FACING_RIGHT
+            if object.timer < 256
+                object.timer++
+                object.xpos -= 0x8000
+            else
+                object.state = POHBEE_MOVING_RIGHT
+                object.timer = 0
+            end if
+            break
+        end switch
+
+        object.pohBeeOscillation += 6
+        object.pohBeeOscillation &= 511
+        Sin(object.ypos, object.pohBeeOscillation)
+        object.ypos <<= 11
+        object.ypos += object.originPos.y
+
+        temp0 = object.rotation
+        temp0 >>= 2
+        Sin(spikeBallN1.oscillation, temp0)
+        spikeBallN1.oscillation >>= 2
+        spikeBallN1.oscillation += 136
+        spikeBallN1.oscillation *= 120
+        spikeBallN1.oscillation >>= 7
+    end if
+
+    object.sballDistance = object.ypos
+    object.sballDistance += 0xD0000
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -20, -16, 20, 14, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        end if
+
+        temp0 = object.xpos
+        temp1 = object.ypos
+
+        Cos(object.xpos, spikeBallN1.oscillation)
+        object.xpos *= 0x2A00
+        object.xpos += temp0
+
+        Sin(object.ypos, spikeBallN1.oscillation)
+        object.ypos *= 0x2A00
+        object.ypos += object.sballDistance
+
+        BoxCollisionTest(C_TOUCH, object.entityPos, -9, -9, 9, 9, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            CallFunction(Player_Hit)
+        end if
+
+        if object.quality == QUALITY_GOOD
+            Cos(object.xpos, spikeBallN2.oscillation)
+            object.xpos *= 0x1200
+            object.xpos += temp0
+
+            Sin(object.ypos, spikeBallN2.oscillation)
+            object.ypos *= 0x1200
+            object.ypos += object.sballDistance
+
+            BoxCollisionTest(C_TOUCH, object.entityPos, -9, -9, 9, 9, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CallFunction(Player_Hit)
+            end if
+        end if
+
+        object.xpos = temp0
+        object.ypos = temp1
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    if object.quality == QUALITY_GOOD
+        // First Spike Ball chain
+        temp0 = 0
+        temp1 = 4
+        while temp0 < 10
+            Cos(temp2, spikeBallN1.oscillation)
+            temp2 *= temp1
+            temp2 <<= 7
+            temp2 += object.xpos
+
+            Sin(temp3, spikeBallN1.oscillation)
+            temp3 *= temp1
+            temp3 <<= 7
+            temp3 += object.sballDistance
+
+            DrawSpriteXY(2, temp2, temp3)
+            temp0++
+            temp1 += 8
+        loop
+
+        // First Spike Ball
+        Cos(temp2, spikeBallN1.oscillation)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, spikeBallN1.oscillation)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += object.sballDistance
+
+        DrawSpriteXY(3, temp2, temp3)
+
+        // Second Spike Ball chain
+        temp0 = 0
+        temp1 = 4
+        while temp0 < 4
+            Cos(temp2, spikeBallN2.oscillation)
+            temp2 *= temp1
+            temp2 <<= 7
+            temp2 += object.xpos
+
+            Sin(temp3, spikeBallN2.oscillation)
+            temp3 *= temp1
+            temp3 <<= 7
+            temp3 += object.sballDistance
+
+            DrawSpriteXY(2, temp2, temp3)
+            temp0++
+            temp1 += 8
+        loop
+
+        // Second Spike Ball
+        Cos(temp2, spikeBallN2.oscillation)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, spikeBallN2.oscillation)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += object.sballDistance
+
+        DrawSpriteXY(3, temp2, temp3)
+    else
+        // Spike Ball chain
+        temp0 = 0
+        temp1 = 4
+        while temp0 < 10
+            Cos(temp2, spikeBallN1.oscillation)
+            temp2 *= temp1
+            temp2 <<= 7
+            temp2 += object.xpos
+
+            Sin(temp3, spikeBallN1.oscillation)
+            temp3 *= temp1
+            temp3 <<= 7
+            temp3 += object.sballDistance
+
+            DrawSpriteXY(2, temp2, temp3)
+            temp0++
+            temp1 += 8
+        loop
+
+        // Spike Ball
+        Cos(temp2, spikeBallN1.oscillation)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, spikeBallN1.oscillation)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += object.sballDistance
+
+        DrawSpriteXY(4, temp2, temp3)
+    end if
+
+    object.frameTimer++
+    object.frameTimer &= 3
+
+    object.frame = object.frameTimer
+    object.frame >>= 1
+    DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects.gif")
+
+    // PohBee
+    SpriteFrame(-19, -20, 48, 36, 75, 140)  // #0 - PohBee frame 0
+    SpriteFrame(-19, -20, 48, 36, 124, 140) // #1 - PohBee frame 1
+
+    // Spike Ball
+    SpriteFrame(-8, -8, 16, 16, 58, 114)    // #2 - Spike Ball, Joint
+    SpriteFrame(-12, -12, 24, 24, 230, 67)  // #3 - Spike Ball, Good quality
+    SpriteFrame(-12, -12, 24, 24, 75, 114)  // #4 - Spike Ball, Bad quality
+
+    foreach (TypeName[Poh Bee], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+
+    temp0 = 0
+    PohBee_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Poh Bee], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(PohBee_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(PohBee_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+
+    // Spikeball good/bad future frame
+    temp7 = 3
+    temp7 += object.propertyValue
+
+    Sin(temp4, 0)
+    temp4 >>= 2
+    temp4 += 136
+    temp4 *= 120
+    temp4 >>= 7
+
+    Sin(temp5, 0)
+    temp5 >>= 2
+    temp5 += 144
+    temp5 *= 112
+    temp5 >>= 7
+
+    temp6 = object.ypos
+    temp6 += 0xD0000
+
+    // First Spike Ball chain
+    temp0 = 0
+    temp1 = 4
+    while temp0 < 10
+        Cos(temp2, temp4)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, temp4)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += temp6
+
+        DrawSpriteXY(2, temp2, temp3)
+        temp0++
+        temp1 += 8
+    loop
+
+    // First Spike Ball
+    Cos(temp2, temp4)
+    temp2 *= temp1
+    temp2 <<= 7
+    temp2 += object.xpos
+
+    Sin(temp3, temp4)
+    temp3 *= temp1
+    temp3 <<= 7
+    temp3 += temp6
+
+    DrawSpriteXY(temp7, temp2, temp3)
+
+    if object.propertyValue == GOOD_QUALITY
+        // Second Spike Ball chain
+        temp0 = 0
+        temp1 = 4
+        while temp0 < 4
+            Cos(temp2, temp5)
+            temp2 *= temp1
+            temp2 <<= 7
+            temp2 += object.xpos
+
+            Sin(temp3, temp5)
+            temp3 *= temp1
+            temp3 <<= 7
+            temp3 += temp6
+
+            DrawSpriteXY(2, temp2, temp3)
+            temp0++
+            temp1 += 8
+        loop
+
+        // Second Spike Ball
+        Cos(temp2, temp5)
+        temp2 *= temp1
+        temp2 <<= 7
+        temp2 += object.xpos
+
+        Sin(temp3, temp5)
+        temp3 *= temp1
+        temp3 <<= 7
+        temp3 += temp6
+
+        DrawSpriteXY(3, temp2, temp3)
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects.gif")
+
+    // PohBee
+    SpriteFrame(-19, -20, 48, 36, 75, 140)  // #0 - PohBee frame 0
+    SpriteFrame(-19, -20, 48, 36, 124, 140) // #1 - PohBee frame 1
+
+    // Spike Ball
+    SpriteFrame(-8, -8, 16, 16, 58, 114)    // #2 - Spike Ball, Joint
+    SpriteFrame(-12, -12, 24, 24, 230, 67)  // #3 - Spike Ball, Good quality
+    SpriteFrame(-12, -12, 24, 24, 75, 114)  // #4 - Spike Ball, Bad quality
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

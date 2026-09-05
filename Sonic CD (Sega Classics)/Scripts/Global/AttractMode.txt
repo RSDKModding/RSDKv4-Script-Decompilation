@@ -1,0 +1,246 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Attract Mode Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.demoDelay
+private alias object.value1 : object.demoTime
+private alias object.value2 : object.demoLength
+private alias object.value3 : object.demoInput
+
+// Player Aliases
+private alias object.xpos        : player.xpos
+private alias object.ypos        : player.ypos
+private alias object.controlMode : player.controlMode
+private alias object.jumpPress   : player.jumpPress
+private alias object.jumpHold    : player.jumpHold
+private alias object.up          : player.up
+private alias object.down        : player.down
+private alias object.left        : player.left
+private alias object.right       : player.right
+
+// States
+private alias 0 : ATTRACTMODE_SETUP
+private alias 1 : ATTRACTMODE_HANDLE_INPUT
+
+// Demo ID Aliases
+private alias 0 : DEMO_R11A
+private alias 1 : DEMO_SS1
+private alias 2 : DEMO_R43C
+private alias 3 : DEMO_SS6
+private alias 4 : DEMO_R82A
+
+// Presentation Stages
+private alias 0 : STAGE_P_TITLE
+
+// Text Info type
+private alias 0 : TEXTINFO_TEXTDATA
+private alias 1 : TEXTINFO_TEXTSIZE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case ATTRACTMODE_SETUP
+        if object.demoDelay == 0
+            if player[0].controlMode == CONTROLMODE_P1
+                object.state++
+                object.demoInput = object.demoLength
+                object.demoInput -= 60
+            end if
+        else
+            object.demoDelay--
+        end if
+        break
+
+    case ATTRACTMODE_HANDLE_INPUT
+        // Get the inputs for the current frame
+        GetTextInfo(temp0, MENU_1, TEXTINFO_TEXTDATA, 0, object.demoTime)
+
+        // Set all the input stuff as needed
+        GetBit(player[0].up, temp0, 0)
+        GetBit(player[0].down, temp0, 1)
+        GetBit(player[0].left, temp0, 2)
+        GetBit(player[0].right, temp0, 3)
+        GetBit(player[0].jumpPress, temp0, 4)
+        GetBit(player[0].jumpHold, temp0, 5)
+
+        // Using score to display demoTime
+        player.score = object.demoTime
+
+        if object.demoTime < object.demoLength
+            object.demoTime++
+        else
+            StopMusic()
+            options.attractMode  = false
+            stage.activeList     = PRESENTATION_STAGE
+            stage.listPos        = STAGE_P_TITLE
+            generator.destroyed  = false
+            metalSonic.destroyed = false
+            goodFuture.enabled   = false
+            LoadStage()
+            lampPostID = 0
+        end if
+
+        if object.demoTime >= object.demoInput
+            // Fade out
+            music.volume -= 2
+
+            screen[0].cameraEnabled = false
+
+            temp0 = object.demoTime
+            temp0 -= object.demoInput
+            temp0 <<= 3
+            if temp0 > 255
+                temp0 = 255
+            end if
+
+            SetScreenFade(0, 0, 0, temp0)
+        else
+            if keyPress[0].buttonA == true
+                object.demoTime = object.demoInput
+            end if
+
+            if keyPress[0].buttonB == true
+                object.demoTime = object.demoInput
+            end if
+
+            if keyPress[0].buttonC == true
+                object.demoTime = object.demoInput
+            end if
+
+            if keyPress[0].start == true
+                object.demoTime = object.demoInput
+            end if
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    arrayPos0 = 32
+    while arrayPos0 < 1056
+        if object[arrayPos0].type == TypeName[Attract Mode]
+            if options.attractMode == true
+                // Make the object always active, regardless of where it's located in the stage
+                object[arrayPos0].priority = PRIORITY_ACTIVE
+
+                // Give it a high Draw Order as well... though nothing's ever really drawn by this object
+                object[arrayPos0].drawOrder = 6
+
+                switch object[arrayPos0].propertyValue
+                case DEMO_R11A
+                    // Palmtree Panic Act 1, Present
+                    LoadTextFile(MENU_1, "Data/Game/Demos/Key11a.bin", 0)
+                    object[arrayPos0].demoDelay = 16
+                    lampPostID = 0
+                    break
+
+                case DEMO_SS1
+                    // Special Stage 1
+                    LoadTextFile(MENU_1, "Data/Game/Demos/Special1.bin", 0)
+                    lampPostID = 0
+                    break
+
+                case DEMO_R43C
+                    // Tidal Tempest 3, Good Future
+                    LoadTextFile(MENU_1, "Data/Game/Demos/Key43c.bin", 0)
+
+                    // Move the Player to where the Attract Mode object's placed
+                    player[0].xpos = object[arrayPos0].xpos
+                    player[0].ypos = object[arrayPos0].ypos
+
+                    screen[0].cameraX = object[arrayPos0].ixpos
+                    screen[0].cameraY = object[arrayPos0].iypos
+
+                    object[arrayPos0].demoDelay = 16
+                    lampPostID = 33
+                    break
+
+                case DEMO_SS6
+                    // Special Stage 6
+                    LoadTextFile(MENU_1, "Data/Game/Demos/Special6.bin", 0)
+                    lampPostID = 0
+                    break
+
+                case DEMO_R82A
+                    // Metallic Madness 2, Present
+                    LoadTextFile(MENU_1, "Data/Game/Demos/Key82a.bin", 0)
+
+                    // Move the Player to where the Attract Mode object's placed
+                    player[0].xpos = object[arrayPos0].xpos
+                    player[0].ypos = object[arrayPos0].ypos
+
+                    screen[0].cameraX = object[arrayPos0].ixpos
+                    screen[0].cameraY = object[arrayPos0].iypos
+
+                    object[arrayPos0].demoDelay = 16
+                    lampPostID = 33
+                    break
+                end switch
+
+                // Get how long the Demo is, and store it in the Attract Mode object
+                GetTextInfo(object[arrayPos0].demoLength, MENU_1, TEXTINFO_TEXTSIZE, 0, 0)
+            else
+                // If Attract Mode isn't active, then remove the object
+                object[arrayPos0].type = TypeName[Blank Object]
+            end if
+        end if
+
+        arrayPos0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+        case 0 // DemoID
+            checkResult = object.propertyValue
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+        case 0 // DemoID
+            object.propertyValue = editor.variableValue
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-17, -5, 34, 11, 1, 176) // "Demo"
+
+    AddEditorVariable("demoID")
+    SetActiveVariable("demoID")
+    AddEnumVariable("Palmtree Panic 1", 0)
+    AddEnumVariable("Special Zone 1", 1)
+    AddEnumVariable("Tidal Tempest 3", 2)
+    AddEnumVariable("Special Zone 6", 3)
+    AddEnumVariable("Metallic Madness 2", 4)
+end event

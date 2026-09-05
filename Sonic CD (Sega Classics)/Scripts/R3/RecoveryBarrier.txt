@@ -1,0 +1,105 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Recovery Barrier Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0     : object.timer
+private alias object[-4].value2 : spinGate.currentLight
+
+// Player Aliases
+private alias object.yvel : player.yvel
+
+// States
+private alias 0 : RBARRIER_INACTIVE
+private alias 1 : RBARRIER_TURNING
+private alias 2 : RBARRIER_ACTIVE
+private alias 3 : RBARRIER_TURNING_BACK
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case RBARRIER_INACTIVE
+        object.frame = 0
+        if spinGate.currentLight == 3
+            object.state = RBARRIER_TURNING
+        end if
+        break
+
+    case RBARRIER_TURNING
+        object.frame = 1
+        if object.timer < 30
+            object.timer++
+        else
+            object.state = RBARRIER_ACTIVE
+        end if
+        break
+
+    case RBARRIER_ACTIVE
+        object.frame = 2
+        if spinGate.currentLight == 0
+            object.state = RBARRIER_TURNING_BACK
+        end if
+        break
+
+    case RBARRIER_TURNING_BACK
+        object.frame = 3 // Pretty sure this should be 1, or we are missing a frame, either goes
+        if object.timer < 30
+            object.timer++
+        else
+            object.state = RBARRIER_INACTIVE
+        end if
+        break
+
+    end switch
+
+    // Bouncy Player
+    if object.state == RBARRIER_ACTIVE
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -8, 16, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                player[currentPlayer].yvel = -0x40000
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects2.gif")
+
+    SpriteFrame(-16, -8, 32, 16, 51, 33)    // #0 - Recoverty Barrier Inactive
+    SpriteFrame(-16, -8, 32, 16, 84, 33)    // #1 - Recoverty Barrier Turning
+    SpriteFrame(-16, -8, 32, 16, 51, 50)    // #2 - Recoverty Barrier Active
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects2.gif")
+    SpriteFrame(-16, -8, 32, 16, 51, 50)    // #2 - Recoverty Barrier Active
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

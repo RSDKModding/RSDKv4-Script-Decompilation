@@ -1,0 +1,1286 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Hotaru Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.originPos.x
+private alias object.value2        : object.originPos.y
+private alias object.value3        : object.hotaru1.x
+private alias object.value4        : object.hotaru2.x
+private alias object.value5        : object.activeHotaru
+private alias object.value6        : object.electricityActive
+private alias object.value7        : object.hotaruRadius
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.entityPos : player.entityPos
+private alias object.state     : player.state
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.xvel      : player.xvel
+private alias object.yvel      : player.yvel
+private alias object.speed     : player.speed
+private alias object.animation : player.animation
+private alias object.value7    : player.invincibleTimer
+
+// Object Score Alias
+private alias object[26].value0 : objectScore.timer
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0  : HOTARU_IDLE1
+private alias 1  : HOTARU_IDLE2
+private alias 2  : HOTARU_TRACKPLAYER
+private alias 3  : HOTARU_PAUSE
+private alias 4  : HOTARU_LIGHTSON1
+private alias 5  : HOTARU_LIGHTSOFF1
+private alias 6  : HOTARU_LIGHTSON2
+private alias 7  : HOTARU_LIGHTSOFF2
+private alias 8  : HOTARU_LIGHTSON3
+private alias 9  : HOTARU_LIGHTSOFF3
+private alias 10 : HOTARU_FLASHING
+private alias 11 : HOTARU_FLYAWAY
+private alias 12 : HOTARU_OFFSCREEN
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Hotaru_DebugDraw
+reserve function Hotaru_DebugSpawn
+reserve function Hotaru_HotaruBreak
+
+// ========================
+// Static Values
+// ========================
+
+private value Hotaru_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Hotaru_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Hotaru_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function Hotaru_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Hotaru_startDebugID
+    CreateTempObject(TypeName[Hotaru], temp0, object.xpos, object.ypos)
+end function
+
+
+private function Hotaru_HotaruBreak
+    // This function is called to see if the individual Hotaru being checked should break
+
+    // Preconditions:
+    // - object.xpos & object.ypos are set to the positions of the Hotaru being checked (not the base Hotaru object!)
+    // - arrayPos1 is the entityPos of where to spawn the Hotaru, if it needs to be broken
+
+    CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
+    temp0 = checkResult
+
+    CheckEqual(player[currentPlayer].animation, ANI_SPINDASH)
+    temp0 |= checkResult
+
+    if player[currentPlayer].animation == ANI_FLYING
+        CheckGreater(player[currentPlayer].ypos, object.ypos)
+        temp0 |= checkResult
+    end if
+
+    // Notably, the invincibility granted by time warping isn't granted here...
+    if temp0 == true
+        ResetObjectEntity(arrayPos1, flowerType, 0, object.xpos, object.ypos)
+        object[arrayPos1].drawOrder = 4
+
+        CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+        object[tempObjectPos].drawOrder = 4
+
+        CreateTempObject(TypeName[Object Score], objectScore.timer, object.xpos, object.ypos)
+        object[tempObjectPos].drawOrder = 4
+
+        PlaySfx(SfxName[Destroy], false)
+
+        if player[currentPlayer].yvel > 0
+            FlipSign(player[currentPlayer].yvel)
+        else
+            player[currentPlayer].yvel += 0xC000
+        end if
+
+        // Grant the player some score
+        switch objectScore.timer
+        case 0
+            player.score += 100
+            break
+
+        case 1
+            player.score += 200
+            break
+
+        case 2
+            player.score += 500
+            break
+
+        case 3
+            player.score += 1000
+            break
+        end switch
+    else
+        arrayPos0 = player[currentPlayer].entityPos
+        arrayPos0 += 2
+        if object[arrayPos0].type == TypeName[Invincibility]
+            ResetObjectEntity(arrayPos1, flowerType, 0, object.xpos, object.ypos)
+            object[arrayPos1].drawOrder = 4
+
+            CreateTempObject(TypeName[Smoke Puff], 0, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+
+            CreateTempObject(TypeName[Object Score], objectScore.timer, object.xpos, object.ypos)
+            object[tempObjectPos].drawOrder = 4
+
+            PlaySfx(SfxName[Destroy], false)
+
+            if player[currentPlayer].yvel > 0
+                FlipSign(player[currentPlayer].yvel)
+            end if
+
+            // Grant the player's score
+            switch objectScore.timer
+            case 0
+                player.score += 100
+                break
+
+            case 1
+                player.score += 200
+                break
+
+            case 2
+                player.score += 500
+                break
+
+            case 3
+                player.score += 1000
+                break
+            end switch
+        else
+            if object.state > HOTARU_LIGHTSOFF3
+                if player[currentPlayer].invincibleTimer == 0
+                    player[currentPlayer].state = Player_State_GotHit
+                    if player[currentPlayer].xpos > object.xpos
+                        player[currentPlayer].speed = 0x20000
+                    else
+                        player[currentPlayer].speed = -0x20000
+                    end if
+                end if
+            end if
+        end if
+    end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.outOfBounds == true
+        object.state = Player_State_Ground
+        object.timer = 0
+
+        // Set the object back to its starting position
+        // Note that the Hotarus' state being set to HOTARU_OFFSCREEN means that there won't be any visible teleporting
+        object.xpos = object.originPos.x
+        object.ypos = object.originPos.y
+
+        // Reset the Hotarus to be 70 pixels apart
+        // (Regardless of their Property Value, since that's already been reset...)
+        object.hotaru1.x = -0x230000
+        object.hotaru2.x = 0x230000
+
+        object.electricityActive = false
+    end if
+
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case HOTARU_IDLE1
+            object.priority = PRIORITY_ACTIVE
+
+            // Right range of 43 pixels for Hotaru 1
+            if object.hotaru1.x < 0x2B0000
+                // Move both Hotarus in their respective directions by a pixel
+                object.hotaru1.x += 0x10000
+                object.hotaru2.x -= 0x10000
+            else
+                // Turn around
+                object.state = HOTARU_IDLE2
+            end if
+            break
+
+        case HOTARU_IDLE2
+            // Left range of 115 pixels for Hotaru 1
+            if object.hotaru1.x > -0x730000
+                // Move both Hotarus in their respective directions by a pixel
+                object.hotaru1.x -= 0x10000
+                object.hotaru2.x += 0x10000
+            else
+                // Turn around
+                object.state = HOTARU_IDLE1
+            end if
+            break
+
+        case HOTARU_TRACKPLAYER
+            // Make the Hotarus follow the screen
+            temp0 = screen.xoffset
+            temp0 += screen.xcenter
+            temp0 <<= 16
+            temp1 = false
+            if object.xpos < temp0
+                object.xpos += 0x20000
+                if object.xpos >= temp0
+                    object.xpos = temp0
+                    temp1 = true
+                end if
+            else
+                object.xpos -= 0x20000
+                if object.xpos <= temp0
+                    object.xpos = temp0
+                    temp1 = true
+                end if
+            end if
+
+            temp0 = screen.yoffset
+            temp0 += 104
+            temp0 <<= 16
+            if object.ypos < temp0
+                object.ypos += 0x20000
+                if object.ypos >= temp0
+                    object.ypos = temp0
+                    if temp1 == true
+                        // In a good position, advance states
+                        object.state++
+                    end if
+                end if
+            else
+                object.ypos -= 0x20000
+                if object.ypos <= temp0
+                    object.ypos = temp0
+                    if temp1 == true
+                        // In a good position, advance states
+                        object.state++
+                    end if
+                end if
+            end if
+            break
+
+        case HOTARU_PAUSE
+            if object.timer < 100
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+
+            object.frame = object.timer
+            object.frame %= 20
+            object.frame /= 10
+            object.frame++
+            break
+
+        // A series of very small and similar states - each frame in the flicker animation is its own state
+        case HOTARU_LIGHTSON1
+            if object.timer < 4
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSOFF1
+            if object.timer < 12
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSON2
+            if object.timer < 8
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSOFF2
+            if object.timer < 8
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSON3
+            if object.timer < 12
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSOFF3
+            if object.timer < 4
+                object.timer++
+            else
+                object.timer = 0
+                object.animationTimer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_FLASHING
+            // This is the state where the Sparks are active, although none of them are managed here
+            if object.timer < 100
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+
+            object.frame = object.timer
+            object.frame %= 20
+            object.frame /= 10
+            object.frame++
+            break
+
+        case HOTARU_FLYAWAY
+            // Ascend at a rate of 2 pixels per second
+            object.ypos -= 0x20000
+
+            object.timer++
+            object.timer %= 20
+
+            // Animate the Object
+            object.frame = object.timer
+            object.frame /= 10
+            object.frame++
+
+            if object.outOfBounds == true
+                object.state = Player_State_Ground
+                object.timer = 0
+
+                // Place the Hotaru back at its starting position
+                // Since state is being set to HOTARU_OFFSCREEN, there won't be any visible teleporting
+                object.xpos = object.originPos.x
+                object.ypos = object.originPos.y
+
+                // Reset the Hotarus to be 70 pixels apart
+                // (Regardless of their initial Property Value, since that's already been reset)
+                object.hotaru1.x = -0x230000
+                object.hotaru2.x = 0x230000
+            end if
+            break
+
+        case HOTARU_OFFSCREEN
+            // This state is here so that, if the Hotarus' start position is within bounds, they won't just suddently teleport in front of the player
+            if object.outOfBounds == true
+                object.state = HOTARU_IDLE1
+                object.priority = PRIORITY_BOUNDS
+                object.frame = 0
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case HOTARU_IDLE1
+            object.priority = PRIORITY_ACTIVE
+            object.frame = 3
+
+            // Right range of 43 pixels for Hotaru 1
+            if object.hotaru1.x < 0x2B0000
+                // Move both Hotarus in their respective directions by a half pixel
+                object.hotaru1.x += 0x8000
+                object.hotaru2.x -= 0x8000
+            else
+                // Turn around
+                object.state = HOTARU_IDLE2
+            end if
+            break
+
+        case HOTARU_IDLE2
+            // Left range of 115 pixels for Hotaru 1
+            if object.hotaru1.x > -0x730000
+                // Move both Hotarus in their respective directions by a half pixel
+                object.hotaru1.x -= 0x8000
+                object.hotaru2.x += 0x8000
+            else
+                // Turn around again
+                object.state = HOTARU_IDLE1
+            end if
+            break
+
+        case HOTARU_TRACKPLAYER
+            // Make the Hotarus follow the screen
+            temp0 = screen.xoffset
+            temp0 += screen.xcenter
+            temp0 <<= 16
+            temp1 = false
+            if object.xpos < temp0
+                object.xpos += 0x10000
+                if object.xpos >= temp0
+                    object.xpos = temp0
+                    temp1 = true
+                end if
+            else
+                object.xpos -= 0x10000
+                if object.xpos <= temp0
+                    object.xpos = temp0
+                    temp1 = true
+                end if
+            end if
+
+            temp0 = screen.yoffset
+            temp0 += 104
+            temp0 <<= 16
+            if object.ypos < temp0
+                object.ypos += 0x10000
+                if object.ypos >= temp0
+                    object.ypos = temp0
+                    if temp1 == true
+                        object.state++
+                    end if
+                end if
+            else
+                object.ypos -= 0x10000
+                if object.ypos <= temp0
+                    object.ypos = temp0
+                    if temp1 == true
+                        object.state++
+                    end if
+                end if
+            end if
+            break
+
+        case HOTARU_PAUSE
+            if object.timer < 100
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+
+            object.frame = object.timer
+            object.frame %= 40
+            object.frame /= 20
+            object.frame += 4
+            break
+
+        // A series of very small and similar states - each frame in the flicker animation is its own state
+        case HOTARU_LIGHTSON1
+            if object.timer < 10
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSOFF1
+            if object.timer < 30
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSON2
+            if object.timer < 20
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSOFF2
+            if object.timer < 20
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSON3
+            if object.timer < 30
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_LIGHTSOFF3
+            if object.timer < 10
+                object.timer++
+            else
+                object.timer = 0
+                object.animationTimer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_FLASHING
+            // This is the state where the Sparks should be active, but Bad Hotarus have broken bulbs so they don't get to light up...
+            if object.timer < 200
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+
+            object.frame = object.timer
+            object.frame %= 40
+            object.frame /= 20
+            object.frame += 4
+            break
+
+        case HOTARU_FLYAWAY
+            // Ascend at a rate of 2 pixels per second
+            object.ypos -= 0x20000
+
+            object.timer++
+            object.timer %= 40
+
+            // Animate the Object
+            object.frame = object.timer
+            object.frame /= 20
+            object.frame += 4
+
+            if object.outOfBounds == true
+                object.state = Player_State_Ground
+                object.timer = 0
+
+                // Place the Hotarus back at their starting positions
+                // Because the State's set to HOTARU_OFFSCREEN, that there won't be any visible teleporting
+                object.xpos = object.originPos.x
+                object.ypos = object.originPos.y
+
+                // Reset the Hotarus to be 70 pixels apart
+                // (Ignoring their Property Value, since it got replaced by Hotaru Condition during startup)
+                object.hotaru1.x = -0x230000
+                object.hotaru2.x = 0x230000
+            end if
+            break
+
+        case HOTARU_OFFSCREEN
+            // This state is here so that, if the Hotarus' start position is within bounds, they won't just visibly teleport in front of the player
+            if object.outOfBounds == true
+                object.state = HOTARU_IDLE1
+                object.priority = PRIORITY_BOUNDS
+                object.frame = 0
+            end if
+            break
+        end switch
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        switch object.state
+        case HOTARU_IDLE1
+        case HOTARU_IDLE2
+            // Wandering around aimlessly, just check to see if the player's entered the Hotarus' general range yet
+            BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                // Player stepped within range, start following them...
+                object.state = HOTARU_TRACKPLAYER
+            end if
+            break
+
+        case HOTARU_LIGHTSON2
+        case HOTARU_LIGHTSOFF2
+        case HOTARU_LIGHTSON3
+        case HOTARU_LIGHTSOFF3
+            if object.quality == QUALITY_GOOD
+                // Broken Hotarus don't have functional lights...
+                if object.hotaru1.x < 0
+                    temp0 = object.hotaru1.x
+                    temp0 >>= 16
+                    temp1 = object.hotaru2.x
+                    temp1 >>= 16
+                else
+                    temp0 = object.hotaru2.x
+                    temp0 >>= 16
+                    temp1 = object.hotaru1.x
+                    temp1 >>= 16
+                end if
+
+                temp0 += 8
+                temp1 -= 8
+                BoxCollisionTest(C_TOUCH, object.entityPos, temp0, -60, temp1, 60, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    // Player's within the sensor range, turn on the lights
+                    object.electricityActive = true
+                end if
+            end if
+            // Still no break here
+        end switch
+
+        // Don't do any of these further checks if the Hotaru's not even existent
+        if object.state < HOTARU_OFFSCREEN
+            // Backup the base object's position
+            temp6 = object.xpos
+            temp7 = object.ypos
+
+            // Check collision for Hotaru 1
+            GetBit(temp1, object.activeHotaru, 0)
+            if temp1 == true
+                // Adjust the object's position to match that of Hotaru 1
+                object.xpos += object.hotaru1.x
+                object.ypos -= object.hotaruRadius
+
+                // Check if there was collision
+                BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    // Check if the Hotaru should be broken
+                    arrayPos1 = object.entityPos
+                    arrayPos1++
+                    CallFunction(Hotaru_HotaruBreak)
+                    if object[+1].type == flowerType
+                        // The Hotaru was destroyed, blank its according bit
+                        SetBit(object.activeHotaru, 0, 0)
+                    end if
+                end if
+
+                // Restore the Object's position to what it was before
+                object.xpos = temp6
+                object.ypos = temp7
+            end if
+
+            // Check collision for Hotaru 2
+            GetBit(temp1, object.activeHotaru, 1)
+            if temp1 == true
+                // Adjust the Object's Position to be where Hotaru 2 is
+                object.xpos += object.hotaru2.x
+                object.ypos += object.hotaruRadius
+
+                // Check for collision against this Hotaru
+                BoxCollisionTest(C_TOUCH, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    // Check if the Hotaru should be destroyed or hurt the player
+                    arrayPos1 = object.entityPos
+                    arrayPos1 += 2
+                    CallFunction(Hotaru_HotaruBreak)
+                    if object[+2].type == flowerType
+                        // The Hotaru has been destroyed, so set its bit to zero
+                        SetBit(object.activeHotaru, 1, 0)
+                    end if
+                end if
+            end if
+
+            // If needed, check for the Sparks
+            if object.state == HOTARU_FLASHING
+                if object.electricityActive == true
+                    // That is to say, are both Hotarus active? (3 is 0b11 in bits)
+                    if object.activeHotaru == 3
+                        // Check collision for the Sparks
+
+                        // First, backup the object's position
+                        object.xpos = temp6
+                        object.ypos = temp7
+
+                        // Check collision for the middle Spark
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            CallFunction(Player_Hit)
+                        end if
+
+                        // Check collision for the left Spark
+                        object.xpos = temp6
+                        object.xpos >>= 1
+
+                        temp1 = temp6
+                        temp1 += object.hotaru1.x
+                        temp1 >>= 1
+
+                        object.xpos += temp1
+                        object.ypos = temp7
+                        object.ypos >>= 1
+
+                        temp1 = temp7
+                        temp1 -= object.hotaruRadius
+                        temp1 >>= 1
+
+                        object.ypos += temp1
+
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            CallFunction(Player_Hit)
+                        end if
+
+                        // Check collision for the right Spark
+                        object.xpos = temp6
+                        object.xpos >>= 1
+
+                        temp1 = temp6
+                        temp1 += object.hotaru2.x
+                        temp1 >>= 1
+
+                        object.xpos += temp1
+                        object.ypos = temp7
+                        object.ypos >>= 1
+
+                        temp1 = temp7
+                        temp1 += object.hotaruRadius
+                        temp1 >>= 1
+
+                        object.ypos += temp1
+
+                        BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                        if checkResult == true
+                            CallFunction(Player_Hit)
+                        end if
+                    end if
+                end if
+            end if
+
+            // Restore the base object's position to what it should be
+            object.xpos = temp6
+            object.ypos = temp7
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+    // If this object doesn't have any more alive Hotarus, than just unload now as it serves no purpose
+    if object.activeHotaru == 0
+        ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+    end if
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case HOTARU_IDLE1
+        GetBit(checkResult, object.activeHotaru, 0)
+        if checkResult == true
+            temp0 = object.hotaru1.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 -= object.hotaruRadius
+            object.direction = FACING_LEFT
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+
+        GetBit(checkResult, object.activeHotaru, 1)
+        if checkResult == true
+            temp0 = object.hotaru2.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 += object.hotaruRadius
+            object.direction = FACING_RIGHT
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+        break
+
+    case HOTARU_IDLE2
+        GetBit(checkResult, object.activeHotaru, 0)
+        if checkResult == true
+            temp0 = object.hotaru1.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 -= object.hotaruRadius
+            object.direction = FACING_RIGHT
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+
+        GetBit(checkResult, object.activeHotaru, 1)
+        if checkResult == true
+            temp0 = object.hotaru2.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 += object.hotaruRadius
+            object.direction = FACING_LEFT
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+        break
+
+    case HOTARU_TRACKPLAYER
+        // Always face the Player
+        if player[SLOT_PLAYER1].xpos < object.xpos
+            object.direction = FACING_RIGHT
+        else
+            object.direction = FACING_LEFT
+        end if
+
+        GetBit(checkResult, object.activeHotaru, 0)
+        if checkResult == true
+            temp0 = object.hotaru1.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 -= object.hotaruRadius
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+
+        GetBit(checkResult, object.activeHotaru, 1)
+        if checkResult == true
+            temp0 = object.hotaru2.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 += object.hotaruRadius
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+        break
+
+    case HOTARU_PAUSE
+        object.xpos = screen.xoffset
+        object.xpos += screen.xcenter
+        object.xpos <<= 16
+
+        object.ypos = screen.yoffset
+        object.ypos += 104
+        object.ypos <<= 16
+
+        GetBit(checkResult, object.activeHotaru, 0)
+        if checkResult == true
+            temp0 = object.hotaru1.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 -= object.hotaruRadius
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+
+        GetBit(checkResult, object.activeHotaru, 1)
+        if checkResult == true
+            temp0 = object.hotaru2.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 += object.hotaruRadius
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+        break
+
+    case HOTARU_LIGHTSON1
+    case HOTARU_LIGHTSON2
+    case HOTARU_LIGHTSON3
+    case HOTARU_FLYAWAY
+        GetBit(checkResult, object.activeHotaru, 0)
+        if checkResult == true
+            temp0 = object.hotaru1.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 -= object.hotaruRadius
+            DrawSpriteFX(6, FX_FLIP, temp0, temp1)
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+
+        GetBit(checkResult, object.activeHotaru, 1)
+        if checkResult == true
+            temp0 = object.hotaru2.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 += object.hotaruRadius
+            DrawSpriteFX(6, FX_FLIP, temp0, temp1)
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+        break
+
+    case HOTARU_LIGHTSOFF1
+    case HOTARU_LIGHTSOFF2
+    case HOTARU_LIGHTSOFF3
+        GetBit(checkResult, object.activeHotaru, 0)
+        if checkResult == true
+            temp0 = object.hotaru1.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 -= object.hotaruRadius
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+
+        GetBit(checkResult, object.activeHotaru, 1)
+        if checkResult == true
+            temp0 = object.hotaru2.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 += object.hotaruRadius
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+        break
+
+    case HOTARU_FLASHING
+        GetBit(checkResult, object.activeHotaru, 0)
+        if checkResult == true
+            temp0 = object.hotaru1.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 -= object.hotaruRadius
+            DrawSpriteFX(6, FX_FLIP, temp0, temp1)
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+
+        GetBit(checkResult, object.activeHotaru, 1)
+        if checkResult == true
+            temp0 = object.hotaru2.x
+            temp0 += object.xpos
+            temp1 = object.ypos
+            temp1 += object.hotaruRadius
+            DrawSpriteFX(6, FX_FLIP, temp0, temp1)
+            DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+        end if
+
+        if object.electricityActive == true
+            // Both bits in the number active, meaning that both Hotarus are alive and well
+            if object.activeHotaru == 3
+                // Draw the Middle Spark
+                temp0 = object.animationTimer
+                temp0 >>= 1
+                temp0 += 7
+                DrawSprite(temp0)
+
+                // Draw the Left Spark
+                temp1 = object.xpos
+                temp1 >>= 1
+
+                temp3 = object.xpos
+                temp3 += object.hotaru1.x
+                temp3 >>= 1
+
+                temp1 += temp3
+
+                temp2 = object.ypos
+                temp2 >>= 1
+
+                temp3 = object.ypos
+                temp3 -= object.hotaruRadius
+                temp3 >>= 1
+
+                temp2 += temp3
+                DrawSpriteXY(temp0, temp1, temp2)
+
+                // Draw the Right Spark
+                temp1 = object.xpos
+                temp1 >>= 1
+
+                temp3 = object.xpos
+                temp3 += object.hotaru2.x
+                temp3 >>= 1
+
+                temp1 += temp3
+
+                temp2 = object.ypos
+                temp2 >>= 1
+
+                temp3 = object.ypos
+                temp3 += object.hotaruRadius
+                temp3 >>= 1
+
+                temp2 += temp3
+                DrawSpriteXY(temp0, temp1, temp2)
+
+                // Animate the Sparks
+                object.animationTimer++
+                object.animationTimer %= 6
+            end if
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R7/Objects.gif")
+
+    // "Good" type frames (normal lightbulb)
+    SpriteFrame(-20, -12, 40, 24, 182, 121)
+    SpriteFrame(-12, -20, 24, 40, 231, 119)
+    SpriteFrame(-12, -20, 24, 40, 231, 160)
+
+    // "Bad" type frames (broken lightbulb)
+    SpriteFrame(-20, -12, 40, 24, 182, 146)
+    SpriteFrame(-12, -20, 24, 40, 231, 201)
+    SpriteFrame(-12, -20, 24, 40, 206, 215)
+
+    // blulb
+    SpriteFrame(-11, -7, 24, 24, 175, 196)
+
+    // Eletricity Frames
+    SpriteFrame(-12, -12, 24, 24, 150, 171)
+    SpriteFrame(-12, -12, 24, 24, 175, 171)
+    SpriteFrame(-12, -12, 24, 24, 150, 196)
+
+    foreach (TypeName[Hotaru], arrayPos0, ALL_ENTITIES)
+        // First, set their starting positions
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+
+        // Hotarus draw above other objects, including the Player
+        object[arrayPos0].drawOrder = 5
+
+        // Setup the Hotarus' type and initial positions
+        switch object[arrayPos0].quality
+        case 0
+            // Properties of:
+            // Radius of 60 pixels
+            // Good variant, with a functioning Light
+            // Start the Hotarus 70 pixels apart (35 pixels from the base Pos)
+            object[arrayPos0].hotaruRadius = 0x3C0000
+            object[arrayPos0].quality = QUALITY_GOOD
+            object[arrayPos0].hotaru1.x = -0x230000
+            object[arrayPos0].hotaru2.x = 0x230000
+            break
+
+        case 1
+            // Properties of:
+            // Radius of 60 pixels
+            // Bad variant, with a broken Light
+            // Start the Hotarus 70 pixels apart (35 pixels from the base Pos)
+            object[arrayPos0].hotaruRadius = 0x3C0000
+            object[arrayPos0].quality = QUALITY_BAD
+            object[arrayPos0].hotaru1.x = -0x230000
+            object[arrayPos0].hotaru2.x = 0x230000
+            break
+
+        case 4
+            // Properties of:
+            // Radius of 68 pixels
+            // Good variant, with a functioning Light
+            // Start the Hotarus 100 pixels apart (50 pixels from the base Pos)
+            object[arrayPos0].hotaruRadius = 0x440000
+            object[arrayPos0].quality = QUALITY_GOOD
+            object[arrayPos0].hotaru1.x = -0x320000
+            object[arrayPos0].hotaru2.x = 0x320000
+            break
+
+        case 5
+            // Properties of:
+            // Radius of 68 pixels
+            // Bad variant, with a broken Light
+            // Start the Hotarus 100 pixels apart (50 pixels from the base Pos)
+            object[arrayPos0].hotaruRadius = 0x440000
+            object[arrayPos0].quality = QUALITY_BAD
+            object[arrayPos0].hotaru1.x = -0x320000
+            object[arrayPos0].hotaru2.x = 0x320000
+            break
+
+        case 8
+            // Properties of:
+            // Radius of 56 pixels
+            // Good variant, with a functioning Light
+            // Start the Hotarus 140 pixels apart (70 pixels from the base Pos)
+            object[arrayPos0].hotaruRadius = 0x380000
+            object[arrayPos0].quality = QUALITY_GOOD
+            object[arrayPos0].hotaru1.x = -0x460000
+            object[arrayPos0].hotaru2.x = 0x460000
+            break
+
+        case 9
+            // Properties of:
+            // Radius of 56 pixels
+            // Bad variant, with a broken Light
+            // Start the Hotarus 140 pixels apart (70 pixels from the base Pos)
+            object[arrayPos0].hotaruRadius = 0x380000
+            object[arrayPos0].quality = QUALITY_BAD
+            object[arrayPos0].hotaru1.x = -0x460000
+            object[arrayPos0].hotaru2.x = 0x460000
+            break
+
+        case 12
+            // Properties of:
+            // Radius of 18 pixels
+            // Good variant, with a functioning Light
+            // Start the Hotarus 192 pixels apart (96 pixels from the base Pos)
+            object[arrayPos0].hotaruRadius = 0x120000
+            object[arrayPos0].quality = QUALITY_GOOD
+            object[arrayPos0].hotaru1.x = -0x600000
+            object[arrayPos0].hotaru2.x = 0x600000
+            break
+
+        case 13
+            // Properties of:
+            // Radius of 18 pixels
+            // Bad variant, with a broken Light
+            // Start the Hotarus 192 pixels apart (96 pixels from the base Pos)
+            object[arrayPos0].hotaruRadius = 0x120000
+            object[arrayPos0].quality = QUALITY_BAD
+            object[arrayPos0].hotaru1.x = -0x600000
+            object[arrayPos0].hotaru2.x = 0x600000
+            break
+        end switch
+
+        // Set both of the Object's Hotarus to active
+        SetBit(object[arrayPos0].activeHotaru, 0, true)
+        SetBit(object[arrayPos0].activeHotaru, 1, true)
+    next
+
+    temp0 = 0
+    Hotaru_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Hotaru], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Hotaru_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Hotaru_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Condition
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+
+		case 1 // Formation
+			checkResult = object.propertyValue
+			checkResult &= 254
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Condition
+			CheckNotEqual(editor.variableValue, false)
+			SetBit(object.propertyValue, 0, checkResult)
+			break
+
+		case 1 // Formation
+			object.propertyValue &= 1
+			editor.variableValue &= 254
+			object.propertyValue |= editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	// We got a whole lot to do, we're essentially setting up a new Hotaru every time since we can't depend on values from the last frame
+
+	// First, get the sprite to be used
+	GetBit(temp5, object.quality, 0)
+
+	// Then, get the movement values based on the Hotaru's designated Formation
+	temp0 = object.quality
+	temp0 &= 254
+
+	switch temp0
+	case 0
+	default // inaccurate to how it'll be in-game if given an invalid formation, but it doesn't matter too much
+		temp2 =  0x3C0000
+		temp3 = -0x230000
+		break
+
+	case 4
+		temp2 =  0x440000
+		temp3 = -0x320000
+		break
+
+	case 8
+		temp2 =  0x380000
+		temp3 = -0x460000
+		break
+
+	case 12
+		temp2 =  0x120000
+		temp3 = -0x600000
+		break
+	end switch
+
+	temp4 = temp3
+	FlipSign(temp4)
+
+	temp0 = temp3
+	temp0 += object.xpos
+	temp1 = object.ypos
+	temp1 -= temp2
+	object.direction = FACING_LEFT
+	DrawSpriteFX(temp5, FX_FLIP, temp0, temp1)
+
+	temp6 = temp4
+	temp6 += object.xpos
+	temp7 = object.ypos
+	temp7 += temp2
+	object.direction = FACING_RIGHT
+	DrawSpriteFX(temp5, FX_FLIP, temp6, temp7)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		// First, draw the Hotaru's movement ranges
+		DrawLine(temp0, temp1, temp6, temp1, 255, 255, 255)
+		DrawLine(temp6, temp7, temp0, temp7, 255, 255, 255)
+
+		object.inkEffect = INK_BLEND
+
+		// Then, draw some lines to indicate this Hotaru's following Flower entities
+		DrawArrow(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 255, 255, 0)
+		DrawArrow(object.xpos, object.ypos, object[+2].xpos, object[+2].ypos, 255, 255, 0)
+
+		object.inkEffect = INK_NONE
+
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-20, -12, 40, 24, 182, 121)
+	SpriteFrame(-20, -12, 40, 24, 182, 146)
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", QUALITY_GOOD)
+	AddEnumVariable("Bad Quality", QUALITY_BAD)
+
+	AddEditorVariable("formation")
+	SetActiveVariable("formation")
+	AddEnumVariable("Formation A", 0)
+	AddEnumVariable("Formation B", 4)
+	AddEnumVariable("Formation C", 8)
+	AddEnumVariable("Formation D", 12)
+end event

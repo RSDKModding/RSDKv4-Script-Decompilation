@@ -1,0 +1,128 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Squirrel Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// States
+private alias 0	: SQUIRREL_HOPRIGHT
+private alias 1 : SQUIRREL_HOPLEFT
+
+// Time Period
+private alias 2 : TIME_GOOD_FUTURE
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.ypos += object.yvel
+
+	// Apply a Gravity of about 0.156px
+	object.yvel += 0x2800
+
+	switch object.state
+	case SQUIRREL_HOPRIGHT
+		// Move a pixel to the right
+		object.xpos += 0x10000
+
+		// Only check for collision when going downwards
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				object.direction = FACING_RIGHT
+
+				// Bounce back up, at a starting rate of 5px per frame
+				object.yvel = -0x50000
+				object.state = SQUIRREL_HOPLEFT
+			end if
+		end if
+		break
+
+	case SQUIRREL_HOPLEFT
+		// Move a pixel to the left
+		object.xpos -= 0x10000
+
+		// Only check for collision when going downwards
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				object.direction = FACING_LEFT
+
+				// Bounce back up, at a starting rate of 5px per frame
+				object.yvel = -0x50000
+				object.state = SQUIRREL_HOPRIGHT
+			end if
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	if metalSonic.destroyed == true
+		if object.yvel < 0
+			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		else
+			DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		end if
+	end if
+
+	if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+		if object.yvel < 0
+			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		else
+			DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Global/Items3.gif")
+
+	// Loop through all Objects in the stage and setup all Squirrels
+	// Interestingly, we're iterating through them manually instead
+	// of using RSDKv4's foreach functionality
+	arrayPos0 = 32
+	while arrayPos0 < 0x420
+		if object[arrayPos0].type == TypeName[Squirrel]
+			// Give the Squirrel a starting Y Velocity of 5px up
+			object[arrayPos0].yvel = -0x50000
+
+			// Start the Squirrel facing Right
+			// (The base Sprite itself is facing towards the left, which is why this label may not seem right)
+			object[arrayPos0].direction = FACING_LEFT
+		end if
+		arrayPos0++
+	loop
+
+	SpriteFrame(-10, -8, 24, 16, 150, 35)	// #0 - Squirrel frame 0
+	SpriteFrame(-10, -8, 24, 16, 150, 52)	// #1 - Squirrel frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items3.gif")
+	SpriteFrame(-10, -8, 24, 16, 150, 35)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

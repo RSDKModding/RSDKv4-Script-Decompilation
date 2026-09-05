@@ -1,0 +1,124 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: UFO Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.offset.y
+
+// States
+private alias 0 : UFO_WOBBLE1
+private alias 1 : UFO_DESCEND
+private alias 2 : UFO_ASCEND
+private alias 3 : UFO_WOBBLE2
+
+// Property Values
+private alias 0 : YELLOW_UFO
+private alias 3 : GREEN_UFO
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.direction == FACING_RIGHT
+		object.xpos += object.xvel
+	else
+		object.xpos -= object.xvel
+	end if
+
+	switch object.state
+	case UFO_WOBBLE1
+	case UFO_WOBBLE2
+		object.frame = 0
+		object.angle += 8
+		object.angle &= 511
+		Sin(object.ypos, object.angle)
+		object.ypos <<= 9
+		object.ypos += object.offset.y
+		break
+
+	case UFO_DESCEND
+		object.ypos += object.yvel
+		object.frame = 1
+		object.offset.y = object.ypos
+		if object.ypos > 0xD00000
+			object.state = UFO_ASCEND
+		end if
+		break
+
+	case UFO_ASCEND
+		object.ypos -= object.yvel
+		object.frame = 2
+		object.offset.y = object.ypos
+		if object.ypos < 0x200000
+			object.state = UFO_DESCEND
+		end if
+		break
+
+	end switch
+
+	if object.timer > 0
+		object.timer--
+	else
+		object.offset.y = object.ypos
+
+		Rand(object.state, 3)
+		Rand(object.timer, 90)
+
+		Rand(object.xvel, 6)
+		object.xvel++
+		object.xvel <<= 14
+
+		Rand(object.yvel, 6)
+		object.yvel++
+		object.yvel <<= 15
+	end if
+
+	if object.outOfBounds == true
+		object.type = TypeName[Blank Object]
+	end if
+end event
+
+
+event ObjectDraw
+	temp0 = object.frame
+	temp0 += object.propertyValue
+	DrawSprite(temp0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("DAGarden/Objects.gif")
+
+	SpriteFrame(-12, -12, 24, 24, 354, 804)		// #0 - Yellow UFO Frame 0
+	SpriteFrame(-12, -12, 24, 24, 379, 804)		// #1 - Yellow UFO Frame 1
+	SpriteFrame(-12, -12, 24, 24, 404, 804)		// #2 - Yellow UFO Frame 2
+	SpriteFrame(-12, -12, 24, 24, 354, 829)		// #3 - Green UFO Frame 0
+	SpriteFrame(-12, -12, 24, 24, 379, 829)		// #4 - Green UFO Frame 1
+	SpriteFrame(-12, -12, 24, 24, 404, 829)		// #5 - Green UFO Frame 2
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("DAGarden/Objects.gif")
+	SpriteFrame(-12, -12, 24, 24, 354, 804)		// #0 - Yellow UFO Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

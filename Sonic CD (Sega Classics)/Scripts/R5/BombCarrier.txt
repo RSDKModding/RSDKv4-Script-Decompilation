@@ -1,0 +1,277 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Bomb Carrier Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.angle
+
+// States
+private alias 0 : BOMBCARRIER_IDLE
+private alias 1 : BOMBCARRIER_WAITFORBOSSFIGHT
+private alias 2 : BOMBCARRIER_GRABBOMB
+private alias 3 : BOMBCARRIER_SLIDERIGHT
+private alias 4 : BOMBCARRIER_SLIDELEFT
+private alias 5 : BOMBCARRIER_RELEASEBOMB
+private alias 6 : BOMBCARRIER_HOVER
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// Eggman Aliases
+private alias object[+3].state  : eggman.state
+private alias object[+3].frame  : eggman.frame
+private alias object[+3].value0 : eggman.timer
+
+// Eggman States
+private alias 0 : EGGMAN_IDLE
+private alias 1 : EGGMAN_CONTROL
+private alias 5 : EGGMAN_PANICK_CONTROL
+private alias 6 : EGGMAN_FLEE
+
+
+// Boss Bomb Aliases
+private alias object[-1].xpos  : bossBomb.xpos
+private alias object[-1].ypos  : bossBomb.ypos
+private alias object[-1].state : bossBomb.state
+
+// Boss Bomb States
+private alias 1 : BOSSBOMB_ACTIVE
+
+// Boss Top Aliases
+private alias object[+1].xpos : bossTop.xpos
+
+// Boss Platform Aliases
+private alias object[+4].state  : bossPlatform.state
+private alias object[+4].value5 : bossPlatform.grind
+
+// Boss Platform States
+private alias 8 : BOSSPLATFORM_FALL_4
+private alias 9 : BOSSPLATFORM_FIGHT_4
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOMBCARRIER_IDLE
+        temp0 = object.xpos
+        temp0 += 0x200000
+
+		// See if the Player's past 32 pixels away from this Bomb Carrier Object
+        if player[SLOT_PLAYER1].xpos > temp0
+            CreateTempObject(TypeName[Fade Music], 0, 0, 0)
+            object.state = BOMBCARRIER_WAITFORBOSSFIGHT
+        end if
+        break
+
+    case BOMBCARRIER_GRABBOMB
+        if eggman.state < EGGMAN_FLEE
+            if object.timer < 180
+                object.timer++
+            else
+                object.state = BOMBCARRIER_SLIDELEFT
+                PlaySfx(SfxName[Bomb Carrier], false)
+                if bossPlatform.state < BOSSPLATFORM_FALL_4
+					// If the Boss Platform is still in its main phase, then make Robotnik resume his control animation
+                    eggman.state = EGGMAN_CONTROL
+                else
+					// If the Boss Platform is just about to die, then make Robotnik worried for himself too
+                    eggman.state = EGGMAN_PANICK_CONTROL
+                    eggman.timer = 0
+                    eggman.frame = 0
+                end if
+            end if
+        else
+			// Robotnik's Fleeing, so Unload this Object as well
+            ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+        end if
+        break
+
+    case BOMBCARRIER_SLIDERIGHT
+        if object.xpos < bossTop.xpos
+			// If we haven't reached the Boss Top yet, then keep on moving
+            object.xpos += 0x1E000
+        else
+            object.state = BOMBCARRIER_GRABBOMB
+            object.xpos  = bossTop.xpos
+            object.timer = 0
+            if bossPlatform.state > BOSSPLATFORM_FALL_4
+				// If the Boss Platform is XXX
+                if bossPlatform.state > BOSSPLATFORM_FIGHT_4
+                    ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+                end if
+
+				// If the Boss Platform is past a specific Grind point, then also unload
+                if bossPlatform.grind > 640
+                    ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+                end if
+            end if
+        end if
+        break
+
+    case BOMBCARRIER_SLIDELEFT
+		// If this Object is further to the right than the Player, then...
+        if object.xpos > player[SLOT_PLAYER1].xpos
+			// Move the Carrier left by 0.75 pixels
+            object.xpos -= 0xC000
+
+			// Has this Object past the Player now?
+            if object.xpos <= player[SLOT_PLAYER1].xpos
+				// If it did, then start releasig the Bomb
+                object.state = BOMBCARRIER_RELEASEBOMB
+
+				// Match the Player's Position
+                object.xpos = player[SLOT_PLAYER1].xpos
+
+				// If the Boss Platform XXX, then make Robotnik go back to his Idle State
+                if bossPlatform.state < BOSSPLATFORM_FALL_4
+                    eggman.state = EGGMAN_IDLE
+                end if
+
+                object.timer = 0
+            end if
+        else
+			// No need to move left anymore, start relasing the Bomb
+            object.state = BOMBCARRIER_RELEASEBOMB
+            object.xpos  = player[SLOT_PLAYER1].xpos
+
+			// Put Robotnik in his normal pose, he doesn't need to be pushing the lever anymore either
+            eggman.state = EGGMAN_IDLE
+
+            object.timer = 0
+        end if
+
+        temp0 = bossTop.xpos
+        temp0 -= 0x300000
+        if object.xpos > temp0
+			// If the Bomb Carrier is still within 48 pixels left of the Boss Top's Position,
+			// then keep the Bomb steady
+            object.angle = 384
+        else
+			// Increase the Bomb's Angle
+            object.angle += 8
+            object.angle &= 511
+        end if
+
+		// Make the Bomb move with the Bomb Carrier
+        bossBomb.xpos = object.xpos
+
+		// Make the Bomb bounce a bit
+        Sin(bossBomb.ypos, object.angle)
+        bossBomb.ypos <<= 9
+
+		// Bump it to 28 pixels beyond this Object's Y Position
+        bossBomb.ypos += object.ypos
+        bossBomb.ypos += 0x1C0000
+        break
+
+    case BOMBCARRIER_RELEASEBOMB
+        if object.timer < 30
+			// Hold for half a second
+            object.timer++
+        else
+			// Go to the post-bomb-release pause state
+            object.state = BOMBCARRIER_HOVER
+            object.timer = 0
+
+			// And actually release the Bomb
+            bossBomb.state = BOSSBOMB_ACTIVE
+        end if
+
+		// Increase the Bomb's hover angle
+        object.angle += 8
+        object.angle &= 511
+
+		// And then actually make the Bomb hover
+        Sin(bossBomb.ypos, object.angle)
+        bossBomb.ypos <<= 9
+
+		// Make it 28 pixels below this Bomb Carrier Object
+        bossBomb.ypos += object.ypos
+        bossBomb.ypos += 0x1C0000
+        break
+
+    case BOMBCARRIER_HOVER
+        if object.timer < 90
+			// Pause for a second and a half
+            object.timer++
+        else
+			// Job complete, returning to HQ!
+            object.state = BOMBCARRIER_SLIDERIGHT
+        end if
+        break
+
+    end switch
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case BOMBCARRIER_IDLE
+    case BOMBCARRIER_WAITFORBOSSFIGHT
+    case BOMBCARRIER_GRABBOMB
+    case BOMBCARRIER_SLIDERIGHT
+    case BOMBCARRIER_HOVER
+		// The Carrier isn't holding a Bomb, so draw the inactive Frame
+        DrawSprite(0)
+        break
+
+    case BOMBCARRIER_SLIDELEFT
+    case BOMBCARRIER_RELEASEBOMB
+		// The Carrier is holding a Bomb, so draw the active version of the Frame
+        DrawSprite(1)
+
+		// And then draw the Gravitional Force Pull thing
+        temp0 = object.frame
+        temp0 >>= 2
+        temp0 += 2
+
+        DrawSprite(temp0)
+
+        object.frame++
+        object.frame &= 7
+        break
+
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R5/Objects2.gif")
+
+    // Main Carrier Frame
+    SpriteFrame(-16, -12, 32, 24, 33, 215)
+
+    // Active Carrier Frame
+    SpriteFrame(-16, -12, 32, 24, 100, 113)
+
+    // Levitation Effect Frames
+    SpriteFrame(-16, 12, 32, 16, 33, 239)
+    SpriteFrame(-16, 12, 32, 16, 1, 239)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R5/Objects2.gif")
+    SpriteFrame(-16, -12, 32, 24, 33, 215)
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

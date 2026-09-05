@@ -1,0 +1,419 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: C Platforms Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.angleOffset
+private alias object.value2 : object.platformPos.x
+private alias object.value3 : object.platformPos.y
+private alias object.value4 : object.collisionOffset.x
+private alias object.value5 : object.collisionOffset.y
+private alias object.value6 : object.canBeStepped
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// Property Values
+private alias 0 : GIMMICK_PARENT
+private alias 1 : GIMMICK_CHILD
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.propertyValue == GIMMICK_PARENT
+        temp2 = 0
+        arrayPos0 = object.entityPos
+        arrayPos0++
+        while temp2 < 5
+            object[arrayPos0].angleOffset = object[arrayPos0].angle
+            object[arrayPos0].angleOffset += object.angleOffset
+            object[arrayPos0].angleOffset %= 448
+            if object[arrayPos0].angleOffset < 160
+                object[arrayPos0].collisionOffset.x = object.xpos
+                object[arrayPos0].collisionOffset.x -= 0x400000
+
+                temp0 = object[arrayPos0].angleOffset
+                temp0 <<= 16
+                object[arrayPos0].collisionOffset.x += temp0
+                object[arrayPos0].collisionOffset.y = object.ypos
+                object[arrayPos0].collisionOffset.y -= 0x3A0000
+
+                temp0 = object[arrayPos0].angleOffset
+                temp0 <<= 15
+                object[arrayPos0].collisionOffset.y += temp0
+            else
+                if object[arrayPos0].angleOffset < 224
+                    temp0 = object[arrayPos0].angleOffset
+                    temp0 -= 144
+                    temp0 <<= 2
+                    if temp0 > 144
+                        object[arrayPos0].rotation++
+                        object[arrayPos0].rotation %= 24
+                        object[arrayPos0].canBeStepped = false
+                    end if
+
+                    Sin(object[arrayPos0].collisionOffset.x, temp0)
+                    object[arrayPos0].collisionOffset.x *= 0xC00
+                    object[arrayPos0].collisionOffset.x += object.xpos
+                    object[arrayPos0].collisionOffset.x += 0x500000
+
+                    Cos(object[arrayPos0].collisionOffset.y, temp0)
+                    object[arrayPos0].collisionOffset.y *= -0xC00
+                    object[arrayPos0].collisionOffset.y += object.ypos
+                    object[arrayPos0].collisionOffset.y += 0x280000
+                else
+                    if object[arrayPos0].angleOffset < 384
+                        object[arrayPos0].rotation++
+                        object[arrayPos0].rotation %= 24
+                        object[arrayPos0].canBeStepped = false
+
+                        temp0 = object[arrayPos0].angleOffset
+                        temp0 -= 224
+                        object[arrayPos0].collisionOffset.x = object.xpos
+                        object[arrayPos0].collisionOffset.x += 0x3E0000
+
+                        temp1 = temp0
+                        temp1 <<= 16
+                        object[arrayPos0].collisionOffset.x -= temp1
+                        object[arrayPos0].collisionOffset.y = object.ypos
+                        object[arrayPos0].collisionOffset.y += 0x390000
+
+                        temp1 = temp0
+                        temp1 <<= 15
+                        object[arrayPos0].collisionOffset.y -= temp1
+                    else
+                        temp0 = object[arrayPos0].angleOffset
+                        temp0 -= 368
+                        temp0 <<= 2
+                        if temp0 > 144
+                            object[arrayPos0].rotation = 0
+                            object[arrayPos0].canBeStepped = true
+                        else
+                            object[arrayPos0].rotation++
+                            object[arrayPos0].rotation %= 24
+                            object[arrayPos0].canBeStepped = false
+                        end if
+
+                        Sin(object[arrayPos0].collisionOffset.x, temp0)
+                        object[arrayPos0].collisionOffset.x *= -0xC00
+                        object[arrayPos0].collisionOffset.x += object.xpos
+                        object[arrayPos0].collisionOffset.x -= 0x500000
+
+                        Cos(object[arrayPos0].collisionOffset.y, temp0)
+                        object[arrayPos0].collisionOffset.y *= 0xC00
+                        object[arrayPos0].collisionOffset.y += object.ypos
+                        object[arrayPos0].collisionOffset.y -= 0x280000
+                    end if
+                end if
+            end if
+
+            object[arrayPos0].collisionOffset.x &= -0x10000 // Truncate the value
+            object[arrayPos0].platformPos.x = object[arrayPos0].collisionOffset.x
+            object[arrayPos0].collisionOffset.x -= object[arrayPos0].xpos
+
+            object[arrayPos0].collisionOffset.y &= -0x10000 // Truncate the value
+            object[arrayPos0].platformPos.y = object[arrayPos0].collisionOffset.y
+            object[arrayPos0].collisionOffset.y -= object[arrayPos0].ypos
+            temp2++
+            arrayPos0++
+        loop
+
+        object.angleOffset++
+        object.angleOffset %= 448
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.propertyValue == GIMMICK_CHILD
+            if object.canBeStepped == true
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -5, 16, 11, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    player[currentPlayer].xpos += object.collisionOffset.x
+                    player[currentPlayer].ypos += object.collisionOffset.y
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    if object.propertyValue == GIMMICK_CHILD
+        object.xpos = object.platformPos.x
+        object.ypos = object.platformPos.y
+
+        temp0 = object.rotation
+        temp0 >>= 1
+        switch temp0
+        case 0
+        case 6
+            DrawSprite(0)
+            break
+
+        case 1
+        case 7
+            DrawSprite(1)
+            break
+
+        case 2
+        case 8
+            DrawSprite(2)
+            break
+
+        case 3
+        case 9
+            DrawSprite(3)
+            break
+
+        case 4
+        case 10
+            object.direction = FACING_LEFT
+            DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+            break
+
+        case 5
+        case 11
+            object.direction = FACING_LEFT
+            DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+            break
+
+        end switch
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects.gif")
+
+    SpriteFrame(-16, -8, 32, 16, 107, 98)   // #0 - Platform Horizontal
+    SpriteFrame(-16, -12, 32, 24, 107, 115) // #1 - Platform Tilted frame 0
+    SpriteFrame(-12, -16, 24, 32, 230, 34)  // #2 - Platform Tilted frame 1
+
+    SpriteFrame(-8, -16, 16, 32, 239, 212)  // #3 - Platform Vertical
+    SpriteFrame(-12, -16, 24, 32, 230, 34)  // #4 - Platform Tilted frame 0
+    SpriteFrame(-16, -12, 32, 24, 107, 115) // #5 - Platform Tilted frame 1
+
+    foreach (TypeName[C Platforms], arrayPos0, ALL_ENTITIES)
+        if object[arrayPos0].propertyValue == GIMMICK_PARENT
+            arrayPos0++
+            object[arrayPos0].angle = 0
+            object[arrayPos0].canBeStepped = true
+            object[arrayPos0].platformPos.x = object[arrayPos0].xpos
+            object[arrayPos0].platformPos.y = object[arrayPos0].ypos
+
+            arrayPos0++
+            object[arrayPos0].angle = 90
+            object[arrayPos0].canBeStepped = true
+            object[arrayPos0].platformPos.x = object[arrayPos0].xpos
+            object[arrayPos0].platformPos.y = object[arrayPos0].ypos
+
+            arrayPos0++
+            object[arrayPos0].angle = 180
+            object[arrayPos0].canBeStepped = true
+            object[arrayPos0].platformPos.x = object[arrayPos0].xpos
+            object[arrayPos0].platformPos.y = object[arrayPos0].ypos
+
+            arrayPos0++
+            object[arrayPos0].angle = 268
+            object[arrayPos0].canBeStepped = true
+            object[arrayPos0].platformPos.x = object[arrayPos0].xpos
+            object[arrayPos0].platformPos.y = object[arrayPos0].ypos
+
+            arrayPos0++
+            object[arrayPos0].angle = 358
+            object[arrayPos0].canBeStepped = true
+            object[arrayPos0].platformPos.x = object[arrayPos0].xpos
+            object[arrayPos0].platformPos.y = object[arrayPos0].ypos
+        end if
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= GIMMICK_CHILD
+            break
+
+        case 0 // type
+            checkResult = object.propertyValue
+            checkResult &= GIMMICK_CHILD
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= GIMMICK_CHILD
+            break
+
+        case 0 // type
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= GIMMICK_CHILD
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+
+    if object.propertyValue == GIMMICK_CHILD
+        arrayPos0 = object.entityPos
+        temp0 = 0
+        temp1 = 0
+        while temp1 == false
+            if temp0 == 5
+                temp1 = true
+            end if
+            arrayPos0--
+            temp0++
+
+            CheckEqual(object[arrayPos0].type, TypeName[CPlatforms])
+            temp1 = CheckResult
+
+            CheckNotEqual(object[arrayPos0].propertyValue, GIMMICK_CHILD)
+            temp1 &= CheckResult
+        loop
+
+        DrawLine(object.xpos, object.ypos, object[arrayPos0].xpos, object[arrayPos0].ypos, 255, 255, 0)
+        arrayPos1 = object.entityPos
+        arrayPos1 -= object[arrayPos0].entityPos
+
+        switch arrayPos1
+        case 1
+            temp7 = 0
+            break
+
+        case 2
+            temp7 = 90
+            break
+
+        case 3
+            temp7 = 180
+            break
+
+        case 4
+            temp7 = 268
+            break
+
+        case 5
+            temp7 = 358
+            break
+
+        end switch
+
+        if temp7 < 160
+            temp4 = object.xpos
+            temp4 -= 0x400000
+
+            temp0 = temp7
+            temp0 <<= 16
+            temp4 += temp0
+            temp5 = object.ypos
+            temp5 -= 0x3A0000
+            
+            temp0 = temp7
+            temp0 <<= 15
+            temp5 += temp0
+        else
+            if temp7 < 224
+                temp0 = temp7
+                temp0 -= 144
+                temp0 <<= 2
+                Sin(temp4, temp0)
+                temp4 *= 0xC00
+                temp4 += object.xpos
+                temp4 += 0x500000
+
+                Cos(temp5, temp0)
+                temp5 *= -0xC00
+                temp5 += object.ypos
+                temp5 += 0x280000
+            else
+                if temp7 < 384
+                    temp0 = temp7
+                    temp0 -= 224
+
+                    temp4 = object.xpos
+                    temp4 += 0x3E0000
+                    temp1 = temp0
+                    temp1 <<= 16
+                    temp4 -= temp1
+
+                    temp5 = object.ypos
+                    temp5 += 0x390000
+                    temp1 = temp0
+                    temp1 <<= 15
+                    temp5 -= temp1
+                else
+                    temp0 = temp7
+                    temp0 -= 368
+                    temp0 <<= 2
+
+                    Sin(temp4, temp0)
+                    temp4 *= -0xC00
+                    temp4 += object.xpos
+                    temp4 -= 0x500000
+
+                    Cos(temp5, temp0)
+                    temp5 *= 0xC00
+                    temp5 += object.ypos
+                    temp5 -= 0x280000
+                end if
+            end if
+        end if
+
+        temp4 &= 0xFFFF0000 // Truncate the value
+        temp2 = temp4
+        temp4 = object.xpos
+
+        temp5 &= 0xFFFF0000 // Truncate the value
+        temp3 = temp5
+        temp5 = object.ypos
+
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            object.inkEffect = INK_BLEND
+            DrawSpriteFX(0, FX_INK, temp2, temp3)
+            DrawLine(object.xpos, object.ypos, temp2, temp3, 255, 255, 0)
+            editor.drawingOverlay = false
+        end if
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects.gif")
+    
+    SpriteFrame(-16, -8, 32, 16, 107, 98)   // #0 - Platform Horizontal
+    SpriteFrame(-16, -12, 32, 24, 107, 115) // #1 - Platform Tilted frame 0
+    SpriteFrame(-12, -16, 24, 32, 230, 34)  // #2 - Platform Tilted frame 1
+
+    SpriteFrame(-8, -16, 16, 32, 239, 212)  // #3 - Platform Vertical
+    SpriteFrame(-12, -16, 24, 32, 230, 34)  // #4 - Platform Tilted frame 0
+    SpriteFrame(-16, -12, 32, 24, 107, 115) // #5 - Platform Tilted frame 1
+
+    AddEditorVariable("type")
+    SetActiveVariable("type")
+    AddEnumVariable("Parent", GIMMICK_PARENT)
+    AddEnumVariable("Child", GIMMICK_CHILD)
+end event

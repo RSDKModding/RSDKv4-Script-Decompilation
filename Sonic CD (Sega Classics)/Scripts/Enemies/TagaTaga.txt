@@ -1,0 +1,377 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Taga Taga Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0         : object.timer
+private alias object.value1         : object.yvel
+private alias object.value2         : object.originPos.y
+private alias object.propertyValue  : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// States
+private alias 0 : TAGATAGA_SET_LAUNCH_SPEED
+private alias 1 : TAGATAGA_EMERGE
+private alias 2 : TAGATAGA_MOVE_PINCH_1
+private alias 3 : TAGATAGA_TURN_1
+private alias 4 : TAGATAGA_TURN_2
+private alias 5 : TAGATAGA_TURN_3
+private alias 6 : TAGATAGA_MOVE_PINCH_2
+private alias 7 : TAGATAGA_SUBMERGE
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function TagaTaga_DebugDraw
+reserve function TagaTaga_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value TagaTaga_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function TagaTaga_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= TagaTaga_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(6) // Bad quality
+    end if
+end function
+
+
+private function TagaTaga_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= TagaTaga_startDebugID
+    CreateTempObject(TypeName[Taga Taga], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].originPos.y = object[tempObjectPos].ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case TAGATAGA_SET_LAUNCH_SPEED
+            object.yvel = -0x40000
+            object.timer = 1
+            object.state = TAGATAGA_EMERGE
+            break
+
+        case TAGATAGA_EMERGE
+            object.yvel += 0x1000
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 24
+                object.state = TAGATAGA_MOVE_PINCH_1
+            end if
+            break
+
+        case TAGATAGA_MOVE_PINCH_1
+            object.yvel += 0x1000
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 48
+                object.state = TAGATAGA_TURN_1
+            end if
+            break
+
+        case TAGATAGA_TURN_1
+            object.yvel += 0x1000
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 56
+                object.state = TAGATAGA_TURN_2
+            end if
+            break
+
+        case TAGATAGA_TURN_2
+            object.yvel += 0x1000
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 64
+                object.state = TAGATAGA_TURN_3
+            end if
+            break
+
+        case TAGATAGA_TURN_3
+            object.yvel += 0x1000
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 96
+                object.state = TAGATAGA_MOVE_PINCH_2
+            end if
+            break
+
+        case TAGATAGA_MOVE_PINCH_2
+            object.yvel += 0x1000
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 128
+                object.state = TAGATAGA_SUBMERGE
+                PlaySfx(SfxName[Water Splash], false)
+            end if
+            break
+
+        case TAGATAGA_SUBMERGE
+            object.timer++
+            if object.timer > 204
+                object.state = TAGATAGA_SET_LAUNCH_SPEED
+                object.timer = 0
+                object.ypos = object.originPos.y
+                PlaySfx(SfxName[Water Splash], false)
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case TAGATAGA_SET_LAUNCH_SPEED
+            object.yvel = -0x30000
+            object.timer = 1
+            object.state = TAGATAGA_EMERGE
+            break
+
+        case TAGATAGA_EMERGE
+            object.yvel += 0xEC4
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 40
+                object.state = TAGATAGA_MOVE_PINCH_1
+            end if
+            break
+
+        case TAGATAGA_MOVE_PINCH_1
+            object.yvel += 0xEC4
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 50
+                object.state = TAGATAGA_TURN_1
+            end if
+            break
+
+        case TAGATAGA_TURN_1
+            object.yvel += 0xEC4
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 60
+                object.state = TAGATAGA_TURN_2
+            end if
+            break
+
+        case TAGATAGA_TURN_2
+            object.yvel += 0xEC4
+            object.ypos += object.yvel
+            object.timer++
+            if object.timer > 104
+                object.state = TAGATAGA_TURN_3
+                PlaySfx(SfxName[Water Splash], false)
+            end if
+            break
+
+        case TAGATAGA_TURN_3
+            object.timer++
+            if object.timer > 188
+                object.state = TAGATAGA_SET_LAUNCH_SPEED
+                object.timer = 0
+                object.ypos = object.originPos.y
+                PlaySfx(SfxName[Water Splash], false)
+            end if
+            break
+        end switch
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.quality == QUALITY_GOOD
+            if object.state < TAGATAGA_SUBMERGE
+                BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+                if checkResult == true
+                    CallFunction(Player_BadnikBreak)
+                end if
+            end if
+        else
+            if object.state < TAGATAGA_TURN_3
+                BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+                if checkResult == true
+                    CallFunction(Player_BadnikBreak)
+                end if
+            end if
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case TAGATAGA_SET_LAUNCH_SPEED
+        case TAGATAGA_EMERGE
+            DrawSprite(0)
+            break
+
+        case TAGATAGA_MOVE_PINCH_1
+            temp0 = object.timer
+            temp0 &= 15
+            if temp0 < 8
+                DrawSprite(0)
+            else
+                DrawSprite(1)
+            end if
+            break
+
+        case TAGATAGA_TURN_1
+            DrawSprite(2)
+            break
+
+        case TAGATAGA_TURN_2
+            DrawSprite(3)
+            break
+
+        case TAGATAGA_TURN_3
+            DrawSprite(4)
+            break
+
+        case TAGATAGA_MOVE_PINCH_2
+            temp0 = object.timer
+            temp0 &= 15
+            if temp0 < 8
+                DrawSprite(4)
+            else
+                DrawSprite(5)
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case TAGATAGA_SET_LAUNCH_SPEED
+        case TAGATAGA_EMERGE
+            DrawSprite(6)
+            break
+
+        case TAGATAGA_MOVE_PINCH_1
+            DrawSprite(7)
+            break
+
+        case TAGATAGA_TURN_1
+            DrawSprite(8)
+            break
+
+        case TAGATAGA_TURN_2
+            DrawSprite(9)
+            break
+        end switch
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects.gif")
+
+    foreach (TypeName[Taga Taga], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+
+    // Good TagaTaga
+    SpriteFrame(-16, -22, 32, 44, 223, 154)     // #0 - TagaTaga emerge Frame 0
+    SpriteFrame(-16, -22, 32, 44, 223, 199)     // #1 - TagaTaga emerge Frame 1
+    SpriteFrame(-16, -16, 32, 32, 35, 109)      // #2 - TagaTaga turning Frame 0
+    SpriteFrame(-16, -16, 32, 32, 68, 109)      // #3 - TagaTaga turning Frame 1
+    SpriteFrame(-16, -22, 32, 44, 1, 101)       // #4 - TagaTaga submerge Frame 0
+    SpriteFrame(-16, -22, 32, 44, 1, 146)       // #5 - TagaTaga submerge Frame 1
+
+    // Bad TagaTaga
+    SpriteFrame(-16, -22, 32, 44, 223, 154)     // #6 - TagaTaga emerge Frame 0
+    SpriteFrame(-16, -16, 32, 32, 35, 109)      // #7 - TagaTaga turning Frame 0
+    SpriteFrame(-16, -16, 32, 32, 35, 142)      // #8 - TagaTaga turning Frame 1
+    SpriteFrame(-16, -22, 32, 44, 1, 191)       // #9 - TagaTaga submerge Frame 0
+
+    temp0 = 0
+    TagaTaga_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Taga Taga], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(TagaTaga_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(TagaTaga_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects.gif")
+
+    SpriteFrame(-16, -22, 32, 44, 223, 154)  // #0 - TagaTaga emerge, Good quality
+    SpriteFrame(-16, -22, 32, 44, 223, 154)  // #1 - TagaTaga emerge, Bad quality
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

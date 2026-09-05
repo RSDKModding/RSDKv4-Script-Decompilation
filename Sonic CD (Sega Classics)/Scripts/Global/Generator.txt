@@ -1,0 +1,341 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Generator Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.frameTimer
+private alias object.value1 : object.yOriginPos
+private alias object.value2 : object.timer
+private alias object.value3 : object.oscillation
+
+// Player Aliases
+private alias object.ypos      : player.ypos
+private alias object.animation : player.animation
+
+// States
+private alias 0 : GENERATOR_HOVER_DOWN
+private alias 1 : GENERATOR_HOVER_UP
+private alias 2 : GENERATOR_EXPLODE
+
+// Property Values
+private alias 0 : OPERATIVE
+private alias 1 : OLD
+private alias 2 : DESTROYED
+private alias 3 : OLD_DESTROYED
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Generator_DebugDraw
+reserve function Generator_DebugSpawn
+reserve function Generator_PlayerInteraction
+
+// ========================
+// Function Definitions
+// ========================
+
+public function Generator_DebugDraw
+    temp0 = object.direction
+    object.direction = FLIP_Y
+    DrawSprite(0)
+    DrawSprite(4)
+    DrawSprite(8)
+    DrawSprite(12)
+    DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+    object.direction = temp0
+end function
+
+
+public function Generator_DebugSpawn
+    CreateTempObject(TypeName[Generator], 0, object.xpos, object.ypos)
+    object[tempObjectPos].direction = FLIP_Y
+    object[tempObjectPos].yOriginPos  = object[tempObjectPos].ypos
+    object[tempObjectPos].oscillation = -0x2000
+end function
+
+
+public function Generator_PlayerInteraction
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if player[currentPlayer].animation == ANI_JUMPING
+            BoxCollisionTest(C_TOUCH, object.entityPos, -38, -32, 38, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                object.state = GENERATOR_EXPLODE
+                object.ypos  = object.yOriginPos
+
+                generator.destroyed = true
+                goodFuture.enabled  = true
+
+                object.priority = PRIORITY_ACTIVE
+
+                player.score += 1500
+                if stage.actNum < 3
+                    temp0 = stage.listPos
+                    temp0 /= 10
+                    temp0 <<= 1
+                    temp0 += stage.actNum
+                    temp0--
+                    SetBit(goodFuture.list, temp0, true)
+                end if
+
+                // Saviour of the Planet unlock criteria
+                if stage.playerListPos == PLAYER_SONIC_A
+                    if stage.debugMode == false
+                        if goodFuture.list > 16382 // 0b11111111111110
+                            if metalSonic.list > 11
+                                // no achievement
+                            end if
+                        end if
+                    end if
+                end if
+            end if
+        else
+            BoxCollisionTest(C_SOLID, object.entityPos, -38, -33, 38, 36, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                player[currentPlayer].ypos += 0x10000
+            end if
+        end if
+    next
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.propertyValue == OPERATIVE
+        switch object.state
+        case GENERATOR_HOVER_DOWN
+            object.timer++
+            if object.timer == 32
+                object.oscillation = 0x2000
+                object.timer = 0
+                object.state = GENERATOR_HOVER_UP
+            end if
+
+            object.ypos += object.oscillation
+            CallFunction(Generator_PlayerInteraction)
+            break
+
+        case GENERATOR_HOVER_UP
+            object.timer++
+            if object.timer == 32
+                object.oscillation = -0x2000
+                object.timer = 0
+                object.state = GENERATOR_HOVER_DOWN
+            end if
+
+            object.ypos += object.oscillation
+            CallFunction(Generator_PlayerInteraction)
+            break
+
+        case GENERATOR_EXPLODE
+            // Explosion code
+            Rand(temp0, 80)
+            temp0 -= 40
+            temp0 <<= 16
+            temp0 += object.xpos
+
+            Rand(temp1, 64)
+            temp1 -= 32
+            temp1 <<= 16
+            temp1 += object.ypos
+
+            CreateTempObject(TypeName[Explosion], 0, temp0, temp1)
+
+            temp0 = object.timer
+            temp0 &= 3
+            if temp0 == 0
+                PlaySfx(SfxName[Explosion], false)
+            end if
+
+            object.timer++
+            if object.timer == 60
+                object.priority      = PRIORITY_BOUNDS
+                object.timer         = 0
+                object.state         = GENERATOR_HOVER_DOWN
+                object.propertyValue = DESTROYED
+
+                object.iypos += 16
+                PlaySfx(SfxName[Achievement], false)
+            end if
+            break
+        end switch
+    end if
+end event
+
+
+event ObjectDraw
+    switch object.propertyValue
+    case OPERATIVE
+        if object.state < GENERATOR_EXPLODE
+            DrawSprite(object.frame)
+            DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+
+            // Electricity
+            temp0 = object.frame
+            temp0 += 4
+            DrawSprite(temp0)
+            temp0 += 4
+            DrawSprite(temp0)
+            temp0 += 4
+            DrawSprite(temp0)
+
+            object.frameTimer++
+            if object.frameTimer > 3
+                object.frameTimer = 0
+                object.frame++
+                if object.frame > 3
+                    object.frame = 0
+                end if
+            end if
+        end if
+        break
+
+    case OLD
+        DrawSprite(17)
+        DrawSpriteFX(17, FX_FLIP, object.xpos, object.ypos)
+        break
+
+    case DESTROYED
+        DrawSprite(16)
+        break
+
+    case OLD_DESTROYED
+        DrawSprite(18)
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items3.gif")
+
+    foreach (TypeName[Generator], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].direction = FLIP_Y
+
+        if generator.destroyed == true
+            switch object[arrayPos0].propertyValue
+            case OPERATIVE
+                object[arrayPos0].propertyValue = DESTROYED
+                break
+
+            case OLD
+                object[arrayPos0].propertyValue = OLD_DESTROYED
+                break
+            end switch
+        else
+            if object[arrayPos0].propertyValue == OPERATIVE
+                object[arrayPos0].iypos -= 16
+            end if
+
+            object[arrayPos0].yOriginPos  = object[arrayPos0].ypos
+            object[arrayPos0].oscillation = -0x2000
+        end if
+    next
+
+    SpriteFrame(-40, -32, 80, 24, 175, 61)	// #0  - Transporter Frame 0
+    SpriteFrame(-40, -32, 80, 24, 175, 86)	// #1  - Transporter Frame 1
+    SpriteFrame(-40, -32, 80, 24, 175, 111)	// #2  - Transporter Frame 2
+    SpriteFrame(-40, -32, 80, 24, 175, 86)	// #3  - Transporter Frame 3
+    SpriteFrame(-6, -8, 12, 16, 149, 1)		// #4  - Electricity Frame 0
+    SpriteFrame(-6, -8, 12, 16, 162, 1)		// #5  - Electricity Frame 1
+    SpriteFrame(-6, -8, 12, 16, 149, 18)	// #6  - Electricity Frame 2
+    SpriteFrame(-6, -8, 12, 16, 162, 18)	// #7  - Electricity Frame 3
+    SpriteFrame(-22, -8, 12, 16, 149, 1)	// #8  - Electricity Frame 4
+    SpriteFrame(-22, -8, 12, 16, 162, 1)	// #9  - Electricity Frame 5
+    SpriteFrame(-22, -8, 12, 16, 149, 18)	// #10 - Electricity Frame 6
+    SpriteFrame(-22, -8, 12, 16, 162, 18)	// #11 - Electricity Frame 7
+    SpriteFrame(10, -8, 12, 16, 149, 1)		// #12 - Electricity Frame 8
+    SpriteFrame(10, -8, 12, 16, 162, 1)		// #13 - Electricity Frame 9
+    SpriteFrame(10, -8, 12, 16, 149, 18)	// #14 - Electricity Frame 10
+    SpriteFrame(10, -8, 12, 16, 162, 18)	// #15 - Electricity Frame 11
+    SpriteFrame(-40, 16, 80, 16, 175, 44)	// #16 - Transporter Destroyed
+    SpriteFrame(-40, -32, 80, 25, 175, 18)	// #17 - Transporter Old
+    SpriteFrame(-40, 16, 80, 16, 175, 1)	// #18 - Transporter Old Destroyed
+
+    SetTableValue(TypeName[Generator], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(Generator_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(Generator_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // inactive
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+		case 0 // inactive
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.direction = FLIP_Y
+
+	if object.propertyValue == OPERATIVE
+		// Machine
+		DrawSprite(0)
+		DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+
+		// Electricity
+		DrawSprite(4)
+		DrawSprite(8)
+		DrawSprite(12)
+	else
+		DrawSprite(17)
+		DrawSpriteFX(17, FX_FLIP, object.XPos, object.ypos)
+	end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items3.gif")
+
+    SpriteFrame(-40, -32, 80, 24, 175, 61)	// #0  - Transporter Frame 0
+    SpriteFrame(-40, -32, 80, 24, 175, 86)	// #1  - Transporter Frame 1
+    SpriteFrame(-40, -32, 80, 24, 175, 111)	// #2  - Transporter Frame 2
+    SpriteFrame(-40, -32, 80, 24, 175, 86)	// #3  - Transporter Frame 3
+    SpriteFrame(-6, -8, 12, 16, 149, 1)		// #4  - Electricity Frame 0
+    SpriteFrame(-6, -8, 12, 16, 162, 1)		// #5  - Electricity Frame 1
+    SpriteFrame(-6, -8, 12, 16, 149, 18)	// #6  - Electricity Frame 2
+    SpriteFrame(-6, -8, 12, 16, 162, 18)	// #7  - Electricity Frame 3
+    SpriteFrame(-22, -8, 12, 16, 149, 1)	// #8  - Electricity Frame 4
+    SpriteFrame(-22, -8, 12, 16, 162, 1)	// #9  - Electricity Frame 5
+    SpriteFrame(-22, -8, 12, 16, 149, 18)	// #10 - Electricity Frame 6
+    SpriteFrame(-22, -8, 12, 16, 162, 18)	// #11 - Electricity Frame 7
+    SpriteFrame(10, -8, 12, 16, 149, 1)		// #12 - Electricity Frame 8
+    SpriteFrame(10, -8, 12, 16, 162, 1)		// #13 - Electricity Frame 9
+    SpriteFrame(10, -8, 12, 16, 149, 18)	// #14 - Electricity Frame 10
+    SpriteFrame(10, -8, 12, 16, 162, 18)	// #15 - Electricity Frame 11
+    SpriteFrame(-40, 16, 80, 16, 175, 44)	// #16 - Transporter Destroyed
+    SpriteFrame(-40, -32, 80, 25, 175, 18)	// #17 - Transporter Old
+    SpriteFrame(-40, 16, 80, 16, 175, 1)	// #18 - Transporter Old Destroyed
+
+    AddEditorVariable("inactive")
+    SetActiveVariable("inactive")
+    AddEnumVariable("False", false)
+    AddEnumVariable("True", true)
+end event

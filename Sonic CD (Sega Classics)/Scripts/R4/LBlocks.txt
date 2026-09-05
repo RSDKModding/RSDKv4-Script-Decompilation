@@ -1,0 +1,283 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: L Blocks Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : LBLOCKS_INACTIVE
+private alias 1 : LBLOCKS_STEP_LEFT
+private alias 2 : LBLOCKS_STEP_RIGHT
+private alias 3 : LBLOCKS_ROTATE_LEFT
+private alias 4 : LBLOCKS_ROTATE_RIGHT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case LBLOCKS_STEP_LEFT
+        if object.timer < 14
+            object.timer++
+        else
+            object.timer = 0
+            object.state = LBLOCKS_ROTATE_LEFT
+            PlaySfx(SfxName[Switch], false)
+        end if
+        break
+
+    case LBLOCKS_STEP_RIGHT
+        if object.timer < 14
+            object.timer++
+        else
+            object.timer = 0
+            object.state = LBLOCKS_ROTATE_RIGHT
+            PlaySfx(SfxName[Switch], false)
+        end if
+        break
+
+    case LBLOCKS_ROTATE_LEFT
+        if object.timer < 8
+            object.timer++
+            object.angle++
+        else
+            object.timer = 0
+            object.state = LBLOCKS_INACTIVE
+            PlaySfx(SfxName[Switch], false)
+        end if
+        break
+
+    case LBLOCKS_ROTATE_RIGHT
+        if object.timer < 8
+            object.timer++
+            object.angle--
+        else
+            object.timer = 0
+            object.state = LBLOCKS_INACTIVE
+            PlaySfx(SfxName[Switch], false)
+        end if
+        break
+    end switch
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+		if object.state == LBLOCKS_INACTIVE
+            temp1 = checkResult
+        else
+            temp1 = COL_TOP
+        end if
+
+		if object.state < 3
+            temp0 = object.angle
+            temp0 >>= 3
+            switch temp0
+            case 0
+                BoxCollisionTest(C_SOLID, object.entityPos, -16, -48, 16, -16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_SOLID, object.entityPos, -48, -16, -16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == COL_TOP
+                    if temp1 == COL_NONE
+                        object.state = LBLOCKS_STEP_LEFT
+                    end if
+                end if
+                break
+
+            case 1
+                BoxCollisionTest(C_SOLID, object.entityPos, -16, 16, 16, 48, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_SOLID, object.entityPos, -48, -16, -16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == COL_TOP
+                    if temp1 == COL_NONE
+                        object.state = LBLOCKS_STEP_LEFT
+                    end if
+                end if
+                break
+
+            case 2
+                BoxCollisionTest(C_SOLID, object.entityPos, -16, 16, 16, 48, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_SOLID, object.entityPos, 16, -16, 48, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == COL_TOP
+                    if temp1 == COL_NONE
+                        object.state = LBLOCKS_STEP_RIGHT
+                    end if
+                end if
+                break
+
+            case 3
+                BoxCollisionTest(C_SOLID, object.entityPos, -16, -48, 16, -16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_SOLID, object.entityPos, 16, -16, 48, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == COL_TOP
+                    if temp1 == COL_NONE
+                        object.state = LBLOCKS_STEP_RIGHT
+                    end if
+                end if
+                break
+            end switch
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    temp0 = object.angle
+    if object.state == LBLOCKS_ROTATE_RIGHT
+        temp0 += 3
+    end if
+
+    temp0 >>= 2
+    temp0 *= 3
+
+    temp0++
+    DrawSprite(temp0)
+
+    temp0++
+    DrawSprite(temp0)
+
+    temp0++
+    DrawSprite(temp0)
+
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects3.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 67, 46)		// #0  - LBlock Center
+
+	// Rotation Set 1
+	SpriteFrame(-16, -16, 32, 32, 34, 34)	// #1  - LBlock 1
+	SpriteFrame(-48, -16, 32, 32, 1, 34)	// #2  - LBlock 2
+	SpriteFrame(-16, -48, 32, 32, 34, 1)	// #3  - LBlock 3
+	SpriteFrame(-22, -22, 44, 44, 157, 1)	// #4  - LBlock Diagonal 1
+	SpriteFrame(-44, -44, 44, 44, 112, 1)	// #5  - LBlock Diagonal 2
+	SpriteFrame(-44, 0, 44, 44, 202, 1)		// #6  - LBlock Diagonal 3
+
+	// Rotation Set 2
+	SpriteFrame(-16, -16, 32, 32, 34, 1)	// #7  - LBlock 1
+	SpriteFrame(-48, -16, 32, 32, 1, 1)		// #8  - LBlock 2
+	SpriteFrame(-16, 16, 32, 32, 34, 34)	// #9  - LBlock 3
+	SpriteFrame(-22, -22, 44, 44, 112, 1)	// #10 - LBlock Diagonal 1
+	SpriteFrame(-44, 0, 44, 44, 67, 1)		// #11 - LBlock Diagonal 2
+	SpriteFrame(0, 0, 44, 44, 157, 1)		// #12 - LBlock Diagonal 3
+
+	// Rotation Set 3
+	SpriteFrame(-16, -16, 32, 32, 1, 1)		// #13 - LBlock 1
+	SpriteFrame(-16, 16, 32, 32, 1, 34)		// #14 - LBlock 2
+	SpriteFrame(16, -16, 32, 32, 34, 1)		// #15 - LBlock 3
+	SpriteFrame(-22, -22, 44, 44, 67, 1)	// #16 - LBlock Diagonal 1
+	SpriteFrame(0, -44, 44, 44, 112, 1)		// #17 - LBlock Diagonal 2
+	SpriteFrame(0, 0, 44, 44, 202, 1)		// #18 - LBlock Diagonal 3
+
+	// Rotation Set 4
+	SpriteFrame(-16, -16, 32, 32, 1, 34)	// #19 - LBlock 1
+	SpriteFrame(-16, -48, 32, 32, 1, 1)		// #20 - LBlock 2
+	SpriteFrame(16, -16, 32, 32, 34, 34)	// #21 - LBlock 3
+	SpriteFrame(-22, -22, 44, 44, 202, 1)	// #22 - LBlock Diagonal 1
+	SpriteFrame(-44, -44, 44, 44, 67, 1)	// #23 - LBlock Diagonal 2
+	SpriteFrame(0, -44, 44, 44, 157, 1)		// #24 - LBlock Diagonal 3
+
+    foreach (TypeName[L Blocks], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].angle = object[arrayPos0].propertyValue
+        object[arrayPos0].angle <<= 3
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+		case 0 // block set
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // property value
+		case 0 // block set
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp0 = object.propertyValue
+	temp0 <<= 3
+
+	temp0 >>= 2
+	temp0 *= 3
+
+	temp0++
+	DrawSprite(temp0)
+
+	temp0++
+	DrawSprite(temp0)
+
+	temp0++
+	DrawSprite(temp0)
+
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R4/Objects3.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 67, 46)		// #0  - LBlock Center
+
+	// Rotation Set 1
+	SpriteFrame(-16, -16, 32, 32, 34, 34)	// #1  - LBlock 1
+	SpriteFrame(-48, -16, 32, 32, 1, 34)	// #2  - LBlock 2
+	SpriteFrame(-16, -48, 32, 32, 34, 1)	// #3  - LBlock 3
+	SpriteFrame(-22, -22, 44, 44, 157, 1)	// #4  - LBlock Diagonal 1
+	SpriteFrame(-44, -44, 44, 44, 112, 1)	// #5  - LBlock Diagonal 2
+	SpriteFrame(-44, 0, 44, 44, 202, 1)		// #6  - LBlock Diagonal 3
+
+	// Rotation Set 2
+	SpriteFrame(-16, -16, 32, 32, 34, 1)	// #7  - LBlock 1
+	SpriteFrame(-48, -16, 32, 32, 1, 1)		// #8  - LBlock 2
+	SpriteFrame(-16, 16, 32, 32, 34, 34)	// #9  - LBlock 3
+	SpriteFrame(-22, -22, 44, 44, 112, 1)	// #10 - LBlock Diagonal 1
+	SpriteFrame(-44, 0, 44, 44, 67, 1)		// #11 - LBlock Diagonal 2
+	SpriteFrame(0, 0, 44, 44, 157, 1)		// #12 - LBlock Diagonal 3
+
+	// Rotation Set 3
+	SpriteFrame(-16, -16, 32, 32, 1, 1)		// #13 - LBlock 1
+	SpriteFrame(-16, 16, 32, 32, 1, 34)		// #14 - LBlock 2
+	SpriteFrame(16, -16, 32, 32, 34, 1)		// #15 - LBlock 3
+	SpriteFrame(-22, -22, 44, 44, 67, 1)	// #16 - LBlock Diagonal 1
+	SpriteFrame(0, -44, 44, 44, 112, 1)		// #17 - LBlock Diagonal 2
+	SpriteFrame(0, 0, 44, 44, 202, 1)		// #18 - LBlock Diagonal 3
+
+	// Rotation Set 4
+	SpriteFrame(-16, -16, 32, 32, 1, 34)	// #19 - LBlock 1
+	SpriteFrame(-16, -48, 32, 32, 1, 1)		// #20 - LBlock 2
+	SpriteFrame(16, -16, 32, 32, 34, 34)	// #21 - LBlock 3
+	SpriteFrame(-22, -22, 44, 44, 202, 1)	// #22 - LBlock Diagonal 1
+	SpriteFrame(-44, -44, 44, 44, 67, 1)	// #23 - LBlock Diagonal 2
+	SpriteFrame(0, -44, 44, 44, 157, 1)		// #24 - LBlock Diagonal 3
+
+	AddEditorVariable("block set")
+	SetActiveVariable("block set")
+	AddEnumVariable("Set 1", 0)
+	AddEnumVariable("Set 2", 1)
+	AddEnumVariable("Set 3", 2)
+	AddEnumVariable("Set 4", 3)
+end event

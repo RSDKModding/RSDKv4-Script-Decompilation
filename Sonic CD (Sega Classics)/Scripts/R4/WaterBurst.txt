@@ -1,0 +1,253 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Water Burst Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.frameTimer
+private alias object.value1 : object.timer
+
+// Player Aliases
+private alias object.state       : player.state
+private alias object.xpos        : player.xpos
+private alias object.ypos        : player.ypos
+private alias object.xvel        : player.xvel
+private alias object.yvel        : player.yvel
+private alias object.speed       : player.speed
+private alias object.animation   : player.animation
+private alias object.controlMode : player.controlMode
+private alias object.left        : player.left
+private alias object.right       : player.right
+private alias object.up          : player.up
+private alias object.down        : player.down
+private alias object.value1      : player.timer
+
+// Burst Splash Aliases
+private alias object.xvel : burstSplash.xvel
+private alias object.yvel : burstSplash.yvel
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.timer++
+    if object.timer == 8
+        Rand(temp0, 80)
+        temp0 -= 40
+        temp0 <<= 16
+        temp0 += object.xpos
+
+        Rand(temp1, 16)
+        temp1 -= 8
+        temp1 <<= 16
+        temp1 += object.ypos
+        temp1 -= 0x300000
+
+        CreateTempObject(TypeName[Burst Splash], 0, temp0, temp1)
+        Rand(burstSplash[tempObjectPos].xvel, 10)
+        burstSplash[tempObjectPos].xvel -= 5
+        burstSplash[tempObjectPos].xvel <<= 13
+        burstSplash[tempObjectPos].yvel = -0x20000
+
+        object.timer = 0
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_PLATFORM, object.entityPos, -48, -66, 48, -32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            player[currentPlayer].ypos += 0x20000
+        end if
+
+        BoxCollisionTest(C_TOUCH, object.entityPos, -128, -24, 128, 400, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            if player[currentPlayer].state != Player_State_Death
+                if player[currentPlayer].state != Player_State_Drown
+                    player[currentPlayer].state = Player_State_WaterCurrent
+                    player[currentPlayer].animation = ANI_FANROTATE
+
+                    player[currentPlayer].controlMode = CONTROLMODE_NONE
+                    player[currentPlayer].left  = false
+                    player[currentPlayer].right = false
+                    player[currentPlayer].up    = false
+                    player[currentPlayer].down  = false
+
+                    player[currentPlayer].yvel = -0x100000
+                    player[currentPlayer].timer = 0
+                end if
+            end if
+
+            BoxCollisionTest(C_TOUCH, object.entityPos, -128, 48, 128, 332, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                temp0 = object.xpos
+                temp0 -= player[currentPlayer].xpos
+                temp0 >>= 2
+                if temp0 > 0x100000
+                    temp0 = 0x100000
+                end if
+
+                if temp0 < -0x100000
+                    temp0 = -0x100000
+                end if
+
+                player[currentPlayer].xpos += temp0
+            end if
+        else
+            if player[currentPlayer].state == Player_State_WaterCurrent
+                player[currentPlayer].state = Player_State_Air
+                player[currentPlayer].controlMode = currentPlayer
+                player[currentPlayer].animation = ANI_BOUNCING
+
+                player[currentPlayer].xvel = 0
+                player[currentPlayer].speed = 0
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    object.ypos = stage.newWaterLevel
+    object.ypos -= 0x300000
+
+    temp0 = oscillation
+    temp0 <<= 2
+    Sin(temp1, temp0)
+    temp1 <<= 9
+    object.ypos += temp1
+
+    temp0 = object.frameTimer
+    temp0 /= 3
+    temp0 += 8
+    DrawSprite(temp0)
+
+    temp0 += 4
+    DrawSprite(temp0)
+
+    temp0 += 4
+    DrawSprite(temp0)
+
+    temp0 += 4
+    DrawSprite(temp0)
+
+    object.frameTimer++
+    object.frameTimer %= 12
+    DrawSprite(object.frame)
+
+    temp0 = object.frame
+    temp0 += 4
+    DrawSprite(temp0)
+
+    object.frame++
+    object.frame &= 3
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects3.gif")
+
+    SpriteFrame(-56, -80, 112, 32, 143, 46)     // #0  - Water Burst frame 0
+    SpriteFrame(-56, -80, 112, 32, 143, 79)     // #1  - Water Burst frame 1
+    SpriteFrame(-56, -80, 112, 32, 143, 112)    // #2  - Water Burst frame 2
+    SpriteFrame(-56, -80, 112, 32, 143, 145)    // #3  - Water Burst frame 3
+
+    SpriteFrame(-56, 48, 112, 32, 143, 46)      // #4  - Current frame 0
+    SpriteFrame(-56, 48, 112, 32, 143, 79)      // #5  - Current frame 1
+    SpriteFrame(-56, 48, 112, 32, 143, 112)     // #6  - Current frame 2
+    SpriteFrame(-56, 48, 112, 32, 143, 145)     // #7  - Current frame 3
+
+    SpriteFrame(-32, -64, 64, 32, 126, 178)     // #8  - Current frame 4
+    SpriteFrame(-32, -64, 64, 32, 61, 178)      // #9  - Current frame 5
+    SpriteFrame(-32, -64, 64, 32, 191, 178)     // #10 - Current frame 6
+    SpriteFrame(-32, -64, 64, 32, 191, 211)     // #11 - Current frame 7
+
+    SpriteFrame(-32, -32, 64, 32, 126, 178)     // #12 - Current frame 8
+    SpriteFrame(-32, -32, 64, 32, 61, 178)      // #13 - Current frame 9
+    SpriteFrame(-32, -32, 64, 32, 191, 178)     // #14 - Current frame 10
+    SpriteFrame(-32, -32, 64, 32, 191, 211)     // #15 - Current frame 11
+
+    SpriteFrame(-32, 0, 64, 32, 126, 178)       // #16 - Current frame 12
+    SpriteFrame(-32, 0, 64, 32, 61, 178)        // #17 - Current frame 13
+    SpriteFrame(-32, 0, 64, 32, 191, 178)       // #18 - Current frame 14
+    SpriteFrame(-32, 0, 64, 32, 191, 211)       // #19 - Current frame 15
+
+    SpriteFrame(-32, 32, 64, 32, 126, 178)      // #20 - Current frame 16
+    SpriteFrame(-32, 32, 64, 32, 61, 178)       // #21 - Current frame 17
+    SpriteFrame(-32, 32, 64, 32, 191, 178)      // #22 - Current frame 18
+    SpriteFrame(-32, 32, 64, 32, 191, 211)      // #23 - Current frame 19
+
+    foreach (TypeName[Water Burst], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].drawOrder = 4
+        object[arrayPos0].priority = PRIORITY_XBOUNDS
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    temp0  = 0
+    temp0 /= 3
+    temp0 += 8
+    DrawSprite(temp0)
+
+    temp0 += 4
+    DrawSprite(temp0)
+
+    temp0 += 4
+    DrawSprite(temp0)
+
+    temp0 += 4
+    DrawSprite(temp0)
+
+    DrawSprite(0)
+
+    temp0 = 0
+    temp0 += 4
+    DrawSprite(temp0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects3.gif")
+
+    SpriteFrame(-56, -80, 112, 32, 143, 46)     // #0  - Water Burst frame 0
+    SpriteFrame(-56, -80, 112, 32, 143, 79)     // #1  - Water Burst frame 1
+    SpriteFrame(-56, -80, 112, 32, 143, 112)    // #2  - Water Burst frame 2
+    SpriteFrame(-56, -80, 112, 32, 143, 145)    // #3  - Water Burst frame 3
+
+    SpriteFrame(-56, 48, 112, 32, 143, 46)      // #4  - Current frame 0
+    SpriteFrame(-56, 48, 112, 32, 143, 79)      // #5  - Current frame 1
+    SpriteFrame(-56, 48, 112, 32, 143, 112)     // #6  - Current frame 2
+    SpriteFrame(-56, 48, 112, 32, 143, 145)     // #7  - Current frame 3
+
+    SpriteFrame(-32, -64, 64, 32, 126, 178)     // #8  - Current frame 4
+    SpriteFrame(-32, -64, 64, 32, 61, 178)      // #9  - Current frame 5
+    SpriteFrame(-32, -64, 64, 32, 191, 178)     // #10 - Current frame 6
+    SpriteFrame(-32, -64, 64, 32, 191, 211)     // #11 - Current frame 7
+
+    SpriteFrame(-32, -32, 64, 32, 126, 178)     // #12 - Current frame 8
+    SpriteFrame(-32, -32, 64, 32, 61, 178)      // #13 - Current frame 9
+    SpriteFrame(-32, -32, 64, 32, 191, 178)     // #14 - Current frame 10
+    SpriteFrame(-32, -32, 64, 32, 191, 211)     // #15 - Current frame 11
+
+    SpriteFrame(-32, 0, 64, 32, 126, 178)       // #16 - Current frame 12
+    SpriteFrame(-32, 0, 64, 32, 61, 178)        // #17 - Current frame 13
+    SpriteFrame(-32, 0, 64, 32, 191, 178)       // #18 - Current frame 14
+    SpriteFrame(-32, 0, 64, 32, 191, 211)       // #19 - Current frame 15
+
+    SpriteFrame(-32, 32, 64, 32, 126, 178)      // #20 - Current frame 16
+    SpriteFrame(-32, 32, 64, 32, 61, 178)       // #21 - Current frame 17
+    SpriteFrame(-32, 32, 64, 32, 191, 178)      // #22 - Current frame 18
+    SpriteFrame(-32, 32, 64, 32, 191, 211)      // #23 - Current frame 19
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

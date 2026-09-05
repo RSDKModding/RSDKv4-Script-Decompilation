@@ -1,0 +1,144 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Warp Star Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.randFadeTimer
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// States
+private alias 0 : WARPSTAR_SPAWN
+private alias 1 : WARPSTAR_FADE_OUT
+private alias 2 : WARPSTAR_CUTSCENE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case WARPSTAR_SPAWN
+        warp.count++
+        if warp.count > 2
+            warp.count = 0
+        end if
+
+        object.timer--
+        if object.timer < 1
+            if warp.timer > 0
+                warp.frame = object.frame
+
+                object.state     = WARPSTAR_FADE_OUT
+                object.inkEffect = INK_ALPHA
+                object.alpha     = 255
+                CreateTempObject(TypeName[Warp Star], 0, player[SLOT_PLAYER1].xpos, player[SLOT_PLAYER1].ypos)
+
+                if object.speed < 0
+                    object[tempObjectPos].timer = object.speed
+                    FlipSign(object[tempObjectPos].timer)
+                else
+                    object[tempObjectPos].timer = object.speed
+                end if
+
+                object[tempObjectPos].timer >>= 19
+                object[tempObjectPos].timer += 7
+                object[tempObjectPos].drawOrder = 4
+                object[tempObjectPos].frame = object.frame
+            else
+                object.type = TypeName[Blank Object]
+            end if
+        else
+            if warp.timer == 0
+                object.type = TypeName[Blank Object]
+            end if
+        end if
+        break
+
+    case WARPSTAR_FADE_OUT
+        object.timer++
+        object.alpha -= 8
+        if object.timer == 16
+            object.type = TypeName[Blank Object]
+        end if
+        break
+
+    case WARPSTAR_CUTSCENE
+        object.yvel += 0x3000
+        object.ypos += object.yvel
+        object.timer++
+        if object.timer == object.randFadeTimer
+            object.type = TypeName[Blank Object]
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case 0
+        if warp.timer > 0
+            DrawSprite(object.frame)
+        end if
+
+        object.frame++
+        object.frame &= 3
+        break
+
+    case 1
+        if warp.count != 2
+            if warp.timer > 0
+                DrawSpriteFX(warp.frame, FX_INK, object.xpos, object.ypos)
+            end if
+        end if
+        break
+
+    case 2
+        temp0 = object.frame
+        temp0 >>= 1
+        DrawSprite(temp0)
+
+        object.frame++
+        object.frame &= 7
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items3.gif")
+
+    SpriteFrame(-16, -16, 32, 32, 50, 133)	// #0 - Warp Star Frame 0
+    SpriteFrame(-16, -16, 32, 32, 50, 166)	// #1 - Warp Star Frame 1
+    SpriteFrame(-24, -24, 48, 48, 1, 197)	// #2 - Warp Star Frame 2
+    SpriteFrame(-16, -16, 32, 32, 50, 199)	// #3 - Warp Star Frame 3
+    SpriteFrame(-12, -12, 24, 24, 148, 152)	// #4 - Warp Star Frame 4
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items3.gif")
+    SpriteFrame(-16, -16, 32, 32, 50, 133)	// #0 - Warp Star Frame 0
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

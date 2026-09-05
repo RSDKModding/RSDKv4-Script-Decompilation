@@ -1,0 +1,296 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Time Warp Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.timer
+private alias object.value7 : object.currentPeriod
+
+// Player Aliases
+private alias object.xpos          : player.xpos
+private alias object.ypos          : player.ypos
+private alias object.xvel          : player.xvel
+private alias object.yvel          : player.yvel
+private alias object.speed         : player.speed
+private alias object.collisionMode : player.collisionMode
+private alias object.controlMode   : player.controlMode
+private alias object.gravity       : player.gravity
+private alias object.state         : player.state
+private alias object.visible       : player.visible
+private alias object.animation     : player.animation
+private alias object.frame         : player.frame
+private alias object.angle         : player.angle
+private alias object.value0        : player.rings
+private alias object.value7        : player.invincibleTimer
+private alias object.value17       : player.minRollSpeed
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : TIMEWARP_SETUP
+private alias 1 : TIMEWARP_FADE_IN
+private alias 2 : TIMEWARP_BACKGROUND
+private alias 3 : TIMEWARP_BLANK
+private alias 4 : TIMEWARP_LEAVING
+private alias 5 : TIMEWARP_TRAVEL
+
+// Warp Destination
+private alias 1 : WARPDEST_PAST
+
+// Next Time Period
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+    switch object.state
+    case TIMEWARP_SETUP
+        if object.timer < 320
+            if object.timer == 0
+                warp.xpos          = player[SLOT_PLAYER1].xpos
+                warp.ypos          = player[SLOT_PLAYER1].ypos
+                warp.xvel          = player[SLOT_PLAYER1].xvel
+                warp.yvel          = player[SLOT_PLAYER1].yvel
+                warp.speed         = player[SLOT_PLAYER1].speed
+                warp.collisionMode = player[SLOT_PLAYER1].collisionMode
+                warp.minRollSpeed  = player[SLOT_PLAYER1].minRollSpeed
+                warp.gravity       = player[SLOT_PLAYER1].gravity
+
+                if player[SLOT_PLAYER1].state == Player_State_Static
+                    warp.state = Player_State_Air
+                else
+                    if player[SLOT_PLAYER1].state == Player_State_SpinningTop
+                        warp.state = Player_State_Air
+                    else
+                        if player[SLOT_PLAYER1].state == Player_State_WaterCurrent
+                            warp.state = Player_State_Air
+                        else
+                            warp.state = player[SLOT_PLAYER1].state
+                        end if
+                    end if
+                end if
+
+                warp.animation   = player[SLOT_PLAYER1].animation
+                warp.angle       = player[SLOT_PLAYER1].angle
+                warp.playerFrame = player[SLOT_PLAYER1].frame
+
+                player[SLOT_PLAYER1].invincibleTimer = 1000
+                player[SLOT_PLAYER1].controlMode     = CONTROLMODE_NONE
+                player[SLOT_PLAYER1].visible         = false
+            end if
+
+            music.volume -= 8
+            SetScreenFade(208, 255, 224, object.timer)
+            object.timer += 10
+        else
+            // 88 Miles per Hour unlock criteria
+            if stage.playerListPos == PLAYER_SONIC_A
+                if stage.debugMode == false
+                    // (unused)
+                end if
+            end if
+
+            StopSfx(SfxName[Flying])
+            StopSfx(SfxName[Tired])
+
+            stage.state       = STAGE_RUNNING
+            stage.timeEnabled = false
+
+            // Saves everything
+            CallFunction(StageSetup_SaveStageState)
+
+            recMilliSeconds = stage.milliSeconds
+            recSeconds      = stage.seconds
+            recMinutes      = stage.minutes
+
+            warp.rings = player[SLOT_PLAYER1].rings
+            temp2      = HUD.currentTimePeriod
+
+            // Sets every object as a blank object in the current period
+            // (likely to avoid the player's death during the cutscene)
+            temp0 = 0
+            while temp0 < 1184
+                ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
+                temp0++
+            loop
+
+            // Blanks the level layers
+            screen.xoffset = 0
+            screen.yoffset = 0
+            stage[0].activeLayer = 9
+            stage[1].activeLayer = 9
+            stage[2].activeLayer = 9
+            stage[3].activeLayer = 9
+            arrayPos0 = 0
+
+            // Sets the fade in
+            object[arrayPos0].type          = TypeName[Time Warp]
+            object[arrayPos0].state         = TIMEWARP_FADE_IN
+            object[arrayPos0].timer         = 320
+            object[arrayPos0].currentPeriod = temp2
+            arrayPos0++
+
+            // Creates the background
+            temp0 = -32
+            while temp0 < 256
+                temp1 = 0
+                while temp1 < screen.xsize
+                    object[arrayPos0].type  = TypeName[Time Warp]
+                    object[arrayPos0].state = TIMEWARP_BACKGROUND
+                    Rand(object[arrayPos0].frame, 27)
+                    object[arrayPos0].frame >>= 2
+                    object[arrayPos0].frame <<= 2
+                    object[arrayPos0].ixpos = temp1
+                    object[arrayPos0].iypos = temp0
+                    object[arrayPos0].ixpos += 16
+                    object[arrayPos0].iypos += 16
+                    Rand(object[arrayPos0].direction, 15)
+                    object[arrayPos0].direction >>= 2
+                    arrayPos0++
+                    temp1 += 32
+                loop
+                temp0 += 32
+            loop
+
+            // And of course, the star of the show appears
+            object[arrayPos0].type  = TypeName[Warp Sonic]
+            object[arrayPos0].ixpos = screen.xcenter
+            object[arrayPos0].iypos = 480
+
+            SetScreenFade(208, 255, 224, 255)
+
+            PlaySfx(SfxName[Time Warp], false)
+        end if
+        break
+
+    case TIMEWARP_FADE_IN
+        if object.timer > 0
+            SetScreenFade(208, 255, 224, object.timer)
+            object.timer -= 10
+        else
+            object.state = TIMEWARP_BLANK
+        end if
+        break
+
+    case TIMEWARP_BACKGROUND
+        temp0 = object.frame
+        temp0 >>= 1
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+        object.frame++
+        if object.frame == 28
+            object.frame = 0
+        end if
+
+        object.ypos += 0x40000
+        if object.ypos >= 0x1000000
+            object.ypos -= 0x1200000
+        end if
+        break
+
+    case TIMEWARP_BLANK
+        break
+
+    case TIMEWARP_LEAVING
+        object.timer++
+        if object.timer == 40
+            object.timer = 0
+            object.state = TIMEWARP_TRAVEL
+        end if
+        break
+
+    case TIMEWARP_TRAVEL
+        if object.timer < 1800
+            SetScreenFade(208, 255, 224, object.timer)
+            object.timer += 10
+        else
+            SetScreenFade(208, 255, 224, 255)
+            switch object.currentPeriod
+            case TIME_PRESENT
+                if warp.destination == WARPDEST_PAST
+                    stage.listPos++
+                else
+                    if generator.destroyed == true
+                        stage.listPos += 2
+                    else
+                        stage.listPos += 3
+                    end if
+                end if
+                break
+
+            case TIME_PAST
+                stage.listPos--
+                break
+
+            case TIME_GOOD_FUTURE
+                stage.listPos -= 2
+                break
+
+            case TIME_BAD_FUTURE
+                stage.listPos -= 3
+                break
+
+            end switch
+
+            fadeColor = 208
+            fadeColor <<= 16
+            temp0 = 255
+            temp0 <<= 8
+            fadeColor += temp0
+            fadeColor += 224
+
+            LoadStage()
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items3.gif")
+
+    SpriteFrame(-16, -16, 32, 32, 83, 0)	// #0  - Time Travel BG Chunk 0
+    SpriteFrame(-16, -16, 32, 32, 83, 32)	// #1  - Time Travel BG Chunk 1
+    SpriteFrame(-16, -16, 32, 32, 83, 64)	// #2  - Time Travel BG Chunk 2
+    SpriteFrame(-16, -16, 32, 32, 83, 96)	// #3  - Time Travel BG Chunk 3
+    SpriteFrame(-16, -16, 32, 32, 83, 128)	// #4  - Time Travel BG Chunk 4
+    SpriteFrame(-16, -16, 32, 32, 83, 160)	// #5  - Time Travel BG Chunk 5
+    SpriteFrame(-16, -16, 32, 32, 83, 192)	// #6  - Time Travel BG Chunk 6
+    SpriteFrame(-16, -16, 32, 32, 83, 224)	// #7  - Time Travel BG Chunk 7
+    SpriteFrame(-16, -16, 32, 32, 115, 0)	// #8  - Time Travel BG Chunk 8
+    SpriteFrame(-16, -16, 32, 32, 115, 32)	// #9  - Time Travel BG Chunk 9
+    SpriteFrame(-16, -16, 32, 32, 115, 64)	// #10 - Time Travel BG Chunk 10
+    SpriteFrame(-16, -16, 32, 32, 115, 96)	// #11 - Time Travel BG Chunk 11
+    SpriteFrame(-16, -16, 32, 32, 115, 128)	// #12 - Time Travel BG Chunk 12
+    SpriteFrame(-16, -16, 32, 32, 115, 160)	// #13 - Time Travel BG Chunk 13
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items3.gif")
+    SpriteFrame(-16, -16, 32, 32, 83, 0)	// #0  - Time Travel BG Chunk 0
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

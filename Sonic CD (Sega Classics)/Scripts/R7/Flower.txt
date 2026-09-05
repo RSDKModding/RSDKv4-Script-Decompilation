@@ -1,0 +1,187 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Flower Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// States
+private alias 0 : FLOWER_SEED_SPAWN
+private alias 1 : FLOWER_SEED_FALL
+private alias 2 : FLOWER_SEED_PLANTED_1
+private alias 3 : FLOWER_SEED_PLANTED_2
+private alias 4 : FLOWER_SEED_PLANTED_3
+private alias 5 : FLOWER_ROOT_GROWTH_1
+private alias 6 : FLOWER_ROOT_GROWTH_2
+private alias 7 : FLOWER_ROOT_GROWTH_3
+private alias 8 : FLOWER_ANIM_2
+private alias 9 : FLOWER_ANIM_3
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case FLOWER_SEED_SPAWN
+        // Hover as a seed for a brief moment
+        
+        // Frame 8 is the invisible frame
+        object.frame = 8
+        object.timer++
+        if object.timer == 20
+            object.timer = 0
+            object.state++
+        end if
+        break
+
+    case FLOWER_SEED_FALL
+        object.frame = object.timer
+        object.frame >>= 2
+
+        object.timer++
+        object.timer &= 7
+
+        // Fall at a graceful speed of 2 pixels per frame
+        object.ypos += 0x20000
+
+        // Check if the Flower has touched the ground
+        ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+        if checkResult == true
+            // If it has, then turn it into a full-on Flower
+            
+            // First, move the seed 8 pixels down since Flowers' offsets are further than that of seeds
+            object.ypos += 0x80000
+
+            object.state++
+            object.timer = 0
+            object.frame = 2
+        end if
+        break
+
+    // All the growth animation frames are their own mini-state, just about the same thing
+
+    case FLOWER_SEED_PLANTED_1
+        object.timer++
+        if object.timer == 4
+            object.timer = 0
+            object.state++
+            object.frame = 3
+        end if
+        break
+
+    case FLOWER_SEED_PLANTED_2
+        object.timer++
+        if object.timer == 4
+            object.timer = 0
+            object.state++
+            object.frame = 2
+        end if
+        break
+        
+    case FLOWER_SEED_PLANTED_3
+        object.timer++
+        if object.timer == 4
+            object.timer = 0
+            object.state++
+            object.frame = 3
+        end if
+        break
+
+    case FLOWER_ROOT_GROWTH_1
+        object.timer++
+        if object.timer == 5
+            object.timer = 0
+            object.state++
+            object.frame = 4
+        end if
+        break
+
+    case FLOWER_ROOT_GROWTH_2
+        object.timer++
+        if object.timer == 4
+            object.timer = 0
+            object.state++
+            object.frame = 5
+        end if
+        break
+
+    case FLOWER_ROOT_GROWTH_3
+        object.timer++
+        if object.timer == 2
+            object.timer = 0
+            object.state++
+            object.frame = 6
+        end if
+        break
+
+    // Similarly, the main flower animation is also comprised of two near-identical states
+
+    case FLOWER_ANIM_2
+        object.timer++
+        if object.timer == 20
+            object.timer = 0
+            object.state++
+            object.frame = 7
+        end if
+        break
+
+    case FLOWER_ANIM_3
+        object.timer++
+        if object.timer == 20
+            object.timer = 0
+            object.state--
+            object.frame = 6
+        end if
+        break
+
+    end switch
+end event
+
+
+event ObjectDraw
+    DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R7/Objects2.gif")
+    
+    SpriteFrame(-4, -8, 8, 16, 26, 170)     // #0 - Seed Frame 0
+    SpriteFrame(-4, -8, 8, 16, 35, 170)     // #1 - Seed Frame 1
+    
+    SpriteFrame(-8, -8, 16, 16, 44, 170)    // #2 - Planted Seed Frame 0
+    SpriteFrame(-8, -8, 16, 16, 26, 187)    // #3 - Planted Seed Frame 1
+    
+    SpriteFrame(0, -8, 8, 16, 66, 99)       // #4 - Flower Growth Frame 0
+    SpriteFrame(-12, -24, 24, 24, 66, 25)   // #5 - Flower Growth Frame 1
+    
+    SpriteFrame(-12, -48, 24, 48, 66, 1)    // #6 - Flower Frame 0
+    SpriteFrame(-12, -48, 24, 48, 66, 50)   // #7 - Flower Frame 1
+    
+    SpriteFrame(0, 0, 0, 0, 73, 132)        // #8 - Cheat Sprite, blank frame
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects2.gif")
+	SpriteFrame(-12, -48, 24, 48, 66, 1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

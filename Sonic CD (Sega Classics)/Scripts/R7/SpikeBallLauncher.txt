@@ -1,0 +1,306 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Spike Launcher Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Position is an offset relative to the base Spike Launcher Object, in world-space
+private alias object.value1 : object.spikeBallPosition
+private alias object.value2 : object.spikeBallVelocity
+
+// States
+private alias 0	: SPIKELAUNCHER_INIT
+private alias 1	: SPIKELAUNCHER_RAISING
+private alias 2	: SPIKELAUNCHER_PAUSE
+private alias 3	: SPIKELAUNCHER_THROWN
+private alias 4	: SPIKELAUNCHER_CATCHING
+
+// Property Values
+private alias 0	: LAUNCH_DIR_UP
+private alias 1	: LAUNCH_DIR_DOWN
+private alias 2	: LAUNCH_DIR_LEFT
+private alias 3	: LAUNCH_DIR_RIGHT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case SPIKELAUNCHER_INIT
+		// Set the object to always be active
+		object.priority = PRIORITY_ACTIVE
+
+		// Give it a bit of time before starting the object's main routine proper
+		if object.timer < 150
+			object.timer++
+		else
+			object.timer = 0
+			object.spikeBallPosition = 0
+			object.state++
+		end if
+		break
+
+	case SPIKELAUNCHER_RAISING
+		// Start by poking the Spike Ball out of the Launcher's face, half a pixel per frame at a time
+		if object.timer < 32
+			object.timer++
+			object.spikeBallPosition -= 0x8000
+		else
+			object.timer = 0
+			object.state++
+		end if
+		break
+
+	case SPIKELAUNCHER_PAUSE
+		// Now, pause for a moment before shooting the Spike Ball away
+		if object.timer < 30
+			object.timer++
+		else
+			object.timer = 0
+
+			// Initial velocity of 6 pixels per frame
+			object.spikeBallVelocity = -0x60000
+
+			object.state++
+		end if
+		break
+
+	case SPIKELAUNCHER_THROWN
+		if object.spikeBallPosition < 0
+			// Apply a gravity of 0.25 pixels to the Spike Ball every frame
+			object.spikeBallVelocity += 0x4000
+
+			// And then actually add the Velocity to the Spike Ball's position
+			object.spikeBallPosition += object.spikeBallVelocity
+		else
+			object.state++
+		end if
+		break
+
+	case SPIKELAUNCHER_CATCHING
+		if object.timer < 40
+			object.timer++
+		else
+			object.timer = 0
+			object.spikeBallPosition = 0
+			object.state = SPIKELAUNCHER_RAISING
+		end if
+		break
+
+	end switch
+
+	if object.outOfBounds == true
+		// Reset the object and give it normal priority
+		object.state = SPIKELAUNCHER_INIT
+		object.timer = 0
+		object.priority = PRIORITY_BOUNDS
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Only check for Spike Ball collisions if it's a state where the Spike ball is actually visible
+		switch object.state
+		case SPIKELAUNCHER_RAISING
+		case SPIKELAUNCHER_PAUSE
+		case SPIKELAUNCHER_THROWN
+			// First, backup the base object's position
+			temp0 = object.xpos
+			temp1 = object.ypos
+
+			// Then, add the corresponding offset based on the Spike Ball's position
+			switch object.propertyValue
+			case LAUNCH_DIR_UP
+				// Upwards
+				object.ypos += object.spikeBallPosition
+				break
+
+			case LAUNCH_DIR_DOWN
+				// Downwards
+				object.ypos -= object.spikeBallPosition
+				break
+
+			case LAUNCH_DIR_LEFT
+				// Left
+				object.xpos += object.spikeBallPosition
+				break
+
+			case LAUNCH_DIR_RIGHT
+				// Right
+				object.xpos -= object.spikeBallPosition
+				break
+
+			end switch
+
+			// Check collision with the player & hurt them if needed
+			BoxCollisionTest(C_TOUCH, object.entityPos, -12, -12, 12, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				CallFunction(Player_Hit)
+			end if
+
+			// Restore the object's base position
+			object.xpos = temp0
+			object.ypos = temp1
+
+			// No break is used here, although it doesn't matter too much anyway since there's nothing afterwards
+		end switch
+	next
+end event
+
+
+event ObjectDraw
+	if object.drawOrder == 3
+		// Drawing the Spike Ball...
+		switch object.state
+		case SPIKELAUNCHER_RAISING
+		case SPIKELAUNCHER_PAUSE
+		case SPIKELAUNCHER_THROWN
+			switch object.propertyValue
+			case LAUNCH_DIR_UP
+				// Upwards
+				temp0 = object.ypos
+				temp0 += object.spikeBallPosition
+				DrawSpriteXY(4, object.xpos, temp0)
+				break
+
+			case LAUNCH_DIR_DOWN
+				// Downwards
+				temp0 = object.ypos
+				temp0 -= object.spikeBallPosition
+				DrawSpriteXY(4, object.xpos, temp0)
+				break
+
+			case LAUNCH_DIR_LEFT
+				// Facing left
+				temp0 = object.xpos
+				temp0 += object.spikeBallPosition
+				DrawSpriteXY(4, temp0, object.ypos)
+				break
+
+			case LAUNCH_DIR_RIGHT
+				// Facing right
+				temp0 = object.xpos
+				temp0 -= object.spikeBallPosition
+				DrawSpriteXY(4, temp0, object.ypos)
+				break
+
+			end switch // object.propertyValue
+		end switch // object.state
+
+		// Add the Object to Draw List 4 so that its other half can draw above the Spike Ball
+		SetDrawListEntityRef(object.entityPos, 4, screen[4].drawListSize)
+		screen[4].drawListSize++
+		object.drawOrder = 4
+	else
+		// Drawing the Spike Ball Launcher itself...
+
+		// The object's direction is stored in its Property Value, which also happens to align with the correct Sprite Frames
+		DrawSprite(object.propertyValue)
+
+		// Reset the object's Draw Order back to 3 so that this whole process can be done again next frame
+		object.drawOrder = 3
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	SpriteFrame(-16, -16, 32, 16, 133, 1) // #0 - Upwards Launcher Frame
+	SpriteFrame(-16, 0, 32, 16, 166, 1)   // #1 - Downwards Launcher Frame
+	SpriteFrame(-16, -16, 16, 32, 1, 166) // #2 - Left-facing Launcher Frame
+	SpriteFrame(0, -16, 16, 32, 17, 166)  // #3 - Right-facing Launcher Frame
+	SpriteFrame(-16, -16, 32, 32, 1, 199) // #4 - Spike Ball Frame
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Direction
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Direction
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(4)
+	DrawSprite(object.propertyValue)
+
+	if editor.showGizmos == true
+		editor.drawingOverlay = true
+
+		temp0 = object.xpos
+		temp1 = object.ypos
+
+		switch object.propertyValue
+		case 0
+		default
+			temp1 -= 0x300000
+			break
+
+		case 1
+			temp1 += 0x300000
+			break
+
+		case 2
+			temp0 -= 0x300000
+			break
+
+		case 3
+			temp0 += 0x300000
+			break
+
+		end switch
+
+		DrawArrow(object.xpos, object.ypos, temp0, temp1, 255, 255, 255)
+
+		editor.drawingOverlay = false
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-16, -16, 32, 16, 133, 1)
+	SpriteFrame(-16, 0, 32, 16, 166, 1)
+	SpriteFrame(-16, -16, 16, 32, 1, 166)
+	SpriteFrame(0, -16, 16, 32, 17, 166)
+	SpriteFrame(-16, -16, 32, 32, 1, 199)
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Down", 1)
+	AddEnumVariable("Left", 2)
+	AddEnumVariable("Right", 3)
+end event

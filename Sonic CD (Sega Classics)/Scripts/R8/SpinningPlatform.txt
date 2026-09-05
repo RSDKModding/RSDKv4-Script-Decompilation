@@ -1,0 +1,117 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: SpinningPlatform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.propertyValue : object.spinOffset
+
+// R8 Setup Aliases
+private alias object[21].rotation : R8Setup.rotation
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// All Spinning Platforms are synced together, via the Object in slot 19 which
+	// should be the R8 Setup Object
+	object.rotation = R8Setup.rotation
+
+	// And then bump that rotation as needed
+	object.rotation += object.spinOffset
+
+	// Keep the rotation limited to 143, as with the R8 Setup's rotation value as well
+	object.rotation %= 144
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// Only check for Collision when the Platform is in its normal position
+		if object.rotation < 121
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -5, 16, 11, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	if object.rotation < 121
+		// Draw the normal Platform frame
+		DrawSprite(0)
+	else
+		// Use different drawing routines for the Platform's different possible angles
+		temp0 = object.rotation
+		temp0 -= 120
+		temp0 >>= 1
+
+		switch temp0
+		case 0
+		case 6
+			DrawSprite(1)
+			break
+
+		case 1
+		case 7
+			DrawSprite(2)
+			break
+
+		case 2
+		case 8
+			DrawSprite(3)
+			break
+
+		case 3
+		case 9
+			object.direction = FACING_LEFT
+			DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+			break
+
+		case 4
+		case 10
+			object.direction = FACING_LEFT
+			DrawSpriteFX(5, FX_FLIP, object.xpos, object.ypos)
+			break
+
+		case 5
+		case 11
+			DrawSprite(0)
+			break
+
+		end switch
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R8/Objects.gif")
+
+	SpriteFrame(-16, -8, 32, 16, 107, 98)	// #0 - Platform Horizontal
+	SpriteFrame(-16, -12, 32, 24, 107, 115)	// #1 - Platform Tilted frame 0
+	SpriteFrame(-12, -16, 24, 32, 230, 34)	// #2 - Platform Tilted frame 1
+
+	SpriteFrame(-8, -16, 16, 32, 239, 212)	// #3 - Platform Vertical
+	SpriteFrame(-12, -16, 24, 32, 230, 34)	// #4 - Platform Tilted frame 0
+	SpriteFrame(-16, -12, 32, 24, 107, 115)	// #5 - Platform Tilted frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 107, 98)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "spinOffset")
+end event

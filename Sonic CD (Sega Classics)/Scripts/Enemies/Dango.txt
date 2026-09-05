@@ -1,0 +1,666 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Dango Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.originPos.x
+private alias object.value2        : object.originPos.y
+private alias object.value3        : object.chaseChain
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.xvel      : player.xvel
+private alias object.yvel      : player.yvel
+private alias object.speed     : player.speed
+private alias object.gravity   : player.gravity
+private alias object.animation : player.animation
+private alias object.value39   : player.hitboxTop
+private alias object.value40   : player.hitboxBottom
+private alias object.value41   : player.hitboxLeft
+private alias object.value42   : player.hitboxRight
+private alias object.value16   : debugMode.currentSelection
+
+// States
+private alias 0 : DANGO_WALK
+private alias 1 : DANGO_CURL1
+private alias 2 : DANGO_CURL2
+private alias 3 : DANGO_CHARGEROLL
+private alias 4 : DANGO_ROLLING
+private alias 5 : DANGO_UNCURL1
+private alias 6 : DANGO_UNCURL2
+private alias 7 : DANGO_UNCURLED
+private alias 8 : DANGO_OFFSCREEN // Unused
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Dango_DebugDraw
+reserve function Dango_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Dango_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Dango_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Dango_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function Dango_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Dango_startDebugID
+    CreateTempObject(TypeName[Dango], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case DANGO_WALK
+            object.priority = PRIORITY_ACTIVE
+
+            object.frame = object.timer
+            object.frame /= 10
+
+            object.timer++
+            object.timer %= 20
+
+            object.xpos += object.xvel
+            if object.direction == FACING_RIGHT
+                ObjectTileGrip(CSIDE_FLOOR, -5, 15, 0)
+            else
+                ObjectTileGrip(CSIDE_FLOOR, 5, 15, 0)
+            end if
+
+            if checkResult == false
+                FlipSign(object.xvel)
+                object.direction++
+                object.direction &= FACING_LEFT
+                object.chaseChain = 0
+            else
+                if object.xvel > 0
+                    ObjectTileCollision(CSIDE_LWALL, 16, 8, 0)
+                    if checkResult == true
+                        FlipSign(object.xvel)
+                        object.direction++
+                        object.direction &= FACING_LEFT
+                        object.chaseChain = 0
+                    end if
+                else
+                    ObjectTileCollision(CSIDE_RWALL, -16, 8, 0)
+                    if checkResult == true
+                        FlipSign(object.xvel)
+                        object.direction++
+                        object.direction &= FACING_LEFT
+                        object.chaseChain = 0
+                    end if
+                end if
+            end if
+            break
+
+        case DANGO_CURL1
+            object.frame = 4
+            if object.timer < 8
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case DANGO_CURL2
+            object.frame = 5
+            if object.timer < 6
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case DANGO_CHARGEROLL
+            object.frame = object.animationTimer
+            object.frame /= 5
+            object.frame += 6
+
+            object.animationTimer++
+            object.animationTimer %= 10
+
+            if object.timer < 34
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+                if object.direction == FACING_RIGHT
+                    object.xvel = -0x40000
+                else
+                    object.xvel = 0x40000
+                end if
+            end if
+            break
+
+        case DANGO_ROLLING
+            object.frame = object.animationTimer
+            object.frame /= 5
+            object.frame += 6
+
+            object.animationTimer++
+            object.animationTimer %= 10
+
+            object.xpos += object.xvel
+            if object.direction == FACING_RIGHT
+                ObjectTileGrip(CSIDE_FLOOR, -5, 15, 0)
+            else
+                ObjectTileGrip(CSIDE_FLOOR, 5, 15, 0)
+            end if
+
+            if checkResult == false
+                object.state++
+                object.chaseChain++
+            else
+                if object.xvel > 0
+                    ObjectTileCollision(CSIDE_LWALL, 16, 8, 0)
+                    if checkResult == true
+                        object.state++
+                        object.chaseChain++
+                    end if
+                else
+                    ObjectTileCollision(CSIDE_RWALL, -16, 8, 0)
+                    if checkResult == true
+                        object.state++
+                        object.chaseChain++
+                    end if
+                end if
+            end if
+            break
+
+        case DANGO_UNCURL1
+            object.frame = 5
+            if object.timer < 6
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case DANGO_UNCURL2
+            object.frame = 4
+            if object.timer < 8
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case DANGO_UNCURLED
+            object.frame = 0
+            if object.timer < 16
+                object.timer++
+            else
+                object.timer = 0
+                object.state = DANGO_WALK
+                if object.chaseChain > 7
+                    // Tried going in the same direction 8 times now...
+                    // Even if the player's the other way, go ahead and change directions
+                    object.direction++
+                    object.direction &= FACING_LEFT
+                    object.chaseChain = 0
+                end if
+
+                if object.direction == FACING_RIGHT
+                    object.xvel = -0x6000
+                else
+                    object.xvel = 0x6000
+                end if
+            end if
+            break
+
+        case DANGO_OFFSCREEN
+            // This state is unused, but it serves just about the same buffer purpose as it does with other badniks
+            if object.outOfBounds == true
+                object.state = DANGO_WALK
+                object.priority = PRIORITY_BOUNDS
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case DANGO_WALK
+            object.priority = PRIORITY_ACTIVE
+
+            object.frame = object.timer
+            object.frame /= 30
+            object.frame += 2
+
+            object.timer++
+            object.timer %= 60
+
+            object.xpos += object.xvel
+            if object.direction == FACING_RIGHT
+                ObjectTileGrip(CSIDE_FLOOR, -5, 15, 0)
+            else
+                ObjectTileGrip(CSIDE_FLOOR, 5, 15, 0)
+            end if
+
+            if checkResult == false
+                FlipSign(object.xvel)
+                object.direction++
+                object.direction &= FACING_LEFT
+                object.chaseChain = 0
+            else
+                if object.xvel > 0
+                    ObjectTileCollision(CSIDE_LWALL, 16, 8, 0)
+                    if checkResult == true
+                        FlipSign(object.xvel)
+                        object.direction++
+                        object.direction &= FACING_LEFT
+                        object.chaseChain = 0
+                    end if
+                else
+                    ObjectTileCollision(CSIDE_RWALL, -16, 8, 0)
+                    if checkResult == true
+                        FlipSign(object.xvel)
+                        object.direction++
+                        object.direction &= FACING_LEFT
+                        object.chaseChain = 0
+                    end if
+                end if
+            end if
+            break
+
+        case DANGO_CURL1
+            object.frame = 4
+            if object.timer < 20
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case DANGO_CURL2
+            object.frame = 5
+            if object.timer < 12
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case DANGO_CHARGEROLL
+            object.frame = object.animationTimer
+            object.frame /= 10
+            object.frame += 8
+
+            object.animationTimer++
+            object.animationTimer %= 20
+
+            if object.timer < 96
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+                if object.direction == FACING_RIGHT
+                    object.xvel = -0x10000
+                else
+                    object.xvel = 0x10000
+                end if
+            end if
+            break
+
+        case DANGO_ROLLING
+            object.frame = object.animationTimer
+            object.frame /= 10
+            object.frame += 8
+
+            object.animationTimer++
+            object.animationTimer %= 20
+
+            object.xpos += object.xvel
+            if object.direction == FACING_RIGHT
+                ObjectTileGrip(CSIDE_FLOOR, -5, 15, 0)
+            else
+                ObjectTileGrip(CSIDE_FLOOR, 5, 15, 0)
+            end if
+
+            if checkResult == false
+                object.state++
+                object.chaseChain++
+            else
+                if object.xvel > 0
+                    ObjectTileCollision(CSIDE_LWALL, 16, 8, 0)
+                    if checkResult == true
+                        object.state++
+                        object.chaseChain++
+                    end if
+                else
+                    ObjectTileCollision(CSIDE_RWALL, -16, 8, 0)
+                    if checkResult == true
+                        object.state++
+                        object.chaseChain++
+                    end if
+                end if
+            end if
+            break
+
+        case DANGO_UNCURL1
+            object.frame = 5
+            if object.timer < 12
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case DANGO_UNCURL2
+            object.frame = 4
+            if object.timer < 20
+                object.timer++
+            else
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case DANGO_UNCURLED
+            object.frame = 2
+            if object.timer < 64
+                object.timer++
+            else
+                object.timer = 0
+                object.state = DANGO_WALK
+                if object.chaseChain > 7
+                    // Tried going in the same direction 8 times now...
+                    // Even if the player's the other way, go ahead and change directions
+                    object.direction++
+                    object.direction &= FACING_LEFT
+                    object.chaseChain = 0
+                end if
+
+                if object.direction == FACING_LEFT
+                    object.xvel = -0x1000
+                else
+                    object.xvel = 0x1000
+                end if
+            end if
+            break
+
+        case DANGO_OFFSCREEN
+            // This state is unused, but it serves just about the same buffer purpose as it does with other badniks
+            if object.outOfBounds == true
+                object.state = DANGO_WALK
+                object.priority = PRIORITY_BOUNDS
+            end if
+            break
+        end switch
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state == DANGO_WALK
+            // If the Dango's just wandering, then check to see if the player's stepped within activation range
+            if object.direction == FACING_RIGHT
+                BoxCollisionTest(C_TOUCH, object.entityPos, -112, -128, 0, 128, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            else
+                BoxCollisionTest(C_TOUCH, object.entityPos, 0, -128, 112, 128, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            end if
+
+            if checkResult == true
+                // On the attack!
+                object.state = DANGO_CURL1
+            end if
+        end if
+
+        switch object.state
+        case DANGO_WALK
+        case DANGO_CURL1
+        case DANGO_CURL2
+        case DANGO_UNCURL1
+        case DANGO_UNCURL2
+        case DANGO_UNCURLED
+            BoxCollisionTest(C_TOUCH, object.entityPos, -14, -10, 14, 10, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+            if checkResult == true
+                CallFunction(Player_BadnikBreak)
+            end if
+            break
+
+        case DANGO_CHARGEROLL
+            BoxCollisionTest(C_TOUCH, object.entityPos, -14, -10, 14, 10, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
+                temp0 = checkResult
+
+                CheckEqual(player[currentPlayer].animation, ANI_SPINDASH)
+                temp0 |= checkResult
+
+                if temp0 == true
+                    // The player's rolled towards the Dango, so bounce the player back
+                    player[currentPlayer].speed = player[currentPlayer].xpos
+                    player[currentPlayer].speed -= object.xpos
+                    player[currentPlayer].speed >>= 2
+                    player[currentPlayer].xvel = player[currentPlayer].speed
+
+                    // Account for aerial bouncing too if needed
+                    if player[currentPlayer].gravity == GRAVITY_AIR
+                        player[currentPlayer].yvel = player[currentPlayer].ypos
+                        player[currentPlayer].yvel -= object.ypos
+                        player[currentPlayer].yvel >>= 2
+                    end if
+                else
+                    // Hurt the player
+                    // (Note that there are edge cases with Tails where he may end up breaking the Dango with his tails, instead)
+                    CallFunction(Player_BadnikBreak)
+                end if
+            end if
+            break
+
+        case DANGO_ROLLING
+            BoxCollisionTest(C_TOUCH, object.entityPos, -14, -10, 14, 10, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
+                temp0 = checkResult
+
+                CheckEqual(player[currentPlayer].animation, ANI_SPINDASH)
+                temp0 |= checkResult
+
+                if temp0 == true
+                    // The player's rolled towards the Dango, so bounce the player back
+                    object.xvel = player[currentPlayer].xvel
+
+                    player[currentPlayer].speed = player[currentPlayer].xpos
+                    player[currentPlayer].speed -= object.xpos
+                    player[currentPlayer].speed >>= 2
+                    player[currentPlayer].xvel = player[currentPlayer].speed
+
+                    // Account for aerial bouncing too if needed
+                    if player[currentPlayer].gravity == GRAVITY_AIR
+                        player[currentPlayer].yvel = player[currentPlayer].ypos
+                        player[currentPlayer].yvel -= object.ypos
+                        player[currentPlayer].yvel >>= 2
+                    else
+                        // The player is on the ground, make them bounce back rolling
+                        player[currentPlayer].state = Player_State_Roll
+                        player[currentPlayer].animation = ANI_JUMPING
+                    end if
+                else
+                    // Hurt the player
+                    // (Note that there are edge cases with Tails where he may end up breaking the Dango with his tails, instead)
+                    CallFunction(Player_BadnikBreak)
+                end if
+            end if
+            break
+        end switch
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+
+    // See if the Dango is out of bounds
+    if object.outOfBounds == true
+        temp0 = object.xpos
+        temp1 = object.ypos
+
+        object.xpos = object.originPos.x
+        object.ypos = object.originPos.y
+
+        if object.outOfBounds == true
+            // It is, so in that case it's clear to restore the Dango to its original spot
+            object.priority = PRIORITY_BOUNDS
+
+            object.state = DANGO_WALK
+            object.timer = 0
+
+            object.direction  = FACING_RIGHT
+            object.chaseChain = 0
+
+            if object.quality == QUALITY_GOOD
+                object.xvel = -0x6000
+            else
+                object.xvel = -0x1000
+            end if
+        else
+            object.xpos = temp0
+            object.ypos = temp1
+        end if
+    end if
+end event
+
+
+event ObjectDraw
+    if object.state < DANGO_OFFSCREEN
+        DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Dango Frames
+
+	// 0-1 - Idle Animation, "Good" variant
+	SpriteFrame(-16, -7, 32, 24, 116, 121)
+	SpriteFrame(-16, -7, 32, 24, 149, 121)
+
+	// 2-3 - Idle Animation, "Bad" variant (version with the cracked shell frames)
+	SpriteFrame(-16, -7, 32, 24, 116, 146)
+	SpriteFrame(-16, -7, 32, 24, 149, 146)
+
+	// 4-5 - Curl
+	SpriteFrame(-16, -16, 32, 32, 51, 219)
+	SpriteFrame(-16, -16, 32, 32, 84, 219)
+
+	// 6-9 - Rolling Frames
+	SpriteFrame(-16, -15, 32, 32, 51, 186)
+	SpriteFrame(-16, -15, 32, 32, 117, 186)
+	SpriteFrame(-16, -16, 32, 32, 84, 186)
+	SpriteFrame(-16, -15, 32, 32, 51, 186)
+
+    // Cycle through the level and find all Dango objects
+    foreach (TypeName[Dango], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+
+        if object[arrayPos0].quality == QUALITY_GOOD
+            object[arrayPos0].xvel = -0x6000
+        else
+            object[arrayPos0].xvel = -0x1000
+        end if
+    next
+
+    temp0 = 0
+    Dango_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Dango], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Dango_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Dango_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+
+	SpriteFrame(-16, -7, 32, 24, 116, 121)  // #0 - Idle, Good quality
+	SpriteFrame(-16, -7, 32, 24, 116, 146)  // #1 - Idle, Bad quality
+
+	AddEditorVariable("condition")
+	SetActiveVariable("condition")
+	AddEnumVariable("Good Quality", QUALITY_GOOD)
+	AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

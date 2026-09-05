@@ -1,0 +1,338 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Character Spawn Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.spawnList
+private alias object.value2 : object.spawnType
+
+// Blue Bird/Slow Bird Alias
+private alias object.propertyValue : object.angleSpeed
+
+// Spawn List
+// 0		- Blue Bird
+// 1, 4, 10	- Tornado
+// 2, 5, 9	- Blue Bird/Shooting Star
+// 3, 8		- Metal Sonic
+// 6, 11	- UFO
+// 7, 12	- Eggman
+
+// States
+private alias 0 : CHARACTERSPAWN_SETUP
+private alias 1 : CHARACTERSPAWN_SPAWNER
+
+// UFO Property Values
+private alias 0 : GREEN_UFO
+private alias 3 : YELLOW_UFO
+
+// Shooting Star Property Values
+private alias 0 : WHITE_STAR
+private alias 6 : GREEN_STAR
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CharacterSpawn_SpawnBlueBird
+reserve function CharacterSpawn_SpawnShootStar
+reserve function CharacterSpawn_SpawnSetup
+
+// ========================
+// Events
+// ========================
+
+public function CharacterSpawn_SpawnBlueBird
+	// Base YPos
+	Rand(temp4, 64)
+	temp4 -= 32
+	temp4 += 120
+
+	temp5 = 0
+	while temp1 > 1
+		// Random XPos
+		Rand(temp2, 64)
+		temp2 -= 32
+		temp2 += temp0
+		temp2 <<= 16
+
+		// Random YPos
+		Rand(temp3, 96)
+		temp3 -= 48
+		temp3 += temp4
+		temp3 <<= 16
+
+		CreateTempObject(TypeName[Blue Bird], 0, temp2, temp3)
+
+		if temp0 < screen.xcenter
+			object[tempObjectPos].direction = FACING_RIGHT
+		else
+			object[tempObjectPos].direction = FACING_LEFT
+		end if
+
+		// Set the base angle value
+		object[tempObjectPos].angle = temp5
+		temp5 += 8
+
+		// Set the angle increment value
+		Rand(object[tempObjectPos].angleSpeed, 10)
+		object[tempObjectPos].angleSpeed += 3
+		temp1--
+	loop
+
+	// Spawn one slower blue bird
+	// Random XPos
+	Rand(temp2, 64)
+	temp2 -= 32
+	temp2 += temp0
+	temp2 <<= 16
+
+	// Random YPos
+	Rand(temp3, 96)
+	temp3 -= 48
+	temp3 += temp4
+	temp3 <<= 16
+
+	CreateTempObject(TypeName[Slow Bird], 0, temp2, temp3)
+
+	if temp0 < screen.xcenter
+		object[tempObjectPos].direction = FACING_RIGHT
+	else
+		object[tempObjectPos].direction = FACING_LEFT
+	end if
+
+	// Set the base angle value
+	object[tempObjectPos].angle = temp5
+	temp5 += 8
+
+	// Set the angle increment value
+	Rand(object[tempObjectPos].angleSpeed, 10)
+	object[tempObjectPos].angleSpeed += 3
+	temp1--
+end function
+
+
+public function CharacterSpawn_SpawnShootStar
+	while temp1 > 0
+		// Random XPos
+		Rand(temp2, 256)
+		temp2 -= 64
+		temp2 += screen.xcenter
+		temp2 <<= 16
+
+		// Random YPos
+		Rand(temp3, 80)
+		temp3 -= 96
+		temp3 <<= 16
+
+		// Define the color of the shooting star
+		Rand(temp4, 10)
+		if temp4 > 5
+			CreateTempObject(TypeName[Shooting Star], GREEN_STAR, temp2, temp3)
+		else
+			CreateTempObject(TypeName[Shooting Star], WHITE_STAR, temp2, temp3)
+		end if
+		temp1--
+	loop
+end function
+
+
+public function CharacterSpawn_SpawnSetup
+	switch object.spawnList
+	case 0
+		// Set Base XPos
+		temp0 = screen.xsize
+		temp0 += 96
+		temp1 = 8
+		CallFunction(CharacterSpawn_SpawnBlueBird)
+		object.spawnList++
+		break
+
+	case 1
+		// Set Base XPos
+		temp0 = screen.xsize
+		temp0 += 48
+		temp0 <<= 16
+		CreateTempObject(TypeName[Tails Biplane], 0, temp0, object.ypos)
+		object[tempObjectPos].direction = FACING_LEFT
+		object.spawnList++
+		break
+
+	case 2
+		if object.spawnType == 0
+			// Set Base XPos
+			temp0 = 0
+			temp0 -= 96
+			temp1 = 6
+			CallFunction(CharacterSpawn_SpawnBlueBird)
+		else
+			temp1 = 3 // Set the amount of stars to spawn
+			CallFunction(CharacterSpawn_SpawnShootStar)
+		end if
+		object.spawnList++
+		break
+
+	case 3
+		// Set XPos
+		Rand(temp0, 320)
+		temp0 -= 160
+		temp0 += screen.xcenter
+		temp0 <<= 16
+
+		// Determine if spawns from the top or bottom of the screen
+		Rand(temp1, 64)
+		if temp1 > 40
+			CreateTempObject(TypeName[Metal Sonic], 0, temp0, 0x10C0000)
+		else
+			CreateTempObject(TypeName[Metal Sonic], 0, temp0, -0x400000)
+		end if
+		object.spawnList++
+		break
+
+	case 4
+		CreateTempObject(TypeName[Tails Biplane], 0, object.xpos, object.ypos)
+		object.spawnList++
+		break
+
+	case 5
+		if object.spawnType == 0
+			// Set Base XPos
+			temp0 = 0
+			temp0 -= 96
+			temp1 = 4
+			CallFunction(CharacterSpawn_SpawnBlueBird)
+		else
+			temp1 = 4 // Set the amount of stars to spawn
+			CallFunction(CharacterSpawn_SpawnShootStar)
+		end if
+		object.spawnList++
+		break
+
+	case 6
+		// Set Base XPos
+		temp0 = screen.xsize
+		temp0 += 48
+		temp0 <<= 16
+		CreateTempObject(TypeName[UFO], YELLOW_UFO, temp0, object.ypos)
+		object[tempObjectPos].direction = FACING_LEFT
+		object.spawnList++
+		break
+
+	case 7
+		// Set Base XPos
+		temp0 = screen.xsize
+		temp0 += 48
+		temp0 <<= 16
+		CreateTempObject(TypeName[Dr Eggman], 6, temp0, 0xC00000)
+		object[tempObjectPos].direction = FACING_RIGHT
+		object.spawnList++
+		break
+
+	case 8
+		// Set Base XPos
+		Rand(temp0, 320)
+		temp0 -= 160
+		temp0 += screen.xcenter
+		temp0 <<= 16
+
+		// Determine if spawns from the top or bottom of the screen
+		Rand(temp1, 64)
+		if temp1 > 40
+			CreateTempObject(TypeName[Metal Sonic], 0, temp0, 0x10C0000)
+		else
+			CreateTempObject(TypeName[Metal Sonic], 0, temp0, -0x400000)
+		end if
+		object.spawnList++
+		break
+
+	case 9
+		if object.spawnType == 0
+			// Set Base XPos
+			temp0 = screen.xsize
+			temp0 += 96
+			temp1 = 8
+			CallFunction(CharacterSpawn_SpawnBlueBird)
+		else
+			temp1 = 2 // Set the amount of stars to spawn
+			CallFunction(CharacterSpawn_SpawnShootStar)
+		end if
+		object.spawnList++
+		break
+
+	case 10
+		// Set Base XPos
+		temp0 = screen.xsize
+		temp0 += 48
+		temp0 <<= 16
+		CreateTempObject(TypeName[Tails Biplane], 0, temp0, object.ypos)
+		object[tempObjectPos].direction = FACING_LEFT
+		object.spawnList++
+		break
+
+	case 11
+		CreateTempObject(TypeName[UFO], GREEN_UFO, object.xpos, object.ypos)
+		CreateTempObject(TypeName[UFO], YELLOW_UFO, object.xpos, object.ypos)
+		object.spawnList++
+		break
+
+	case 12
+		// Set Base XPos
+		temp0 = -48
+		temp0 <<= 16
+		CreateTempObject(TypeName[Dr Eggman], 6, temp0, 0xC00000)
+		object[tempObjectPos].direction = FACING_LEFT
+		object.spawnList = 0
+		break
+
+	end switch
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case CHARACTERSPAWN_SETUP
+		CreateTempObject(TypeName[Tails Biplane], 0, object.xpos, object.ypos)
+		object.timer = 380
+		object.state++
+		break
+
+	case CHARACTERSPAWN_SPAWNER
+		if object.timer > 0
+			object.timer--
+		else
+			Rand(object.timer, 480)
+			object.timer += 240
+			CallFunction(CharacterSpawn_SpawnSetup)
+		end if
+		break
+
+	end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)		// #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

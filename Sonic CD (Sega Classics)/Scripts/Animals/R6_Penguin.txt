@@ -1,0 +1,137 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Penguin Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.yvel
+private alias object.value1 : object.hops
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0	: PENGUIN_HOPRIGHT
+private alias 1 : PENGUIN_HOPLEFT
+
+// Time Period
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.ypos += object.yvel
+
+	// Apply a gravity of about 0.17 pixels per frame
+	object.yvel += 0x2C00
+
+	switch object.state
+	case PENGUIN_HOPRIGHT
+		// Move the Penguin a pixel to the right
+		object.xpos += 0x10000
+
+		// Collision is only to be checked when falling faster than 4px a frame
+		if object.yvel > 0x40000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				// Bounce back up, at a starting rate of 5px per frame
+				object.yvel = -0x50000
+
+				object.hops++
+				if object.hops == 2
+					object.hops = 0
+
+					// Turn around
+					object.state     = PENGUIN_HOPLEFT
+					object.direction = FACING_LEFT
+				end if
+			end if
+		end if
+		break
+
+	case PENGUIN_HOPLEFT
+		// Move the Penguin a pixel to the left
+		object.xpos -= 0x10000
+
+		// Collision is only to be checked when falling faster than 4px a frame
+		if object.yvel > 0x40000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				// Bounce back up, at a starting rate of 5px per frame
+				object.yvel = -0x50000
+
+				object.hops++
+				if object.hops == 2
+					object.hops = 0
+
+					// Turn around
+					object.state     = PENGUIN_HOPRIGHT
+					object.direction = FACING_RIGHT
+				end if
+			end if
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	if metalSonic.destroyed == true
+		if object.yvel < 0
+			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		else
+			DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		end if
+	else
+		if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+			if object.yvel < 0
+				DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+			else
+				DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	// Find and setup all Flying Penguin Objects in the Level
+	foreach (TypeName[Penguin], arrayPos0, ALL_ENTITIES)
+		// Start bouncing up, at a rate of 5px per frame
+		object[arrayPos0].yvel = -0x50000
+
+		// Start facing right, to correspond with the starting state of PENGUIN_HOPRIGHT
+		object[arrayPos0].direction = FACING_RIGHT
+	next
+
+	SpriteFrame(-8, -12, 16, 24, 222, 66)
+	SpriteFrame(-8, -12, 16, 24, 239, 66)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+	SpriteFrame(-8, -12, 16, 24, 222, 66)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,439 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Kama Kama Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value3        : object.originPos.x
+private alias object.value4        : object.originPos.y
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.xpos    : player.xpos
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// Blade Aliases
+private alias object.value1 : object.kamakamaEntityPos
+
+// States
+private alias 0 : KAMAKAMA_FINDGROUND
+private alias 1 : KAMAKAMA_GUARD
+private alias 2 : KAMAKAMA_LAUNCH_BLADE
+private alias 3 : KAMAKAMA_PREPARE_CHARGE
+private alias 4 : KAMAKAMA_CHARGE
+private alias 5 : KAMAKAMA_SWITCH_DIRECTION
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function KamaKama_DebugDraw
+reserve function KamaKama_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value KamaKama_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function KamaKama_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= KamaKama_startDebugID
+    DrawSprite(0)
+
+    if temp0 == 0
+        DrawSprite(4) // Body, Good quality
+        DrawSprite(6) // Head, Good quality
+    else
+        DrawSprite(10) // Body, Bad quality
+        DrawSprite(12) // Head, Bad quality
+    end if
+end function
+
+
+private function KamaKama_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= KamaKama_startDebugID
+    CreateTempObject(TypeName[Kama Kama], temp0, object.xpos, object.ypos)
+    object[tempObjectPos].originPos.x = object.xpos
+    object[tempObjectPos].originPos.y = object.ypos
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.animationTimer++
+    object.animationTimer &= 15
+
+    switch object.state
+    case KAMAKAMA_FINDGROUND
+        ObjectTileCollision(CSIDE_FLOOR, 0, 19, 0)
+        if checkResult == true
+            object.state = KAMAKAMA_GUARD
+        else
+            object.ypos += 0x20000
+        end if
+        break
+
+    case KAMAKAMA_GUARD
+        ObjectTileGrip(CSIDE_FLOOR, 0, 19, 0)
+        if object.xpos > player[SLOT_PLAYER1].xpos
+            object.direction = FACING_RIGHT
+        else
+            object.direction = FACING_LEFT
+        end if
+
+        BoxCollisionTest(C_TOUCH, object.entityPos, -96, -48, 96, 48, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+        if checkResult == true
+            object.state = KAMAKAMA_LAUNCH_BLADE
+            object.priority = PRIORITY_ACTIVE
+
+            // Only badniks in a good state still have blades to throw
+            if object.quality == QUALITY_GOOD
+                CreateTempObject(TypeName[Kama Kama Blade], 24, object.xpos, object.ypos)
+                object[tempObjectPos].direction = object.direction
+                object[tempObjectPos].iypos -= 6
+                object[tempObjectPos].kamakamaEntityPos = object.entityPos
+
+                if object.direction == FACING_RIGHT
+                    object[tempObjectPos].ixpos -= 8
+                else
+                    object[tempObjectPos].ixpos += 8
+                end if
+
+                CreateTempObject(TypeName[Kama Kama Blade], 56, object.xpos, object.ypos)
+                object[tempObjectPos].direction = object.direction
+                object[tempObjectPos].iypos -= 4
+                object[tempObjectPos].kamakamaEntityPos = object.entityPos
+
+                if object.direction == FACING_RIGHT
+                    object[tempObjectPos].ixpos -= 16
+                else
+                    object[tempObjectPos].ixpos += 16
+                end if
+            end if
+        end if
+        break
+
+    case KAMAKAMA_LAUNCH_BLADE
+        if object.timer < 110
+            object.timer++
+        else
+            object.state = KAMAKAMA_PREPARE_CHARGE
+            object.timer = 0
+        end if
+        break
+
+    case KAMAKAMA_PREPARE_CHARGE
+        if object.timer < 48
+            object.timer++
+        else
+            object.state = KAMAKAMA_CHARGE
+            object.timer = 0
+            object.frame = 0
+
+            if object.direction == FACING_RIGHT
+                object.xvel = -0x10000
+            else
+                object.xvel = 0x10000
+            end if
+
+            if object.quality != QUALITY_GOOD
+                object.xvel >>= 1
+            end if
+        end if
+        break
+
+    case KAMAKAMA_CHARGE
+        object.frame++
+        object.frame &= 31
+
+        object.xpos += object.xvel
+        ObjectTileGrip(CSIDE_FLOOR, 0, 19, 0) // Check if it's reaching a ledge
+        if checkResult == false
+            object.state = KAMAKAMA_SWITCH_DIRECTION
+            object.timer = 60
+        end if
+        break
+
+    case KAMAKAMA_SWITCH_DIRECTION
+        object.frame++
+        object.frame &= 31
+        if object.timer > 0
+            object.timer--
+        else
+            object.state = KAMAKAMA_CHARGE
+            FlipSign(object.xvel)
+            if object.direction == FACING_RIGHT
+                object.direction = FACING_LEFT
+            else
+                object.direction = FACING_RIGHT
+            end if
+        end if
+        break
+    end switch
+
+    // Reset object when out of bounds
+    if object.outOfBounds == true
+        object.priority = PRIORITY_BOUNDS
+
+        object.state = KAMAKAMA_GUARD
+        object.timer = 0
+
+        object.animationTimer = 0
+        object.frame = 0
+
+        object.xpos = object.originPos.x
+        object.ypos = object.originPos.y
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 20, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    switch object.state
+    case KAMAKAMA_FINDGROUND
+    case KAMAKAMA_GUARD
+        temp0 = object.animationTimer
+        temp0 >>= 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+        if object.quality == QUALITY_GOOD
+            temp1 = temp0
+            temp1 += 4
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 += 12
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 -= 10
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+        else
+            temp1 = temp0
+            temp1 += 10
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 += 2
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+        end if
+        break
+
+    case KAMAKAMA_LAUNCH_BLADE
+        temp0 = object.animationTimer
+        temp0 >>= 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+        if object.quality == QUALITY_GOOD
+            temp1 = temp0
+            temp1 += 4
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 += 2
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+        else
+            temp1 = temp0
+            temp1 += 10
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 += 2
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+        end if
+        break
+
+    case KAMAKAMA_PREPARE_CHARGE
+        temp0 = object.animationTimer
+        temp0 >>= 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+        if object.quality == QUALITY_GOOD
+            temp1 = temp0
+            temp1 += 4
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 += 4
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+        else
+            temp1 = temp0
+            temp1 += 10
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 += 4
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+        end if
+        break
+
+    case KAMAKAMA_CHARGE
+    case KAMAKAMA_SWITCH_DIRECTION
+        temp0 = object.frame
+        temp0 >>= 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+        temp0 = object.animationTimer
+        temp0 >>= 3
+        if object.quality == QUALITY_GOOD
+            temp1 = temp0
+            temp1 += 4
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 += 2
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+        else
+            temp1 = temp0
+            temp1 += 10
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+
+            temp1 += 2
+            DrawSpriteFX(temp1, FX_FLIP, object.xpos, object.ypos)
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects.gif")
+
+    foreach (TypeName[Kama Kama], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+    next
+
+    SpriteFrame(0, 4, 16, 16, 198, 119)     // #0  - Wheel Frame 0
+    SpriteFrame(0, 4, 16, 16, 215, 119)     // #1  - Wheel Frame 1
+    SpriteFrame(0, 4, 16, 16, 232, 119)     // #2  - Wheel Frame 2
+    SpriteFrame(0, 4, 16, 16, 215, 119)     // #3  - Wheel Frame 3
+
+    // Good Kama Kama
+    SpriteFrame(-10, -4, 24, 16, 215, 102)  // #4  - Body Frame 0
+    SpriteFrame(-10, -3, 24, 16, 215, 102)  // #5  - Body Frame 1
+
+    SpriteFrame(-16, -20, 16, 16, 198, 102) // #6  - Head Frame 0
+    SpriteFrame(-16, -19, 16, 16, 198, 102) // #7  - Head Frame 1
+    SpriteFrame(-16, -20, 16, 16, 198, 136) // #8  - Head Frame 2
+    SpriteFrame(-16, -19, 16, 16, 198, 102) // #9  - Head Frame 3
+
+    // Bad Kama Kama
+    SpriteFrame(-10, -4, 24, 16, 232, 136)  // #10 - Body Frame 0
+    SpriteFrame(-10, -3, 24, 16, 198, 153)  // #11 - Body Frame 1
+
+    SpriteFrame(-16, -20, 16, 16, 215, 136) // #12 - Head Frame 0
+    SpriteFrame(-16, -19, 16, 16, 240, 102) // #13 - Head Frame 0
+    SpriteFrame(-16, -20, 16, 16, 198, 136) // #14 - Head Frame 0
+    SpriteFrame(-16, -19, 16, 16, 240, 102) // #15 - Head Frame 0
+
+    SpriteFrame(-22, -14, 24, 20, 173, 101) // #16 - Claws Frame 0
+    SpriteFrame(-22, -14, 24, 20, 173, 122) // #17 - Claws Frame 1
+
+    temp0 = 0
+    KamaKama_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Kama Kama], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(KamaKama_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(KamaKama_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(0)
+
+    switch object.quality
+    case QUALITY_GOOD
+        DrawSprite(1)
+        DrawSprite(2)
+        DrawSprite(3)
+        break
+
+    case QUALITY_BAD
+        DrawSprite(4)
+        DrawSprite(5)
+        break
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects.gif")
+
+    SpriteFrame(0, 4, 16, 16, 198, 119)     // #0 - Wheel
+
+    // Good Kama Kama
+    SpriteFrame(-10, -4, 24, 16, 215, 102)  // #1 - Body
+    SpriteFrame(-16, -20, 16, 16, 198, 102) // #2 - Head
+    SpriteFrame(-22, -14, 24, 20, 173, 101) // #3 - Claws
+
+    // Bad Kama Kama
+    SpriteFrame(-10, -4, 24, 16, 232, 136)  // #4 - Body
+    SpriteFrame(-16, -20, 16, 16, 215, 136) // #5 - Head
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

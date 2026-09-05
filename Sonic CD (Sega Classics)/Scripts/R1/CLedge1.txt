@@ -1,0 +1,195 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Crumble Ledge 1 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.debrisSpawnX
+private alias object.value2 : object.debrisSpawnY
+
+// States
+private alias 0 : CLEDGE1_IDLE
+private alias 1 : CLEDGE1_DEBRIS
+private alias 2 : CLEDGE1_RESTORE // Unused
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function CrumbleLedge1_DebugDraw
+reserve function CrumbleLedge1_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function CrumbleLedge1_DebugDraw
+    DrawSprite(0)
+end function
+
+
+public function CrumbleLedge1_DebugSpawn
+    CreateTempObject(TypeName[Crumble Ledge 1], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case CLEDGE1_DEBRIS
+        if object.timer > 0
+            object.timer--
+        else
+            object.yvel += 0x5000
+            object.ypos += object.yvel
+        end if
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+        end if
+        break
+
+    case CLEDGE1_RESTORE
+        if object.outOfBounds == true
+            object.state = CLEDGE1_IDLE
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+
+    switch object.propertyValue
+    case 0
+        if object.state == CLEDGE1_IDLE
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                if object.type != TypeName[Blank Object]
+                    BoxCollisionTest(C_PLATFORM, object.entityPos, -40, -24, 40, -8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        // temp0 : Debris chunk value
+                        // temp1 : Ledge section value
+                        // temp2 : Debris for ledge section
+                        // temp3 : Fall timer
+
+                        temp0 = 1
+                        temp1 = 0
+                        object.debrisSpawnX = object.xpos
+                        object.debrisSpawnX -= 0x200000
+
+                        while temp1 < 5
+                            temp2 = 0
+                            object.debrisSpawnY = object.ypos
+                            object.debrisSpawnY += 0x200000
+
+                            switch temp1
+                            case 0
+                                temp3 = 10
+                                break
+                            case 1
+                                temp3 = 22
+                                break
+                            case 2
+                                temp3 = 34
+                                break
+                            case 3
+                                temp3 = 46
+                                break
+                            case 4
+                                temp3 = 58
+                                break
+                            end switch
+
+                            while temp2 < 5
+                                CreateTempObject(TypeName[Crumble Ledge 1], temp0, object.debrisSpawnX, object.debrisSpawnY)
+                                object[tempObjectPos].timer = temp3
+                                object[tempObjectPos].state = CLEDGE1_DEBRIS
+
+                                temp3 += 5
+                                temp0++
+                                temp2++
+                                object.debrisSpawnY -= 0x100000
+                            loop
+
+                            temp3 -= 8
+                            temp1++
+                            object.debrisSpawnX += 0x100000
+                        loop
+
+                        PlaySfx(SfxName[Crumble], false)
+
+                        object.priority = PRIORITY_BOUNDS
+                        object.type = TypeName[Blank Object]
+                    end if
+                end if
+            next
+        end if
+        break
+
+	// The five debris chunks at the very top retains collision
+    case 4
+    case 9
+    case 14
+    case 19
+    case 24
+        if object.timer > 0
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                BoxCollisionTest(C_PLATFORM, object.entityPos, -8, -8, 8, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            next
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    if object.state < 2
+        DrawSprite(object.propertyValue)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects2.gif")
+    SpriteFrame(-40, -40, 80, 80, 1, 1) // #0 - Ledge
+
+	// Debris chunks
+    temp1 = 1
+    while temp1 < 80
+        temp0 = 65
+        while temp0 > 0
+            SpriteFrame(-8, -8, 16, 16, temp1, temp0)
+            temp0 -= 16
+        loop
+        temp1 += 16
+    loop
+
+    SetTableValue(TypeName[Crumble Ledge 1], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(CrumbleLedge1_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(CrumbleLedge1_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects2.gif")
+    SpriteFrame(-40, -40, 80, 80, 1, 1) // #0 - Ledge
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

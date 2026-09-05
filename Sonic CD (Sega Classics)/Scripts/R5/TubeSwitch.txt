@@ -1,0 +1,277 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Tube Switch Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.inTube
+
+// Player aliases
+private alias object.state          : player.state
+private alias object.direction      : player.direction
+private alias object.xpos           : player.xpos
+private alias object.ypos           : player.ypos
+private alias object.xvel           : player.xvel
+private alias object.yvel           : player.yvel
+private alias object.speed          : player.speed
+private alias object.angle          : player.angle
+private alias object.animation      : player.animation
+private alias object.gravity        : player.gravity
+private alias object.collisionMode  : player.collisionMode
+private alias object.value1         : player.timer
+private alias object.value5         : player.rollAnimationSpeed
+private alias object.value17        : player.minRollSpeed
+
+// Warp Star Aliases
+private alias object.value0 : object.timer
+
+// Warp Destination
+private alias 0 : WARPDEST_NONE
+
+// ========================
+// Events
+// ========================
+
+// 0 - standard (biased towards right)
+// 1 - standard (biased towards left)
+// 2 - downards sender
+// 3 - downards conveyer tube
+// 4 - upwards conveyer tube
+// 5 - XXXXXX
+// 7 - vertical tunnel, middle
+// 8 - vertical tunnel, endpoints
+
+event ObjectUpdate
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			switch object.propertyValue
+			case 0
+				if player[currentPlayer].speed >= 0
+					if player[currentPlayer].state != Player_State_TubeRoll
+						PlaySfx(SfxName[Charge], false)
+					end if
+
+					player[currentPlayer].direction = FACING_RIGHT
+					player[currentPlayer].state = Player_State_TubeRoll
+					player[currentPlayer].animation = ANI_JUMPING
+					player[currentPlayer].minRollSpeed = 0x20000
+					if player[currentPlayer].speed < 0x20000
+						player[currentPlayer].speed = 0x20000
+					end if
+				else
+					if player[currentPlayer].speed > -0x20000
+						player[currentPlayer].speed = -0x20000
+					end if
+
+					player[currentPlayer].state = Player_State_Roll
+					player[currentPlayer].animation = ANI_JUMPING
+				end if
+				break
+
+			case 1
+				if player[currentPlayer].speed <= 0
+					if player[currentPlayer].state != Player_State_TubeRoll
+						PlaySfx(SfxName[Charge], false)
+					end if
+
+					player[currentPlayer].state = Player_State_TubeRoll
+					player[currentPlayer].animation = ANI_JUMPING
+					player[currentPlayer].minRollSpeed = 0x80000
+					if player[currentPlayer].speed > -0x20000
+						player[currentPlayer].speed = -0x20000
+					end if
+				else
+					if player[currentPlayer].speed < 0x20000
+						player[currentPlayer].speed = 0x20000
+					end if
+
+					player[currentPlayer].state = Player_State_Roll
+					player[currentPlayer].animation = ANI_JUMPING
+				end if
+				break
+
+			case 2
+				player[currentPlayer].gravity = GRAVITY_AIR
+				player[currentPlayer].collisionMode = CMODE_FLOOR
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				break
+
+			case 3
+				if conveyorBelt.flag == 0
+					if player[currentPlayer].ypos < object.ypos
+						if player[currentPlayer].state != Player_State_Static
+							PlaySfx(SfxName[Release], false)
+						end if
+
+						player[currentPlayer].state = Player_State_Static
+						if player[currentPlayer].animation != ANI_JUMPING
+							player[currentPlayer].animation = ANI_JUMPING
+						end if
+
+						player[currentPlayer].rollAnimationSpeed = 240
+						player[currentPlayer].speed = 0
+						player[currentPlayer].timer = 0
+						player[currentPlayer].xpos = object.xpos
+						player[currentPlayer].xvel = 0
+						player[currentPlayer].yvel = 0xA0000
+					end if
+				else
+					if player[currentPlayer].state == Player_State_Static
+						player[currentPlayer].state = Player_State_Air
+					end if
+				end if
+				break
+
+			case 4
+				if conveyorBelt.flag == 3
+					if player[currentPlayer].ypos > object.ypos
+						// Hold the Player's Warp, if needed
+						// -> This section of code wasn't in the initial version of the game (Steam)
+						//    and is only present in updated versions (mobile & Origins)
+						if warp.destination > WARPDEST_NONE
+							if warp.timer == 0
+								warp.timer = 1
+								ResetObjectEntity(3, TypeName[Warp Star], 0, player[currentPlayer].xpos, player[currentPlayer].ypos)
+								object[3].timer = 7
+								object[3].drawOrder = 4
+							end if
+						end if
+
+						if player[currentPlayer].state != Player_State_Static
+							PlaySfx(SfxName[Release], false)
+						end if
+
+						player[currentPlayer].state = Player_State_Static
+						if player[currentPlayer].animation != ANI_JUMPING
+							player[currentPlayer].animation = ANI_JUMPING
+						end if
+
+						player[currentPlayer].rollAnimationSpeed = 240
+						player[currentPlayer].speed = 0
+						player[currentPlayer].timer = 0
+						player[currentPlayer].xpos = object.xpos
+						player[currentPlayer].xvel = 0
+						player[currentPlayer].yvel = -0x80000
+					end if
+				else
+					if player[currentPlayer].state == Player_State_Static
+						player[currentPlayer].state = Player_State_Air
+					end if
+				end if
+				break
+
+			case 5
+				if player[currentPlayer].yvel < 0
+					player[currentPlayer].gravity = GRAVITY_GROUND
+					player[currentPlayer].state = Player_State_TubeRoll
+					player[currentPlayer].animation = ANI_JUMPING
+					player[currentPlayer].collisionMode = CMODE_RWALL
+					player[currentPlayer].angle = 64
+					player[currentPlayer].speed = -0xA0000
+					player[currentPlayer].minRollSpeed = 0xA0000
+				end if
+				break
+
+			case 6
+				if player[currentPlayer].yvel > 0
+					player[currentPlayer].gravity = GRAVITY_GROUND
+					player[currentPlayer].state = Player_State_TubeRoll
+					player[currentPlayer].animation = ANI_JUMPING
+					player[currentPlayer].collisionMode = CMODE_RWALL
+					player[currentPlayer].angle = 64
+					player[currentPlayer].speed = player[currentPlayer].yvel
+					player[currentPlayer].minRollSpeed = 0xA0000
+				end if
+				break
+
+			case 7
+				player[currentPlayer].gravity = GRAVITY_GROUND
+				player[currentPlayer].state = Player_State_TubeRoll
+				player[currentPlayer].animation = ANI_JUMPING
+
+				if player[currentPlayer].collisionMode != CMODE_RWALL
+					player[currentPlayer].collisionMode = CMODE_RWALL
+					player[currentPlayer].angle = 64
+				end if
+
+				if conveyorBelt.flag == 3
+					player[currentPlayer].speed = -0xD0000
+					player[currentPlayer].minRollSpeed = 0xD0000
+				else
+					player[currentPlayer].speed = 0xA0000
+					player[currentPlayer].minRollSpeed = 0xA0000
+				end if
+				break
+
+			case 8
+				if conveyorBelt.flag == 3
+					player[currentPlayer].gravity = GRAVITY_GROUND
+					player[currentPlayer].state = Player_State_TubeRoll
+					player[currentPlayer].animation = ANI_JUMPING
+					player[currentPlayer].collisionMode = CMODE_RWALL
+					player[currentPlayer].angle = 64
+					player[currentPlayer].speed = -0xD0000
+					player[currentPlayer].minRollSpeed = 0xD0000
+
+					if object.inTube == false
+						PlaySfx(SfxName[Release], false)
+					end if
+				end if
+				break
+
+			end switch
+
+			object.inTube = true
+		else
+			object.inTube = false
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	temp0 = object.xpos
+	temp0 -= 0x80000
+
+	temp1 = object.ypos
+	temp1 -= 0x80000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp1 += 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	temp0 -= 0x100000
+	DrawSpriteXY(0, temp0, temp1)
+
+	if editor.showGizmos == true
+		temp0 = object.xpos
+		temp0 -= 8
+
+		temp1 = object.ypos
+		temp1 -= 8
+		DrawRectOutline(temp0, temp1, 16, 16, 255, 255, 255, 255)
+	end if
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-8, -8, 16, 16, 173, 67) // #0 - Tubeswitch icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

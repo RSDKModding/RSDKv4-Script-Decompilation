@@ -1,0 +1,237 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: R4 Setup Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.paletteTimer
+private alias object.value2 : object.paletteSrcIndex
+private alias object.value3 : object.paletteMaxIndex
+private alias object.value4 : object.usePaletteCycle
+
+// Reserved Object Slot Aliases
+private alias 21 : SLOT_R4SETUP
+
+// Deformation Layer
+private alias 3 : DEFORM_BG_WATER
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function R4Setup_Deform_Left
+reserve function R4Setup_Deform_Right
+
+// ========================
+// Static Values
+// ========================
+
+public value Water_flashTimer = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+public function R4Setup_Deform_Left
+    stage[arrayPos0].deformationData1 = 1
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 1
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 2
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 2
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 3
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 3
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 3
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 3
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 2
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 2
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 1
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = 1
+    arrayPos0++
+end function
+
+
+public function R4Setup_Deform_Right
+    stage[arrayPos0].deformationData1 = -1
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -1
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -2
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -2
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -3
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -3
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -3
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -3
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -2
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -2
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -1
+    arrayPos0++
+    stage[arrayPos0].deformationData1 = -1
+    arrayPos0++
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.timer++
+    if object.timer > 1
+        tileLayer[0].deformationOffsetW++
+        tileLayer[1].deformationOffsetW++
+        object.timer = 0
+    end if
+
+    if object.usePaletteCycle == true
+        object.paletteTimer++
+        if object.paletteTimer == 3
+            object.paletteTimer = 0
+
+            CopyPalette(3, object.paletteSrcIndex, 0, 176, 16)
+            object.paletteSrcIndex += 16
+            object.paletteSrcIndex %= object.paletteMaxIndex
+        end if
+    end if
+
+    if Water_flashTimer > 0
+        Water_flashTimer--
+    end if
+end event
+
+
+event ObjectDraw
+    temp0 = stage.waterLevel
+    temp0 -= screen.yoffset
+
+    if temp0 < 0
+        temp0 = 0
+    end if
+
+    if temp0 > screen.ysize
+        temp0 = screen.ysize
+    end if
+
+    SetActivePalette(0, 0, temp0)
+
+    if Water_flashTimer > 0
+        SetActivePalette(2, temp0, screen.ysize)
+    else
+        SetActivePalette(1, temp0, screen.ysize)
+    end if
+
+    player.waterStream = false
+end event
+
+
+event ObjectStartup
+    object[SLOT_R4SETUP].type = TypeName[R4 Setup]
+    object[SLOT_R4SETUP].priority = PRIORITY_ACTIVE
+    object[SLOT_R4SETUP].drawOrder = 0
+
+    arrayPos0 = 0
+    CallFunction(R4Setup_Deform_Left)
+
+    arrayPos0 = 128
+    CallFunction(R4Setup_Deform_Left)
+
+    arrayPos0 = 160
+    CallFunction(R4Setup_Deform_Right)
+
+    arrayPos0 = 256
+    while arrayPos0 < 576
+        arrayPos1 = arrayPos0
+        arrayPos1 -= 256
+        stage[arrayPos0].deformationData1 = stage[arrayPos1].deformationData1
+        arrayPos0++
+    loop
+
+    SetLayerDeformation(DEFORM_BG_WATER, 128, 4, 0, 0, 0)
+
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadPalette("R4A_WaterPal.act", 1, 0, 0, 256)
+        if stage.actNum == 2
+            LoadPalette("R4A_PalCycle.act", 3, 0, 0, 64)
+            object[SLOT_R4SETUP].usePaletteCycle = true
+            object[SLOT_R4SETUP].paletteMaxIndex = 64
+        end if
+        break
+
+    case TIME_PAST
+        LoadPalette("R4B_WaterPal.act", 1, 0, 0, 256)
+        if stage.actNum == 2
+            LoadPalette("R4B_PalCycle.act", 3, 0, 0, 48)
+            object[SLOT_R4SETUP].usePaletteCycle = true
+            object[SLOT_R4SETUP].paletteMaxIndex = 48
+        end if
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadPalette("R4C_WaterPal.act", 1, 0, 0, 256)
+        LoadPalette("R4C_PalCycle.act", 3, 0, 0, 64)
+        object[SLOT_R4SETUP].usePaletteCycle = true
+        object[SLOT_R4SETUP].paletteMaxIndex = 64
+        break
+
+    case TIME_BAD_FUTURE
+        LoadPalette("R4D_WaterPal.act", 1, 0, 0, 256)
+        LoadPalette("R4D_PalCycle.act", 3, 0, 0, 48)
+        object[SLOT_R4SETUP].usePaletteCycle = true
+        object[SLOT_R4SETUP].paletteMaxIndex = 48
+        break
+    end switch
+
+    LoadPalette("ElectricFlash.act", 2, 0, 0, 256)
+    Water_flashTimer = 0
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-16, -16, 32, 32, 1, 143)  // #0 - "Script" Icon
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

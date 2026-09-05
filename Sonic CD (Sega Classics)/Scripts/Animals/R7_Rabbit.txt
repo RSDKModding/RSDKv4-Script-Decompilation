@@ -1,0 +1,142 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Rabbit Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.bounces
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0	: RABBIT_HOPRIGHT
+private alias 1 : RABBIT_HOPLEFT
+
+// Time Period
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Note: As with the other animals, this Rabbit is always running, regardless of the stage's or generator's state
+	// However, it's just set not to draw if it's in a scenario it shouldn't, although it is always being updated all the same
+
+	// Update the Y movement of the Rabbit
+	object.ypos += object.yvel
+
+	// Apply a gravity of ~0.17 pixels per frame
+	object.yvel += 0x2C00
+
+	switch object.state
+	case RABBIT_HOPRIGHT
+		// Move the Rabbit right at a speed of 1 pixel per frame
+		object.xpos += 0x10000
+
+		// The Rabbit can only interact with the floor if it's falling at a rate of 4 pixels per frame or more
+		if object.yvel > 0x40000
+			// Check to see if the Rabbit's landed
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				// If the Rabbit's landed, then bounce it back up again at a rate of 5 px per frame
+				object.yvel = -0x50000
+
+				// Incerase the Bounce count so that the Rabbit will be able to turn around again when needed
+				object.bounces++
+				if object.bounces == 2
+					object.bounces = 0
+
+					// If this is the Rabbit's third bounce in this direction, then turn it around
+					object.state     = RABBIT_HOPLEFT
+					object.direction = FACING_LEFT
+				end if
+			end if
+		end if
+		break
+
+	case RABBIT_HOPLEFT
+		// Move the Rabbit left at a speed of 1 pixel per frame
+		object.xpos -= 0x10000
+
+		// The Rabbit can only interact with the floor if it's falling at a rate of 4 pixels per frame or more
+		if object.yvel > 0x40000
+			// Check to see if the Rabbit's landed
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				// If the Rabbit's landed, then bounce it back up again at a rate of 5 px per frame
+				object.yvel = -0x50000
+
+				// Incerase the Bounce count so that the Rabbit will be able to turn around again when needed
+				object.bounces++
+				if object.bounces == 2
+					object.bounces = 0
+
+					// If this is the Rabbit's third bounce in this direction, then turn it around
+					object.state     = RABBIT_HOPRIGHT
+					object.direction = FACING_RIGHT
+				end if
+			end if
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	// Only draw if the stage's generator has been destroyed or we're in the Good Future right now
+	if metalSonic.destroyed == true
+		if object.yvel < 0
+			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		else
+			DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		end if
+	else
+		if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+			if object.yvel < 0
+				DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+			else
+				DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	foreach (TypeName[Rabbit], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].yvel = -0x50000
+		object[arrayPos0].direction = FACING_RIGHT
+	next
+
+	// Rabbit Frames
+	SpriteFrame(-8, -12, 16, 24, 1, 232)
+	SpriteFrame(-8, -12, 16, 24, 18, 232)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-8, -12, 16, 24, 1, 232)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

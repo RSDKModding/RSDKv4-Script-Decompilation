@@ -1,0 +1,193 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Flip Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.interaction : player.interaction
+
+// States
+private alias 0 : FLIPDOOR_CLOSED
+private alias 1 : FLIPDOOR_HALF_OPEN
+private alias 2 : FLIPDOOR_OPEN
+private alias 3 : FLIPDOOR_HALF_CLOSED
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.frame == 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			if player[currentPlayer].interaction == true
+				BoxCollisionTest(C_SOLID, object.entityPos, -4, -32, 4, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			end if
+		next
+	end if
+
+	if object.direction == FACING_RIGHT
+		switch object.state
+		case FLIPDOOR_CLOSED
+			object.frame = 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -48, -32, 0, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					object.state = FLIPDOOR_HALF_OPEN
+					PlaySfx(SfxName[Door], false)
+				end if
+			next
+			break
+
+		case FLIPDOOR_HALF_OPEN
+			if object.timer < 4
+				object.timer++
+				object.frame = 1
+			else
+				object.timer = 0
+				object.state = FLIPDOOR_OPEN
+			end if
+			break
+
+		case FLIPDOOR_OPEN
+			object.frame = 2
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -48, -32, 64, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == false
+					object.state = FLIPDOOR_HALF_CLOSED
+				end if
+			next
+			break
+
+		case FLIPDOOR_HALF_CLOSED
+			if object.timer < 4
+				object.timer++
+				object.frame = 1
+			else
+				object.timer = 0
+				object.state = FLIPDOOR_CLOSED
+			end if
+			break
+		end switch
+	else
+		switch object.state
+		case FLIPDOOR_CLOSED
+			object.frame = 0
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, 0, -32, 48, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					object.state = FLIPDOOR_HALF_OPEN
+					PlaySfx(SfxName[Door], false)
+				end if
+			next
+			break
+
+		case FLIPDOOR_HALF_OPEN
+			if object.timer < 4
+				object.timer++
+				object.frame = 1
+			else
+				object.timer = 0
+				object.state = FLIPDOOR_OPEN
+			end if
+			break
+
+		case FLIPDOOR_OPEN
+			object.frame = 2
+			foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+				BoxCollisionTest(C_TOUCH, object.entityPos, -64, -32, 48, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == false
+					object.state = FLIPDOOR_HALF_CLOSED
+				end if
+			next
+			break
+
+		case FLIPDOOR_HALF_CLOSED
+			if object.timer < 4
+				object.timer++
+				object.frame = 1
+			else
+				object.timer = 0
+				object.state = FLIPDOOR_CLOSED
+			end if
+			break
+		end switch
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R6/Objects.gif")
+
+	SpriteFrame(-4, -32, 8, 64, 230, 1)  // #0 - FlipDoor Closed
+	SpriteFrame(-4, -32, 48, 48, 83, 34) // #1 - FlipDoor Half-Open
+	SpriteFrame(-4, -32, 64, 8, 132, 34) // #2 - FlipDoor Open
+
+	foreach (TypeName[Flip Door], arrayPos0, ACTIVE_ENTITIES)
+		object[arrayPos0].drawOrder = 4
+		object[arrayPos0].direction = object[arrayPos0].propertyValue
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // direction
+			checkResult = object.propertyValue
+			checkResult &= 1
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // direction
+			object.propertyValue = editor.variableValue
+			object.propertyValue &= 1
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	object.direction = object.propertyValue
+	DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R6/Objects.gif")
+	SpriteFrame(-4, -32, 8, 64, 230, 1)  // #0 - FlipDoor Closed
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+
+	AddEditorVariable("direction")
+	SetActiveVariable("direction")
+	AddEnumVariable("right", FACING_RIGHT)
+	AddEnumVariable("left", FACING_LEFT)
+end event

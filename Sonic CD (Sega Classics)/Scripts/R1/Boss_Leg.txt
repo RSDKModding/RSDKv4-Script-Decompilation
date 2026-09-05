@@ -1,0 +1,285 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Leg Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.xvel   : object.offset.x
+private alias object.yvel   : object.offset.y
+private alias object.value0 : object.legJointEntity
+private alias object.value1 : object.footEntity
+private alias object.value4 : object.legSide
+private alias object.value6 : object.velocity.x
+private alias object.value7 : object.velocity.y
+
+// Foot Aliases
+private alias object.value4 : foot.legSide
+
+// Leg Joint Aliases
+private alias object.xpos   : legJoint.xpos
+private alias object.ypos   : legJoint.ypos
+private alias object.value0 : legJoint.bodyEntity
+private alias object.value1 : legJointR.legREntity
+
+// Leg Aliases
+private alias object.xpos : legR.xpos
+private alias object.ypos : legR.ypos
+
+// Body Aliases
+private alias object.value0 : body.faceEntity
+private alias object.value1 : body.legJointREntity
+private alias object.xpos   : body.xpos
+private alias object.ypos   : body.ypos
+
+// Face Aliases
+private alias object.xpos           : face.xpos
+private alias object.ypos           : face.ypos
+private alias object.animation      : face.animation
+private alias object.animationTimer : face.faceTimer
+
+// States
+private alias 0 : BOSSLEG_SETUP
+private alias 1 : BOSSLEG_LANDING
+private alias 2 : BOSSLEG_L_MIMIC_R
+private alias 3 : BOSSLEG_MOVE
+private alias 4 : BOSSLEG_MOVE_OPPOSITE
+private alias 5 : BOSSLEG_MOVE_C          // Charged version
+private alias 6 : BOSSLEG_MOVE_OPPOSITE_C // Charged version
+private alias 7 : BOSSLEG_DESTROYED
+
+// Player Aliases
+private alias object.value7  : player.invincibleTimer
+
+// Eggman Animations
+private alias 2 : EGGANI_LAUGH
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BossLeg_SaveLegPosition
+reserve function BossLeg_HandleMovement
+
+// ========================
+// Function Definitions
+// ========================
+
+public function BossLeg_SaveLegPosition
+    GetBit(temp0, object.legSide, 5)
+    if temp0 == true
+        arrayPos0 = object.legJointEntity
+        legJoint[arrayPos0].xpos += temp1
+        legJoint[arrayPos0].ypos += temp2
+
+        arrayPos1 = legJoint[arrayPos0].bodyEntity
+        body[arrayPos1].xpos += temp1
+        body[arrayPos1].ypos += temp2
+
+        arrayPos0 = body[arrayPos1].faceEntity
+        face[arrayPos0].xpos += temp1
+        face[arrayPos0].ypos += temp2
+    end if
+end function
+
+
+public function BossLeg_HandleMovement
+    arrayPos0 = object.legJointEntity
+    object.xpos = legJoint[arrayPos0].xpos
+    object.xpos += 0x40000
+    object.xpos += object.velocity.x
+
+    object.ypos = legJoint[arrayPos0].ypos
+    object.ypos += 0x100000
+    object.ypos += object.velocity.y
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSLEG_SETUP
+        object.offset.x = 0x8000
+        object.offset.y = 0x4000
+        object.state = BOSSLEG_LANDING
+        break
+
+    case BOSSLEG_LANDING
+        arrayPos0 = object.legJointEntity
+
+        object.xpos = legJoint[arrayPos0].xpos
+        object.xpos += 0x40000
+
+        object.ypos = legJoint[arrayPos0].ypos
+        object.ypos += 0x100000
+        break
+
+    case BOSSLEG_L_MIMIC_R
+        // No matter the leg, it will end up picking the right leg here
+        arrayPos0 = object.legJointEntity
+        arrayPos1 = legJoint[arrayPos0].bodyEntity
+        arrayPos0 = body[arrayPos1].legJointREntity
+        arrayPos1 = legJointR[arrayPos0].legREntity
+
+        object.xpos = legR[arrayPos1].xpos
+        object.xpos -= 0xA0000
+        object.ypos = legR[arrayPos1].ypos
+        break
+
+    case BOSSLEG_MOVE // whatever leg this is, it will move
+        arrayPos0 = object.footEntity
+        if object.velocity.x < 0x80000
+            temp1 = object.offset.x
+            object.velocity.x += temp1
+
+            GetBit(temp0, object.legSide, 4)
+            if temp0 == true
+                FlipSign(temp1)
+                temp2 = false
+                CallFunction(BossLeg_SaveLegPosition)
+            else
+                CallFunction(BossLeg_HandleMovement)
+            end if
+        else
+            CallFunction(BossLeg_HandleMovement)
+        end if
+        break
+
+    case BOSSLEG_MOVE_OPPOSITE // whatever leg this is, it will wait for the opposite to move
+        arrayPos0 = object.footEntity
+        if object.velocity.x > -0x80000
+            temp1 = object.offset.x
+            object.velocity.x -= temp1
+
+            GetBit(temp0, object.legSide, 4)
+            if temp0 == true
+                temp2 = false
+                CallFunction(BossLeg_SaveLegPosition)
+            else
+                CallFunction(BossLeg_HandleMovement)
+            end if
+        else
+            CallFunction(BossLeg_HandleMovement)
+        end if
+        break
+
+    case BOSSLEG_MOVE_C // whatever leg this is, it will move
+        if object.velocity.x > -0x80000
+            temp1 = object.offset.x
+            object.velocity.x -= temp1
+        else
+            temp1 = false
+        end if
+
+        if object.velocity.y > -0x40000
+            temp2 = object.offset.y
+            object.velocity.y -= temp2
+        else
+            temp2 = false
+        end if
+
+        GetBit(temp0, object.legSide, 4)
+        if temp0 == true
+            CallFunction(BossLeg_SaveLegPosition)
+        else
+            CallFunction(BossLeg_HandleMovement)
+        end if
+        break
+
+    case BOSSLEG_MOVE_OPPOSITE_C // whatever leg this is, it will wait for it's opposite to move
+        if object.velocity.x > -0x80000
+            temp1 = object.offset.x
+            object.velocity.x -= temp1
+        else
+            temp1 = false
+        end if
+
+        if object.velocity.y < 0x40000
+            temp2 = object.offset.y
+            object.velocity.y += temp2
+        else
+            temp2 = false
+        end if
+
+        GetBit(temp0, object.legSide, 4)
+        if temp0 == true
+            FlipSign(temp2)
+            CallFunction(BossLeg_SaveLegPosition)
+        else
+            CallFunction(BossLeg_HandleMovement)
+        end if
+        break
+
+    case BOSSLEG_DESTROYED
+        GetBit(temp0, object.legSide, 4)
+        if temp0 == false
+            object.offset.x -= 0x600
+        else
+            object.offset.x += 0x600
+        end if
+
+        object.offset.y += 0x1A60
+
+        object.xpos += object.offset.x
+        object.ypos += object.offset.y
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+
+    if object.state < BOSSLEG_DESTROYED
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            if player[currentPlayer].invincibleTimer == 0
+                BoxCollisionTest(C_TOUCH, object.entityPos, -12, -20, 12, -20, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    arrayPos0 = object.legJointEntity
+                    arrayPos1 = legJoint[arrayPos0].bodyEntity
+                    arrayPos0 = body[arrayPos1].faceEntity
+
+                    face[arrayPos0].animation = EGGANI_LAUGH
+                    face[arrayPos0].faceTimer = 180
+                    CallFunction(Player_Hit)
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-12, -20, 24, 40, 74, 1) // #0 - EGG-HVC-001 Leg
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-12, -20, 24, 40, 74, 1) // #0 - EGG-HVC-001 Leg
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

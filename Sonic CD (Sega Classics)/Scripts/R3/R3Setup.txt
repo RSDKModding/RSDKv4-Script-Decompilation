@@ -1,0 +1,502 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: R3 Setup Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0  : object.deformTimer
+private alias object.value2  : object.bumperOscillation
+private alias object.value3  : object.turnDirection
+private alias object.value4  : object.stateStageUpdate
+private alias object.value5  : object.paletteTableIndex1
+private alias object.value6  : object.paletteTableIndex2
+private alias object.value7  : object.paletteTableIndex3
+private alias object.value8  : object.paletteTableIndex4
+private alias object.value9  : object.paletteCycleTimer1
+private alias object.value10 : object.paletteCycleTimer2
+
+// Player Aliases
+private alias object.state           : player.state
+private alias object.xpos            : player.xpos
+private alias object.ypos            : player.ypos
+private alias object.xvel            : player.xvel
+private alias object.yvel            : player.yvel
+private alias object.speed           : player.speed
+private alias object.gravity         : player.gravity
+private alias object.collisionMode   : player.collisionMode
+private alias object.collisionTop    : player.collisionTop
+private alias object.collisionBottom : player.collisionBottom
+private alias object.value1          : player.timer
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Reserved Object Slot Aliases
+private alias 21 : SLOT_R3SETUP
+
+// Tile Info
+private alias 1 : TILEINFO_DIRECTION
+private alias 6 : TILEINFO_ANGLEA
+
+// Deformation Layer
+private alias 1 : DEFORM_FG_WATER
+private alias 2 : DEFORM_BG
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function R3Setup_PresentStageUpdate
+reserve function R3Setup_PastStageUpdate
+reserve function R3Setup_GoodFutureStageUpdate
+reserve function R3Setup_BadFutureStageUpdate
+
+// ========================
+// Static Values
+// ========================
+
+public value R3Setup_drumTimer = 0
+
+// ========================
+// Tables
+// ========================
+
+// Present
+public table R3Setup_Present_PalCycle1
+    0xE0E000, 0xE0E000, 0xE0E000, 0xE0E000, 0x000000, 0x000000, 0x000000
+end table
+
+public table R3Setup_Present_PalCycle2
+    0xE0E000, 0xE0E000, 0x000000, 0x000000, 0x000000, 0xE0E000, 0xE0E000, 0x000000
+    0x000000, 0x000000, 0xE0E000, 0xE0E000, 0x000000, 0x000000, 0x000000, 0xE0E000
+    0xE0E000, 0x000000, 0x000000, 0x000000, 0xE0E000, 0xE0E000, 0x000000, 0x000000
+    0x000000, 0xE0E000, 0xE0E000, 0x000000, 0x000000, 0x000000, 0xE0E000, 0xE0E000
+    0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000
+    0x000000,
+end table
+
+public table R3Setup_Present_PalCycle3
+    0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000
+    0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000
+    0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000
+    0xE000E0, 0xE000E0, 0xE000E0, 0x000000, 0x000000, 0x000000, 0xE000E0, 0xE000E0
+    0xE000E0, 0x000000, 0x000000, 0x000000, 0xE000E0, 0xE000E0, 0xE000E0, 0x000000
+    0x000000, 0x000000, 0xE000E0, 0xE000E0, 0xE000E0, 0x000000, 0x000000, 0x000000
+    0xE0A0E0, 0xE0A0E0, 0xE000E0, 0xE000E0, 0xE000E0, 0xE0A0E0, 0xE0A0E0, 0xE000E0
+    0xE000E0, 0xE000E0, 0xE0A0E0, 0xE0A0E0, 0xE000E0, 0xE000E0, 0xE000E0,
+end table
+
+public table R3Setup_Present_PalCycle4
+	0x00E0E0, 0x00E0E0, 0x000000, 0x000000, 0x000000
+end table
+
+// Good Future
+public table R3Setup_GoodFuture_PalCycle1
+	0x000000, 0x000000, 0xE0D0E0, 0xE0D0E0, 0xE000E0, 0xE000E0, 0xE000E0
+end table
+
+// Bad Future
+public table R3Setup_BadFuture_PalCycle1
+	0x000000, 0x000000, 0x000000, 0x00E0E0, 0x00E0E0, 0x00E0E0, 0x00C060, 0x00C060
+end table
+
+public table R3Setup_BadFuture_PalCycle2
+	0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x400000, 0x400000
+	0x602000, 0x602000, 0x804000, 0x804000, 0xA06000, 0xA06000, 0xC08000, 0xC08000
+	0xE0A000, 0xE0A000, 0xE0E000, 0xE0E000, 0xE0E000, 0xE0A000, 0xE0A000, 0xC08000
+	0xC08000, 0xA06000, 0xA06000, 0x804000, 0x804000, 0x602000, 0x602000, 0x400000
+	0x400000
+end table
+
+public table R3Setup_BadFuture_PalCycle3
+	0x00E000, 0x80E000, 0xE0E000, 0xE0E080, 0xE0E000, 0x00E000, 0x00E080, 0x00E0E0
+	0x0080E0, 0x8000E0, 0xE000E0, 0xE000E0, 0x8000E0, 0x0080E0, 0x00E0E0, 0x00E080
+end table
+
+// ========================
+// Function Definitions
+// ========================
+
+public function R3Setup_PresentStageUpdate
+	GetTableValue(temp0, object.paletteTableIndex1, R3Setup_Present_PalCycle1)
+	object.paletteTableIndex1++
+	object.paletteTableIndex1 %= 7
+	SetPaletteEntry(0, 175, temp0)
+
+	GetTableValue(temp0, object.paletteTableIndex2, R3Setup_Present_PalCycle2)
+	object.paletteTableIndex2++
+	object.paletteTableIndex2 %= 41
+	SetPaletteEntry(0, 188, temp0)
+
+	GetTableValue(temp0, object.paletteTableIndex3, R3Setup_Present_PalCycle3)
+	object.paletteTableIndex3++
+	object.paletteTableIndex3 %= 63
+	SetPaletteEntry(0, 189, temp0)
+
+	GetTableValue(temp0, object.paletteTableIndex4, R3Setup_Present_PalCycle4)
+	object.paletteTableIndex4++
+	object.paletteTableIndex4 %= 5
+	SetPaletteEntry(0, 191, temp0)
+end function
+
+
+public function R3Setup_PastStageUpdate
+end function
+
+
+public function R3Setup_GoodFutureStageUpdate
+	GetTableValue(temp0, object.paletteTableIndex1, R3Setup_GoodFuture_PalCycle1)
+	object.paletteTableIndex1++
+	object.paletteTableIndex1 %= 7
+	SetPaletteEntry(0, 172, temp0)
+end function
+
+
+public function R3Setup_BadFutureStageUpdate
+	GetTableValue(temp0, object.paletteTableIndex1, R3Setup_BadFuture_PalCycle1)
+	object.paletteTableIndex1++
+	object.paletteTableIndex1 &= 7
+	SetPaletteEntry(0, 170, temp0)
+
+	object.paletteCycleTimer1++
+	if object.paletteCycleTimer1 == 5
+		object.paletteCycleTimer1 = 0
+		GetTableValue(temp0, object.paletteTableIndex2, R3Setup_BadFuture_PalCycle2)
+		object.paletteTableIndex2++
+		object.paletteTableIndex2 %= 33
+		SetPaletteEntry(0, 189, temp0)
+	end if
+
+	object.paletteCycleTimer2++
+	if object.paletteCycleTimer2 == 10
+		object.paletteCycleTimer2 = 0
+		GetTableValue(temp0, object.paletteTableIndex3, R3Setup_BadFuture_PalCycle3)
+		object.paletteTableIndex3++
+		object.paletteTableIndex3 &= 15
+		SetPaletteEntry(0, 187, temp0)
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	CallFunction(object.stateStageUpdate)
+
+	if object.turnDirection == false
+		if object.bumperOscillation < 0x300000
+			object.bumperOscillation += 0x10000
+		else
+			object.turnDirection = true
+		end if
+	else
+		if object.bumperOscillation > -0x300000
+			object.bumperOscillation -= 0x10000
+		else
+			object.turnDirection = false
+		end if
+	end if
+
+	if HUD.currentTimePeriod != TIME_PAST
+		R3Setup_drumTimer++
+		R3Setup_drumTimer %= 20
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		temp2 = player[currentPlayer].xpos
+		temp2 >>= 16
+
+		temp4 = temp2
+		temp2 -= 8
+		temp4 += 8
+
+		temp3 = player[currentPlayer].ypos
+		temp3 >>= 16
+
+		if player[currentPlayer].yvel >= 0
+			temp3 += player[currentPlayer].collisionBottom
+			temp3 -= 2
+		else
+			temp3 += player[currentPlayer].collisionTop
+			temp3 += 2
+		end if
+
+		temp5 = temp3
+		temp7 = 0
+		Get16x16TileInfo(temp0, temp2, temp3, TILEINFO_ANGLEA)
+		switch temp0
+		case 1
+			temp7 = 1
+			break
+
+		case 3
+			temp7 = 3
+			Get16x16TileInfo(temp6, temp2, temp3, TILEINFO_DIRECTION)
+			break
+
+		case 5
+			temp7 = 2
+			break
+
+		end switch
+
+		// Note:
+		// So, funny story about this code segment here below, it has a bias.
+		// When you encounter the tiles using these values, like the ones in CCZ2A at x-3376 and y-1080, the right most two tiles will send the player right.
+		// While when you bounce on the left ones, the player will stay on top until they gets bounced by the tile that curves over to the left.
+
+		Get16x16TileInfo(temp0, temp4, temp5, TILEINFO_ANGLEA)
+		switch temp0
+		case 1
+			temp7 = 1
+			break
+
+		case 3
+			temp7 = 3
+			Get16x16TileInfo(temp6, temp4, temp5, TILEINFO_DIRECTION)
+			break
+
+		case 5
+			temp7 = 2
+			break
+
+		end switch
+
+		switch temp7
+		case 1
+			if player[currentPlayer].yvel >= 0
+				player[currentPlayer].gravity = GRAVITY_AIR
+				PlaySfx(SfxName[Bumper 2], false)
+
+				if player[currentPlayer].state == Player_State_Fly
+					player[currentPlayer].yvel = -0x40000
+				else
+					player[currentPlayer].yvel = -0x70000
+				end if
+
+				if player[currentPlayer].state == Player_State_Hurt
+					player[currentPlayer].state = Player_State_Air
+					player[currentPlayer].timer = 0
+				end if
+			else
+				if player[currentPlayer].gravity == GRAVITY_AIR
+					player[currentPlayer].yvel = 0x40000
+					PlaySfx(SfxName[Bumper 2], false)
+				end if
+			end if
+			break
+
+		case 2
+			if player[currentPlayer].gravity == GRAVITY_AIR
+				PlaySfx(SfxName[Mini Bumper], false)
+
+				if player[currentPlayer].yvel >= 0
+					player[currentPlayer].yvel = -0x40000
+				else
+					player[currentPlayer].yvel = 0x40000
+				end if
+			end if
+			break
+
+		case 3
+			if player[currentPlayer].gravity == GRAVITY_AIR
+				PlaySfx(SfxName[Bumper 2], false)
+
+				if player[currentPlayer].yvel >= 0
+					if player[currentPlayer].state == Player_State_Fly
+						player[currentPlayer].yvel = -0x40000
+					else
+						player[currentPlayer].yvel = -0x70000
+					end if
+				else
+					player[currentPlayer].yvel = 0x40000
+				end if
+
+				if temp6 == 0
+					if player[currentPlayer].xvel > 0
+						FlipSign(player[currentPlayer].xvel)
+						player[currentPlayer].xvel *= 5
+						player[currentPlayer].xvel >>= 2
+						if player[currentPlayer].xvel > -0x20000
+							player[currentPlayer].xvel = -0x20000
+						end if
+					else
+						if player[currentPlayer].xvel > -0x20000
+							player[currentPlayer].xvel = -0x20000
+						end if
+					end if
+				else
+					if player[currentPlayer].xvel < 0
+						FlipSign(player[currentPlayer].xvel)
+						player[currentPlayer].xvel *= 5
+						player[currentPlayer].xvel >>= 2
+						if player[currentPlayer].xvel < 0x20000
+							player[currentPlayer].xvel = 0x20000
+						end if
+					else
+						if player[currentPlayer].xvel < 0x20000
+							player[currentPlayer].xvel = 0x20000
+						end if
+					end if
+				end if
+
+				player[currentPlayer].speed = player[currentPlayer].xvel
+			end if
+			break
+
+		end switch
+
+		temp3 = player[currentPlayer].ypos
+		temp3 >>= 16
+
+		temp5 = temp3
+		temp3 -= 6
+		temp5 += 6
+
+		temp2 = player[currentPlayer].xpos
+		temp2 >>= 16
+
+		if player[currentPlayer].xvel > 0
+			temp2 += 8
+		else
+			temp2 -= 8
+		end if
+
+		temp4 = temp2
+		temp7 = 0
+		Get16x16TileInfo(temp0, temp2, temp3, TILEINFO_ANGLEA)
+		switch temp0
+		case 3
+			temp7 = 1
+			break
+
+		case 5
+			temp7 = 2
+			break
+
+		case 7
+			temp7 = 1
+			break
+
+		end switch
+
+		Get16x16TileInfo(temp0, temp4, temp5, TILEINFO_ANGLEA)
+		switch temp0
+		case 3
+			temp7 = 1
+			break
+
+		case 5
+			temp7 = 2
+			break
+
+		case 7
+			temp7 = 1
+			break
+
+		end switch
+
+		switch temp7
+		case 1
+			if player[currentPlayer].xvel > 0
+				player[currentPlayer].xvel = -0x50000
+			else
+				player[currentPlayer].xvel = 0x50000
+			end if
+
+			player[currentPlayer].speed = player[currentPlayer].xvel
+			PlaySfx(SfxName[Bumper 2], false)
+			break
+
+		case 2
+			if player[currentPlayer].xvel > 0
+				player[currentPlayer].xvel = -0x40000
+			else
+				player[currentPlayer].xvel = 0x40000
+			end if
+
+			player[currentPlayer].speed = player[currentPlayer].xvel
+			PlaySfx(SfxName[Mini Bumper], false)
+			break
+
+		end switch
+	next
+end event
+
+
+event ObjectDraw
+	object.deformTimer++
+	if object.deformTimer > 3
+		tileLayer[0].deformationOffsetW++
+		tileLayer[1].deformationOffset++
+		object.deformTimer = 0
+	end if
+end event
+
+
+event ObjectStartup
+	object[SLOT_R3SETUP].type = TypeName[R3 Setup]
+	object[SLOT_R3SETUP].priority = PRIORITY_ACTIVE
+	object[SLOT_R3SETUP].drawOrder = 0
+
+	switch HUD.currentTimePeriod
+	case TIME_PRESENT
+		object[SLOT_R3SETUP].stateStageUpdate = R3Setup_PresentStageUpdate
+		break
+
+	case TIME_PAST
+		object[SLOT_R3SETUP].stateStageUpdate = R3Setup_PastStageUpdate
+		break
+
+	case TIME_GOOD_FUTURE
+		object[SLOT_R3SETUP].stateStageUpdate = R3Setup_GoodFutureStageUpdate
+		break
+
+	case TIME_BAD_FUTURE
+		object[SLOT_R3SETUP].stateStageUpdate = R3Setup_BadFutureStageUpdate
+		break
+
+	end switch
+
+	SetLayerDeformation(DEFORM_BG, 128, 6, 0, 0, 0)
+	SetLayerDeformation(DEFORM_FG_WATER, 64, 4, 0, 0, 0)
+
+	stage.waterLevel = 1472
+
+	if HUD.currentTimePeriod == TIME_PAST
+		R3Setup_drumTimer = 1
+	else
+		R3Setup_drumTimer = 0
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143) // #0 - "Script" Icon
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

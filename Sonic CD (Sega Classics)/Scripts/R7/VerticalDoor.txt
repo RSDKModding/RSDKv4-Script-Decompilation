@@ -1,0 +1,215 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Vertical Door Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.drawPosY
+
+// Player Aliases
+private alias object.xpos           : player.xpos
+private alias object.xvel           : player.xvel
+private alias object.speed          : player.speed
+private alias object.collisionRight : player.collisionRight
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0 : VERTICALDOOR_CLOSED
+private alias 1 : VERTICALDOOR_START_OPENING
+private alias 2 : VERTICALDOOR_END_CLOSING
+private alias 3 : VERTICALDOOR_END_OPENED
+private alias 4 : VERTICALDOOR_END_CLOSING_METAL
+private alias 5 : VERTICALDOOR_START_OPENED
+private alias 6 : VERTICALDOOR_END_CLOSED_SONIC
+
+// Time Periods
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case VERTICALDOOR_START_OPENING
+		if object.drawPosY < 0x400000
+			object.drawPosY += 0x20000
+			object.ypos -= 0x20000
+		else
+			object.state = VERTICALDOOR_START_OPENED
+		end if
+		break
+
+	case VERTICALDOOR_END_CLOSING
+		if object.drawPosY > 0
+			object.drawPosY -= 0x20000
+			object.ypos += 0x20000
+		else
+			object.state = VERTICALDOOR_END_CLOSED_SONIC
+		end if
+		break
+
+	case VERTICALDOOR_END_OPENED
+		temp0 = player[SLOT_PLAYER1].collisionRight
+		temp0 += 16
+		temp0 <<= 16
+		temp0 += object.xpos
+
+		// The Player is past the door, meaning Sonic's won
+		if player[SLOT_PLAYER1].xpos > temp0
+			// From here, do the standard closing routine
+			object.state = VERTICALDOOR_END_CLOSING
+			PlaySfx(SfxName[Door Close], false)
+		else
+			// If Metal Sonic is past the door
+			if object[+2].xpos > object.xpos
+				object.state = VERTICALDOOR_END_CLOSING_METAL
+				PlaySfx(SfxName[Door Close], false)
+			end if
+		end if
+		break
+
+	case VERTICALDOOR_END_CLOSING_METAL
+		if object.drawPosY > 0
+			object.drawPosY -= 0x20000
+			object.ypos += 0x20000
+		end if
+		break
+
+	end switch
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		switch object.state
+		case VERTICALDOOR_CLOSED
+			// Act as a tall vertical wall
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			break
+
+		case VERTICALDOOR_START_OPENING
+		case VERTICALDOOR_START_OPENED
+			// Acting as a comparatively shorter wall (it's still pretty tall though!)
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			break
+
+		case VERTICALDOOR_END_CLOSING
+		case VERTICALDOOR_END_CLOSED_SONIC
+			// Acting as a *really* tall vertical wall
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 128, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			
+			// Enforce right bounds, make sure the player doesn't leave where they should be
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = stage.curXBoundary2
+			temp1 <<= 16
+			if temp0 > temp1
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos = temp1
+				temp0 = player[currentPlayer].collisionRight
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+			break
+
+		case VERTICALDOOR_END_OPENED
+			// Somewhat tall vertical wall
+			BoxCollisionTest(C_SOLID, object.entityPos, -16, -32, 16, 32, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			
+			// And enforce right bounds here too
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = stage.curXBoundary2
+			temp1 <<= 16
+			if temp0 > temp1
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos = temp1
+				temp0 = player[currentPlayer].collisionRight
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+			break
+
+		case VERTICALDOOR_END_CLOSING_METAL
+			// Only enforcing right bounds, no need for collision checks anymore
+			temp0 = player[currentPlayer].collisionRight
+			temp0 <<= 16
+			temp0 += player[currentPlayer].xpos
+			temp1 = object.xpos
+			temp1 -= 0x100000
+			if temp0 > temp1
+				player[currentPlayer].xvel = 0
+				player[currentPlayer].speed = 0
+				player[currentPlayer].xpos = temp1
+				temp0 = player[currentPlayer].collisionRight
+				temp0 <<= 16
+				player[currentPlayer].xpos -= temp0
+			end if
+			break
+
+		end switch
+	next
+end event
+
+
+event ObjectDraw
+	// Draw the extension sprite
+	temp0 = object.drawPosY
+	temp0 >>= 1
+	temp0 += object.ypos
+	DrawSpriteXY(0, object.xpos, temp0)
+
+	// Draw the base sprite
+	DrawSprite(1)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	// Good future gets different sprites from other time periods
+	if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+		SpriteFrame(-16, -32, 32, 32, 117, 219)
+		SpriteFrame(-16, 0, 32, 32, 117, 219)
+	else
+		SpriteFrame(-16, -32, 32, 32, 1, 1)
+		SpriteFrame(-16, 0, 32, 32, 1, 1)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+	DrawSprite(1)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R7/Objects.gif")
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	// Good future gets different sprites from other time periods
+	if checkResult == TIME_GOOD_FUTURE
+		SpriteFrame(-16, -32, 32, 32, 117, 219)
+		SpriteFrame(-16, 0, 32, 32, 117, 219)
+	else
+		SpriteFrame(-16, -32, 32, 32, 1, 1)
+		SpriteFrame(-16, 0, 32, 32, 1, 1)
+	end if
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

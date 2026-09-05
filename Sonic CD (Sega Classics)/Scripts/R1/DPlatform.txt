@@ -1,0 +1,152 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Diag Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.collisionOffset.x
+private alias object.value3 : object.drawPos.y
+private alias object.value4 : object.collisionOffset.y
+private alias object.value5 : object.angle
+private alias object.value6 : object.amplitude
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// Property Values
+private alias 0 : START_MOVING_LEFT_DOWN
+private alias 1 : START_MOVING_RIGHT_DOWN
+private alias 2 : START_MOVING_LEFT_UP
+private alias 3 : START_MOVING_RIGHT_UP
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function DiagPlatform_DebugDraw
+reserve function DiagPlatform_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function DiagPlatform_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function DiagPlatform_DebugSpawn
+	CreateTempObject(TypeName[Diag Platform], START_MOVING_LEFT_DOWN, object.xpos, object.ypos)
+	object[tempObjectPos].xpos &= -0x10000
+	object[tempObjectPos].ypos &= -0x10000
+	object[tempObjectPos].amplitude = 0x1800
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.angle = oscillation
+	object.angle <<= 1
+	if object.propertyValue == START_MOVING_RIGHT_DOWN
+		object.angle += 256
+	end if
+
+	Cos(object.collisionOffset.x, object.angle)
+	object.collisionOffset.x *= 0x1800
+	object.collisionOffset.x += object.xpos
+	object.collisionOffset.x &= -0x10000 // Truncate the value
+	object.collisionOffset.x -= object.drawPos.x
+
+	Cos(object.collisionOffset.y, object.angle)
+	FlipSign(object.collisionOffset.y)
+	object.collisionOffset.y *= object.amplitude
+	object.collisionOffset.y += object.ypos
+	object.collisionOffset.y &= -0x10000 // Truncate the value
+	object.collisionOffset.y -= object.drawPos.y
+
+	temp0 = object.xpos
+	object.xpos = object.drawPos.x
+
+	temp1 = object.ypos
+	object.ypos = object.drawPos.y
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -9, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+		end if
+	next
+
+	object.xpos = temp0
+	object.ypos = temp1
+end event
+
+
+event ObjectDraw
+	Cos(object.drawPos.x, object.angle)
+	object.drawPos.x *= 0x1800
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= -0x10000 // Truncate the value
+
+	Cos(object.drawPos.y, object.angle)
+	FlipSign(object.drawPos.y)
+	object.drawPos.y *= object.amplitude
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(0, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 101, 109) // #0 - Platform
+
+	foreach (TypeName[Diag Platform], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue > START_MOVING_RIGHT_DOWN
+			object[arrayPos0].amplitude = -0x1800
+			object[arrayPos0].propertyValue -= 2
+		else
+			object[arrayPos0].amplitude = 0x1800
+		end if
+	next
+
+	SetTableValue(TypeName[Diag Platform], DebugMode_ObjCount, DebugMode_TypesTable)
+	SetTableValue(DiagPlatform_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+	SetTableValue(DiagPlatform_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+	DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-32, -16, 64, 32, 101, 109) // #0 - Platform
+	
+	AddEditorVariable("startDir")
+	SetActiveVariable("startDir")
+	AddEnumVariable("Left, Down", START_MOVING_LEFT_DOWN)
+	AddEnumVariable("Right, Down", START_MOVING_RIGHT_DOWN)
+	AddEnumVariable("Left, Up", START_MOVING_LEFT_UP)
+	AddEnumVariable("Right, Up", START_MOVING_RIGHT_UP)
+end event

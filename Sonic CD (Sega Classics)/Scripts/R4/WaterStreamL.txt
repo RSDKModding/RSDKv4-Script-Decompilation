@@ -1,0 +1,123 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Water Stream L Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.propertyValue : object.activeWaterStream
+private alias object.value1        : object.hitboxLeft
+private alias object.value2        : object.hitboxRight
+
+// Previous Object Aliases
+private alias object.propertyValue : prevObject.active
+
+// Player Aliases
+private alias object.state       : player.state
+private alias object.xpos        : player.xpos
+private alias object.ypos        : player.ypos
+private alias object.xvel        : player.xvel
+private alias object.yvel        : player.yvel
+private alias object.speed       : player.speed
+private alias object.animation   : player.animation
+private alias object.controlMode : player.controlMode
+private alias object.up          : player.up
+private alias object.down        : player.down
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Water streams are activated through a chain, originated from a blank object or a fan
+	if prevObject[-1].active == true
+		object.activeWaterStream = true
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			BoxCollisionTest(C_TOUCH, object.entityPos, object.hitboxLeft, -32, object.hitboxRight, 32, currentPlayer, 0, 0, 0, 0)
+			if checkResult == true
+				if player[currentPlayer].state != Player_State_Hurt
+					if player[currentPlayer].state != Player_State_Death
+						if player[currentPlayer].state != Player_State_Drown
+							if player[currentPlayer].state != Player_State_Static
+								player[currentPlayer].state = Player_State_WaterCurrent
+								player[currentPlayer].animation = ANI_FANROTATE
+
+								if player[currentPlayer].up == false
+									if player[currentPlayer].down == false
+										if player[currentPlayer].ypos < object.ypos
+											player[currentPlayer].ypos += 0x10000
+										end if
+
+										if player[currentPlayer].ypos > object.ypos
+											player[currentPlayer].ypos -= 0x10000
+										end if
+									end if
+								end if
+
+								player[currentPlayer].xvel = -0x40000
+								player[currentPlayer].speed = -0x40000
+
+								if player.waterStream == false
+									player[currentPlayer].yvel = 0
+									player.waterStream = true
+								end if
+							end if
+						end if
+					end if
+				end if
+			else
+				if player[currentPlayer].state == Player_State_WaterCurrent
+					if player.waterStream == false
+						player[currentPlayer].state = Player_State_Air
+						player[currentPlayer].controlMode = currentPlayer
+						player[currentPlayer].animation = ANI_WALKING
+					end if
+				end if
+			end if
+		next
+	end if
+end event
+
+
+event ObjectStartup
+	foreach (TypeName[Water Stream L], arrayPos0, ALL_ENTITIES)
+		object[arrayPos0].hitboxLeft = object[arrayPos0].propertyValue
+		object[arrayPos0].hitboxLeft <<= 3
+		object[arrayPos0].hitboxRight = object[arrayPos0].hitboxLeft
+		FlipSign(object[arrayPos0].hitboxLeft)
+		object[arrayPos0].activeWaterStream = false
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	if editor.showGizmos == true
+		DrawLine(object.xpos, object.ypos, object[-1].xpos, object.ypos, 0, 255, 255)
+		DrawLine(object[-1].xpos, object.ypos, object[-1].xpos, object[-1].ypos, 0, 255, 255)
+	end if
+
+	object.inkEffect = INK_ALPHA
+	object.alpha = 198
+	DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+
+	temp0 = object.xpos
+	temp0 -= 0x400000
+	DrawArrow(object.xpos, object.ypos, temp0, object.ypos, 255, 255, 0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Players/Sonic3.gif")
+	SpriteFrame(-28, -12, 56, 24, 199, 100)  // #0 - Sonic Fan Rotate frame 2
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

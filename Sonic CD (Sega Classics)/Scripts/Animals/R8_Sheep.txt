@@ -1,0 +1,121 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Sheep Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0	: SHEEP_HOPRIGHT
+private alias 1 : SHEEP_HOPLEFT
+
+// Time Period
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.ypos += object.yvel
+
+	// Gravity of around 0.156px
+	object.yvel += 0x2800
+
+	switch object.state
+	case SHEEP_HOPRIGHT
+		// Go right at a rate of 1px per frame
+		object.xpos += 0x10000
+
+		// Only check for collision when going down
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				// Turn around
+				object.direction = FACING_LEFT
+
+				// Bounce back up with a velocity of 5px per frame
+				object.yvel  = -0x50000
+				object.state = SHEEP_HOPLEFT
+			end if
+		end if
+		break
+
+	case SHEEP_HOPLEFT
+		// Go left at a rate of 1px per frame
+		object.xpos -= 0x10000
+
+		// Only check for collision when going down
+		if object.yvel > 0
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				// Turn around again
+				object.direction = FACING_RIGHT
+
+				// Bounce back up with a velocity of 5px per frame
+				object.yvel  = -0x50000
+				object.state = SHEEP_HOPRIGHT
+			end if
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	if metalSonic.destroyed == true
+		if object.yvel < 0
+			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		else
+			DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		end if
+	end if
+
+	if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+		if object.yvel < 0
+			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		else
+			DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	// Find all Sheep Objects in the stage
+	foreach (TypeName[Sheep], arrayPos0, ALL_ENTITIES)
+		// Start the Sheep going upwards at 5px per frame
+		object[arrayPos0].yvel = -0x50000
+	next
+
+	// Sheep Frames
+	SpriteFrame(-10, -8, 24, 16, 160, 110)
+	SpriteFrame(-10, -8, 24, 16, 160, 127)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+	SpriteFrame(-10, -8, 24, 16, 160, 110)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,168 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Pole Trigger Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.collisionTop
+private alias object.value1 : object.collisionBottom
+private alias object.value3 : object.jumpCheck
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.drawOrder : player.drawOrder
+private alias object.xpos      : player.xpos
+private alias object.ypos      : player.ypos
+private alias object.xvel      : player.xvel
+private alias object.yvel      : player.yvel
+private alias object.speed     : player.speed
+private alias object.animation : player.animation
+private alias object.jumpPress : player.jumpPress
+
+// States
+private alias 0 : POLETRIGGER_IDLE
+private alias 1 : POLETRIGGER_PLAYER_ROT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state == POLETRIGGER_IDLE
+            BoxCollisionTest(C_TOUCH, object.entityPos, -4, object.collisionTop, 4, object.collisionBottom, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                if player[currentPlayer].state != Player_State_Hurt
+                    object.state = POLETRIGGER_PLAYER_ROT
+                    object.jumpCheck = false
+
+                    player[currentPlayer].state = Player_State_Static
+                    player[currentPlayer].animation = ANI_JUMPING
+                    player[currentPlayer].xpos = object.xpos
+                    player[currentPlayer].xvel = 0
+                    player[currentPlayer].speed = 0
+                    player[currentPlayer].drawOrder = 5
+
+                    if player[currentPlayer].yvel > 0
+                        player[currentPlayer].yvel = 0x20000
+                    else
+                        player[currentPlayer].yvel = -0x20000
+                    end if
+                end if
+            end if
+        else
+            if player[currentPlayer].state == Player_State_Static
+                if player[currentPlayer].jumpPress == true
+                    object.jumpCheck = true
+                end if
+
+                object.angle += 16
+                object.angle &= 511
+                Sin(player[currentPlayer].xpos, object.angle)
+                player[currentPlayer].xpos *= -0xC00
+                player[currentPlayer].xpos += object.xpos
+
+                player[currentPlayer].drawOrder = 4
+
+                if object.angle < 129
+                    player[currentPlayer].drawOrder = 5
+                end if
+
+                if object.angle > 383
+                    player[currentPlayer].drawOrder = 5
+                end if
+
+                temp0 = player[currentPlayer].ypos
+                temp0 -= object.ypos
+                temp0 >>= 16
+                if temp0 < 0
+                    if temp0 < object.collisionTop
+                        player[currentPlayer].yvel = 0x20000
+                    end if
+                else
+                    if temp0 > object.collisionBottom
+                        player[currentPlayer].yvel = -0x20000
+                    end if
+                end if
+
+                if object.jumpCheck == true
+                    if object.angle == 128
+                        player[currentPlayer].drawOrder = 4
+                        player[currentPlayer].state = Player_State_Air
+                        player[currentPlayer].speed = -0xC0000
+                        player[currentPlayer].xvel = -0xC0000
+
+                        object.state = POLETRIGGER_IDLE
+                    end if
+
+                    if object.angle == 384
+                        player[currentPlayer].drawOrder = 4
+                        player[currentPlayer].state = Player_State_Air
+                        player[currentPlayer].speed = 0xC0000
+                        player[currentPlayer].xvel = 0xC0000
+
+                        object.state = POLETRIGGER_IDLE
+                    end if
+                end if
+            else
+                if player[currentPlayer].drawOrder == 5
+                    player[currentPlayer].drawOrder = 4
+                end if
+
+                object.state = POLETRIGGER_IDLE
+            end if
+        end if
+    next
+end event
+
+
+event ObjectStartup
+    foreach (TypeName[Pole Trigger], arrayPos0, ALL_ENTITIES)
+        object[arrayPos0].collisionTop = object[arrayPos0].propertyValue
+        object[arrayPos0].collisionTop <<= 3
+        object[arrayPos0].collisionBottom = object[arrayPos0].collisionTop
+        FlipSign(object[arrayPos0].collisionTop)
+        object[arrayPos0].collisionTop -= 8
+        object[arrayPos0].collisionBottom += 8
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+
+    if editor.showGizmos == true
+        editor.drawingOverlay = true
+        temp0 = object.xpos
+        temp0 -= 0x40000
+        temp1 = object.propertyValue
+        temp1 <<= 3
+        temp2 = temp1
+        FlipSign(temp1)
+        temp1 -= 8
+        temp2 += 8
+        temp2 *= 2
+        temp1 <<= 16
+        temp1 += object.ypos
+        DrawRectOutline(temp0, temp1, 8, temp2, 255, 255, 0, 255)
+        editor.drawingOverlay = false
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Players/Sonic1.gif")
+    SpriteFrame(-16, -16, 32, 32, 75, 118) // #0 - Sonic spin
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

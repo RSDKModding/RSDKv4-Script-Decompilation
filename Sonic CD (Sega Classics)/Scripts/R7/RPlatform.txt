@@ -1,0 +1,412 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: R Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+private alias object.value5 : object.swingAngle
+private alias object.value6 : object.chainsNo
+
+// Player Aliases
+private alias object.state   : player.state
+private alias object.gravity : player.gravity
+private alias object.xpos    : player.xpos
+private alias object.ypos    : player.ypos
+private alias object.xvel    : player.xvel
+private alias object.yvel    : player.yvel
+
+// States
+private alias 0 : RPLATFORM_FULL_CW_SLOWAPEX
+private alias 1 : RPLATFORM_FULL_CW
+private alias 2 : RPLATFORM_FULL_CCW
+private alias 3 : RPLATFORM_TOP180
+private alias 4 : RPLATFORM_RIGHT180
+private alias 5 : RPLATFORM_BOTTOM180
+
+// Property Values
+private alias 19  : HALF_CW_BOTTOM
+private alias 35  : HALF_CW_TOP
+private alias 54  : FULL_CW_SLOW
+private alias 67  : HALF_CW_RIGHT
+private alias 99  : FULL_CW
+private alias 115 : FULL_CCW
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Each state directly corresponds to a subtype of the platform
+	switch object.state
+	case RPLATFORM_FULL_CW_SLOWAPEX
+		object.swingAngle++
+		object.swingAngle &= 511
+		Sin(object.angle, object.swingAngle)
+		object.angle /= 3
+		object.angle += 640
+		break
+
+	case RPLATFORM_FULL_CW
+		object.swingAngle++
+		object.swingAngle &= 511
+		temp0 = object.swingAngle
+		temp0 >>= 1
+		Cos(temp1, temp0)
+		temp1 >>= 1
+		object.angle = 640
+		object.angle -= temp1
+		break
+
+	case RPLATFORM_FULL_CCW
+		object.swingAngle++
+		object.swingAngle &= 511
+		temp0 = object.swingAngle
+		temp0 >>= 1
+		Cos(object.angle, temp0)
+		object.angle >>= 1
+		object.angle += 640
+		break
+
+	case RPLATFORM_TOP180
+		object.swingAngle++
+		object.swingAngle &= 511
+		Sin(object.angle, object.swingAngle)
+		object.angle >>= 2
+		object.angle += 896
+		break
+
+	case RPLATFORM_RIGHT180
+		object.swingAngle++
+		object.swingAngle &= 511
+		Sin(object.angle, object.swingAngle)
+		object.angle >>= 2
+		object.angle += 512
+		break
+
+	case RPLATFORM_BOTTOM180
+		object.swingAngle++
+		object.swingAngle &= 511
+		Sin(object.angle, object.swingAngle)
+		object.angle >>= 2
+		object.angle += 640
+		break
+
+	end switch
+
+	temp1 = object.chainsNo
+	temp1++
+	temp1 <<= 4
+
+	Cos(object.collisionOffset.x, object.angle)
+	object.collisionOffset.x *= temp1
+	object.collisionOffset.x <<= 7
+	object.collisionOffset.x += object.xpos
+	object.collisionOffset.x &= -0x10000 // Truncate the value
+	object.collisionOffset.x -= object.drawPos.x
+
+	Sin(object.collisionOffset.y, object.angle)
+	object.collisionOffset.y *= temp1
+	object.collisionOffset.y <<= 7
+	object.collisionOffset.y += object.ypos
+	object.collisionOffset.y &= -0x10000 // Truncate the value
+	object.collisionOffset.y -= object.drawPos.y
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		// First backup the object's position
+		temp0 = object.xpos
+		temp1 = object.ypos
+
+		temp2 = player[currentPlayer].ypos
+		object.xpos = object.drawPos.x
+		object.ypos = object.drawPos.y
+
+		if player[currentPlayer].state == Player_State_Hurt
+			BoxCollisionTest(C_SOLID, object.entityPos, -32, -8, 32, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		else
+			BoxCollisionTest(C_SOLID, object.entityPos, -24, -8, 24, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		end if
+
+		switch checkResult
+		case COL_TOP
+			player[currentPlayer].xpos += object.collisionOffset.x
+			player[currentPlayer].ypos += object.collisionOffset.y
+			break
+
+		case COL_LEFT
+		case COL_RIGHT
+			CallFunction(Player_Hit)
+			// [Fallthrough to below, for more collision checks]
+
+		case COL_BOTTOM
+			BoxCollisionTest(C_TOUCH, object.entityPos, -16, -8, 16, 9, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+			if checkResult == true
+				if player[currentPlayer].state != Player_State_Hurt
+					temp3 = player[currentPlayer].xvel
+					if temp3 < 0
+						FlipSign(temp3)
+					end if
+
+					if temp3 < 0x60000
+						if player[currentPlayer].gravity == GRAVITY_GROUND
+							CallFunction(Player_Kill)
+						end if
+					else
+						if player[currentPlayer].gravity == GRAVITY_GROUND
+							CallFunction(Player_Hit)
+						end if
+					end if
+				else
+					player[currentPlayer].ypos = temp2
+				end if
+			else
+				player[currentPlayer].ypos = temp2
+
+				if player[currentPlayer].gravity == GRAVITY_GROUND
+					CallFunction(Player_Hit)
+				end if
+			end if
+			break
+
+		end switch
+
+		// Now we can restore the Object back to its normal position
+		object.xpos = temp0
+		object.ypos = temp1
+	next
+end event
+
+
+event ObjectDraw
+	// Draw the platform post frame
+	DrawSprite(0)
+
+	// Draw all the chains
+	temp0 = 0
+	temp1 = 16
+	while temp0 < object.chainsNo
+		Cos(temp2, object.angle)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, object.angle)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+
+	// Draw the main platform sprite
+
+	// Find the X component
+	Cos(object.drawPos.x, object.angle)
+	object.drawPos.x *= temp1
+	object.drawPos.x <<= 7
+	object.drawPos.x += object.xpos
+	object.drawPos.x &= -0x10000 // Truncate the value
+
+	// And then find the Y
+	Sin(object.drawPos.y, object.angle)
+	object.drawPos.y *= temp1
+	object.drawPos.y <<= 7
+	object.drawPos.y += object.ypos
+	object.drawPos.y &= -0x10000 // Truncate the value
+
+	DrawSpriteXY(2, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects.gif")
+
+	SpriteFrame(-8, -8, 16, 16, 34, 1)  // #0 - Pivot Ball Frame
+	SpriteFrame(-8, -8, 16, 16, 51, 1)  // #1 - Chain Frame
+	SpriteFrame(-32, -8, 64, 16, 68, 1) // #2 - Platform Frame
+
+	foreach (TypeName[R Platform], arrayPos0, ALL_ENTITIES)
+		if object[arrayPos0].propertyValue == HALF_CW_BOTTOM
+			object[arrayPos0].state = RPLATFORM_BOTTOM180
+			object[arrayPos0].chainsNo = 2
+		end if
+
+		if object[arrayPos0].propertyValue == HALF_CW_TOP
+			object[arrayPos0].state = RPLATFORM_TOP180
+			object[arrayPos0].chainsNo = 2
+		end if
+
+		if object[arrayPos0].propertyValue == FULL_CW_SLOW
+			object[arrayPos0].state = RPLATFORM_FULL_CW_SLOWAPEX
+			object[arrayPos0].chainsNo = 5
+		end if
+
+		if object[arrayPos0].propertyValue == HALF_CW_RIGHT
+			object[arrayPos0].state = RPLATFORM_RIGHT180
+			object[arrayPos0].chainsNo = 2
+		end if
+
+		if object[arrayPos0].propertyValue == FULL_CW
+			object[arrayPos0].state = RPLATFORM_FULL_CW
+			object[arrayPos0].chainsNo = 2
+		end if
+
+		if object[arrayPos0].propertyValue == FULL_CCW
+			object[arrayPos0].state = RPLATFORM_FULL_CCW
+			object[arrayPos0].chainsNo = 2
+		end if
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Type
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Type
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp4 = 0 // chainsNo
+	temp1 = 0 // behaviour
+
+	switch object.propertyValue
+	case HALF_CW_BOTTOM
+	default
+		temp4 = 2
+		temp1 = 5
+		break
+
+	case HALF_CW_TOP
+		temp4 = 2
+		temp1 = 3
+		break
+
+	case FULL_CW_SLOW
+		temp4 = 5
+		temp1 = 0
+		break
+
+	case HALF_CW_RIGHT
+		temp4 = 2
+		temp1 = 4
+		break
+
+	case FULL_CW
+		temp4 = 2
+		temp1 = 1
+		break
+
+	case FULL_CCW
+		temp4 = 2
+		temp1 = 2
+		break
+
+	end switch
+
+	switch temp1
+	case 0
+	case 1
+	case 2
+	case 5
+		object.angle = 640
+		break
+
+	case 3
+		object.angle = 896
+		break
+
+	case 4
+		object.angle = 512
+		break
+
+	end switch
+
+	DrawSprite(0)
+
+	temp0 = 0
+	temp1 = 16
+	while temp0 < temp4
+		Cos(temp2, object.angle)
+		temp2 *= temp1
+		temp2 <<= 7
+		temp2 += object.xpos
+
+		Sin(temp3, object.angle)
+		temp3 *= temp1
+		temp3 <<= 7
+		temp3 += object.ypos
+
+		DrawSpriteXY(1, temp2, temp3)
+
+		temp0++
+		temp1 += 16
+	loop
+
+	Cos(temp0, object.angle)
+	temp0 *= temp1
+	temp0 <<= 7
+	temp0 += object.xpos
+	temp0 &= 0xFFFF0000 // Truncate the value
+
+	Sin(temp2, object.angle)
+	temp2 *= temp1
+	temp2 <<= 7
+	temp2 += object.ypos
+	temp2 &= 0xFFFF0000 // Truncate the value
+
+	DrawSpriteXY(2, temp0, temp2)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects.gif")
+	SpriteFrame(-8, -8, 16, 16, 34, 1)  // Pivot Ball
+	SpriteFrame(-8, -8, 16, 16, 51, 1)  // Chain
+	SpriteFrame(-32, -8, 64, 16, 68, 1) // Platform
+
+	AddEditorVariable("type")
+	SetActiveVariable("type")
+	AddEnumVariable("Half (clockwise)", HALF_CW_BOTTOM)
+	AddEnumVariable("Half (clockwise, top)", HALF_CW_TOP)
+	AddEnumVariable("Full (clockwise, slow)", FULL_CW_SLOW)
+	AddEnumVariable("Half (clockwise, right)", HALF_CW_RIGHT)
+	AddEnumVariable("Full (clockwise)", FULL_CW)
+	AddEnumVariable("Full (counter-clockwise)", FULL_CCW)
+end event

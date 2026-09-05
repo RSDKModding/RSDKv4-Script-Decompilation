@@ -1,0 +1,378 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: HOBlocks3 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.collisionOffset.x
+private alias object.value4 : object.againstBlock
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Property Values
+private alias 0 : ONE_BLOCK
+private alias 1 : TWO_BLOCKS
+private alias 2 : THREE_BLOCKS
+private alias 3 : FOUR_BLOCKS
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.angle = oscillation
+    object.angle += object.propertyValue
+    object.angle <<= 1
+
+    Cos(object.collisionOffset.x, object.angle)
+
+    switch object.propertyValue
+    case ONE_BLOCK
+        object.collisionOffset.x <<= 11
+        break
+
+    case TWO_BLOCKS
+        object.collisionOffset.x <<= 12
+        break
+
+    case THREE_BLOCKS
+        object.collisionOffset.x *= 0x1800
+        break
+
+    case FOUR_BLOCKS
+        object.collisionOffset.x <<= 13
+        break
+    end switch
+
+    object.collisionOffset.x += object.xpos
+    object.collisionOffset.x &= -0x10000 // Truncate the value
+    object.collisionOffset.x -= object.drawPos.x
+
+    object.againstBlock = false
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        temp0 = object.xpos
+        object.xpos = object.drawPos.x
+
+        switch object.propertyValue
+        case ONE_BLOCK
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            break
+
+        case TWO_BLOCKS
+            BoxCollisionTest(C_SOLID, object.entityPos, -32, -16, 32, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            break
+
+        case THREE_BLOCKS
+            BoxCollisionTest(C_SOLID, object.entityPos, -48, -16, 48, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            break
+
+        case FOUR_BLOCKS
+            BoxCollisionTest(C_SOLID, object.entityPos, -64, -16, 64, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            break
+        end switch
+
+        object.xpos = temp0
+        switch checkResult
+        case COL_TOP
+            player[currentPlayer].xpos += object.collisionOffset.x
+            break
+
+        case COL_LEFT
+            BoxCollisionTest(C_SOLID, object.entityPos, -160, -16, -128, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == COL_RIGHT
+                CallFunction(Player_Kill)
+            end if
+            break
+        end switch
+    next
+end event
+
+
+event ObjectDraw
+    switch object.propertyValue
+    case ONE_BLOCK
+        Cos(object.drawPos.x, object.angle)
+        object.drawPos.x <<= 11
+        object.drawPos.x += object.xpos
+        object.drawPos.x &= -0x10000 // Truncate the value
+        DrawSpriteXY(1, object.drawPos.x, object.ypos)
+        break
+
+    case TWO_BLOCKS
+        Cos(object.drawPos.x, object.angle)
+        object.drawPos.x <<= 12
+        object.drawPos.x += object.xpos
+        object.drawPos.x &= -0x10000 // Truncate the value
+        DrawSpriteXY(4, object.drawPos.x, object.ypos)
+        DrawSpriteXY(5, object.drawPos.x, object.ypos)
+        break
+
+    case THREE_BLOCKS
+        Cos(object.drawPos.x, object.angle)
+        object.drawPos.x *= 0x1800
+        object.drawPos.x += object.xpos
+        object.drawPos.x &= -0x10000 // Truncate the value
+        DrawSpriteXY(0, object.drawPos.x, object.ypos)
+        DrawSpriteXY(1, object.drawPos.x, object.ypos)
+        DrawSpriteXY(2, object.drawPos.x, object.ypos)
+        break
+
+    case FOUR_BLOCKS
+        Cos(object.drawPos.x, object.angle)
+        object.drawPos.x <<= 13
+        object.drawPos.x += object.xpos
+        object.drawPos.x &= -0x10000 // Truncate the value
+        DrawSpriteXY(3, object.drawPos.x, object.ypos)
+        DrawSpriteXY(4, object.drawPos.x, object.ypos)
+        DrawSpriteXY(5, object.drawPos.x, object.ypos)
+        DrawSpriteXY(6, object.drawPos.x, object.ypos)
+        break
+    end switch
+end event
+
+
+event ObjectStartup
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        break
+    end switch
+
+    // R4 Blocks
+    SpriteFrame(-48, -16, 32, 32, temp0, temp1)
+    SpriteFrame(-16, -16, 32, 32, temp0, temp1)
+    SpriteFrame(16, -16, 32, 32, temp0, temp1)
+    SpriteFrame(-64, -16, 32, 32, temp0, temp1)
+    SpriteFrame(-32, -16, 32, 32, temp0, temp1)
+    SpriteFrame(0, -16, 32, 32, temp0, temp1)
+    SpriteFrame(32, -16, 32, 32, temp0, temp1)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // blocks
+            checkResult = object.propertyValue
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // blocks
+            object.propertyValue = editor.variableValue
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    temp2 = object.propertyValue
+    temp2 <<= 1
+
+    temp1 = object.propertyValue
+    temp1++
+    temp1 *= 0x100000
+    FlipSign(temp1)
+    temp1 += object.xpos
+
+    switch object.propertyValue
+    case ONE_BLOCK
+        Cos(temp0, temp2)
+        temp0 <<= 11
+        temp0 += object.xpos
+        temp0 &= 0xFFFF0000 // Truncate the value
+        DrawSpriteXY(1, temp0, object.ypos)
+        DrawArrow(temp0, object.ypos, temp1, object.ypos, 255, 255, 0)
+
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp4 = object.xpos
+            temp4 -= 0x200000
+            temp3 = object.ypos
+            temp3 -= 0x100000
+            DrawRectOutline(temp4, temp3, 0x40, 0x20, 255, 255, 255, 255)
+            DrawRectOutline(temp1, temp3, 0x20, 0x20, 255, 255, 0, 255)
+            DrawArrow(temp1, object.ypos, temp0, object.ypos, 255, 255, 255)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    case TWO_BLOCKS
+        Cos(temp0, temp2)
+        temp0 <<= 12
+        temp0 += object.xpos
+        temp0 &= 0xFFFF0000 // Truncate the value
+        DrawSpriteXY(4, temp0, object.ypos)
+        DrawSpriteXY(5, temp0, object.ypos)
+
+        DrawArrow(temp0, object.ypos, temp1, object.ypos, 255, 255, 0)
+
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp4 = object.xpos
+            temp4 -= 0x400000
+            temp3 = object.ypos
+            temp3 -= 0x100000
+            DrawRectOutline(temp4, temp3, 0x80, 0x20, 255, 255, 255, 255)
+            DrawRectOutline(temp1, temp3, 0x40, 0x20, 255, 255, 0, 255)
+            DrawArrow(temp1, object.ypos, temp0, object.ypos, 255, 255, 255)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    case THREE_BLOCKS
+        Cos(temp0, temp2)
+        temp0 *= 0x1800
+        temp0 += object.xpos
+        temp0 &= 0xFFFF0000 // Truncate the value
+        DrawSpriteXY(0, temp0, object.ypos)
+        DrawSpriteXY(1, temp0, object.ypos)
+        DrawSpriteXY(2, temp0, object.ypos)
+
+        DrawArrow(temp0, object.ypos, temp1, object.ypos, 255, 255, 0)
+
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp4 = object.xpos
+            temp4 -= 0x600000
+            temp3 = object.ypos
+            temp3 -= 0x100000
+            DrawRectOutline(temp4, temp3, 0x80, 0x20, 255, 255, 255, 255)
+            DrawRectOutline(temp1, temp3, 0x60, 0x20, 255, 255, 0, 255)
+            DrawArrow(temp1, object.ypos, temp0, object.ypos, 255, 255, 255)
+            editor.drawingOverlay = false
+        end if
+        break
+
+    case FOUR_BLOCKS
+        Cos(temp0, temp2)
+        temp0 <<= 13
+        temp0 += object.xpos
+        temp0 &= 0xFFFF0000 // Truncate the value
+        DrawSpriteXY(3, temp0, object.ypos)
+        DrawSpriteXY(4, temp0, object.ypos)
+        DrawSpriteXY(5, temp0, object.ypos)
+        DrawSpriteXY(6, temp0, object.ypos)
+
+        DrawArrow(temp0, object.ypos, temp1, object.ypos, 255, 255, 0)
+
+        if editor.showGizmos == true
+            editor.drawingOverlay = true
+            temp4 = object.xpos
+            temp4 -= 0x800000
+            temp3 = object.ypos
+            temp3 -= 0x100000
+            DrawRectOutline(temp4, temp3, 0xC0, 0x20, 255, 255, 255, 255)
+            DrawRectOutline(temp1, temp3, 0x80, 0x20, 255, 255, 0, 255)
+            DrawArrow(temp1, object.ypos, temp0, object.ypos, 255, 255, 255)
+            editor.drawingOverlay = false
+        end if
+        break
+    end switch
+end event
+
+
+event RSDKLoad
+    CallFunction(EditorHelpers_FindTimePeriod)
+
+    switch checkResult
+    case TIME_PRESENT
+        LoadSpriteSheet("R4/Objects.gif")
+        temp0 = 163
+        temp1 = 1
+        temp2 = 196
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 157
+        temp2 = 34
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 190
+        temp2 = 34
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R4/Objects2.gif")
+        temp0 = 1
+        temp1 = 223
+        temp2 = 34
+        break
+    end switch
+
+    // R4 Blocks
+    SpriteFrame(-48, -16, 32, 32, temp0, temp1)
+    SpriteFrame(-16, -16, 32, 32, temp0, temp1)
+    SpriteFrame(16, -16, 32, 32, temp0, temp1)
+    SpriteFrame(-64, -16, 32, 32, temp0, temp1)
+    SpriteFrame(-32, -16, 32, 32, temp0, temp1)
+    SpriteFrame(0, -16, 32, 32, temp0, temp1)
+    SpriteFrame(32, -16, 32, 32, temp0, temp1)
+
+    AddEditorVariable("blocks")
+    SetActiveVariable("blocks")
+    AddEnumVariable("One block", ONE_BLOCK)
+    AddEnumVariable("Two blocks", TWO_BLOCKS)
+    AddEnumVariable("Three blocks", THREE_BLOCKS)
+    AddEnumVariable("Four blocks", FOUR_BLOCKS)
+end event

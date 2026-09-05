@@ -1,0 +1,122 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Goal Post Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// States
+private alias 0 : GOALPOST_IDLE
+private alias 1 : GOALPOST_BLANK
+
+// Warp Destination
+private alias 0 : WARPDEST_NONE
+
+// Property Values
+private alias 1 : UPPERGOAL
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == GOALPOST_IDLE
+		temp0 = object.ypos
+		temp0 += 0x600000
+
+		if player[SLOT_PLAYER1].ypos < temp0
+			if player[SLOT_PLAYER1].xpos > object.xpos
+				// Block the player from going back into the stage, reset time warps
+				stage.newXBoundary1 = object.xpos
+				stage.newXBoundary1 >>= 16
+				stage.newXBoundary1 -= 160
+
+				warp.destination = WARPDEST_NONE
+				warp.timer       = 0
+
+				object.state = GOALPOST_BLANK
+
+				if object.propertyValue == UPPERGOAL
+					BoxCollisionTest(C_TOUCH, object.entityPos, -32, -256, 32, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+					if checkResult == true
+						// Take The High Road Unlock Criteria
+						if stage.playerListPos == PLAYER_SONIC_A
+							if stage.debugMode == false
+								// except we achieve... nothing!
+							end if
+						end if
+					end if
+				end if
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(0)
+end event
+
+
+event ObjectStartup
+	if stage.playerListPos == PLAYER_SONIC_A
+		LoadSpriteSheet("Global/Items2.gif")
+	else
+		LoadSpriteSheet("Global/Items2_t.gif")
+	end if
+
+	SpriteFrame(-20, -44, 40, 56, 34, 165) // #0 - Goal Post
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // AwardAchievement
+			checkResult = object.propertyValue
+			break
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // AwardAchievement
+			object.propertyValue = editor.variableValue
+			break
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-20, -44, 40, 56, 34, 165) // #0 - Goal Post
+
+	AddEditorVariable("awardAchievement")  // You can't really *get* the achievement in this version,
+	SetActiveVariable("awardAchievement")  // but why not?
+	AddEnumVariable("false", false)
+	AddEnumVariable("true", true)
+end event

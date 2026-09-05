@@ -1,0 +1,140 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Rabbit Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.hops
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0	: RABBIT_HOPRIGHT
+private alias 1 : RABBIT_HOPLEFT
+
+// Time Period
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	object.ypos += object.yvel
+
+	// Apply a Gravity of about 0.17px per frame
+	object.yvel += 0x2C00
+
+	switch object.state
+	case RABBIT_HOPRIGHT
+		// Move the Rabbit right by a pixel
+		object.xpos += 0x10000
+
+		// Only check for the floor if the Rabbit's falling at a rate faster than 4px per frame
+		if object.yvel > 0x40000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				// Bounce back up, at a rate of 5px upwards per frame
+				object.yvel = -0x50000
+
+				// Upon landing from the third hop, the Rabbit should turn around
+				object.hops++
+				if object.hops == 2
+					object.hops = 0
+					object.state = RABBIT_HOPLEFT
+					object.direction = FACING_LEFT
+				end if
+			end if
+		end if
+		break
+
+	case RABBIT_HOPLEFT
+		// Move the Rabbit left by a pixel
+		object.xpos -= 0x10000
+
+		// Only check for the floor if the Rabbit's falling at a rate faster than 4px per frame
+		if object.yvel > 0x40000
+			ObjectTileCollision(CSIDE_FLOOR, 0, 8, 0)
+			if checkResult == true
+				// Bounce back up, at a rate of 5px upwards per frame
+				object.yvel = -0x50000
+
+				// Upon landing from the third hop, the Rabbit should turn around
+				object.hops++
+				if object.hops == 2
+					object.hops = 0
+					object.state = RABBIT_HOPRIGHT
+					object.direction = FACING_RIGHT
+				end if
+			end if
+		end if
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	if metalSonic.destroyed == true
+		if object.yvel < 0
+			DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+		else
+			DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+		end if
+	else
+		if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+			if object.yvel < 0
+				DrawSpriteFX(0, FX_FLIP, object.xpos, object.ypos)
+			else
+				DrawSpriteFX(1, FX_FLIP, object.xpos, object.ypos)
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R3/Objects3.gif")
+
+	// Loop through all Objects in the stage and setup all Rabbits
+	// Interestingly, we're iterating through them manually instead
+	// of using RSDKv4's foreach functionality
+	arrayPos0 = 32
+	while arrayPos0 < 1056
+		if object[arrayPos0].type == TypeName[Rabbit]
+			// Make the Rabbit start at a rising rate of 5px per frame
+			object[arrayPos0].yvel = -0x50000
+
+			// Start facing right
+			object[arrayPos0].direction = FACING_RIGHT
+		end if
+		arrayPos0++
+	loop
+
+	SpriteFrame(-8, -12, 16, 24, 149, 1)
+	SpriteFrame(-8, -12, 16, 24, 166, 1)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R3/Objects3.gif")
+	SpriteFrame(-8, -12, 16, 24, 149, 1)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

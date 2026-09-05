@@ -1,0 +1,241 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Metal Sonic Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.baseY
+private alias object.value4 : object.frameTimer
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// Amy Aliases
+private alias object[-1].xpos      : amy.xpos
+private alias object[-1].ypos      : amy.ypos
+private alias object[-1].direction : amy.direction
+private alias object[-1].frame     : amy.frame
+private alias object[-1].state     : amy.state
+
+// States
+private alias 0 : METALSONIC_WAIT
+private alias 1 : METALSONIC_APPROACH
+private alias 2 : METALSONIC_CATCH_AMY
+private alias 3 : METALSONIC_RISE
+private alias 4 : METALSONIC_HOVER
+private alias 5 : METALSONIC_FLEE
+
+// Amy States
+private alias 4 : AMY_KIDNAP
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case METALSONIC_APPROACH
+        object.xpos -= 0x30000
+        object.frame++
+        object.frame &= 1
+
+        temp0 = 0
+
+        arrayPos0 = object.entityPos
+        arrayPos0++
+        while temp0 < 3
+            if object[arrayPos0].type > TypeName[Blank Object]
+                temp1 = object[arrayPos0].xpos
+                temp1 += 0x240000
+                if object.xpos < temp1
+					// Destroy Spikes
+                    object[arrayPos0].type = TypeName[Blank Object]
+                    temp2 = object[arrayPos0].propertyValue
+                    temp2 <<= 2
+
+					// Create Debris
+                    CreateTempObject(TypeName[Spike Debris], temp2, object[arrayPos0].xpos, object[arrayPos0].ypos)
+                    object[tempObjectPos].ixpos -= 9
+                    object[tempObjectPos].iypos -= 9
+                    object[tempObjectPos].xvel = -0x10000
+                    object[tempObjectPos].yvel = -0x30000
+                    temp2++
+
+                    CreateTempObject(TypeName[Spike Debris], temp2, object[arrayPos0].xpos, object[arrayPos0].ypos)
+                    object[tempObjectPos].ixpos += 8
+                    object[tempObjectPos].iypos -= 9
+                    object[tempObjectPos].xvel = 0x10000
+                    object[tempObjectPos].yvel = -0x30000
+                    temp2++
+
+                    CreateTempObject(TypeName[Spike Debris], temp2, object[arrayPos0].xpos, object[arrayPos0].ypos)
+                    object[tempObjectPos].ixpos -= 9
+                    object[tempObjectPos].iypos += 8
+                    object[tempObjectPos].xvel = -0x10000
+                    object[tempObjectPos].yvel = -0x18000
+                    temp2++
+
+                    CreateTempObject(TypeName[Spike Debris], temp2, object[arrayPos0].xpos, object[arrayPos0].ypos)
+                    object[tempObjectPos].ixpos += 8
+                    object[tempObjectPos].iypos += 8
+                    object[tempObjectPos].xvel = 0x10000
+                    object[tempObjectPos].yvel = -0x18000
+                    temp2++
+
+                    PlaySfx(SfxName[Crumble], false)
+                end if
+            end if
+
+            arrayPos0++
+            temp0++
+        loop
+
+        temp0 = amy.xpos
+        temp0 += 0x200000
+        if object.xpos < temp0
+            object.state = METALSONIC_CATCH_AMY
+            object.frame = 2
+            object.baseY = object.ypos
+            amy.frame = 8
+            amy.state = AMY_KIDNAP
+            PlaySfx(SfxName[Amy Captured], false)
+        end if
+        break
+
+    case METALSONIC_CATCH_AMY
+        if object.timer > 8
+            if player[SLOT_PLAYER1].xpos < object.xpos
+                object.direction = FACING_LEFT
+            else
+                object.direction = FACING_RIGHT
+            end if
+        end if
+
+        Sin(object.ypos, object.timer)
+        object.ypos <<= 9
+        object.ypos += object.baseY
+
+        object.timer += 8
+        if object.timer > 607
+            object.state = METALSONIC_RISE
+            object.timer = 0
+        end if
+        break
+
+    case METALSONIC_RISE
+        if player[SLOT_PLAYER1].xpos < object.xpos
+            object.direction = FACING_LEFT
+        else
+            object.direction = FACING_RIGHT
+        end if
+
+        if object.timer < 40
+            object.timer++
+            object.baseY -= 0x20000
+            object.ypos -= 0x20000
+        else
+            object.state = METALSONIC_HOVER
+            object.timer = 256
+        end if
+        break
+
+    case METALSONIC_HOVER
+        if player[SLOT_PLAYER1].xpos < object.xpos
+            object.direction = FACING_LEFT
+        else
+            object.direction = FACING_RIGHT
+        end if
+
+        Sin(object.ypos, object.timer)
+        object.ypos <<= 9
+        object.ypos += object.baseY
+
+        object.timer += 8
+        if object.timer > 976
+            object.state = METALSONIC_FLEE
+            object.direction = FACING_RIGHT
+        end if
+        break
+
+    case METALSONIC_FLEE
+        if object.xvel < 0x60000
+            object.xvel += 0x2000
+        end if
+
+        object.xpos += object.xvel
+
+        if object.outOfBounds == true
+			// Erase Metal
+            temp0 = object.entityPos
+            ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
+
+			// Erase Amy
+            temp0--
+            ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
+        end if
+        break
+
+    end switch
+end event
+
+
+event ObjectDraw
+    if object.state < METALSONIC_CATCH_AMY
+        DrawSprite(object.frame)
+    else
+        amy.xpos = object.xpos
+        amy.ypos = object.ypos
+        amy.direction = object.direction
+
+        temp0 = object.frameTimer
+        temp0 >>= 1
+        temp0 += 3
+        DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+
+        object.frameTimer++
+        object.frameTimer &= 7
+        DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects.gif")
+
+    // Overdrive Attack
+    SpriteFrame(-24, -16, 48, 32, 67, 68)   // #0 - Overdrive Attack Frame 0
+    SpriteFrame(-24, -16, 48, 32, 116, 68)  // #1 - Overdrive Attack Frame 1
+
+    // Metal Idle
+    SpriteFrame(-16, -24, 32, 48, 1, 108)   // #2 - Idle
+
+    // Booster
+    SpriteFrame(-24, -12, 24, 24, 214, 43)  // #3 - Booster Frame 0
+    SpriteFrame(0, 0, 2, 2, 165, 68)        // #4 - Booster Frame 1 / Cheat Sprite
+    SpriteFrame(-28, -16, 32, 32, 165, 68)  // #5 - Booster Frame 2
+    SpriteFrame(0, 0, 2, 2, 165, 68)        // #6 - Booster Frame 3 / Cheat Sprite
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects.gif")
+    SpriteFrame(-24, -16, 48, 32, 67, 68)  // #0 - Overdrive Attack Frame 0
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

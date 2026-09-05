@@ -1,0 +1,119 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Flying Bird Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// States
+private alias 0	: BIRD_FLYRIGHT
+private alias 1 : BIRD_FLYLEFT
+
+// Time Period
+private alias 2 : TIME_GOOD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case BIRD_FLYRIGHT
+		if object.angle > 0
+			object.angle -= 2
+		else
+			// Apex reached, turn around
+			object.state     = BIRD_FLYLEFT
+			object.direction = FACING_RIGHT
+		end if
+		break
+
+	case BIRD_FLYLEFT
+		if object.angle < 256
+			object.angle += 2
+		else
+			// Other side's apex reached, (re)turn once again
+			object.state     = BIRD_FLYRIGHT
+			object.direction = FACING_RIGHT
+		end if
+		break
+
+	end switch
+
+	// Animate the Bird
+	object.timer++
+	if object.timer > 19
+		object.timer = 0
+		object.frame++
+		object.frame &= 1
+	end if
+end event
+
+
+event ObjectDraw
+	if metalSonic.destroyed == true
+		Cos(temp0, object.angle)
+		temp0 <<= 14
+		temp0 += object.xpos
+
+		Sin(temp1, object.angle)
+		temp1 <<= 14
+		temp1 += object.ypos
+
+		DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+	end if
+
+	if HUD.currentTimePeriod == TIME_GOOD_FUTURE
+		Cos(temp0, object.angle)
+		temp0 <<= 14
+		temp0 += object.xpos
+
+		Sin(temp1, object.angle)
+		temp1 <<= 14
+		temp1 += object.ypos
+
+		DrawSpriteFX(object.frame, FX_FLIP, temp0, temp1)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R8/Objects2.gif")
+
+	// Bird Frames
+	SpriteFrame(-8, -8, 16, 16, 143, 110)
+	SpriteFrame(-8, -8, 16, 16, 143, 127)
+
+	// Find all Flying Bird Objects in the stage
+	foreach (TypeName[Flying Bird], arrayPos0, ALL_ENTITIES)
+		// Set the Object's Draw Order to be above most other objects and the stage
+		object[arrayPos0].drawOrder = 5
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R8/Objects2.gif")
+	SpriteFrame(-8, -8, 16, 16, 143, 110)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

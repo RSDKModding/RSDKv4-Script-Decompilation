@@ -1,0 +1,451 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Hotaru Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value3 : object.originPos.x
+private alias object.value4 : object.originPos.y
+private alias object.value5 : object.leftBound
+private alias object.value6 : object.rightBound
+private alias object.value7 : object.checkBounds
+
+// Player Aliases
+private alias object.xpos : player.xpos
+
+// Hotaru Laser alias
+private alias object.value2 : object.hotaruEntity
+
+// HUD Alias
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// One Way Door Alias
+private alias object[+5].state : oneWayDoor.State
+
+// Hotaru Spawner States
+private alias 0 : HOTARU_SPAWNER_CHECK_BOUNDS
+private alias 1 : HOTARU_SPAWNER_SPAWN_CHILD_1
+private alias 2 : HOTARU_SPAWNER_CHECK_CHILD_1
+private alias 3 : HOTARU_SPAWNER_SPAWN_CHILD_2
+private alias 4 : HOTARU_SPAWNER_CHECK_CHILD_2
+private alias 5 : HOTARU_SPAWNER_OPEN_DOORS
+
+// Hotaru States
+private alias 0 : HOTARU_FADE_IN
+private alias 1 : HOTARU_MOVE
+private alias 2 : HOTARU_CHARGE_LASER
+private alias 3 : HOTARU_SHOT_LASER
+private alias 4 : HOTARU_SET_NEW_DESTINATION
+
+// One Way Door States
+private alias 1 : ONEWAYDOOR_OPEN
+
+// Property Values
+private alias 0 : PARENT_OBJECT
+private alias 1 : CHILD_OBJECT
+
+// Time Periods
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Hotaru_Set_Destination
+
+// ========================
+// Function Definitions
+// ========================
+
+public function Hotaru_Set_Destination
+    if object.checkBounds == false
+        temp0 = true
+    else
+        temp1 = player[SLOT_PLAYER1].xpos
+        temp1 >>= 16
+        temp1 &= 32760
+
+        CheckLower(temp1, object.leftBound)
+        temp0 = checkResult
+
+        CheckGreater(temp1, object.rightBound)
+        temp0 |= checkResult
+    end if
+
+    if temp0 == true
+        temp2 = oscillation
+        temp2 &= 127
+        temp2 += object.originPos.x
+        temp2 -= 64
+
+        temp3 = player[SLOT_PLAYER1].xpos
+        temp3 >>= 16
+        temp3 *= 5
+        temp3 &= 31
+        temp3 += object.originPos.y
+    else
+        temp2 = temp1
+
+        temp3 = object.originPos.y
+        temp3 -= 8
+    end if
+
+    object.xvel = temp2
+    object.xvel -= object.ixpos
+    object.xvel <<= 11
+
+    object.yvel = temp3
+    object.yvel -= object.iypos
+    object.yvel <<= 11
+
+    object.checkBounds++
+    object.checkBounds &= 1
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.propertyValue == PARENT_OBJECT
+        switch object.state
+        case HOTARU_SPAWNER_CHECK_BOUNDS
+            temp0 = object.xpos
+            temp0 -= 0x300000
+            if player[SLOT_PLAYER1].xpos > temp0
+                object.state++
+            end if
+            break
+
+        case HOTARU_SPAWNER_SPAWN_CHILD_1
+            if object.timer < 60
+                object.timer++
+            else
+                object.timer = 0
+
+                object[+1].type = TypeName[Hotaru]
+                object[+1].xpos = object.xpos
+                object[+1].xpos -= 0x500000
+                object[+1].ypos = object.ypos
+                object[+1].ypos += 0x300000
+
+                object.state++
+            end if
+            break
+
+        case HOTARU_SPAWNER_CHECK_CHILD_1
+            // Check if the first Hotaru got destroyed
+            if object[+1].type != TypeName[Hotaru]
+                object.state++
+            else
+                if object[+1].state < HOTARU_CHARGE_LASER
+                    temp0 = 176
+                else
+                    temp0 = 0
+                end if
+
+                temp0 -= object.alpha
+                temp0 >>= 3
+                object.alpha += temp0
+            end if
+            break
+
+        case HOTARU_SPAWNER_SPAWN_CHILD_2
+            if object.timer < 60
+                object.timer++
+            else
+                object.timer = 0
+
+                object[+2].type = TypeName[Hotaru]
+                object[+2].checkBounds = true
+
+                object[+2].xpos = object.xpos
+                object[+2].xpos -= 0x500000
+
+                object[+2].ypos = object.ypos
+                object[+2].ypos += 0x280000
+
+                object[+3].type = TypeName[Hotaru]
+                object[+3].checkBounds = false
+
+                object[+3].xpos = object.xpos
+                object[+3].xpos += 0x500000
+
+                object[+3].ypos = object.ypos
+                object[+3].ypos += 0x280000
+                object.state++
+            end if
+            break
+
+        case HOTARU_SPAWNER_CHECK_CHILD_2
+            if object[+2].type != TypeName[Hotaru]
+                if object[+3].type != TypeName[Hotaru]
+                    temp0 = 3840
+                    temp0 -= screen.xcenter
+                    stage.newXBoundary1 = temp0
+
+                    temp0 += screen.xsize
+                    stage.newXBoundary2 = temp0
+
+                    object.priority = PRIORITY_ACTIVE
+                    object.state++
+                else
+                    if object[+3].state < HOTARU_CHARGE_LASER
+                        temp0 = 176
+                    else
+                        temp0 = 0
+                    end if
+
+                    temp0 -= object.alpha
+                    temp0 >>= 3
+                    object.alpha += temp0
+                end if
+            else
+                if object[+2].state < HOTARU_CHARGE_LASER
+                    temp0 = 176
+                else
+                    temp0 = 0
+                end if
+
+                temp0 -= object.alpha
+                temp0 >>= 3
+                object.alpha += temp0
+            end if
+            break
+
+        case HOTARU_SPAWNER_OPEN_DOORS
+            if object[+2].state > HOTARU_MOVE
+                if object[+3].state > HOTARU_MOVE
+                    oneWayDoor.state = ONEWAYDOOR_OPEN
+                end if
+            end if
+
+            if HUD.currentTimePeriod == TIME_BAD_FUTURE
+                if object.alpha < 176
+                    object.alpha++
+                end if
+            else
+                if object.alpha > 0
+                    object.alpha--
+                end if
+            end if
+
+            BoxCollisionTest(C_TOUCH, object.entityPos, -192, -256, 420, 256, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == false
+                ResetObjectEntity(object.entityPos, TypeName[Blank Object], 0, 0, 0)
+            end if
+            break
+
+        end switch
+    else
+        switch object.state
+        case HOTARU_FADE_IN
+            if object.timer < 60
+                object.timer++
+            else
+                object.timer = 32
+                CallFunction(Hotaru_Set_Destination)
+                object.state++
+            end if
+
+            object.alpha = object.timer
+            object.alpha <<= 2
+            break
+
+        case HOTARU_MOVE
+            object.xpos += object.xvel
+            object.ypos += object.yvel
+
+            temp0 = object.timer
+            temp0 &= 3
+            if temp0 == 0
+                CreateTempObject(TypeName[Hotaru Trail], 0, object.xpos, object.ypos)
+                object[tempObjectPos].inkEffect = INK_ALPHA
+                object[tempObjectPos].alpha = 248
+            end if
+
+            object.timer--
+            if object.timer == 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_CHARGE_LASER
+            object.timer++
+            if object.timer == 32
+                object.timer = 0
+                object.state++
+                PlaySfx(SfxName[HLaser], false)
+            end if
+            break
+
+        case HOTARU_SHOT_LASER
+            temp0 = object.timer
+            temp0 &= 1
+            if temp0 == 0
+                CreateTempObject(TypeName[Hotaru Laser], 0, object.xpos, object.ypos)
+                object[tempObjectPos].hotaruEntity = object.entityPos
+            end if
+
+            object.timer++
+            if object.timer == 20
+                object.timer = 0
+                object.state++
+            end if
+            break
+
+        case HOTARU_SET_NEW_DESTINATION
+            object.timer++
+            if object.timer == 16
+                object.timer = 32
+                CallFunction(Hotaru_Set_Destination)
+                object.state = HOTARU_MOVE
+            end if
+            break
+
+        end switch
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.propertyValue == CHILD_OBJECT
+            if object.state == HOTARU_SHOT_LASER
+                if object.timer > 1
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -5, -5, 5, 5, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        CallFunction(Player_BadnikBreak)
+                    end if
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    if object.propertyValue == CHILD_OBJECT
+        switch object.state
+        case HOTARU_FADE_IN
+            DrawSpriteFX(2, FX_INK, object.xpos, object.ypos)
+            break
+
+        case HOTARU_MOVE
+            DrawSprite(2)
+            break
+
+        case HOTARU_CHARGE_LASER
+            temp0 = object.timer
+            temp0 &= 3
+            temp0 >>= 1
+            if temp0 == 0
+                DrawSprite(3)
+            else
+                DrawSprite(0)
+            end if
+            break
+
+        case HOTARU_SHOT_LASER
+            temp0 = object.timer
+            temp0 &= 7
+            temp0 >>= 2
+            DrawSprite(temp0)
+            DrawSprite(3)
+            break
+
+        case HOTARU_SET_NEW_DESTINATION
+            temp0 = object.timer
+            temp0 &= 3
+            temp0 >>= 1
+            if temp0 == 0
+                DrawSprite(3)
+            else
+                DrawSprite(0)
+            end if
+            break
+
+        end switch
+    else
+        DrawRect(0, 0, screen.xsize, screen.ysize, 0, 0, 0, object.alpha)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R8/Objects3.gif")
+
+    SpriteFrame(-12, -24, 24, 40, 96, 133)  // #0 - Hotaru Idle frame 0
+    SpriteFrame(-12, -24, 24, 40, 121, 133) // #1 - Hotaru Idle frame 1
+
+    SpriteFrame(-12, -10, 24, 24, 146, 133) // #2 - Hotaru Bulb frame 0
+    SpriteFrame(-12, -10, 24, 24, 171, 133) // #3 - Hotaru Bulb frame 1
+
+    arrayPos0 = 32
+    while arrayPos0 < 1056
+        if object[arrayPos0].type == TypeName[Hotaru]
+            object[arrayPos0].alpha = 0
+            object[arrayPos0].inkEffect = INK_ALPHA
+
+            if HUD.currentTimePeriod == TIME_BAD_FUTURE
+                object[arrayPos0].drawOrder = 2
+            end if
+
+            arrayPos1 = arrayPos0
+            arrayPos1++
+            temp0 = 0
+            while temp0 < 3
+                // Setups the next 3 blank objects
+                object[arrayPos1].propertyValue = CHILD_OBJECT
+                object[arrayPos1].drawOrder = 4
+                object[arrayPos1].inkEffect = INK_ALPHA
+
+                object[arrayPos1].originPos.x = object[arrayPos0].ixpos
+                object[arrayPos1].originPos.y = object[arrayPos0].iypos
+
+                object[arrayPos1].leftBound = object[arrayPos0].ixpos
+                object[arrayPos1].leftBound -= 112
+
+                object[arrayPos1].rightBound = object[arrayPos0].ixpos
+                object[arrayPos1].rightBound += 112
+
+                temp0++
+                arrayPos1++
+            loop
+            arrayPos0 += 3
+        end if
+        arrayPos0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+    if editor.showGizmos == true
+        editor.drawingOverlay = true
+        DrawLine(object.xpos, object.ypos, object[+1].xpos, object[+1].ypos, 255, 255, 0)
+        DrawLine(object.xpos, object.ypos, object[+2].xpos, object[+2].ypos, 255, 255, 0)
+        DrawLine(object.xpos, object.ypos, object[+3].xpos, object[+3].ypos, 255, 255, 0)
+        editor.drawingOverlay = false
+    end if
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R8/Objects3.gif")
+    SpriteFrame(-12, -24, 24, 40, 96, 133)  // #0 - Hotaru Idle frame 0
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

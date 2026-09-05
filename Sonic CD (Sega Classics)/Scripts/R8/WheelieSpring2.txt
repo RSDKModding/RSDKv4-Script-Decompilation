@@ -1,0 +1,178 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Wheelie Spring 2 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.propertyValue : object.dirTimer
+
+// Player Aliases
+private alias object.state     : player.state
+private alias object.yvel      : player.yvel
+private alias object.gravity   : player.gravity
+private alias object.animation : player.animation
+private alias object.value1    : player.timer
+private alias object.value9    : player.animationReserve
+
+private alias 11 : ANI_BOUNCING_A
+
+// States
+private alias 0 : WHEELIESPRING2_MOVING_RIGHT
+private alias 1 : WHEELIESPRING2_MOVING_LEFT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == WHEELIESPRING2_MOVING_RIGHT
+        if object.timer < object.dirTimer
+            object.timer++
+            object.xpos += 0x10000
+        else
+            object.state = WHEELIESPRING2_MOVING_LEFT
+            object.timer = object.dirTimer
+            FlipSign(object.timer)
+        end if
+    else
+        if object.timer < object.dirTimer
+            object.timer++
+            object.xpos -= 0x10000
+        else
+            object.state = WHEELIESPRING2_MOVING_RIGHT
+            object.timer = object.dirTimer
+            FlipSign(object.timer)
+        end if
+    end if
+
+    ObjectTileGrip(CSIDE_FLOOR, 0, 15, 0)
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if player[currentPlayer].state != Player_State_Static
+            if player[currentPlayer].yvel >= 0
+                BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_TOUCH, object.entityPos, -15, -18, 15, -12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+                if checkResult == true
+                    object.frame = 1
+
+                    player[currentPlayer].state = Player_State_Air
+
+                    player[currentPlayer].gravity = GRAVITY_AIR
+                    player[currentPlayer].yvel    = -0x100000
+
+                    player[currentPlayer].animationReserve = ANI_WALKING
+
+                    if player[currentPlayer].animation == ANI_RUNNING
+                        player[currentPlayer].animationReserve = ANI_RUNNING
+                    end if
+
+                    if player[currentPlayer].animation == ANI_PEELOUT
+                        player[currentPlayer].animationReserve = ANI_PEELOUT
+                    end if
+
+                    player[currentPlayer].animation = ANI_BOUNCING_A
+                    player[currentPlayer].timer     = 0
+
+                    PlaySfx(SfxName[Spring], false)
+                end if
+            end if
+
+            if player[currentPlayer].gravity == GRAVITY_GROUND
+                BoxCollisionTest(C_SOLID, object.entityPos, -16, -20, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                BoxCollisionTest(C_TOUCH, object.entityPos, -15, -18, 15, -12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+
+                if checkResult == true
+                    object.frame = 1
+
+                    player[currentPlayer].state = Player_State_Air
+
+                    player[currentPlayer].gravity = GRAVITY_AIR
+                    player[currentPlayer].yvel    = -0x100000
+
+                    player[currentPlayer].animation = ANI_BOUNCING_A
+                    player[currentPlayer].timer     = 0
+
+                    PlaySfx(SfxName[Spring], false)
+                end if
+            end if
+        end if
+    next
+end event
+
+
+event ObjectDraw
+    if object.frame == 0
+        DrawSprite(0)
+    else
+        object.frame++
+
+        temp0 = object.frame
+        temp0 >>= 1
+        switch temp0
+        case 0
+        case 1
+            DrawSprite(0)
+            break
+
+        case 2
+        case 6
+            DrawSprite(1)
+            break
+
+        case 3
+        case 4
+        case 5
+            DrawSprite(2)
+            break
+
+        end switch
+
+        if object.frame > 12
+            object.frame = 0
+        end if
+    end if
+
+    temp0 = object.timer
+    temp0 += object.dirTimer
+    temp0 %= 18
+    temp0 /= 9
+    temp0 += 3
+    DrawSprite(temp0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("Global/Items.gif")
+
+    SpriteFrame(-16, -16, 32, 16, 84, 1)    // #0 - Red Spring
+    SpriteFrame(-16, -8, 32, 8, 84, 1)      // #1 - Red Spring Head
+    SpriteFrame(-16, -40, 32, 40, 84, 18)   // #2 - Red Spring Launch
+    SpriteFrame(-8, 0, 16, 16, 233, 0)      // #3 - Wheel Frame 0
+    SpriteFrame(-8, 0, 16, 16, 233, 17)     // #4 - Wheel Frame 1
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+    DrawSprite(1)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Items.gif")
+    SpriteFrame(-16, -16, 32, 16, 84, 1)    // #0 - Red Spring
+    SpriteFrame(-8, 0, 16, 16, 233, 0)      // #1 - Wheel Frame 0
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "dirTimer")
+end event

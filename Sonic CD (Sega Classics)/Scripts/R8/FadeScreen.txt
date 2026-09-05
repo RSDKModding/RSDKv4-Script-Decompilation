@@ -1,0 +1,178 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Fade Screen Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+
+// Player Aliases
+private alias object.value0 : player.rings
+
+// States
+private alias 0 : FADESCREEN_SETUP
+private alias 1 : FADESCREEN_AMY
+private alias 2 : FADESCREEN_TAILS
+private alias 3 : FADESCREEN_BLANK
+
+// Property Values
+private alias 0 : CUTSCENE_NO_SKIP
+private alias 1 : CUTSCENE_SKIP
+
+// Presentation Stages
+private alias 0 : STAGE_P_TITLE
+private alias 2 : STAGE_P_TATTACK
+private alias 7 : STAGE_P_STAFFCREDITS
+private alias 8 : STAGE_P_TAILSUNLOCK
+
+// Soundtrack
+private alias 0 : OST_JP
+
+// Engine States
+private alias 8	: ENGINE_RESETGAME
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case FADESCREEN_SETUP
+        if object.timer < 480
+            object.timer += 4
+            music.volume--
+        else
+            object.timer = 224
+            if object.propertyValue == CUTSCENE_NO_SKIP
+                object.state++
+            else
+                object.state += 2
+            end if
+        end if
+
+        if object.propertyValue == CUTSCENE_SKIP
+            SetScreenFade(0, 0, 0, object.timer)
+        else
+            SetScreenFade(224, 224, 224, object.timer)
+        end if
+        break
+
+    case FADESCREEN_AMY
+        if object.timer > 0
+            music.volume--
+            object.timer -= 16
+        else
+            StopMusic()
+
+            if options.gameMode == MODE_TIMEATTACK
+                timeAttack.result = stage.seconds
+                timeAttack.result *= 100
+                temp0 = stage.minutes
+                temp0 *= 6000
+                timeAttack.result += temp0
+                timeAttack.result += stage.milliSeconds
+
+                temp0 = stage.listPos
+                temp0 %= 10
+                temp0 >>= 2
+                temp1 = stage.listPos
+                temp1 /= 10
+                temp1 *= 3
+                temp0 += temp1
+                temp0++
+                temp1 = stage.seconds
+                temp1 *= 100
+                temp2 = stage.minutes
+                temp2 *= 6000
+                temp1 += temp2
+                temp1 += stage.milliSeconds
+
+                stage.activeList = PRESENTATION_STAGE
+                stage.listPos = STAGE_P_TATTACK
+                LoadStage()
+            else
+                if stage.playerListPos == PLAYER_SONIC_A
+                    if player.score > 0
+                        if options.gameMode == MODE_SAVEGAME
+                            if stage.debugMode == false
+								// (unused)
+                            end if
+                        end if
+                    end if
+
+                    if specialStage.timeStones > 126 // 0b1111110, each '1' bit represents an obtained time stone
+                        if options.soundtrack == OST_JP
+                            CallNativeFunction2(PlayVideo, "GoodEnding", false)
+                        else
+                            CallNativeFunction2(PlayVideo, "GoodEndingUS", false)
+                        end if
+                    else
+                        if goodFuture.list > 0x3FFE // 0b11111111111110, each '1' bit represents a zone with the robot transporters destroyed
+                            if options.soundtrack == OST_JP
+                                CallNativeFunction2(PlayVideo, "GoodEnding", false)
+                            else
+                                CallNativeFunction2(PlayVideo, "GoodEndingUS", false)
+                            end if
+                        else
+                            if options.soundtrack == OST_JP
+                                CallNativeFunction2(PlayVideo, "BadEnding", false)
+                            else
+                                CallNativeFunction2(PlayVideo, "BadEndingUS", false)
+                            end if
+                        end if
+                    end if
+
+                    if saveRAM[36] == 0 // Is Tails unlocked?
+                        saveRAM[36] = true
+                        WriteSaveRAM()
+                        stage.activeList = PRESENTATION_STAGE
+                        stage.listPos = STAGE_P_TAILSUNLOCK
+                        LoadStage()
+                    else
+                        engine.state = ENGINE_RESETGAME
+                    end if
+                else
+                    engine.state = ENGINE_RESETGAME
+                end if
+            end if
+        end if
+
+        SetScreenFade(object.timer, object.timer, object.timer, 255)
+        break
+
+    case FADESCREEN_TAILS
+        if object.timer > 0
+            music.volume--
+            object.timer -= 16
+        else
+            StopMusic()
+            stage.listPos += 2
+            LoadStage()
+        end if
+        break
+
+    end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("Global/Display.gif")
+    SpriteFrame(-16, -16, 32, 32, 1, 143) // #0 - "Script" Icon
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

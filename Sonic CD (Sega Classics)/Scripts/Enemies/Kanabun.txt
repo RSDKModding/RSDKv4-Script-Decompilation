@@ -1,0 +1,386 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Kanabun Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.originPos.x
+private alias object.value2        : object.originPos.y
+private alias object.value3        : object.depth
+private alias object.value4        : object.returnDrawOrder
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.animation : player.animation
+private alias object.value39   : player.hitboxTop
+private alias object.value40   : player.hitboxBottom
+private alias object.value41   : player.hitboxLeft
+private alias object.value42   : player.hitboxRight
+private alias object.value16   : debugMode.currentSelection
+
+// States
+private alias 0 : KANABUN_FLYL
+private alias 1 : KANABUN_FLYR
+private alias 2 : KANABUN_OFFSCREEN
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+private alias 2 : QUALITY_GOOD_HIGH_LAYER
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Kanabun_DebugDraw
+reserve function Kanabun_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Kanabun_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Kanabun_DebugDraw
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Kanabun_startDebugID
+    if temp0 == 0
+        DrawSprite(0) // Good quality
+    else
+        DrawSprite(2) // Bad quality
+    end if
+end function
+
+
+private function Kanabun_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Kanabun_startDebugID
+    CreateTempObject(TypeName[Kanabun], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.outOfBounds == true
+        object.state = KANABUN_OFFSCREEN
+        object.timer = 0
+        object.angle = 256
+
+        object.direction = FACING_RIGHT
+
+        object.xpos = object.originPos.x
+        object.ypos = object.originPos.y
+    end if
+
+    // The different Kanabun types have their own main update routines
+    // However, their main State Switches are exactly the same, it's only the small bit of code after that differs between the two
+
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case KANABUN_FLYL
+            // Give the Kanabun active priority so that its offscreen state will work fine when needed
+            // (or else the object will go offscreen and immediately pause, not returning to its original position)
+            object.priority = PRIORITY_ACTIVE
+
+            // Move left at a rate of 0.25 pixels per frame
+            object.xpos -= 0x4000
+
+            object.timer++
+            if object.timer == 256
+                // Turn around
+                object.state = KANABUN_FLYR
+                object.direction = FACING_LEFT
+            end if
+            break
+
+        case KANABUN_FLYR
+            // object.timer is assumed to be 256 when going into this state
+
+            // Go right at a rate of 0.25 pixels per frame
+            object.xpos += 0x4000
+
+            object.timer--
+            if object.timer == 0
+                // Turn back around again
+                object.state = KANABUN_FLYL
+                object.direction = FACING_RIGHT
+            end if
+            break
+
+        case KANABUN_OFFSCREEN
+            // Buffer state to hold the Kanabun if it went off-screen
+            if object.outOfBounds == true
+                object.state = KANABUN_FLYL
+
+                // And give the object normal priority again, too
+                object.priority = PRIORITY_BOUNDS
+            end if
+            break
+        end switch
+
+        // Update the Kanabun's movement angle
+        object.angle += 4
+        object.angle &= 511
+
+        // And animate it, too
+        object.frame = object.animationTimer
+        object.frame >>= 1
+
+        object.animationTimer++
+        object.animationTimer &= 3
+    else
+        switch object.state
+        case KANABUN_FLYL
+            // Give the Kanabun active priority so that its offscreen state will work fine when needed
+            // (or else the object will go offscreen and immediately pause, not returning to its original position)
+            object.priority = PRIORITY_ACTIVE
+
+            // Go left at a rate of 0.25 pixels per frame
+            object.xpos -= 0x4000
+
+            object.timer++
+            if object.timer == 256
+                // Turn around
+                object.state = KANABUN_FLYR
+                object.direction = FACING_LEFT
+            end if
+            break
+
+        case KANABUN_FLYR
+            // object.timer is assumed to be 256 when going into this state
+
+            // Go right at a rate of 0.25 pixels per frame
+            object.xpos += 0x4000
+
+            object.timer--
+            if object.timer == 0
+                object.state = KANABUN_FLYL
+                object.direction = FACING_RIGHT
+            end if
+            break
+
+        case KANABUN_OFFSCREEN
+            // Buffer state to hold the Kanabun if it went off-screen
+            if object.outOfBounds == true
+                object.state = KANABUN_FLYL
+
+                // And give the object normal priority again, too
+                object.priority = PRIORITY_BOUNDS
+            end if
+            break
+        end switch
+
+        // Update the Kanabun's movement angle
+        object.angle += 2
+        object.angle &= 511
+
+        // And animate it, too
+        object.frame = object.animationTimer
+        object.frame >>= 2
+        object.frame += 6
+
+        object.animationTimer++
+        object.animationTimer &= 7
+    end if
+
+    // Make the Kanabun move around, vertically
+    // Object.Depth is 0, 2, or 4, based on how into the background the Kanabun is
+    // 0 for FG, 4 for furthest in the BG
+    // These also correspond to Sprite Frames, with smaller sprites
+
+    Sin(object.ypos, object.angle)
+    if object.angle < 128
+        object.drawOrder = 5
+
+        object.depth = 0
+        if object.ypos < -384
+            object.depth = 2
+        end if
+
+        if object.ypos > 384
+            object.depth = 2
+        end if
+    else
+        if object.angle > 384
+            object.drawOrder = 5
+
+            object.depth = 0
+            if object.ypos < -384
+                object.depth = 2
+            end if
+
+            if object.ypos > 384
+                object.depth = 2
+            end if
+        else
+            object.drawOrder = object.returnDrawOrder
+
+            object.depth = 4
+            if object.ypos < -384
+                object.depth = 2
+            end if
+
+            if object.ypos > 384
+                object.depth = 2
+            end if
+        end if
+    end if
+
+    object.frame += object.depth
+
+    object.ypos <<= 13
+    object.ypos += object.originPos.y
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        if object.state < KANABUN_OFFSCREEN
+            if object.depth == 0
+                BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+                if checkResult == true
+                    CallFunction(Player_BadnikBreak)
+                end if
+            else
+                if player[currentPlayer].animation == ANI_JUMPING
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -14, -14, 14, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+                    if checkResult == true
+                        CallFunction(Player_BadnikBreak)
+                    end if
+                end if
+            end if
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    if object.state < KANABUN_OFFSCREEN
+        DrawSpriteFX(object.frame, FX_FLIP, object.xpos, object.ypos)
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R7/Objects.gif")
+
+    // All these Sprite Frames are in sets of 2 for all the depth levels of the Kanabun
+
+    // "Good" Kanabun Frames
+
+    // Nearest to the screen
+    SpriteFrame(-16, -16, 32, 32, 1, 100)
+    SpriteFrame(-16, -16, 32, 32, 1, 133)
+
+    // Middle depth to the screen
+    SpriteFrame(-12, -12, 24, 24, 34, 71)
+    SpriteFrame(-12, -12, 27, 27, 62, 43)
+
+    // Furthest away from the screen
+    SpriteFrame(-12, -12, 24, 24, 59, 71)
+    SpriteFrame(-12, -12, 24, 24, 84, 71)
+
+    // "Bad" Kanabun Frames
+
+    // Closest to the screen
+    SpriteFrame(-16, -16, 32, 32, 1, 34)
+    SpriteFrame(-16, -16, 32, 32, 1, 67)
+
+    // Somewhat away from the screen
+    SpriteFrame(-12, -12, 24, 24, 34, 18)
+    SpriteFrame(-12, -12, 27, 27, 34, 43)
+
+    // Farthest away from the screen
+    SpriteFrame(-12, -12, 24, 24, 59, 18)
+    SpriteFrame(-12, -12, 24, 24, 84, 18)
+
+    foreach (TypeName[Kanabun], arrayPos0, ALL_ENTITIES)
+        // Make the Kanabun start halfway across its movement cycle, right in the middle
+        object[arrayPos0].angle = 256
+
+        // Store the Kanabun's starating position, not only for object resetting but also for Y movement calculations
+        object[arrayPos0].originPos.x = object[arrayPos0].xpos
+        object[arrayPos0].originPos.y = object[arrayPos0].ypos
+
+        // And setup where the Kanabun's gonna fly back to, only the Good variant can go back to the higher layer
+        if object[arrayPos0].quality == QUALITY_GOOD_HIGH_LAYER
+            object[arrayPos0].quality = QUALITY_GOOD
+            object[arrayPos0].returnDrawOrder = 3
+        else
+            object[arrayPos0].returnDrawOrder = 2
+        end if
+    next
+
+    temp0 = 0
+    Kanabun_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Kanabun], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Kanabun_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Kanabun_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R7/Objects.gif")
+
+    SpriteFrame(-16, -16, 32, 32, 1, 100)
+    SpriteFrame(-16, -16, 32, 32, 1, 34)
+    SpriteFrame(-16, -16, 32, 32, 1, 100)
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good", QUALITY_GOOD)
+    AddEnumVariable("Bad", QUALITY_BAD)
+    AddEnumVariable("Good (Return to high layer)", QUALITY_GOOD_HIGH_LAYER)
+end event

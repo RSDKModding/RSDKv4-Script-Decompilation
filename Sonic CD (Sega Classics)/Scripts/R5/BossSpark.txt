@@ -1,0 +1,98 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Spark Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.xvel
+private alias object.value2 : object.yvel
+
+// Property Values
+private alias 0 : BOSSSPARK_GRIND
+private alias 1 : BOSSSPARK_LAND
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Have a horizontal deceleration value of 0.125 pixels per frame
+	object.xvel -= 0x2000
+
+	// Enforce a maximum left velocity of 3 pixels per frame
+	if object.xvel < -0x30000
+		object.xvel = -0x30000
+	end if
+
+	// Update X movement
+	object.xpos += object.xvel
+
+	if object.propertyValue == BOSSSPARK_LAND
+		// Move the Spark down by 0.125 pixels
+		object.yvel += 0x2000
+
+		// Update the Spark's Y Position
+		object.ypos += object.yvel
+
+		// Unload when no longer needed
+		if object.outOfBounds == true
+			object.type = TypeName[Blank Object]
+		end if
+	else
+		// For a grinding-generated Spark, just show for around half a second and disappear after that
+		if object.timer < 36
+			object.timer++
+		else
+			object.type = TypeName[Blank Object]
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	temp0 = object.frame
+	temp0 >>= 2
+	DrawSprite(temp0)
+
+	// Object animation is progressed here
+	object.frame++
+	object.frame %= 20
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R5/Objects2.gif")
+
+	// Boss Spark Frames
+	// Their offset isn't in the center, these sprites are actually offset to the left a bit
+	SpriteFrame(-2, -4, 16, 8, 131, 155)
+	SpriteFrame(-2, -4, 16, 8, 131, 164)
+	SpriteFrame(-2, -4, 16, 8, 131, 173)
+	SpriteFrame(-2, -4, 16, 8, 131, 182)
+	SpriteFrame(-2, -4, 16, 8, 148, 182)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R5/Objects2.gif")
+	SpriteFrame(-2, -4, 16, 8, 131, 155)
+
+	// Although used by the object, it shouldn't be set from the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

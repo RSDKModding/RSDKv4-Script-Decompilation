@@ -1,0 +1,352 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Link Platforms Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1 : object.drawPos.x
+private alias object.value2 : object.drawPos.y
+private alias object.value3 : object.collisionOffset.x
+private alias object.value4 : object.collisionOffset.y
+private alias object.value5 : object.angleIncrease
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// Property Values
+private alias 0 : CHAIN
+private alias 1 : CLOCKWISE_MOVEMENT
+private alias 2 : COUNTERCLOCKWISE_MOVEMENT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.angle += object.angleIncrease
+    if object.angle < 0
+        object.angle += 512
+    end if
+
+    object.angle &= 511
+    temp1 = 96
+
+    Cos(object.collisionOffset.x, object.angle)
+    object.collisionOffset.x *= temp1
+    object.collisionOffset.x <<= 7
+    object.collisionOffset.x += object.xpos
+    object.collisionOffset.x &= -0x10000 // Truncate the value
+    object.collisionOffset.x -= object.drawPos.x
+
+    Sin(object.collisionOffset.y, object.angle)
+    object.collisionOffset.y *= temp1
+    object.collisionOffset.y <<= 7
+    object.collisionOffset.y += object.ypos
+    object.collisionOffset.y &= -0x10000 // Truncate the value
+    object.collisionOffset.y -= object.drawPos.y
+
+    if object.frame == 1
+        temp0 = object.xpos
+        temp1 = object.ypos
+
+        object.xpos = object.drawPos.x
+        object.ypos = object.drawPos.y
+
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -8, 32, 8, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                player[currentPlayer].xpos += object.collisionOffset.x
+                player[currentPlayer].ypos += object.collisionOffset.y
+            end if
+        next
+
+        object.xpos = temp0
+        object.ypos = temp1
+    end if
+end event
+
+
+event ObjectDraw
+    temp1 = 96
+
+    Cos(object.drawPos.x, object.angle)
+    object.drawPos.x *= temp1
+    object.drawPos.x <<= 7
+    object.drawPos.x += object.xpos
+    object.drawPos.x &= -0x10000 // Truncate the value
+
+    Sin(object.drawPos.y, object.angle)
+    object.drawPos.y *= temp1
+    object.drawPos.y <<= 7
+    object.drawPos.y += object.ypos
+    object.drawPos.y &= -0x10000 // Truncate the value
+
+    DrawSpriteXY(object.frame, object.drawPos.x, object.drawPos.y)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 180, 52)   // #0 - Chain
+    SpriteFrame(-32, -8, 64, 16, 147, 69)  // #1 - Platform
+
+    foreach (TypeName[Link Platforms], arrayPos0, ALL_ENTITIES)
+        switch object[arrayPos0].propertyValue
+        case CLOCKWISE_MOVEMENT
+            object[arrayPos0].angle = 112
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = 2
+            arrayPos0++
+
+            object[arrayPos0].angle = 16
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = 2
+            
+            arrayPos0++
+            object[arrayPos0].angle = 32
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = 2
+
+            arrayPos0++
+            object[arrayPos0].angle = 48
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = 2
+
+            arrayPos0++
+            object[arrayPos0].angle = 96
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = 2
+
+            arrayPos0++
+            object[arrayPos0].angle = 80
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = 2
+
+            arrayPos0++
+            object[arrayPos0].angle = 64
+            object[arrayPos0].frame = 1
+            object[arrayPos0].angleIncrease = 2
+
+            arrayPos0++
+            object[arrayPos0].angle = 0
+            object[arrayPos0].frame = 1
+            object[arrayPos0].angleIncrease = 2
+
+            arrayPos0++
+            object[arrayPos0].angle = 128
+            object[arrayPos0].frame = 1
+            object[arrayPos0].angleIncrease = 2
+            break
+
+        case COUNTERCLOCKWISE_MOVEMENT
+            object[arrayPos0].angle = 112
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = -2
+
+            arrayPos0++
+            object[arrayPos0].angle = 16
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = -2
+            arrayPos0++
+            object[arrayPos0].angle = 32
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = -2
+
+            arrayPos0++
+            object[arrayPos0].angle = 48
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = -2
+
+            arrayPos0++
+            object[arrayPos0].angle = 96
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = -2
+
+            arrayPos0++
+            object[arrayPos0].angle = 80
+            object[arrayPos0].frame = 0
+            object[arrayPos0].angleIncrease = -2
+
+            arrayPos0++
+            object[arrayPos0].angle = 64
+            object[arrayPos0].frame = 1
+            object[arrayPos0].angleIncrease = -2
+
+            arrayPos0++
+            object[arrayPos0].angle = 0
+            object[arrayPos0].frame = 1
+            object[arrayPos0].angleIncrease = -2
+
+            arrayPos0++
+            object[arrayPos0].angle = 128
+            object[arrayPos0].frame = 1
+            object[arrayPos0].angleIncrease = -2
+            break
+        end switch
+    next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // moveDir
+            checkResult = object.propertyValue
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // moveDir
+            object.propertyValue = editor.variableValue
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    switch object.propertyValue
+    case CLOCKWISE_MOVEMENT
+        object.inkEffect = INK_BLEND
+        
+        DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+        temp2 = 112
+        temp3 = 0
+        temp0 = object.xpos
+        temp1 = object.ypos
+        temp0 += 0x100000
+        temp1 -= 0x100000
+        DrawArrow(object.xpos, temp1, temp0, object.ypos, 255, 255, 0)
+        break
+
+    case COUNTERCLOCKWISE_MOVEMENT
+        object.inkEffect = INK_BLEND
+        DrawSpriteFX(0, FX_INK, object.xpos, object.ypos)
+
+        temp2 = 112
+        temp3 = 0
+        temp0 = object.xpos
+        temp1 = object.ypos
+        temp0 += 0x100000
+        temp1 -= 0x100000
+        DrawArrow(temp0, object.ypos, object.xpos, temp1, 255, 255, 0)
+        break
+
+    case CHAIN
+        arrayPos0 = object.entityPos
+        temp0 = 0
+        temp1 = 0
+        while temp1 == false
+            if temp0 == 8
+                temp1 = true
+            end if
+
+            arrayPos0--
+            temp0++
+            
+            CheckEqual(object[arrayPos0].type, TypeName[Link Platforms])
+            temp1 = checkResult
+            
+            CheckNotEqual(object[arrayPos0].propertyValue, CHAIN)
+            temp1 &= checkResult
+        loop
+
+        arrayPos1 = object.entityPos
+        arrayPos1 -= object[arrayPos0].entityPos
+        switch arrayPos1
+        case 0
+            temp2 = 112
+            temp3 = 0
+            break
+
+        case 1
+            temp2 = 16
+            temp3 = 0
+            break
+
+        case 2
+            temp2 = 32
+            temp3 = 0
+            break
+            
+        case 3
+            temp2 = 48
+            temp3 = 0
+            break
+
+        case 4
+            temp2 = 96
+            temp3 = 0
+            break
+
+        case 5
+            temp2 = 80
+            temp3 = 0
+            break
+
+        case 6
+            temp2 = 64
+            temp3 = 1
+            break
+
+        case 7
+            temp2 = 0
+            temp3 = 1
+            break
+
+        case 8
+            temp2 = 128
+            temp3 = 1
+            break
+        end switch
+        break
+    end switch
+
+    Cos(temp4, temp2)
+    temp4 *= 96
+    temp4 <<= 7
+    temp4 += object.xpos
+    temp4 &= 0xFFFF0000 // Truncate the value
+
+    Sin(temp5, temp2)
+    temp5 *= 96
+    temp5 <<= 7
+    temp5 += object.ypos
+    temp5 &= 0xFFFF0000 // Truncate the value
+    DrawSpriteXY(temp3, temp4, temp5)
+    DrawLine(object.xpos, object.ypos, temp4, temp5, 255, 255, 0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 180, 52)    // #0 - Chain
+    SpriteFrame(-32, -8, 64, 16, 147, 69)   // #1 - Platform
+
+    AddEditorVariable("moveDir")
+    SetActiveVariable("moveDir")
+    AddEnumVariable("Chain", CHAIN)
+    AddEnumVariable("Clockwise", CLOCKWISE_MOVEMENT)
+    AddEnumVariable("Counter-Clockwise", COUNTERCLOCKWISE_MOVEMENT)
+end event

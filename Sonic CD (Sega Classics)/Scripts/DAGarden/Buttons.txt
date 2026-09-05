@@ -1,0 +1,360 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Touch Buttons Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1        : object.buttonPressed
+private alias object.propertyValue : object.buttonID
+
+// Touch Buttons Aliases
+private alias object[35].propertyValue : object.button1Value
+private alias object[36].propertyValue : object.button2Value
+private alias object[37].propertyValue : object.button3Value
+
+// Little Planet Aliases
+private alias object[32].value1 : littlePlanet.zoomDepth
+private alias object[32].value3 : littlePlanet.rotationSpeed
+
+// Music Selector Aliases
+private alias object[33].frame     : musicSelector.frame
+private alias object[33].xpos      : musicSelector.xpos
+private alias object[33].state     : musicSelector.state
+private alias object[33].drawOrder : musicSelector.drawOrder
+private alias object[33].priority  : musicSelector.priority
+
+// MenuControl Aliases
+private alias object[0].state : menuControl.state
+
+// Music Selector States
+private alias 1 : MUSICSELECTOR_STOP_MOVE_L
+private alias 2 : MUSICSELECTOR_MOVE_L
+private alias 4 : MUSICSELECTOR_MOVE_R
+
+// States
+private alias 1 : MENUCONTROL_FADE_IN
+private alias 3 : MENUCONTROL_MUSIC_CONTROLS
+private alias 4 : MENUCONTROL_SET_MUSIC
+private alias 6 : MENUCONTROL_EXIT
+
+// Priority
+private alias 1 : PRIORITY_ACTIVE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if menuControl.state > MENUCONTROL_FADE_IN
+		if menuControl.state < MENUCONTROL_SET_MUSIC
+			temp0 = object.xpos
+			temp0 >>= 16
+			temp1 = temp0
+
+			temp0 -= 32
+			temp0 -= screen.xoffset
+
+			temp1 += 32
+			temp1 -= screen.xoffset
+
+			CheckTouchRect(temp0, 0, temp1, 32)
+			if checkResult > -1
+				object.buttonPressed = object.buttonID
+				object.buttonPressed++
+
+				switch object.buttonID
+				case 0
+					if littlePlanet.zoomDepth < 0x4000
+						littlePlanet.zoomDepth += 8
+					end if
+					break
+
+				case 1
+					if littlePlanet.zoomDepth > 48
+						littlePlanet.zoomDepth -= 8
+					end if
+					break
+
+				case 2
+					if littlePlanet.rotationSpeed < 256
+						littlePlanet.rotationSpeed += 2
+					end if
+					break
+
+				case 3
+					if littlePlanet.rotationSpeed > -256
+						littlePlanet.rotationSpeed -= 2
+					end if
+					break
+
+				end switch
+			else
+				CheckTouchRect(0, 0, screen.xsize, screen.ysize)
+				if checkResult < 0
+					switch object.buttonID
+					// Zooming
+					case 0
+						if object.buttonPressed == 1
+							object.buttonPressed = 0
+							object.button1Value = 1
+						end if
+						break
+
+					case 1
+						if object.buttonPressed == 2
+							object.buttonPressed = 0
+							object.button1Value = 0
+						end if
+						break
+
+					// Rotation
+					case 2
+						if object.buttonPressed == 3
+							object.buttonPressed = 0
+							object.button2Value = 3
+						end if
+						break
+
+					case 3
+						if object.buttonPressed == 4
+							object.buttonPressed = 0
+							object.button2Value = 2
+						end if
+						break
+
+					// Music Selector
+					case 4
+						if object.buttonPressed == 5
+							object.buttonPressed = 0
+							PlaySfx(SfxName[Menu Button], false)
+							musicSelector.state = MUSICSELECTOR_MOVE_R
+						end if
+						break
+
+					case 5
+						if object.buttonPressed == 6
+							object.buttonPressed = 0
+							menuControl.state = MENUCONTROL_SET_MUSIC
+							StopMusic()
+						end if
+						break
+
+					case 6
+						if object.buttonPressed == 7
+							object.buttonPressed = 0
+							PlaySfx(SfxName[Menu Button], false)
+							musicSelector.state = MUSICSELECTOR_MOVE_L
+						end if
+						break
+
+					case 7
+						if object.buttonPressed == 8
+							object.buttonPressed = 0
+
+							PlaySfx(SfxName[Select], false)
+
+							menuControl.state = MENUCONTROL_MUSIC_CONTROLS
+							musicSelector.xpos = screen.xsize
+							musicSelector.xpos += 96
+							musicSelector.xpos <<= 16
+
+							musicSelector.state = MUSICSELECTOR_STOP_MOVE_L
+							musicSelector.drawOrder = 5
+							musicSelector.priority = PRIORITY_ACTIVE
+
+							object.button1Value = 4
+							object.button2Value = 5
+							object.button3Value = 6
+						end if
+						break
+
+					// Exit
+					case 8
+						if object.buttonPressed == 9
+							object.buttonPressed = 0
+							StopMusic()
+							PlaySfx(SfxName[Select], false)
+							menuControl.state = MENUCONTROL_EXIT
+						end if
+						break
+
+					end switch
+				else
+					// Reset buttons
+					switch object.buttonID
+					case 0
+						if object.buttonPressed == 1
+							object.buttonPressed = 0
+						end if
+						break
+
+					case 1
+						if object.buttonPressed == 2
+							object.buttonPressed = 0
+						end if
+						break
+
+					case 2
+						if object.buttonPressed == 3
+							object.buttonPressed = 0
+						end if
+						break
+
+					case 3
+						if object.buttonPressed == 4
+							object.buttonPressed = 0
+						end if
+						break
+
+					case 4
+						if object.buttonPressed == 5
+							object.buttonPressed = 0
+						end if
+						break
+
+					case 5
+						if object.buttonPressed == 6
+							object.buttonPressed = 0
+						end if
+						break
+
+					case 6
+						if object.buttonPressed == 7
+							object.buttonPressed = 0
+						end if
+						break
+
+					case 7
+						if object.buttonPressed == 8
+							object.buttonPressed = 0
+						end if
+						break
+
+					case 8
+						if object.buttonPressed == 9
+							object.buttonPressed = 0
+						end if
+						break
+
+					end switch
+				end if
+			end if
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	temp0 = object.buttonID
+	temp0 <<= 1
+
+	temp1 = object.buttonID
+	temp1++
+	if object.buttonPressed == temp1
+		temp0++
+	end if
+	DrawSprite(temp0)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("DAGarden/Objects.gif")
+
+	SpriteFrame(-32, -16, 63, 31, 146, 577)		// #0 - Zoom Out
+	SpriteFrame(-32, -16, 63, 31, 146, 609)		// #1 - Zoom Out Highlight
+	SpriteFrame(-32, -16, 63, 31, 210, 577)		// #2 - Zoom In
+	SpriteFrame(-32, -16, 63, 31, 210, 609)		// #3 - Zoom In Highlight
+	SpriteFrame(-32, -16, 63, 31, 274, 577)		// #4 - Rotation Right
+	SpriteFrame(-32, -16, 63, 31, 274, 609)		// #5 - Rotation Right Highlight
+	SpriteFrame(-32, -16, 63, 31, 338, 577)		// #6 - Rotation Left
+	SpriteFrame(-32, -16, 63, 31, 338, 609)		// #7 - Rotation Left Highlight
+	SpriteFrame(-32, -16, 63, 31, 210, 641)		// #8 - Prior Theme
+	SpriteFrame(-32, -16, 63, 31, 210, 673)		// #9 - Prior Theme Highlight
+	SpriteFrame(-32, -16, 63, 31, 274, 641)		// #10 - Play
+	SpriteFrame(-32, -16, 63, 31, 274, 673)		// #11 - Play Highlight
+	SpriteFrame(-32, -16, 63, 31, 338, 641)		// #12 - Next Theme
+	SpriteFrame(-32, -16, 63, 31, 338, 673)		// #13 - Next Theme Highlight
+	SpriteFrame(-32, -16, 63, 31, 402, 641)		// #14 - Music Toggle
+	SpriteFrame(-32, -16, 63, 31, 402, 673)		// #15 - Music Toggle Highlight
+	SpriteFrame(-32, -16, 63, 31, 402, 577)		// #16 - Exit
+	SpriteFrame(-32, -16, 63, 31, 402, 609)		// #17 - Exit Highlight
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // ButtonID
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // ButtonID
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	temp0 = object.buttonID
+	temp0 <<= 1
+	DrawSprite(temp0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("DAGarden/Objects.gif")
+	SpriteFrame(-32, -16, 63, 31, 146, 577)		// #0 - Zoom Out
+	SpriteFrame(-32, -16, 63, 31, 146, 609)		// #1 - Zoom Out Highlight
+	SpriteFrame(-32, -16, 63, 31, 210, 577)		// #2 - Zoom In
+	SpriteFrame(-32, -16, 63, 31, 210, 609)		// #3 - Zoom In Highlight
+	SpriteFrame(-32, -16, 63, 31, 274, 577)		// #4 - Rotate Right
+	SpriteFrame(-32, -16, 63, 31, 274, 609)		// #5 - Rotate Right Highlight
+	SpriteFrame(-32, -16, 63, 31, 338, 577)		// #6 - Rotate Left
+	SpriteFrame(-32, -16, 63, 31, 338, 609)		// #7 - Rotate Left Highlight
+	SpriteFrame(-32, -16, 63, 31, 210, 641)		// #8 - Previous Track
+	SpriteFrame(-32, -16, 63, 31, 210, 673)		// #9 - Previous Track Highlight
+	SpriteFrame(-32, -16, 63, 31, 274, 641)		// #10 - Play Track
+	SpriteFrame(-32, -16, 63, 31, 274, 673)		// #11 - Play Track Highlight
+	SpriteFrame(-32, -16, 63, 31, 338, 641)		// #12 - Next Track
+	SpriteFrame(-32, -16, 63, 31, 338, 673)		// #13 - Next Track Highlight
+	SpriteFrame(-32, -16, 63, 31, 402, 641)		// #14 - Music Toggle
+	SpriteFrame(-32, -16, 63, 31, 402, 673)		// #15 - Music Toggle Highlight
+	SpriteFrame(-32, -16, 63, 31, 402, 577)		// #16 - Exit
+	SpriteFrame(-32, -16, 63, 31, 402, 609)		// #17 - Exit Highlight
+
+	AddEditorVariable("ButtonID")
+	SetActiveVariable("ButtonID")
+	AddEnumVariable("Zoom Out", 0)
+	AddEnumVariable("Zoom In", 1)
+	AddEnumVariable("Rotate Right", 2)
+	AddEnumVariable("Rotate Left", 3)
+	AddEnumVariable("Previous Track", 4)
+	AddEnumVariable("Play Track ", 5)
+	AddEnumVariable("Next Track", 6)
+	AddEnumVariable("Music Toggle", 7)
+	AddEnumVariable("Exit", 8)
+end event

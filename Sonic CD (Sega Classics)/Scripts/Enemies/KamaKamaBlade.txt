@@ -1,0 +1,140 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Kama Kama Blade Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1        : object.kamakamaEntityPos
+private alias object.propertyValue : object.launchTimer
+
+// Player Aliases
+private alias object.xvel      : player.xvel
+private alias object.animation : player.animation
+
+// States
+private alias 0 : BLADE_LAUNCH
+private alias 1 : BLADE_BLANK
+private alias 2 : BLADE_DEFLECTED
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    object.xpos += object.xvel
+    object.ypos += object.yvel
+
+    object.frame++
+    object.frame %= 24
+
+    switch object.state
+    case BLADE_LAUNCH
+        arrayPos0 = object.kamakamaEntityPos
+        // if the Kama Kama that launched this is destroyed, destroy the blade
+        if object[arrayPos0].type != TypeName[Kama Kama]
+            object.type = TypeName[Blank Object]
+        end if
+
+        if object.launchTimer > 0
+            object.launchTimer--
+        else
+            object.state = BLADE_BLANK
+            PlaySfx(SfxName[Blades], false)
+
+            if object.direction == FACING_RIGHT
+                object.xvel = -0x30000
+            else
+                object.xvel = 0x30000
+            end if
+        end if
+        break
+
+    case BLADE_DEFLECTED
+        object.yvel += 0x3000
+        break
+    end switch
+
+    if object.outOfBounds == true
+        object.type = TypeName[Blank Object]
+    else
+        temp0 = screen.yoffset
+        temp0 -= 8
+        temp0 <<= 16
+        if object.ypos < temp0
+            object.type = TypeName[Blank Object]
+        end if
+    end if
+
+    if object.state == BLADE_BLANK
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -8, -6, 8, 6, currentPlayer, object[currentPlayer].value41, object[currentPlayer].value39, object[currentPlayer].value42, object[currentPlayer].value40)
+            if checkResult == true
+                // Check if the blades will bounce on the player
+                CheckEqual(player[currentPlayer].animation, ANI_JUMPING)
+                temp0 = checkResult
+
+                CheckEqual(player[currentPlayer].animation, ANI_SPINDASH)
+                temp0 |= checkResult
+
+                if temp0 == true
+                    object.state = BLADE_DEFLECTED
+
+                    object.yvel = -0x80000
+                    if object.direction == FACING_RIGHT
+                        if player[currentPlayer].xvel > 0x8000
+                            FlipSign(object.xvel)
+                        end if
+                    else
+                        if player[currentPlayer].xvel < -0x8000
+                            FlipSign(object.xvel)
+                        end if
+                    end if
+                else
+                    CallFunction(Player_Hit)
+                end if
+            end if
+        next
+    end if
+end event
+
+
+event ObjectDraw
+    temp0 = object.frame
+    temp0 >>= 2
+    DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R3/Objects.gif")
+
+    SpriteFrame(-8, -8, 16, 16, 198, 68)  // #0 - Blade Frame 0
+    SpriteFrame(-8, -8, 16, 16, 215, 68)  // #1 - Blade Frame 1
+    SpriteFrame(-8, -8, 16, 16, 232, 68)  // #2 - Blade Frame 2
+    SpriteFrame(-8, -8, 16, 16, 198, 85)  // #3 - Blade Frame 3
+    SpriteFrame(-8, -8, 16, 16, 215, 85)  // #4 - Blade Frame 4
+    SpriteFrame(-8, -8, 16, 16, 232, 85)  // #5 - Blade Frame 5
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R3/Objects.gif")
+    SpriteFrame(-8, -8, 16, 16, 198, 68)  // #0 - Blade
+
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

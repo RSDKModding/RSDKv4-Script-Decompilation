@@ -1,0 +1,193 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Bubble 1 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.offset.x
+private alias object.value2 : object.offset.y
+private alias object.value3 : object.shift.x
+private alias object.value4 : object.bossEntity
+private alias object.value5 : object.radiusSize
+
+// States
+private alias 0 : BOSSBUBBLE1_SETUP
+private alias 1 : BOSSBUBBLE1_FLOAT
+
+// R4 Eggman States
+private alias 4 : R4_EGG_BUBBLE_EXPAND_SHIELD
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.state == 0
+        if object.frame < 4
+            object.timer++
+            if object.timer > 9
+                if object.frame < 3
+                    object.timer = 0
+                end if
+                object.frame++
+            end if
+        end if
+
+        object.ypos -= 0x18000
+
+        Sin(object.xpos, object.angle)
+        object.xpos <<= object.shift.x
+        object.xpos += object.offset.x
+
+        object.angle += 4
+        object.angle &= 511
+        if object.radiusSize != 0
+            arrayPos0 = object.bossEntity
+
+            temp0 = object[arrayPos0].ypos
+            temp0 += object.radiusSize
+
+            if object.ypos < temp0
+                temp0 = object.xpos
+                temp0 -= object[arrayPos0].xpos
+                if temp0 < 0
+                    FlipSign(temp0)
+                end if
+
+                temp0 >>= 19
+                switch temp0
+                case 0
+                    object.speed = 4
+                    break
+
+                case 1
+                    object.speed = 5
+                    break
+
+                case 2
+                    object.speed = 6
+                    break
+
+                case 3
+                    object.speed = 7
+                    break
+
+                case 4
+                case 5
+                case 6
+                    object.speed = 8
+                    break
+
+                end switch
+
+                object.state = BOSSBUBBLE1_FLOAT
+                object.angle = 0
+                object.offset.x = object.xpos
+                object.offset.y = object.ypos
+            end if
+        end if
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+        end if
+    else
+        arrayPos0 = object.bossEntity
+
+        temp0 = object.offset.x
+        temp0 -= object[arrayPos0].xpos
+        if temp0 < -0x1A0000
+            temp0 += 0x10000
+            object.offset.x += 0x10000
+        end if
+
+        if temp0 > 0x1A0000
+            temp0 -= 0x10000
+            object.offset.x -= 0x10000
+        end if
+
+        temp0 >>= 8
+        temp1 = object.offset.y
+        temp1 -= object[arrayPos0].ypos
+        if temp1 < -0x1A0000
+            temp1 += 0x10000
+            object.offset.y += 0x10000
+        end if
+
+        if temp1 > 0x1A0000
+            temp1 -= 0x10000
+            object.offset.y -= 0x10000
+        end if
+
+        temp1 >>= 8
+
+        Sin(temp2, object.angle)
+        temp2 *= temp1
+
+        Cos(temp3, object.angle)
+        temp3 *= temp0
+
+        object.xpos = temp2
+        object.xpos += temp3
+        object.xpos >>= 1
+        object.xpos += object[arrayPos0].xpos
+
+        Cos(temp2, object.angle)
+        temp2 *= temp1
+
+        Sin(temp3, object.angle)
+        temp3 *= temp0
+
+        object.ypos = temp2
+        object.ypos -= temp3
+        object.ypos >>= 1
+        object.ypos += object[arrayPos0].ypos
+
+        object.angle += object.speed
+        object.angle &= 511
+
+        if object[arrayPos0].state == R4_EGG_BUBBLE_EXPAND_SHIELD
+            object.type = TypeName[Blank Object]
+        end if
+    end if
+end event
+
+
+event ObjectDraw
+    DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R4/Objects.gif")
+
+    SpriteFrame(-4, -4, 8, 8, 212, 61)      // #0 - Small Bubble 1
+    SpriteFrame(-4, -4, 8, 8, 212, 70)      // #1 - Small Bubble 2
+    SpriteFrame(-4, -4, 8, 8, 246, 18)      // #2 - Small Bubble 3
+
+    SpriteFrame(-8, -8, 16, 16, 116, 181)   // #3 - Medium Bubble 1
+    SpriteFrame(-8, -8, 16, 16, 116, 198)   // #4 - Medium Bubble 2
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R4/Objects.gif")
+    SpriteFrame(-4, -4, 8, 8, 212, 61)  // #0 - Small Bubble 1
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

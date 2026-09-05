@@ -1,0 +1,360 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Kamemusi Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0        : object.timer
+private alias object.value1        : object.fireTimer
+private alias object.propertyValue : object.quality
+
+// Player Aliases
+private alias object.value39 : player.hitboxTop
+private alias object.value40 : player.hitboxBottom
+private alias object.value41 : player.hitboxLeft
+private alias object.value42 : player.hitboxRight
+private alias object.value16 : debugMode.currentSelection
+
+// Bullet Aliases
+private alias object.xvel : bullet.xvel
+private alias object.yvel : bullet.yvel
+
+// States
+private alias 0 : KAMEMUSI_FINDGROUND
+private alias 1 : KAMEMUSI_MOVE_LEFT
+private alias 2 : KAMEMUSI_MOVE_RIGHT
+private alias 3 : KAMEMUSI_SHOOT
+
+// Badnik Quality / Property Values
+private alias 0 : QUALITY_GOOD
+private alias 1 : QUALITY_BAD
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Kamemusi_DebugDraw
+reserve function Kamemusi_DebugSpawn
+
+// ========================
+// Static Values
+// ========================
+
+private value Kamemusi_startDebugID = 0
+
+// ========================
+// Function Definitions
+// ========================
+
+private function Kamemusi_DebugDraw
+    DrawSprite(0)
+end function
+
+
+private function Kamemusi_DebugSpawn
+    temp0 = debugMode[0].currentSelection
+    temp0 -= Kamemusi_startDebugID
+    CreateTempObject(TypeName[Kamemusi], temp0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.quality == QUALITY_GOOD
+        switch object.state
+        case KAMEMUSI_FINDGROUND
+            ObjectTileCollision(CSIDE_FLOOR, 0, 14, 0)
+            if checkResult == true
+                object.state = KAMEMUSI_MOVE_LEFT
+            else
+                object.ypos += 0x20000
+            end if
+            break
+
+        case KAMEMUSI_MOVE_LEFT
+            object.frame++
+            object.frame %= 60
+
+            object.xpos -= 0xAAAA
+
+            object.timer--
+            if object.timer == -192
+                object.state = KAMEMUSI_MOVE_RIGHT
+                object.direction = FACING_LEFT
+            end if
+
+            // Check if there's no more floor
+            ObjectTileGrip(CSIDE_FLOOR, 0, 14, 0)
+            if checkResult == false
+                object.state = KAMEMUSI_MOVE_RIGHT
+                object.timer = -192
+                object.direction = FACING_LEFT
+            end if
+
+            if object.fireTimer > -1
+                foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        object.state = KAMEMUSI_SHOOT
+                        object.drawOrder = 4
+                    end if
+                next
+            else
+                object.fireTimer++
+            end if
+            break
+
+        case KAMEMUSI_MOVE_RIGHT
+            object.frame++
+            object.frame %= 60
+
+            object.xpos += 0xAAAA
+
+            object.timer++
+            if object.timer == 192
+                object.state = KAMEMUSI_MOVE_LEFT
+                object.direction = FACING_RIGHT
+            end if
+
+            // Check if there's no more floor
+            ObjectTileGrip(CSIDE_FLOOR, 0, 14, 0)
+            if checkResult == false
+                object.state = KAMEMUSI_MOVE_LEFT
+                object.timer = 192
+                object.direction = FACING_RIGHT
+            end if
+
+            if object.fireTimer > -1
+                foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -64, -64, 64, 64, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        object.state = KAMEMUSI_SHOOT
+                        object.drawOrder = 4
+                    end if
+                next
+            else
+                object.fireTimer++
+            end if
+            break
+
+        case KAMEMUSI_SHOOT
+            if object.fireTimer == 60
+                CreateTempObject(TypeName[Kamemusi Shot], 0, object.xpos, object.ypos)
+                bullet[tempObjectPos].xvel = -0x20000
+                bullet[tempObjectPos].yvel = -0x50000
+            end if
+
+            if object.fireTimer == 62
+                CreateTempObject(TypeName[Kamemusi Shot], 0, object.xpos, object.ypos)
+                bullet[tempObjectPos].xvel = 0x20000
+                bullet[tempObjectPos].yvel = -0x50000
+                PlaySfx(SfxName[Shot], false)
+            end if
+
+            if object.fireTimer == 64
+                object.state = object.direction
+                object.state += 1
+                object.fireTimer = -120
+                object.drawOrder = 3
+            else
+                object.fireTimer++
+            end if
+            break
+        end switch
+    else
+        switch object.state
+        case KAMEMUSI_FINDGROUND
+            ObjectTileCollision(CSIDE_FLOOR, 0, 14, 0)
+            if checkResult == true
+                object.state = KAMEMUSI_MOVE_LEFT
+            else
+                object.ypos += 0x20000
+            end if
+            break
+
+        case KAMEMUSI_MOVE_LEFT
+            object.frame++
+            object.frame %= 12
+
+            object.xpos -= 0x3800
+
+            object.timer--
+            if object.timer == -384
+                object.state = KAMEMUSI_MOVE_RIGHT
+                object.direction = FACING_LEFT
+            end if
+
+            // Check if there's no more floor
+            ObjectTileGrip(CSIDE_FLOOR, 0, 14, 0)
+            if checkResult == false
+                object.state = KAMEMUSI_MOVE_RIGHT
+                object.timer = -384
+                object.direction = FACING_LEFT
+            end if
+
+            if object.fireTimer == 82
+                object.state = KAMEMUSI_SHOOT
+                object.fireTimer = 0
+            else
+                object.fireTimer++
+            end if
+            break
+
+        case KAMEMUSI_MOVE_RIGHT
+            object.frame++
+            object.frame %= 12
+
+            object.xpos += 0x3800
+
+            object.timer++
+            if object.timer == 384
+                object.state = KAMEMUSI_MOVE_LEFT
+                object.direction = FACING_RIGHT
+            end if
+
+            // Check if there's no more floor
+            ObjectTileGrip(CSIDE_FLOOR, 0, 14, 0)
+            if checkResult == false
+                object.state = KAMEMUSI_MOVE_LEFT
+                object.timer = 384
+                object.direction = FACING_RIGHT
+            end if
+
+            if object.fireTimer == 82
+                object.state = KAMEMUSI_SHOOT
+                object.fireTimer = 0
+            else
+                object.fireTimer++
+            end if
+            break
+
+        // In this broken state, the shoot will fail
+        case KAMEMUSI_SHOOT
+            if object.fireTimer == 14
+                object.state = object.direction
+                object.state += 1
+                object.fireTimer = 0
+            else
+                object.fireTimer++
+            end if
+            break
+        end switch
+    end if
+
+    foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+        BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 14, currentPlayer, player[currentPlayer].hitboxLeft, player[currentPlayer].hitboxTop, player[currentPlayer].hitboxRight, player[currentPlayer].hitboxBottom)
+        if checkResult == true
+            CallFunction(Player_BadnikBreak)
+        end if
+    next
+
+    // Check if this badnik should be a flower
+    CallFunction(StageSetup_CheckGoodFuture)
+end event
+
+
+event ObjectDraw
+    if object.quality == QUALITY_GOOD
+        if object.state < KAMEMUSI_SHOOT
+            temp0 = object.frame
+            temp0 /= 30
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        else
+            DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+        end if
+    else
+        if object.state < KAMEMUSI_SHOOT
+            temp0 = object.frame
+            temp0 /= 6
+            temp0 += 2
+            DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+        else
+            DrawSpriteFX(4, FX_FLIP, object.xpos, object.ypos)
+        end if
+    end if
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects.gif")
+
+    // Good Quality
+    SpriteFrame(-16, -15, 32, 29, 223, 34)  // #0 - Kamemusi Movement Frame 0
+    SpriteFrame(-16, -14, 32, 28, 223, 93)  // #1 - Kamemusi Movement Frame 1
+
+    // Bad Quality
+    SpriteFrame(-16, -15, 32, 29, 223, 34)  // #2 - Old Kamemusi Movement Frame 0
+    SpriteFrame(-16, -14, 32, 28, 223, 64)  // #3 - Old Kamemusi Movement Frame 1
+
+    SpriteFrame(-16, -17, 32, 31, 223, 122) // #4 - Kamemusi Shoot Position
+
+    temp0 = 0
+    Kamemusi_startDebugID = DebugMode_ObjCount
+    while temp0 < 2
+        SetTableValue(TypeName[Kamemusi], DebugMode_ObjCount, DebugMode_TypesTable)
+        SetTableValue(Kamemusi_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+        SetTableValue(Kamemusi_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+        DebugMode_ObjCount++
+        temp0++
+    loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+
+        case 0 // condition
+            checkResult = object.propertyValue
+            checkResult &= 1
+            break
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+
+        case 0 // condition
+            object.propertyValue = editor.variableValue
+            object.propertyValue &= 1
+            break
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects.gif")
+
+    SpriteFrame(-16, -15, 32, 29, 223, 34)  // #0 - Kamemusi
+    SpriteFrame(-16, -15, 32, 29, 223, 34)  // #1 - Old Kamemusi
+
+    AddEditorVariable("condition")
+    SetActiveVariable("condition")
+    AddEnumVariable("Good Quality", QUALITY_GOOD)
+    AddEnumVariable("Bad Quality", QUALITY_BAD)
+end event

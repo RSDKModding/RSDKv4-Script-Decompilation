@@ -1,0 +1,103 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Dr.Eggman Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value1        : object.offset.y
+private alias object.propertyValue : object.angleSpeed
+
+// States
+private alias 0 : EGGMAN_SETUP
+private alias 1 : EGGMAN_MOVEMENT
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.direction == FACING_LEFT
+		object.xpos += 0x8000
+	else
+		object.xpos -= 0x8000
+	end if
+
+	switch object.state
+	case EGGMAN_SETUP
+		object.offset.y = object.ypos
+		object.state++
+		break
+
+	case EGGMAN_MOVEMENT
+		object.angle += object.angleSpeed
+		object.angle &= 511
+		Sin(object.ypos, object.angle)
+		object.ypos <<= 11
+		object.ypos += object.offset.y
+		object.offset.y -= 0x4000
+		break
+
+	end switch
+
+	if object.outOfBounds == true
+		object.type = TypeName[Blank Object]
+	end if
+end event
+
+
+event ObjectDraw
+	// Smoke
+	temp0 = object.animationTimer
+	temp0 >>= 1
+	temp0 += 2
+	DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+	object.animationTimer++
+	object.animationTimer %= 12
+
+	// Eggman
+	temp0 = object.animationSpeed
+	temp0 >>= 5
+	DrawSpriteFX(temp0, FX_FLIP, object.xpos, object.ypos)
+	object.animationSpeed++
+	object.animationSpeed &= 63
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("DAGarden/Objects.gif")
+
+	SpriteFrame(-24, -20, 48, 40, 267, 705)		// #0 - Eggman Frame 0
+	SpriteFrame(-24, -20, 48, 40, 316, 705)		// #1 - Eggman Frame 1
+
+	SpriteFrame(8, 0, 24, 24, 265, 746)			// #2 - Smoke Frame 0
+	SpriteFrame(8, 0, 24, 24, 290, 746)			// #3 - Smoke Frame 1
+	SpriteFrame(8, 0, 24, 24, 315, 746)			// #4 - Smoke Frame 2
+	SpriteFrame(8, 0, 24, 24, 340, 746)			// #5 - Smoke Frame 3
+
+	// Blank Frames
+	SpriteFrame(8, 0, 0, 0, 265, 746)
+	SpriteFrame(8, 0, 0, 0, 265, 746)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("DAGarden/Objects.gif")
+	SpriteFrame(-24, -20, 48, 40, 267, 705)		// #0 - Eggman Frame 0
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

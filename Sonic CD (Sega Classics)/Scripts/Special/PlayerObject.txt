@@ -1,0 +1,1630 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Player Object Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Variables
+private alias object.type			 : player.type
+private alias object.state			 : player.state
+private alias object.priority		 : player.priority
+private alias object.xpos			 : player.xpos			  // Total world-space position (0x10000 == 1.0)
+private alias object.ypos			 : player.ypos
+private alias object.yvel			 : player.yvel
+private alias object.speed			 : player.speed			  // Based on world-space (see above)
+private alias object.angle			 : player.angle			  // See above
+private alias object.direction		 : player.direction
+private alias object.frame			 : player.frame
+private alias object.animationSpeed	 : player.animationSpeed
+private alias object.controlMode	 : player.controlMode	  // See CONTROLMODE_* aliases
+
+// *Object-wise* input, not to be confused with keyPress[0].X and keyDown[0].X
+private alias object.jumpPress : player.jumpPress
+private alias object.jumpHold  : player.jumpHold
+private alias object.up        : player.up
+private alias object.down      : player.down
+private alias object.left      : player.left
+private alias object.right     : player.right
+
+// Value aliases
+private alias object.value0  : player.zpos
+private alias object.value1  : player.frameLoop
+private alias object.value2  : player.frameEnd
+private alias object.value3  : player.frameTimer
+private alias object.value4  : player.unused
+private alias object.value5  : player.screenDepth // Same use as other Special Stage objects, see Special Setup
+private alias object.value6  : player.timer
+private alias object.value7  : player.tilt
+private alias object.value8  : player.unused2
+private alias object.value9  : player.screenXPos
+private alias object.value10 : player.screenYPos
+
+// State aliases
+private alias 0  : SSSONIC_INTROPOSE
+private alias 1  : SSSONIC_INTROTURNAROUND
+private alias 2  : SSSONIC_WALKING
+private alias 3  : SSSONIC_JUMPING
+private alias 4  : SSSONIC_SPEEDBOOSTER
+private alias 5  : SSSONIC_FAN
+private alias 6  : SSSONIC_TRIPPED
+private alias 7  : SSSONIC_SPEEDSHOESRUN
+private alias 8  : SSSONIC_FINISHSTAND
+private alias 9  : SSSONIC_CAMERAPAN
+private alias 10 : SSSONIC_STONEGRABBED
+private alias 11 : SSSONIC_SPRING
+
+// Animation aliases
+// Most are divided into three parts where there's the animation's start, its loop point, and its end
+// This is to match with how this Object animates itself, check out Player_ProcessAnimation for more info
+
+// This standing animation doesn't, well, animate, so no extended aliases needed here
+private alias 1 : ANI_STANDING_START
+
+private alias 2 : ANI_FACINGAHEAD_START
+private alias 4 : ANI_FACINGAHEAD_LOOP
+private alias 4 : ANI_FACINGAHEAD_END
+
+private alias 5 : ANI_INTROPOSE_START
+private alias 5 : ANI_INTROPOSE_LOOP
+private alias 8 : ANI_INTROPOSE_END
+
+private alias 9  : ANI_WALKING_START
+private alias 9  : ANI_WALKING_LOOP
+private alias 14 : ANI_WALKING_END
+
+private alias 39 : ANI_JUMPING_START
+private alias 39 : ANI_JUMPING_LOOP
+private alias 42 : ANI_JUMPING_END
+
+private alias 43 : ANI_BRAKING_START
+private alias 43 : ANI_BRAKING_LOOP
+private alias 47 : ANI_BRAKING_END
+
+private alias 48 : ANI_FAN_START
+private alias 48 : ANI_FAN_LOOP
+private alias 53 : ANI_FAN_END
+
+private alias 54 : ANI_TRIP_START
+private alias 54 : ANI_TRIP_LOOP
+private alias 76 : ANI_TRIP_END
+
+private alias 77 : ANI_RUN_START
+private alias 77 : ANI_RUN_LOOP
+private alias 80 : ANI_RUN_END
+
+// HUD Aliases
+private alias object[4].value0 : HUD.ufosCount
+private alias object[4].value3 : HUD.rings
+private alias object[4].value4 : HUD.lastUFOType
+private alias object[4].value5 : HUD.speedShoes
+
+// Ring Aliases
+private alias object.value0 : ring.zpos
+private alias object.value1 : ring.xvel
+private alias object.value2 : ring.yvel
+private alias object.value3 : ring.zvel
+
+// Generic Object Alias
+// (Here it's only used for the Water Splash object, but it does apply to every SS game object as well)
+private alias object.value5 : object.screenDepth
+
+// Player aliases
+public alias 0 : PLAYER_SONIC_A
+public alias 1 : PLAYER_TAILS_A
+
+// Priority
+public alias 0 : PRIORITY_BOUNDS
+public alias 1 : PRIORITY_ACTIVE
+public alias 2 : PRIORITY_ALWAYS
+public alias 3 : PRIORITY_XBOUNDS
+public alias 4 : PRIORITY_XBOUNDS_DESTROY
+public alias 5 : PRIORITY_INACTIVE
+public alias 6 : PRIORITY_BOUNDS_SMALL
+public alias 7 : PRIORITY_ACTIVE_SMALL
+
+// ControlMode Aliases
+public alias -1 : CONTROLMODE_NONE
+public alias  0 : CONTROLMODE_P1
+
+// Ink Effects
+public alias 0 : INK_NONE
+public alias 1 : INK_BLEND
+public alias 2 : INK_ALPHA
+public alias 3 : INK_ADD
+public alias 4 : INK_SUB
+
+// Flip Directions
+public alias 0 : FLIP_NONE
+public alias 1 : FLIP_X
+public alias 2 : FLIP_Y
+public alias 3 : FLIP_XY
+
+// Tile Info
+private alias 1 : TILEINFO_DIRECTION
+private alias 6 : TILEINFO_ANGLEA
+
+// Stage Finish Aliases
+private alias object.propertyValue : object.resultsType
+
+private alias 1 : STAGEFINISH_T_STONEOBTAINED
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function Player_ProcessPlayer
+reserve function Player_HandleMovement
+reserve function Player_ProcessAnimation
+reserve function Player_BumperInteraction
+reserve function Player_TileInteraction
+
+// ========================
+// Static Values
+// ========================
+
+private value Player_unusedValue1  = 0;
+private value Player_unusedValue2  = 0;
+private value Player_unusedValue3  = 0;
+private value Player_unusedValue4  = 0;
+private value Player_unusedValue5  = 0;
+private value Player_unusedValue6  = 0;
+private value Player_unusedValue7  = 0;
+private value Player_unusedValue8  = 0;
+private value Player_unusedValue9  = 0;
+private value Player_unusedValue10 = 0;
+private value Player_unusedValue11 = 0;
+private value Player_unusedValue12 = 0;
+
+// ========================
+// Function Definitions
+// ========================
+
+public function Player_ProcessPlayer
+	if options.attractMode == false
+		// Assign all Player.* input values to their corresponding Input.* values
+		ProcessObjectControl()
+	end if
+end function
+
+
+public function Player_HandleMovement
+	// Update Sonic's tilt based on what directions the player is currently holding
+	// Left takes priority over right, similarly to the maingame
+	if player.left == true
+		player.tilt--
+
+		// Min tilt of -8
+		if player.tilt < -8
+			player.tilt = -8
+		end if
+	else
+		if player.right == true
+			player.tilt++
+
+			// Max tilt of 8
+			if player.tilt > 8
+				player.tilt = 8
+			end if
+		else
+			// Neither left nor right are held, restore Sonic's tilt to neutral position
+			if player.tilt > 0
+				player.tilt--
+			end if
+
+			if player.tilt < 0
+				player.tilt++
+			end if
+		end if
+	end if
+
+	if player.left == true
+		player.angle += 2
+	end if
+
+	if player.right == true
+		player.angle -= 2
+	end if
+
+	if player.angle < 0
+		// It's worth noting, Angle uses a 512-based value, which is why this is "allowed"
+		player.angle += 512
+	end if
+
+	player.angle &= 511
+
+	// Update movement based on the player's angle
+	Sin(temp0, player.angle)
+	temp0 *= player.speed
+	temp0 >>= 9
+	player.xpos += temp0
+
+	Cos(temp0, player.angle)
+	temp0 *= player.speed
+	temp0 >>= 9
+	player.zpos += temp0
+end function
+
+
+public function Player_ProcessAnimation
+	// This function is used for animating the object, here's a short overview of the values it uses
+	// (Frame values are in accordance with SpriteFrames set in ObjectStartup)
+	// -> player.animationSpeed is the speed at which Sonic should animate, it's added to his timer every frame
+	// -> player.frameTimer is the timer used for animating Sonic, think of it akin to object.animationTimer
+	//     - The next frame is triggered whenever the value is 240 or above, the speed is controlled by player.animationSpeed
+	//     - This doesn't get reset whenever the frame transitions, so keep that in mind too
+	// -> player.frameEnd is the final frame of the animation
+	// -> player.frameLoop is the loop point for the animation to go back to after reaching its end
+	// -> player.frame is the frame to be displayed when drawing the object
+
+	// For each animation's corresponding values, check out the ANI_* aliases up above
+	player.frameTimer += player.animationSpeed
+	if player.frameTimer > 239
+		player.frameTimer -= 240
+
+		player.frame++
+		if player.frame > player.frameEnd
+			player.frame = player.frameLoop
+		end if
+	end if
+end function
+
+
+public function Player_BumperInteraction
+	// Preconditions:
+	// - temp0 is player's truncated xpos, and
+	// - temp1 is truncated zpos
+
+	// Reset temp2, it's gonna get used as a bitfield for where bumper collision has been sensed,
+	// see below for which bits correspond to what "sensors"
+	temp2 = 0
+
+	// Check upper-left tile, uses the first bit
+	temp0 -= 8
+	temp1 -= 8
+	Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_ANGLEA)
+	if checkResult == 3
+		SetBit(temp2, 0, true)
+	end if
+
+	// Check upper-right tile, uses the second bit
+	temp0 += 16
+	Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_ANGLEA)
+	if checkResult == 3
+		SetBit(temp2, 1, true)
+	end if
+
+	// Check bottom left tile, uses the third bit
+	temp0 -= 16
+	temp1 += 16
+	Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_ANGLEA)
+	if checkResult == 3
+		SetBit(temp2, 2, true)
+	end if
+
+	// Check bottom right tile, uses the fourth bit
+	temp0 += 16
+	Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_ANGLEA)
+	if checkResult == 3
+		SetBit(temp2, 3, true)
+	end if
+
+	// Was any collision sensed?
+	if temp2 > 0
+		temp3 = player.speed
+		temp3 += 0x10000
+
+		if player.timer != 32
+			PlaySfx(SfxName[Bumper 2], false)
+		end if
+
+		player.timer = 32
+
+		// Jump to the corresponding collision match, each match is labelled in accordance with what sensors are triggered
+		switch temp2
+		case 1 // Upper left tile only
+			player.screenXPos = temp3
+			player.screenYPos = temp3
+			break
+
+		case 2 // Upper right tile only
+			player.screenXPos = temp3
+			player.screenYPos = temp3
+			FlipSign(player.screenXPos)
+			break
+
+		case 3 // Upper left tile and upper right
+			player.screenXPos = 0
+			player.screenYPos = temp3
+			break
+
+		case 4 // Bottom left tile only
+			player.screenXPos = temp3
+			player.screenYPos = temp3
+			FlipSign(player.screenYPos)
+			break
+
+		case 5 // Upper left tile and bottom left tile
+			player.screenXPos = temp3
+			player.screenYPos = 0
+			break
+
+		case 6 // Upper right tile and bottom left tile
+		case 7 // Upper left tile, upper right tile, and bottom left tile
+			player.screenXPos = temp3
+			player.screenYPos = temp3
+			break
+
+		case 8  // Bottom right tile only
+		case 14 // Upper right tile, bottom left tile, and bottom right tile
+		case 15 // Upper left tile, upper right tile, bottom left tile, and bottom right tile
+			player.screenXPos = temp3
+			player.screenYPos = temp3
+			FlipSign(player.screenXPos)
+			FlipSign(player.screenYPos)
+			break
+
+		case 9  // Upper left tile and bottom right tile
+		case 11 // Upper left tile, upper right tile, and bottom right tile
+			player.screenXPos = temp3
+			player.screenYPos = temp3
+			FlipSign(player.screenXPos)
+			break
+
+		case 10 // Upper right tile and bottom right tile
+			player.screenXPos = temp3
+			player.screenYPos = 0
+			FlipSign(player.screenXPos)
+			break
+
+		case 12 // Bottom left tile and bottom right tile
+			player.screenXPos = 0
+			player.screenYPos = temp3
+			FlipSign(player.screenYPos)
+			break
+
+		case 13 // Upper left tile, bottom left tile, and bottom right tile
+			player.screenXPos = temp3
+			player.screenYPos = temp3
+			FlipSign(player.screenYPos)
+			break
+
+		end switch
+	end if
+end function
+
+
+public function Player_TileInteraction
+	// Get the player's truncated xpos and zpos for tile collision purposes
+	temp0 = player.xpos
+	temp0 >>= 16
+	temp1 = player.zpos
+	temp1 >>= 16
+
+	// Pass the results over to the bumper function for bumping interations
+	CallFunction(Player_BumperInteraction)
+
+	// Get the player's truncated xpos and zpos for tile collision purposes (again)
+	temp0 = player.xpos
+	temp0 >>= 16
+	temp1 = player.zpos
+	temp1 >>= 16
+
+	// Find what tile type the player is currently standing on
+	Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_ANGLEA)
+	switch checkResult
+	case 1
+		// Offroad tile, slow down Sonic and kick up some dust
+		object[3].type = TypeName[Dust Puff]
+
+		// Note that we're giving it a Draw Order of 4, not only does this make it draw above Sonic but
+		// more importantly this makes it so that it won't be treated as a 3D object
+		object[3].drawOrder = 4
+
+		if HUD.speedShoes == 0
+			if player.speed > 0x28000
+				// While on dust without speed shoes, the maximum speed is 2.5 px per frame
+				player.speed = 0x28000
+			end if
+		else
+			if player.speed > 0x50000
+				// While on dust *with* speed shoes, the maximum speed is now bumped up to 5 px per frame
+				player.speed = 0x50000
+			end if
+		end if
+		break
+
+	case 2
+		// Water tile, slow down the player and make a splash
+		object[3].type = TypeName[Water Splash]
+		object[3].drawOrder = 4
+
+		// Give the water splash a Z Pos of just a tad bit lower than Sonic, in order to make it draw behind him
+		object[3].screenDepth = 0x57FE
+
+		if HUD.speedShoes > 0
+			if player.speed > 0x50000
+				// If Sonic has speed shoes, then enforce a max speed of 5px per frame
+				player.speed = 0x50000
+			end if
+		end if
+		break
+
+	// 3, the value used by the bumper tiles, is skipped here
+	// It's handled in Player_BumperInteraction instead, called above
+
+	case 4
+		// Ouch, a Cruncher!
+		// Make Sonic fall
+
+		player.state = SSSONIC_TRIPPED
+		player.timer = 136
+
+		player.frame     = ANI_TRIP_START
+		player.frameLoop = ANI_TRIP_LOOP
+		player.frameEnd  = ANI_TRIP_END
+
+		player.animationSpeed = 40
+		player.frameTimer = 0
+
+		// Go to a speed of 1px per frame
+		player.speed = 0x10000
+
+		if HUD.rings > 0
+			PlaySfx(SfxName[Lose Rings], false)
+
+			// Cut the player's rings in half
+			temp0 = HUD.rings
+			HUD.rings >>= 1
+
+			// Find how many rings were lost
+			temp0 -= HUD.rings
+			if temp0 > 8
+				temp0 = 8
+			end if
+
+			// If Sonic has 0 rings now, then reset the UFO streak
+			if HUD.rings == 0
+				HUD.lastUFOType = -1
+			end if
+
+			// Create all the dropped rings
+			while temp0 > 0
+				CreateTempObject(TypeName[Ring], 0, player.xpos, 0)
+				object[tempObjectPos].priority = PRIORITY_ACTIVE
+
+				// Move the Ring to Sonic
+				// (XPos is matched already via object spawning function)
+				Ring[tempObjectPos].zpos = player.zpos
+
+				// Randomise the X Velocity
+				Rand(temp1, 64)
+				temp1 -= 32
+				temp1 <<= 10
+				Ring[tempObjectPos].xvel = temp1
+
+				// Make the Rings fall in the general direction of Sonic, though
+				Sin(temp1, player.angle)
+				temp1 *= 96
+				Ring[tempObjectPos].xvel += temp1
+
+				// Randomise the Y Velocity as well
+				Rand(temp1, 64)
+				temp1 += 32
+				temp1 <<= 12
+				Ring[tempObjectPos].yvel = temp1
+
+				// No further stuff needed for Y Velocity since there's really only one way for them to go - up!
+
+				// Randomise the Ring's Z Velocity too
+				Rand(temp1, 64)
+				temp1 -= 32
+				temp1 <<= 10
+				Ring[tempObjectPos].zvel = temp1
+
+				// And make it somewhat match Sonic's direction
+				Cos(temp1, player.angle)
+				temp1 *= 96
+				Ring[tempObjectPos].zvel += temp1
+
+				temp0--
+			loop
+		end if
+		break
+
+	case 5
+		// Spring, send the player up, up, and away into the skies
+		player.state = SSSONIC_SPRING
+		player.timer = 0
+
+		player.frame     = ANI_JUMPING_START
+		player.frameLoop = ANI_JUMPING_LOOP
+		player.frameEnd  = ANI_JUMPING_END
+
+		player.animationSpeed = 80
+		player.frameTimer = 0
+
+		// Ascending at a rate of 8.75 pixels per frame
+		player.yvel = 0x8C000
+
+		PlaySfx(SfxName[Spring], false)
+		break
+
+	case 6
+		// Fan, starting gliding
+		player.state = SSSONIC_FAN
+		player.timer = 0
+
+		player.frame     = ANI_FAN_START
+		player.frameLoop = ANI_FAN_LOOP
+		player.frameEnd  = ANI_FAN_END
+
+		player.animationSpeed = 24
+		player.frameTimer = 0
+
+		// Fans don't give that much upwards boost, only giving a starting velocity of 2.5 pixels per frame
+		player.yvel = 0x28000
+
+		PlaySfx(SfxName[Fan], false)
+		break
+
+	case 7
+		// Large arrow booster pad, facing left
+		player.timer = 40
+		player.screenXPos = -0xC0000
+		player.screenYPos = 0
+
+		// Get the tile's flip directions
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_DIRECTION)
+
+		// Flip Sonic's direction if needed
+		if checkResult == 1
+			FlipSign(player.screenXPos)
+		else
+			if checkResult == 3
+				FlipSign(player.screenXPos)
+			end if
+		end if
+
+		if player.state != SSSONIC_SPEEDBOOSTER
+			PlaySfx(SfxName[Large Booster], false)
+		end if
+
+		player.state     = SSSONIC_SPEEDBOOSTER
+
+		player.frame     = ANI_BRAKING_START
+		player.frameLoop = ANI_BRAKING_LOOP
+		player.frameEnd  = ANI_BRAKING_END
+
+		player.animationSpeed = 24
+		player.frameTimer = 0
+		break
+
+	case 8
+		// Large arrow booster pad, facing right
+		player.timer = 40
+		player.screenXPos = 0xC0000
+		player.screenYPos = 0
+
+		// Get the tile's flip directions
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_DIRECTION)
+
+		// Flip Sonic's direction if needed
+		if checkResult == 1
+			FlipSign(player.screenXPos)
+		else
+			if checkResult == 3
+				FlipSign(player.screenXPos)
+			end if
+		end if
+
+		if player.state != SSSONIC_SPEEDBOOSTER
+			PlaySfx(SfxName[Large Booster], false)
+		end if
+
+		player.state     = SSSONIC_SPEEDBOOSTER
+
+		player.frame     = ANI_BRAKING_START
+		player.frameLoop = ANI_BRAKING_LOOP
+		player.frameEnd  = ANI_BRAKING_END
+
+		player.animationSpeed = 24
+		player.frameTimer = 0
+		break
+
+	case 9
+		// Large arrow booster pad, facing up
+		player.timer = 40
+		player.screenXPos = 0
+		player.screenYPos = -0xC0000
+
+		// Get the tile's flip directions
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_DIRECTION)
+
+		// Flip Sonic's direction if needed
+		if checkResult == 2
+			FlipSign(player.screenYPos)
+		else
+			if checkResult == 3
+				FlipSign(player.screenYPos)
+			end if
+		end if
+
+		if player.state != SSSONIC_SPEEDBOOSTER
+			PlaySfx(SfxName[Large Booster], false)
+		end if
+
+		player.state     = SSSONIC_SPEEDBOOSTER
+
+		player.frame     = ANI_BRAKING_START
+		player.frameLoop = ANI_BRAKING_LOOP
+		player.frameEnd  = ANI_BRAKING_END
+
+		player.animationSpeed = 24
+		player.frameTimer = 0
+		break
+
+	case 10
+		// Large arrow booster pad, facing down
+		player.timer = 40
+		player.screenXPos = 0
+		player.screenYPos = 0xC0000
+
+		// Get the tile's flip directions
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_DIRECTION)
+
+		// Flip Sonic's direction if needed
+		if checkResult == 2
+			FlipSign(player.screenYPos)
+		else
+			if checkResult == 3
+				FlipSign(player.screenYPos)
+			end if
+		end if
+
+		if player.state != SSSONIC_SPEEDBOOSTER
+			PlaySfx(SfxName[Large Booster], false)
+		end if
+
+		player.state     = SSSONIC_SPEEDBOOSTER
+
+		player.frame     = ANI_BRAKING_START
+		player.frameLoop = ANI_BRAKING_LOOP
+		player.frameEnd  = ANI_BRAKING_END
+
+		player.animationSpeed = 24
+		player.frameTimer = 0
+		break
+
+	case 11
+		// Small arrow booster pad, facing left
+		if player.timer != 16
+			PlaySfx(SfxName[Small Booster], false)
+		end if
+
+		player.timer = 16
+		player.screenXPos = -0x80000
+		player.screenYPos = 0
+
+		// Get the tile's flip directions
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_DIRECTION)
+
+		// Flip Sonic's direction if needed
+		if checkResult == 1
+			FlipSign(player.screenXPos)
+		else
+			if checkResult == 3
+				FlipSign(player.screenXPos)
+			end if
+		end if
+		break
+
+	case 12
+		// Small arrow booster pad, facing right
+		if player.timer != 16
+			PlaySfx(SfxName[Small Booster], false)
+		end if
+
+		player.timer = 16
+		player.screenXPos = 0x80000
+		player.screenYPos = 0
+
+		// Get the tile's flip directions
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_DIRECTION)
+
+		// Flip Sonic's direction if needed
+		if checkResult == 1
+			FlipSign(player.screenXPos)
+		else
+			if checkResult == 3
+				FlipSign(player.screenXPos)
+			end if
+		end if
+		break
+
+	case 13
+		// Small arrow booster pad, facing up
+		if player.timer != 16
+			PlaySfx(SfxName[Small Booster], false)
+		end if
+
+		player.timer = 16
+		player.screenXPos = 0
+		player.screenYPos = -0x80000
+
+		// Get the tile's flip directions
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_DIRECTION)
+
+		// Flip Sonic's direction if needed
+		if checkResult == 2
+			FlipSign(player.screenYPos)
+		else
+			if checkResult == 3
+				FlipSign(player.screenYPos)
+			end if
+		end if
+		break
+
+	case 14
+		// Small arrow booster pad, facing down
+		if player.timer != 16
+			PlaySfx(SfxName[Small Booster], false)
+		end if
+
+		player.timer = 16
+		player.screenXPos = 0
+		player.screenYPos = 0x80000
+
+		// Get the tile's flip directions
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_DIRECTION)
+
+		// Flip Sonic's direction if needed
+		if checkResult == 2
+			FlipSign(player.screenYPos)
+		else
+			if checkResult == 3
+				FlipSign(player.screenYPos)
+			end if
+		end if
+		break
+
+	end switch
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if HUD.speedShoes > 0
+		HUD.speedShoes--
+	end if
+
+	switch player.state
+	case SSSONIC_INTROPOSE
+		CallFunction(Player_ProcessAnimation)
+		player.timer++
+		if player.timer == 120
+			// Stop posing and start turning around
+			player.timer = 0
+
+			player.state = SSSONIC_INTROTURNAROUND
+
+			player.frame     = ANI_FACINGAHEAD_START
+			player.frameLoop = ANI_FACINGAHEAD_LOOP
+			player.frameEnd  = ANI_FACINGAHEAD_END
+
+			player.frameTimer = 0
+			player.animationSpeed = 20
+		end if
+		break
+
+	case SSSONIC_INTROTURNAROUND
+		CallFunction(Player_ProcessAnimation)
+
+		player.timer++
+		if player.timer == 140
+			// Fully turned around now and ready to go!
+			player.timer = 0
+
+			// Start advancing ahead
+			player.state = SSSONIC_WALKING
+
+			player.frame     = ANI_WALKING_START
+			player.frameLoop = ANI_WALKING_LOOP
+			player.frameEnd  = ANI_WALKING_END
+
+			player.speed = 0
+		end if
+		break
+
+	case SSSONIC_WALKING
+		CallFunction(Player_ProcessPlayer)
+
+		if player.speed < 0x50000
+			player.speed += 0x800
+		else
+			player.speed = 0x50000
+		end if
+
+		if keyDown[0].down == true
+			player.speed -= 0xC00
+
+			if player.speed < 0x1E000
+				player.speed = 0x1E000
+			end if
+		end if
+
+		// Sonic's animation speed is dependant on his actual speed
+		player.animationSpeed = player.speed
+		player.animationSpeed *= 15
+		player.animationSpeed /= 0x14000
+		player.animationSpeed += 20
+
+		CallFunction(Player_HandleMovement)
+		CallFunction(Player_ProcessAnimation)
+
+		// Update Sonic's gimmick interaction timer
+		if player.timer > 0
+			player.timer--
+			player.xpos += player.screenXPos
+			player.zpos += player.screenYPos
+		end if
+
+		CallFunction(Player_TileInteraction)
+
+		// Check for jumping
+		if player.jumpPress == true
+			player.state = SSSONIC_JUMPING
+			player.timer = 0
+
+			player.frame     = ANI_JUMPING_START
+			player.frameLoop = ANI_JUMPING_LOOP
+			player.frameEnd  = ANI_JUMPING_END
+
+			player.frameTimer = 0
+			player.animationSpeed = 80
+
+			// Note: We've got a slightly stronger strength here compared to the original's 0x46000
+			player.yvel = 0x58000
+			PlaySfx(SfxName[Jump], false)
+		end if
+		break
+
+	case SSSONIC_JUMPING
+		CallFunction(Player_ProcessPlayer)
+
+		if player.speed < 0x50000
+			player.speed += 0x800
+		end if
+
+		if keyDown[0].down == true
+			player.speed -= 0xC00
+
+			if player.speed < 0x1E000
+				player.speed = 0x1E000
+			end if
+		end if
+
+		if player.jumpHold == false
+			if player.yvel > 0x30000
+				player.yvel = 0x30000
+			end if
+		end if
+
+		CallFunction(Player_HandleMovement)
+		CallFunction(Player_ProcessAnimation)
+
+		// Gravity of 0.125 per frame
+		player.yvel -= 0x2800
+		player.ypos += player.yvel
+
+		// Touched the ground?
+		if player.ypos < 0
+			player.ypos = 0
+
+			if HUD.ufosCount > 0
+				if HUD.speedShoes == 0
+					player.state     = SSSONIC_WALKING
+
+					player.frame     = ANI_WALKING_START
+					player.frameLoop = ANI_WALKING_LOOP
+					player.frameEnd  = ANI_WALKING_END
+
+					player.frameTimer = 0
+				else
+					player.state     = SSSONIC_SPEEDSHOESRUN
+
+					player.frame     = ANI_RUN_START
+					player.frameLoop = ANI_RUN_LOOP
+					player.frameEnd  = ANI_RUN_END
+
+					player.animationSpeed = 80
+					player.frameTimer = 0
+				end if
+			else
+				player.controlMode = CONTROLMODE_NONE
+				player.state = SSSONIC_FINISHSTAND
+				stage.timeEnabled = false
+			end if
+		end if
+		break
+
+	case SSSONIC_SPEEDBOOSTER
+		CallFunction(Player_ProcessPlayer)
+
+		if player.speed < 0x50000
+			player.speed += 0x800
+		end if
+
+		if keyDown[0].down == true
+			player.speed -= 0xC00
+
+			if player.speed < 0x1E000
+				player.speed = 0x1E000
+			end if
+		end if
+
+		CallFunction(Player_HandleMovement)
+		CallFunction(Player_ProcessAnimation)
+
+		// Update the booster timer
+		if player.timer > 0
+			player.timer--
+			player.xpos += player.screenXPos
+			player.zpos += player.screenYPos
+		else
+			// Booster's over, restore the player to normal
+			if HUD.speedShoes == 0
+				player.state     = SSSONIC_WALKING
+
+				player.frame     = ANI_WALKING_START
+				player.frameLoop = ANI_WALKING_LOOP
+				player.frameEnd  = ANI_WALKING_END
+
+				player.frameTimer = 0
+			else
+				player.state     = SSSONIC_SPEEDSHOESRUN
+
+				player.frame     = ANI_RUN_START
+				player.frameLoop = ANI_RUN_LOOP
+				player.frameEnd  = ANI_RUN_END
+
+				player.animationSpeed = 80
+				player.frameTimer = 0
+			end if
+		end if
+
+		CallFunction(Player_TileInteraction)
+
+		// See if the player wants to jump out of the boost
+		if player.jumpPress == true
+			player.state = SSSONIC_JUMPING
+			player.timer = 0
+
+			player.frame     = ANI_JUMPING_START
+			player.frameLoop = ANI_JUMPING_LOOP
+			player.frameEnd  = ANI_JUMPING_END
+
+			// Note: We've got a slightly stronger strength here compared to the original's 0x46000
+			player.animationSpeed = 80
+			player.yvel = 0x58000
+
+			PlaySfx(SfxName[Jump], false)
+		end if
+		break
+
+	case SSSONIC_FAN
+		CallFunction(Player_ProcessPlayer)
+
+		if player.speed < 0x50000
+			player.speed += 0x800
+		end if
+
+		CallFunction(Player_HandleMovement)
+		CallFunction(Player_ProcessAnimation)
+
+		// Gravity of 0.03125 pixels per frame, the fan provides some air resistance to lessen the normal gravity from 0.125 pixels per frame
+		player.yvel -= 0x800
+		player.ypos += player.yvel
+
+		// Touched the ground?
+		if player.ypos < 0
+			player.ypos = 0
+
+			if HUD.ufosCount > 0
+				if HUD.speedShoes == 0
+					player.state     = SSSONIC_WALKING
+
+					player.frame     = ANI_WALKING_START
+					player.frameLoop = ANI_WALKING_LOOP
+					player.frameEnd  = ANI_WALKING_END
+
+					player.frameTimer = 0
+				else
+					player.state     = SSSONIC_SPEEDSHOESRUN
+
+					player.frame     = ANI_RUN_START
+					player.frameLoop = ANI_RUN_LOOP
+					player.frameEnd  = ANI_RUN_END
+
+					player.animationSpeed = 80
+					player.frameTimer = 0
+				end if
+			else
+				player.state = SSSONIC_FINISHSTAND
+				player.controlMode = CONTROLMODE_NONE
+				stage.timeEnabled = false
+			end if
+		end if
+		break
+
+	case SSSONIC_TRIPPED
+		CallFunction(Player_ProcessPlayer)
+
+		// Lock movement
+		player.left = false
+		player.right = false
+
+		CallFunction(Player_HandleMovement)
+		CallFunction(Player_ProcessAnimation)
+
+		// Get the player's truncated xpos and zpos
+		temp0 = player.xpos
+		temp0 >>= 16
+
+		temp1 = player.zpos
+		temp1 >>= 16
+
+		Get16x16TileInfo(checkResult, temp0, temp1, TILEINFO_ANGLEA)
+
+		// If the player's hit a bumper tile, then get up and start walking again
+		if checkResult == 3
+			player.state     = SSSONIC_WALKING
+
+			player.frame     = ANI_WALKING_START
+			player.frameLoop = ANI_WALKING_LOOP
+			player.frameEnd  = ANI_WALKING_END
+
+			player.frameTimer = 0
+		end if
+
+		if player.timer > 0
+			player.timer--
+		else
+			if HUD.speedShoes == 0
+				player.state     = SSSONIC_WALKING
+
+				player.frame     = ANI_WALKING_START
+				player.frameLoop = ANI_WALKING_LOOP
+				player.frameEnd  = ANI_WALKING_END
+
+				player.frameTimer = 0
+			else
+				player.state     = SSSONIC_SPEEDSHOESRUN
+
+				player.frame     = ANI_RUN_START
+				player.frameLoop = ANI_RUN_LOOP
+				player.frameEnd  = ANI_RUN_END
+
+				player.animationSpeed = 80
+				player.frameTimer = 0
+			end if
+		end if
+		break
+
+	case SSSONIC_SPEEDSHOESRUN
+		CallFunction(Player_ProcessPlayer)
+
+		if player.speed < 0x70000
+			player.speed += 0x1000
+		end if
+
+		if keyDown[0].down == true
+			player.speed -= 0xC00
+
+			if player.speed < 0x1E000
+				player.speed = 0x1E000
+			end if
+		end if
+
+		CallFunction(Player_HandleMovement)
+		CallFunction(Player_ProcessAnimation)
+
+		if player.timer > 0
+			player.timer--
+			player.xpos += player.screenXPos
+			player.zpos += player.screenYPos
+		end if
+
+		CallFunction(Player_TileInteraction)
+
+		if player.jumpPress == true
+			player.state = SSSONIC_JUMPING
+			player.timer = 0
+
+			player.frame     = ANI_JUMPING_START
+			player.frameLoop = ANI_JUMPING_LOOP
+			player.frameEnd  = ANI_JUMPING_END
+
+			player.frameTimer = 0
+			player.animationSpeed = 80
+			player.yvel = 0x58000
+
+			PlaySfx(SfxName[Jump], false)
+		end if
+
+		if HUD.speedShoes == 0
+			player.state     = SSSONIC_WALKING
+
+			player.frame     = ANI_WALKING_START
+			player.frameLoop = ANI_WALKING_LOOP
+			player.frameEnd  = ANI_WALKING_END
+
+			player.frameTimer = 0
+		end if
+		break
+
+	case SSSONIC_FINISHSTAND
+		player.frame = ANI_STANDING_START
+		player.timer = 0
+		player.speed = 0
+		break
+
+	case SSSONIC_CAMERAPAN
+		// This state is given to Sonic from the Time Stone object, not from himself
+
+		if player.timer < 128
+			player.timer++
+			player.angle -= 2
+			if player.angle < 0
+				player.angle += 512
+			end if
+		else
+			if object[3].type == TypeName[Blank Object]
+				// Spawn the Time Stone and place it 24 pixels above the screen
+				ResetObjectEntity(3, TypeName[Time Stone], 0, 0, -0x180000)
+				object[3].ixpos = screen.xcenter
+				object[3].priority = PRIORITY_ACTIVE
+			end if
+		end if
+
+		// Make Sonic's rotation based on how far into the pan we are
+		// -> 81 is the starting Sprite Frame ID of the rotation frames
+		player.frame = player.timer
+		player.frame >>= 4
+		player.frame += 81
+		break
+
+	case SSSONIC_STONEGRABBED
+		if player.timer == 308
+			// Spawn the Stage Results, as the "TIME STONES" variant
+			object[30].type = TypeName[Stage Finish]
+			object[30].resultsType = STAGEFINISH_T_STONEOBTAINED
+		else
+			player.timer++
+		end if
+		break
+
+	case SSSONIC_SPRING
+		CallFunction(Player_ProcessPlayer)
+
+		if player.speed < 0x50000
+			player.speed += 0x800
+		end if
+
+		if keyDown[0].down == true
+			player.speed -= 0xC00
+
+			if player.speed < 0x1E000
+				player.speed = 0x1E000
+			end if
+		end if
+
+		CallFunction(Player_HandleMovement)
+		CallFunction(Player_ProcessAnimation)
+
+		// Update gravity with an eight of a pixel per frame as a gravity value
+		player.yvel -= 0x2000
+		player.ypos += player.yvel
+
+		// Touched the ground?
+		if player.ypos < 0
+			player.ypos = 0
+			if HUD.ufosCount > 0
+				if HUD.speedShoes == 0
+					player.state    = SSSONIC_WALKING
+
+					player.frame     = ANI_WALKING_START
+					player.frameLoop = ANI_WALKING_LOOP
+					player.frameEnd  = ANI_WALKING_END
+
+					player.frameTimer = 0
+				else
+					player.state     = SSSONIC_SPEEDSHOESRUN
+
+					player.frame     = ANI_RUN_START
+					player.frameLoop = ANI_RUN_LOOP
+					player.frameEnd  = ANI_RUN_END
+
+					player.animationSpeed = 80
+					player.frameTimer = 0
+				end if
+			else
+				player.controlMode = CONTROLMODE_NONE
+				player.state = SSSONIC_FINISHSTAND
+			end if
+		end if
+		break
+
+	end switch
+
+	// Enforce stage bounds
+	// These stage size values are set by the stage's BGEffects object on Startup
+	if player.xpos > stage.curXBoundary2
+		player.xpos = stage.curXBoundary2
+	end if
+
+	if player.xpos < stage.curXBoundary1
+		player.xpos = stage.curXBoundary1
+	end if
+
+	// The Stage Bounds are setup for a 2D plane, which is why zpos is being paired with the "Y" Bounds here
+	if player.zpos > stage.curYBoundary2
+		player.zpos = stage.curYBoundary2
+	end if
+
+	if player.zpos < stage.curYBoundary1
+		player.zpos = stage.curYBoundary1
+	end if
+
+	// So we're kind of not actually moving around a 3D stage - instead, we're moving the entire world around Sonic
+	// So do the calculations for that
+	tileLayer[0].angle = player.angle
+
+	// X/Z movement
+	Sin(tileLayer[0].xpos, tileLayer[0].angle)
+	Cos(tileLayer[0].zpos, tileLayer[0].angle)
+	tileLayer[0].xpos *= -0x2C00
+	tileLayer[0].zpos *= -0x2C00
+	tileLayer[0].xpos += player.xpos
+	tileLayer[0].zpos += player.zpos
+
+	// Y movement is much easier, no complex calcuations needed here
+	// Just take Sonic's Y Position, smooth it out a bit, and offset it by 88 pixels
+	tileLayer[0].ypos = player.ypos
+	tileLayer[0].ypos /= 3
+	tileLayer[0].ypos += 0x580000
+end event
+
+
+event ObjectDraw
+	// First draw Sonic's shadow
+	// Find his the ground position to draw the shadow on
+	temp0 = tileLayer[0].ypos
+	temp0 >>= 8
+	temp0 *= 96
+	temp0 /= 0x5800
+	temp0 += 128
+
+	// And now draw the shadow at that given spot
+	DrawSpriteScreenXY(0, screen.xcenter, temp0)
+
+	// And now draw Sonic himself
+	// Get the Y position to draw him at
+	temp0 = tileLayer[0].ypos
+	temp0 -= player.ypos
+	temp0 >>= 8
+	temp0 *= 96
+	temp0 /= 0x5800
+	temp0 += 128
+
+	// If in the walking animation, jump to its corresponding special drawing code,
+	// otherwise just do the standard drawing sprite routine
+	switch player.state
+	default
+		// Just draw Sonic's sprite, nothing special needed here
+		DrawSpriteScreenXY(player.frame, screen.xcenter, temp0)
+		break
+
+	case SSSONIC_WALKING
+		// Bump Sonic's sprite based on how "tilted" he is
+
+		temp1 = player.frame
+
+		temp2 = player.tilt
+		temp2 >>= 2
+		temp2 += 2
+
+		// And now jump to the result
+		// Alternate SpriteFrames are used, as well as sprite flipping too
+		switch temp2
+		case 0
+			temp1 += 6
+			player.direction = FACING_LEFT
+			break
+
+		case 1
+			temp1 += 12
+			player.direction = FACING_LEFT
+			break
+
+		case 2
+			player.direction = FACING_RIGHT
+			break
+
+		case 3
+			temp1 += 18
+			player.direction = FACING_RIGHT
+			break
+
+		case 4
+			temp1 += 24
+			player.direction = FACING_RIGHT
+			break
+
+		end switch
+
+		// And now draw the result sprite from that
+		DrawSpriteScreenFX(temp1, FX_FLIP, screen.xcenter, temp0)
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	// Load the correct sprite sheet based on the current player
+	if stage.playerListPos == PLAYER_SONIC_A
+		LoadSpriteSheet("Special/Sonic.gif")
+	else
+		LoadSpriteSheet("Special/Tails.gif")
+	end if
+
+	// Find all player objects
+	foreach (TypeName[Player Object], arrayPos0, ALL_ENTITIES)
+		// Transfer this placed player object's values to the main player object
+		Player[2].xpos = object[arrayPos0].xpos
+
+		// Reset ypos, so that he's starting on the floor
+		Player[2].ypos = 0
+
+		// Due to the difference between editor and game, turn ypos into zpos here
+		Player[2].zpos = object[arrayPos0].ypos
+
+		// propertyValue is the player's starting direction
+		// propertyValue here is normally always 0xC0, which is facing left
+		Player[2].angle = object[arrayPos0].propertyValue
+		Player[2].angle <<= 1
+
+		// Remove this placed player object from the scene set of objects,
+		// as it's been moved to a reserved object slot now
+		ResetObjectEntity(arrayPos0, TypeName[Blank Object], 0, 0, 0)
+	next
+
+	// Place a player object into reserved object slot 2 and initialise its values
+	Player[2].type = TypeName[Player Object]
+
+	// Make the player always active
+	Player[2].priority = PRIORITY_ACTIVE
+
+	// Give them a standard draw order depth, since they're just about in the middle of the screen
+	Player[2].screenDepth = 0x5800
+
+	// Start with them doing their intro pose, pretty fancy
+	Player[2].frame     = ANI_INTROPOSE_START
+	Player[2].frameLoop = ANI_INTROPOSE_LOOP
+	Player[2].frameEnd  = ANI_INTROPOSE_END
+	Player[2].animationSpeed = 30
+
+	// Player Frames
+	// Refer to the ANI_* constants too, those are a good outline of what these SpriteFrames are
+
+	// 0 - Shadow Frame
+	SpriteFrame(-20, -4, 40, 8, 210, 377)
+
+	// 1 - Standing Frame
+	SpriteFrame(-20, -48, 40, 48, 1, 197)
+
+	// 2-4 - Turning Ahead Frames
+	SpriteFrame(-20, -48, 40, 48, 83, 197)
+	SpriteFrame(-20, -48, 40, 48, 42, 197)
+	SpriteFrame(-20, -48, 40, 48, 1, 197)
+
+	// 5-8 - Intro Animation Frames
+	SpriteFrame(-20, -48, 40, 48, 1, 246)
+	SpriteFrame(-20, -48, 40, 48, 42, 246)
+	SpriteFrame(-20, -48, 40, 48, 83, 246)
+	SpriteFrame(-20, -48, 40, 48, 42, 246)
+
+	// 9-14 - Walking Ahead Frames
+	SpriteFrame(-20, -48, 40, 48, 1, 1)
+	SpriteFrame(-20, -48, 40, 48, 42, 1)
+	SpriteFrame(-20, -48, 40, 48, 83, 1)
+	SpriteFrame(-20, -48, 40, 48, 1, 50)
+	SpriteFrame(-20, -48, 40, 48, 42, 50)
+	SpriteFrame(-20, -48, 40, 48, 83, 50)
+
+	// 15-20 - Heavily Leaning Right Frames
+	SpriteFrame(-20, -48, 40, 48, 1, 99)
+	SpriteFrame(-20, -48, 40, 48, 42, 99)
+	SpriteFrame(-20, -48, 40, 48, 83, 99)
+	SpriteFrame(-20, -48, 40, 48, 1, 148)
+	SpriteFrame(-20, -48, 40, 48, 42, 148)
+	SpriteFrame(-20, -48, 40, 48, 83, 148)
+
+	// 21-26 - Lightly Leaning Right Frames
+	SpriteFrame(-20, -48, 40, 48, 124, 1)
+	SpriteFrame(-20, -48, 40, 48, 165, 1)
+	SpriteFrame(-20, -48, 40, 48, 206, 1)
+	SpriteFrame(-20, -48, 40, 48, 124, 50)
+	SpriteFrame(-20, -48, 40, 48, 165, 50)
+	SpriteFrame(-20, -48, 40, 48, 206, 50)
+
+	// 27-29 - Leaning Right Frames again..?
+	// Seems to be unused, perhaps these only exist to pad out the frame number?
+	SpriteFrame(-20, -48, 40, 48, 124, 50)
+	SpriteFrame(-20, -48, 40, 48, 165, 50)
+	SpriteFrame(-20, -48, 40, 48, 206, 50)
+
+	// 30-35 - Lightly Leaning Right Frames
+	SpriteFrame(-20, -48, 40, 48, 124, 1)
+	SpriteFrame(-20, -48, 40, 48, 165, 1)
+	SpriteFrame(-20, -48, 40, 48, 206, 1)
+	SpriteFrame(-20, -48, 40, 48, 1, 148)
+	SpriteFrame(-20, -48, 40, 48, 42, 148)
+	SpriteFrame(-20, -48, 40, 48, 83, 148)
+
+	// 36-38 - Heavily Leaning Right Frames
+	SpriteFrame(-20, -48, 40, 48, 1, 99)
+	SpriteFrame(-20, -48, 40, 48, 42, 99)
+	SpriteFrame(-20, -48, 40, 48, 83, 99)
+
+	// 39-42 - Jumping Animation Frames
+	SpriteFrame(-20, -40, 40, 40, 165, 99)
+	SpriteFrame(-20, -40, 40, 40, 206, 99)
+	SpriteFrame(-20, -40, 40, 40, 124, 140)
+	SpriteFrame(-20, -40, 40, 40, 124, 99)
+
+	// 43-47 - Braking Animation
+	SpriteFrame(-20, -48, 40, 48, 51, 344)
+	SpriteFrame(-21, -48, 42, 48, 182, 295)
+	SpriteFrame(-25, -48, 49, 48, 1, 344)
+	if stage.playerListPos == PLAYER_SONIC_A
+		SpriteFrame(-21, -48, 42, 48, 135, 410)
+		SpriteFrame(-20, -48, 40, 48, 178, 410)
+	else
+		SpriteFrame(-21, -48, 42, 48, 135, 426)
+		SpriteFrame(-20, -48, 40, 48, 178, 426)
+	end if
+
+	// 48-53 - Fan Animation
+	SpriteFrame(-16, -32, 54, 32, 17, 442)  // Not accurate to the pink sprite box, it's actually cropped a bit from that
+	SpriteFrame(-26, -32, 52, 32, 78, 442)  // Same story here, too
+	SpriteFrame(-37, -32, 54, 32, 178, 475) // And here...
+	SpriteFrame(-32, -32, 48, 32, 1, 475)
+	SpriteFrame(-30, -32, 60, 32, 115, 475)
+	SpriteFrame(-16, -32, 48, 32, 208, 344)
+
+	// 54-76 - Falling Down Animation
+	SpriteFrame(-28, -48, 56, 48, 92, 344)
+	SpriteFrame(-30, -32, 60, 32, 54, 475)
+
+	// Most Frames in the animation varies between Sonic and Tails
+	if stage.playerListPos == PLAYER_SONIC_A
+		SpriteFrame(-29, -32, 58, 32, 149, 344)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+		SpriteFrame(-30, -32, 60, 32, 149, 377)
+	else
+		SpriteFrame(-29, -32, 58, 37, 149, 344)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+		SpriteFrame(-30, -32, 60, 32, 149, 382)
+	end if
+
+	SpriteFrame(-20, -48, 40, 48, 1, 393)
+	SpriteFrame(-20, -48, 40, 48, 42, 393)
+	SpriteFrame(-20, -48, 40, 48, 83, 393)
+
+	// 77-80 - Running Frames
+	SpriteFrame(-20, -48, 40, 48, 165, 140)
+	SpriteFrame(-20, -48, 40, 48, 206, 140)
+	SpriteFrame(-20, -48, 40, 48, 165, 189)
+	SpriteFrame(-20, -48, 40, 48, 206, 189)
+
+	// 81-90 - Time Stone Grabbing Frames
+	// These aren't used in the traditional animation system, and are instead manually set in SSSONIC_CAMERAPAN
+	SpriteFrame(-20, -48, 40, 48, 1, 197)
+	SpriteFrame(-20, -48, 40, 48, 124, 246)
+	SpriteFrame(-20, -48, 40, 48, 165, 246)
+	SpriteFrame(-20, -48, 40, 48, 206, 246)
+	SpriteFrame(-20, -48, 40, 48, 1, 295)
+	SpriteFrame(-20, -48, 40, 48, 42, 295)
+	SpriteFrame(-16, -48, 32, 48, 83, 295)
+	SpriteFrame(-16, -48, 32, 48, 116, 295)
+	SpriteFrame(-16, -48, 32, 48, 116, 295)
+	SpriteFrame(-16, -48, 32, 48, 149, 295)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // StartDir
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // StartDir
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/Sonic.gif")
+	SpriteFrame(-20, -48, 40, 48, 1, 246)
+
+	AddEditorVariable("StartDir")
+	SetActiveVariable("StartDir")
+	AddEnumVariable("Up", 0)
+	AddEnumVariable("Right", 64)
+	AddEnumVariable("Down", 128)
+	AddEnumVariable("Left", 192)
+end event

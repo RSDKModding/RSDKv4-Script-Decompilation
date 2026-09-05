@@ -1,0 +1,240 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Spinning Top Object
+// Script Author: Christian Whitehead / Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0	: object.activePlayers
+private alias object.value1	: object.playerRadius
+private alias object.value2	: object.playerAngles
+
+private alias object.state			 : player.state
+private alias object.xpos			 : player.xpos				// In total world-space position (0x10000 == 1.0)
+private alias object.ypos			 : player.ypos
+private alias object.xvel			 : player.xvel				// Based on world-space
+private alias object.yvel			 : player.yvel
+private alias object.speed			 : player.speed				// Also based on world-space
+private alias object.angle			 : player.angle
+private alias object.gravity		 : player.gravity			// GRAVITY_GROUND or GRAVITY_AIR. Not to be confused with player.gravityStrength, see there for more info
+private alias object.frame			 : player.frame
+private alias object.animation		 : player.animation
+private alias object.controlLock	 : player.controlLock		// Timer for how long control lock is active. Not to be confused with roll jump lock, see the Player_Action_Jump function for that
+private alias object.scrollTracking	 : player.scrollTracking	// Determines if the camera will track the player's position or just follow it
+private alias object.collisionMode	 : player.collisionMode
+
+// Player Inputs
+private alias object.jumpPress  : player.jumpPress
+private alias object.jumpHold 	: player.jumpHold
+private alias object.up		 	: player.up
+private alias object.down	 	: player.down
+private alias object.left	 	: player.left
+private alias object.right	 	: player.right
+
+// Player Values
+private alias object.value1  : player.timer
+private alias object.value26 : player.jumpStrength
+private alias object.value24 : player.gravityStrength
+private alias object.value33 : player.collisionDisabled
+private alias object.value34 : player.jumpAbilityState
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function SpinningTop_DebugDraw
+reserve function SpinningTop_DebugSpawn
+reserve function SpinningTop_PlayerJump
+
+// ========================
+// Tables
+// ========================
+
+// fun fact: this table matches the exact frame table used in the original 1993 version of Sonic CD!
+private table SpinningTop_PlayerFrames
+	0, 0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 5
+end table
+
+private table SpinningTop_PlayerSpeeds[4]
+
+// ========================
+// Function Definitions
+// ========================
+
+public function SpinningTop_DebugDraw
+	DrawSprite(0)
+end function
+
+
+public function SpinningTop_DebugSpawn
+	CreateTempObject(TypeName[Spinning Top], 0, object.xpos, object.ypos)
+end function
+
+
+public function SpinningTop_PlayerJump
+	temp1 = 0
+	if temp1 == 0
+		player[currentPlayer].controlLock = 0
+		player[currentPlayer].gravity = 1
+		temp1 = player[currentPlayer].jumpStrength
+		temp1 += player[currentPlayer].gravityStrength  // temp1 is just thrown into the void here...
+		player[currentPlayer].yvel = player[currentPlayer].jumpStrength
+		FlipSign(player[currentPlayer].yvel)
+		GetTableValue(player[currentPlayer].speed, temp7, SpinningTop_PlayerSpeeds)
+		player[currentPlayer].scrollTracking = 1
+		player[currentPlayer].animation = ANI_JUMPING
+		player[currentPlayer].angle = 0
+		player[currentPlayer].collisionMode = 0
+		player[currentPlayer].timer = 1
+		player[currentPlayer].state = Player_State_Air
+		player[currentPlayer].collisionDisabled = true
+		player[currentPlayer].jumpAbilityState = 1
+	end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	temp7 = 0
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		GetBit(temp6, object.activePlayers, temp7)
+		SetBit(object.activePlayers, temp7, 0)
+		temp3 = temp7
+		temp3 <<= 3
+		temp2 = 255
+		temp2 <<= temp3
+		temp2 ^= -1
+		temp4 = object.playerRadius
+		temp4 >>= temp3
+		temp4 &= 255
+		object.playerRadius &= temp2
+		temp5 = object.playerAngles
+		temp5 >>= temp3
+		temp5 &= 255
+		object.playerAngles &= temp2
+		BoxCollisionTest(C_SOLID, object.entityPos, -16, -8, 16, 24, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+		if checkResult == true
+			SetBit(object.activePlayers, temp7, 1)
+			if player[currentPlayer].state != Player_State_SpinningTop
+				player[currentPlayer].state = Player_State_SpinningTop
+				temp0 = player[currentPlayer].xpos
+				temp0 -= object.xpos
+				temp0 >>= 16
+				if temp0 < 0
+					FlipSign(temp0)
+					temp5 = 128
+				else
+					temp5 = 0
+				end if
+				temp4 = temp0
+				SetTableValue(player[currentPlayer].speed, temp7, SpinningTop_PlayerSpeeds)
+				player[currentPlayer].animation = ANI_SPINNING_TOP
+			end if
+			player[currentPlayer].xvel = 0
+			player[currentPlayer].speed = 0
+			temp5 += 8
+			Cos256(temp0, temp5)
+			temp0 *= temp4
+			temp0 <<= 8
+			temp0 += object.xpos
+			player[currentPlayer].xpos = temp0
+			temp0 = temp5
+			temp0 >>= 4
+			GetTableValue(player[0].frame, temp0, SpinningTop_PlayerFrames)
+			temp0 = temp5
+			temp0 &= 63
+			if temp0 == 0
+				temp4++
+			end if
+			if player[currentPlayer].xpos < object.xpos
+				if player[currentPlayer].left == 1
+					temp4++
+				end if
+				if player[currentPlayer].right == 1
+					temp4--
+					if object.playerRadius == -1
+						temp4 = 0
+					end if
+				end if
+			else
+				if player[currentPlayer].left == 1
+					temp4--
+					if temp4 == -1
+						temp4 = 0
+					end if
+				end if
+				if player[currentPlayer].right == 1
+					temp4++
+				end if
+			end if
+			if player[currentPlayer].jumpPress == 1
+				CallFunction(SpinningTop_PlayerJump)
+				if player[currentPlayer].state == Player_State_Air
+					PlaySfx(SfxName[Shot], 0)
+					SetBit(object.activePlayers, temp7, 0)
+				end if
+			end if
+		else
+			if temp6 == 1
+				player[currentPlayer].state = Player_State_Air
+				player[currentPlayer].animation = ANI_WALKING
+				GetTableValue(player[currentPlayer].speed, temp7, SpinningTop_PlayerSpeeds)
+			end if
+		end if
+		temp4 &= 255
+		temp4 <<= temp3
+		object.playerRadius += temp4
+		temp5 &= 255
+		temp5 <<= temp3
+		object.playerAngles += temp5
+		temp7++
+	next
+	temp0 = oscillation
+	temp0 &= 1
+	if temp0 == 0
+		object.frame++
+		if object.frame > 2
+			object.frame = 0
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R1/Objects.gif")
+
+	SpriteFrame(-16, -8, 32, 16, 101, 76)
+	SpriteFrame(-16, -8, 32, 16, 101, 76)
+	SpriteFrame(-16, -8, 32, 16, 134, 76)
+
+	SetTableValue(TypeName[Spinning Top], DebugMode_ObjCount, DebugMode_TypesTable) // DebugMode_value5, _table1
+	SetTableValue(SpinningTop_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable) // debugmode_table2
+	SetTableValue(SpinningTop_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable) // DebugMode_table0
+	DebugMode_ObjCount++
+end event
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+event RSDKLoad
+	LoadSpriteSheet("R1/Objects.gif")
+	SpriteFrame(-16, -8, 32, 16, 101, 76)
+end event

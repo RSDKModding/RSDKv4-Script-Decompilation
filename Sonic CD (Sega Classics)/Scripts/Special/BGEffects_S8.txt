@@ -1,0 +1,178 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: BGEffects Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value2 : object.prevAngle
+private alias object.value3 : object.fansTimer
+private alias object.value4 : object.crunchersTimer
+private alias object.value5 : object.fansSprite
+private alias object.value6 : object.crunchersSprite
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Animate the fans that are in the level
+	object.fansTimer++
+	if object.fansTimer > 2
+		object.fansTimer = 0
+		object.fansSprite++
+		object.fansSprite %= 3
+		switch object.fansSprite
+		case 0
+			// Fans are 4x4 tiles, comprised of 8 unique tiles, so
+			// 8 tiles need to be updated to change the entire sprite
+			Copy16x16Tile(237, 308)
+			Copy16x16Tile(238, 309)
+			Copy16x16Tile(239, 310)
+			Copy16x16Tile(240, 311)
+			Copy16x16Tile(241, 312)
+			Copy16x16Tile(242, 313)
+			Copy16x16Tile(243, 314)
+			Copy16x16Tile(244, 315)
+			break
+
+		case 1
+			Copy16x16Tile(237, 316)
+			Copy16x16Tile(238, 317)
+			Copy16x16Tile(239, 318)
+			Copy16x16Tile(240, 319)
+			Copy16x16Tile(241, 320)
+			Copy16x16Tile(242, 321)
+			Copy16x16Tile(243, 322)
+			Copy16x16Tile(244, 323)
+			break
+
+		case 2
+			Copy16x16Tile(237, 324)
+			Copy16x16Tile(238, 325)
+			Copy16x16Tile(239, 326)
+			Copy16x16Tile(240, 327)
+			Copy16x16Tile(241, 328)
+			Copy16x16Tile(242, 329)
+			Copy16x16Tile(243, 330)
+			Copy16x16Tile(244, 331)
+			break
+		end switch
+	end if
+
+	// Animate the hungry crunchers throughout the level, too
+	object.crunchersTimer++
+	if object.crunchersTimer > 5
+		object.crunchersTimer = 0
+		object.crunchersSprite++
+		object.crunchersSprite &= 3
+		switch object.crunchersSprite
+		case 0
+			// Crunchers are 2x2 tiles, so 4 tiles need to be updated
+			// in order to completely change their sprite
+			Copy16x16Tile(135, 332)
+			Copy16x16Tile(136, 333)
+			Copy16x16Tile(137, 336)
+			Copy16x16Tile(138, 337)
+			break
+
+		case 1
+			Copy16x16Tile(135, 334)
+			Copy16x16Tile(136, 335)
+			Copy16x16Tile(137, 338)
+			Copy16x16Tile(138, 339)
+			break
+
+		case 2
+			Copy16x16Tile(135, 340)
+			Copy16x16Tile(136, 341)
+			Copy16x16Tile(137, 344)
+			Copy16x16Tile(138, 345)
+			break
+
+		case 3
+			Copy16x16Tile(135, 342)
+			Copy16x16Tile(136, 343)
+			Copy16x16Tile(137, 346)
+			Copy16x16Tile(138, 347)
+			break
+		end switch
+	end if
+
+	// Find the difference between the current scroll position and the last scroll position... but nothing's really done with the result
+	// This script was likely just copied over from the other BGEffects scripts, and this was never removed
+	temp1 = object.prevAngle
+	temp2 = tileLayer[0].angle
+	if temp1 < temp2
+		temp3 = temp2
+		temp3 -= temp1
+		if temp3 > 256
+			temp1 += 512
+		end if
+	else
+		temp3 = temp1
+		temp3 -= temp2
+		if temp3 > 256
+			temp2 += 512
+		end if
+	end if
+
+	// object.prevAngle would normally be updated here, it looks like at least *some* effort was taken to remove the useless code
+end event
+
+
+event ObjectStartup
+	// Set the stage's bounds
+	// Interestingly, this stage has different widths and heights, not making it a square like the others
+	stage.curXBoundary1 = 0x2800000 // left bounds:  640 pixels
+	stage.curXBoundary2 = 0xD800000 // right bounds: 3456 pixels
+	stage.curYBoundary1 = 0x3000000 // upper bounds: 768 pixels
+	stage.curYBoundary2 = 0xD000000 // lower bounds: 3328 pixels
+
+	// Center the stage's background so that Robotnik's amazing mug can be in the middle of the screen
+	temp0 = screen.xsize
+	temp0 -= 320
+
+	// Shouldn't this be <<= 16? If it's going from screen-space to world-space...
+	temp0 <<= 15
+
+	// Base position of 96 pixels
+	hParallax[0].scrollPos = 0x600000
+
+	// And then shift it as needed to match up centre screen
+	hParallax[0].scrollPos -= temp0
+
+	// Cycle through all BGEffects objects and set them up
+	foreach (TypeName[BG Effects], arrayPos0, ALL_ENTITIES)
+		// Make the object always be run, since fans and tiles should be animated always
+		object[arrayPos0].priority = PRIORITY_ACTIVE
+
+		// Give it the lowest draw order as well, in order to make it run before other objects' draw events
+		object[arrayPos0].drawOrder = 0
+
+		// Set the initial starting angle, although it's not really used...
+		object[arrayPos0].prevAngle = 368
+	next
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Display.gif")
+	SpriteFrame(-16, -16, 32, 32, 1, 143)
+
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

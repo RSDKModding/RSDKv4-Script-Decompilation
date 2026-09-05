@@ -1,0 +1,310 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Breakable Wall Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// The object isn't cleared upon being destroyed, it's just given a new state and made hidden instead...
+private alias object.state : object.destroyed
+
+// Player Aliases
+private alias object.animation : player.animation
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// Property Values
+private alias 0 : BREAKWALL
+private alias 1 : BREAKWALL_DEBRIS_1
+private alias 2 : BREAKWALL_DEBRIS_2
+private alias 3 : BREAKWALL_DEBRIS_3
+private alias 4 : BREAKWALL_DEBRIS_4
+private alias 5 : BREAKWALL_DEBRIS_5
+private alias 6 : BREAKWALL_DEBRIS_6
+private alias 7 : BREAKWALL_DEBRIS_7
+private alias 8 : BREAKWALL_DEBRIS_8
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BreakableWall_DebugDraw
+reserve function BreakableWall_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function BreakableWall_DebugDraw
+    DrawSprite(0)
+end function
+
+
+public function BreakableWall_DebugSpawn
+    CreateTempObject(TypeName[Breakable Wall], BREAKWALL, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    if object.propertyValue > BREAKWALL
+		// Update Movements
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+
+		// Apply a Gravity of 0.25 px per frame
+        object.yvel += 0x4000
+
+        if object.outOfBounds == true
+			// Unload when no longer needed
+            object.type = TypeName[Blank Object]
+        end if
+    else
+        if object.destroyed == true
+			// Check to see if the Player's *not* within this giant range
+            BoxCollisionTest(C_TOUCH, object.entityPos, -384, -256, 384, 256, 0, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == false
+				// The Player is nowhere near this object, so it's safe to reset since it's likely out of view now
+                object.destroyed = false
+
+                if object.priority != PRIORITY_XBOUNDS_DESTROY
+                    object.priority = PRIORITY_BOUNDS
+                end if
+            end if
+        else
+            foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+                if player[currentPlayer].animation == ANI_JUMPING
+                    BoxCollisionTest(C_TOUCH, object.entityPos, -18, -48, 18, 48, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                    if checkResult == true
+                        object.destroyed = true
+
+                        if object.priority != PRIORITY_XBOUNDS_DESTROY
+                            object.priority = PRIORITY_ACTIVE
+                        end if
+
+                        PlaySfx(SfxName[Explosion], false)
+
+						// Spawn all the Wall Fragments
+						// - temp1 is left position  (8 pixels left  from this object's position)
+						// - temp2 is right position (8 pixels right from this object's position)
+						// - temp3 is Y Position, starting 24 pixels from this object's position
+
+                        temp1 = object.xpos
+                        temp1 -= 0x80000
+
+                        temp2 = object.xpos
+                        temp2 += 0x80000
+
+                        temp3 = object.ypos
+                        temp3 -= 0x180000
+
+                        CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_1, temp1, temp3)
+                        object[tempObjectPos].xvel = -0x10000
+                        object[tempObjectPos].yvel = -0x20000
+                        object[tempObjectPos].drawOrder = 5
+
+                        CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_2, temp2, temp3)
+                        object[tempObjectPos].xvel = 0x10000
+                        object[tempObjectPos].yvel = -0x20000
+                        object[tempObjectPos].drawOrder = 5
+
+                        temp3 += 0x100000
+
+                        CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_3, temp1, temp3)
+                        object[tempObjectPos].xvel = -0x20000
+                        object[tempObjectPos].yvel = -0x10000
+                        object[tempObjectPos].drawOrder = 5
+
+                        CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_4, temp2, temp3)
+                        object[tempObjectPos].xvel = 0x20000
+                        object[tempObjectPos].yvel = -0x10000
+                        object[tempObjectPos].drawOrder = 5
+
+                        temp3 += 0x100000
+
+                        CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_5, temp1, temp3)
+                        object[tempObjectPos].xvel = -0x40000
+                        object[tempObjectPos].yvel = 0
+                        object[tempObjectPos].drawOrder = 5
+
+                        CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_6, temp2, temp3)
+                        object[tempObjectPos].xvel = 0x40000
+                        object[tempObjectPos].yvel = 0
+                        object[tempObjectPos].drawOrder = 5
+
+                        temp3 += 0x100000
+
+                        CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_7, temp1, temp3)
+                        object[tempObjectPos].xvel = -0x20000
+                        object[tempObjectPos].yvel = 0x10000
+                        object[tempObjectPos].drawOrder = 5
+
+                        CreateTempObject(TypeName[Breakable Wall], BREAKWALL_DEBRIS_8, temp2, temp3)
+                        object[tempObjectPos].xvel = 0x20000
+                        object[tempObjectPos].yvel = 0x10000
+                        object[tempObjectPos].drawOrder = 5
+
+                    end if
+                else
+                    BoxCollisionTest(C_SOLID, object.entityPos, -16, -48, 16, 48, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                end if
+            next
+        end if
+    end if
+end event
+
+
+event ObjectDraw
+    if object.destroyed == false
+        DrawSprite(object.propertyValue)
+    end if
+end event
+
+
+event ObjectStartup
+    switch HUD.currentTimePeriod
+    case TIME_PRESENT
+        LoadSpriteSheet("R5/Objects.gif")
+        SpriteFrame(-16, -48, 32, 96, 223, 141)
+        temp0 = 223
+        temp1 = 239
+        temp2 = 141
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -48, 32, 96, 132, 1)
+        temp0 = 132
+        temp1 = 148
+        temp2 = 1
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -48, 32, 96, 66, 1)
+        temp0 = 66
+        temp1 = 82
+        temp2 = 1
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -48, 32, 96, 99, 1)
+        temp0 = 99
+        temp1 = 115
+        temp2 = 1
+        break
+
+    end switch
+
+    temp2 += 16
+    SpriteFrame(-8, -8, 16, 16, temp0, temp2)
+    SpriteFrame(-8, -8, 16, 16, temp1, temp2)
+
+    temp2 += 16
+    SpriteFrame(-8, -8, 16, 16, temp0, temp2)
+    SpriteFrame(-8, -8, 16, 16, temp1, temp2)
+
+    temp2 += 16
+    SpriteFrame(-8, -8, 16, 16, temp0, temp2)
+    SpriteFrame(-8, -8, 16, 16, temp1, temp2)
+
+    temp2 += 16
+    SpriteFrame(-8, -8, 16, 16, temp0, temp2)
+    SpriteFrame(-8, -8, 16, 16, temp1, temp2)
+
+    SetTableValue(TypeName[Breakable Wall], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(BreakableWall_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(BreakableWall_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+
+	if editor.showGizmos == true
+		temp0 = object.ixpos
+		temp0 -= 16
+		temp1 = object.iypos
+		temp1 -= 48
+		DrawRectOutline(temp0, temp1, 32, 96, 255, 255, 255, 255)
+	end if
+end event
+
+
+event RSDKLoad
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+    switch checkResult
+    case TIME_PRESENT
+        LoadSpriteSheet("R5/Objects.gif")
+        SpriteFrame(-16, -48, 32, 96, 223, 141)
+        temp0 = 223
+        temp1 = 239
+        temp2 = 141
+        break
+
+    case TIME_PAST
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -48, 32, 96, 132, 1)
+        temp0 = 132
+        temp1 = 148
+        temp2 = 1
+        break
+
+    case TIME_GOOD_FUTURE
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -48, 32, 96, 66, 1)
+        temp0 = 66
+        temp1 = 82
+        temp2 = 1
+        break
+
+    case TIME_BAD_FUTURE
+        LoadSpriteSheet("R5/Objects3.gif")
+        SpriteFrame(-16, -48, 32, 96, 99, 1)
+        temp0 = 99
+        temp1 = 115
+        temp2 = 1
+        break
+
+    end switch
+
+    temp2 += 16
+    SpriteFrame(-8, -8, 16, 16, temp0, temp2)
+    SpriteFrame(-8, -8, 16, 16, temp1, temp2)
+
+    temp2 += 16
+    SpriteFrame(-8, -8, 16, 16, temp0, temp2)
+    SpriteFrame(-8, -8, 16, 16, temp1, temp2)
+
+    temp2 += 16
+    SpriteFrame(-8, -8, 16, 16, temp0, temp2)
+    SpriteFrame(-8, -8, 16, 16, temp1, temp2)
+
+    temp2 += 16
+    SpriteFrame(-8, -8, 16, 16, temp0, temp2)
+    SpriteFrame(-8, -8, 16, 16, temp1, temp2)
+
+	// Although used by the object, it shouldn't be set from the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

@@ -1,0 +1,141 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Amy 1 Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value3 : object.bounds.left
+private alias object.value4 : object.bounds.right
+
+// Player Aliases
+private alias object.yvel : player.yvel
+
+// States
+private alias 0 : AMY1_CAUGHT
+private alias 1 : AMY1_FALLING
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.state == AMY1_FALLING
+		object.ypos += object.yvel // Update falling movements
+		object.yvel += 0x2000      // Gravity of 0.125 pixels per frame
+
+		// Check if Amy's touched the floor
+		ObjectTileCollision(CSIDE_FLOOR, 0, 19, 0)
+		if checkResult == true
+			// Amy's landed on the ground now, replace her with an Amy 2 object
+			ResetObjectEntity(object.entityPos, TypeName[Amy 2], 0, object.xpos, object.ypos)
+			object.frame     = 4
+			object.drawOrder = 4
+
+			// Set Amy's bounds to make sure she doesn't go too far
+			// they're hardcoded positions btw :(
+			object.bounds.left  = 0x3EA40000 // Left bounds  (16036 with the in-game debug position display)
+			object.bounds.right = 0x40000000 // Right bounds (16384 with the in-game debug position display)
+		end if
+	end if
+
+	foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+		if object.state == AMY1_CAUGHT
+			// Due to how the engine works, there's a single frame upon landing where this code is actually
+			//   being run from an Amy 2 object, so check against that
+			// This check was only introduced in an update, so it's not in the 2012 Steam version or anything
+			if object.type == TypeName[Amy 1]
+				// Check if Sonic's hit Amy
+				BoxCollisionTest(C_TOUCH, object.entityPos, -8, -16, 8, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+				if checkResult == true
+					// Free Amy if Sonic broke the rope (?)
+
+					// Bounce Sonic off
+					FlipSign(player[currentPlayer].yvel)
+					player[currentPlayer].yvel >>= 1
+
+					// And start Amy's descent
+					object.state = AMY1_FALLING
+					object.frame >>= 3
+
+					// Create an Explosion for the rope (?) just broken
+					CreateTempObject(TypeName[Explosion], 0, object.xpos, object.ypos)
+					
+					// And that wraps up the stage!
+					stage.timeEnabled = false
+					PlaySfx(SfxName[Explosion], false)
+				end if
+			end if
+		end if
+	next
+end event
+
+
+event ObjectDraw
+	if object.state == AMY1_CAUGHT
+		temp0 = object.frame
+		temp0 >>= 3
+		DrawSprite(temp0)
+
+		// Animation is done here as well
+		object.frame++
+		object.frame &= 31
+	else
+		// Stay static while falling down
+		DrawSprite(object.frame)
+	end if
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("R7/Objects2.gif")
+
+	// Erase all Amy 1 objects in the level if she's not supposed to appear
+	foreach (TypeName[Amy 1], arrayPos0, ALL_ENTITIES)
+		// Only appear for Sonic
+		if stage.playerListPos == PLAYER_SONIC_A
+			if options.gameMode == MODE_TIMEATTACK
+				// Don't appear in time attack, unload
+				object[arrayPos0].type = TypeName[Blank Object]
+			else
+				// All conditions passed - Amy can continue as normal
+					
+				// Have her draw above Sonic,
+				object[arrayPos0].drawOrder = 4
+			end if
+		else
+			// Amy doesn't care about Tails, unload
+			object[arrayPos0].type = TypeName[Blank Object]
+		end if
+	next
+
+	// Amy Frames
+	
+	// 0-3 - Hanging Frames
+	SpriteFrame(-12, -20, 24, 40, 1, 170)
+	SpriteFrame(-12, -20, 24, 40, 1, 211)
+	SpriteFrame(-12, -20, 24, 40, 124, 109)
+	SpriteFrame(-12, -20, 24, 40, 1, 211)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("R7/Objects2.gif")
+	SpriteFrame(-12, -20, 24, 40, 1, 170)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

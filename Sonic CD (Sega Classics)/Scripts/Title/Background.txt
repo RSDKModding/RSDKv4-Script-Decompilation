@@ -1,0 +1,104 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Background Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.lPlanetYOffset
+private alias object.value1 : object.unused
+
+// ========================
+// Events
+// ========================
+
+event ObjectDraw
+	// Draw the solid background color
+	temp0 = screen.xcenter
+	temp0 <<= 1
+	DrawRect(0, 0, temp0, 100, 0, 0, 96, 255) // this seems to use 100 instead of 300 here... huh.
+	
+	// Little Planet Movement
+	Sin(temp0, object.lPlanetYOffset)
+	temp0 >>= 7
+	temp0 -= 16
+
+	DrawSpriteScreenXY(2, 280, temp0)
+	object.lPlanetYOffset++
+	object.lPlanetYOffset &= 511
+	
+	// Water Movement
+	temp0 = 3
+	temp1 = 16
+	arrayPos0 = 40
+	while temp0 < 39
+		object[arrayPos0].xpos += temp1
+		if object[arrayPos0].xpos > 0x2000000
+			object[arrayPos0].xpos -= 0x2000000
+		end if
+		temp2 = object[arrayPos0].xpos
+		temp2 >>= 16
+		arrayPos0++
+		DrawSpriteScreenXY(temp0, temp2, 0)
+		temp0++
+		DrawSpriteScreenXY(temp0, temp2, 0)
+		temp0++
+		temp1 += 0x2000
+	loop
+
+	// Unknown use, this value is never referenced anywhere else... just like it was in 2011.
+	object.unused++
+	object.unused &= 511
+end event
+
+
+event ObjectStartup
+	LoadSpriteSheet("Title/Title.gif")
+
+	// Note: these two sprite frames are not actually used, the actual mountains are in Logo.txt
+	SpriteFrame(0, 0, 176, 68, 256, 4)		// #0 - Left Mountain
+	SpriteFrame(-144, 0, 144, 68, 257, 251) // #1 - Right Mountain
+
+	SpriteFrame(0, 0, 120, 104, 257, 146)	// #2 - Little Planet
+
+	// #4 - #20 rows of water sprites, from back to front
+	temp0 = 447
+	temp1 = 168
+	while temp0 < 511
+		SpriteFrame(0, temp1, 512, 4, 0, temp0)
+		SpriteFrame(-512, temp1, 512, 4, 0, temp0)
+		temp0 += 4
+		temp1 += 4
+	loop
+
+	// #21 - #22 rows of water sprites, from back to front
+	temp0 -= 16
+	while temp1 < 240
+		SpriteFrame(0, temp1, 512, 4, 0, temp0)
+		SpriteFrame(-512, temp1, 512, 4, 0, temp0)
+		temp0 += 4
+		temp1 += 4
+	loop
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Title/Title.gif")
+	SpriteFrame(0, 0, 120, 104, 257, 146)
+	
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

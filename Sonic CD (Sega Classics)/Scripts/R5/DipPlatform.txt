@@ -1,0 +1,361 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Dipping Platform Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.stood
+private alias object.value1 : object.drawPos.y
+private alias object.value2 : object.collisionOffset.y
+
+// Player Aliases
+private alias object.xpos : player.xpos
+private alias object.ypos : player.ypos
+
+// HUD Aliases
+private alias object[9].propertyValue : HUD.currentTimePeriod
+
+// Time Period Aliases
+private alias 0 : TIME_PRESENT
+private alias 1 : TIME_PAST
+private alias 2 : TIME_GOOD_FUTURE
+private alias 3 : TIME_BAD_FUTURE
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	if object.stood == true
+		if object.drawPos.y < 16
+			object.drawPos.y++
+
+			temp0 = object.drawPos.y
+			temp0 &= 3
+
+			if temp0 == 3
+				// The Platform will be moved 1 pixel down
+				object.collisionOffset.y = 0x10000
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			object.collisionOffset.y = 0
+		end if
+	else
+		if object.drawPos.y > 0
+			object.drawPos.y--
+
+			temp0 = object.drawPos.y
+			temp0 &= 3
+
+			if temp0 == 3
+				// The Platform should be moved 1 pixel up
+				object.collisionOffset.y = -0x10000
+			else
+				object.collisionOffset.y = 0
+			end if
+		else
+			object.collisionOffset.y = 0
+		end if
+	end if
+
+	object.stood = false
+
+	switch object.propertyValue
+	case 0
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			// Small Platform
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.stood = true
+
+				// Move the Player along with the Platform
+				player[currentPlayer].ypos += object.collisionOffset.y
+			end if
+		next
+		break
+
+	case 1
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			// Medium-sized Platform
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.stood = true
+
+				// Move the Player in accordance with the Platform
+				player[currentPlayer].ypos += object.collisionOffset.y
+			end if
+		next
+		break
+
+	case 2
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			// Large Platform
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -48, -16, 48, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.stood = true
+				
+				// As needed, nudge the Player so that the follow the Platform
+				player[currentPlayer].ypos += object.collisionOffset.y
+			end if
+		next
+		break
+
+	case 3
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			// Small Conveyor Platform
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -16, -16, 16, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.stood = true
+
+				// Update the Player's Y Position to follow the Platform
+				player[currentPlayer].ypos += object.collisionOffset.y
+
+				// Also, update their X Position as needed with the Conveyor Belt too
+				if conveyorBelt.flag == 0
+					player[currentPlayer].xpos += conveyorBelt.speed
+				else
+					player[currentPlayer].xpos -= conveyorBelt.speed
+				end if
+			end if
+		next
+		break
+
+	case 4
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			// Medium-sized Conveyor Platform
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -32, -16, 32, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.stood = true
+
+				// Make the Player follow the Platform
+				player[currentPlayer].ypos += object.collisionOffset.y
+
+				// And make them follow the Conveyor Belt as well
+				if conveyorBelt.flag == 0
+					player[currentPlayer].xpos += conveyorBelt.speed
+				else
+					player[currentPlayer].xpos -= conveyorBelt.speed
+				end if
+			end if
+		next
+		break
+
+	case 5
+		foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+			// Large Conveyor Platform
+			BoxCollisionTest(C_PLATFORM, object.entityPos, -48, -16, 48, 12, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+			if checkResult == true
+				object.stood = true
+
+				// The Platform moves vertically, so should the Player!
+				player[currentPlayer].ypos += object.collisionOffset.y
+
+				// And don't forget about the Conveyor Belt, too!
+				if conveyorBelt.flag == 0
+					player[currentPlayer].xpos += conveyorBelt.speed
+				else
+					player[currentPlayer].xpos -= conveyorBelt.speed
+				end if
+			end if
+		next
+		break
+	end switch
+
+	object.ypos += object.collisionOffset.y
+end event
+
+
+event ObjectDraw
+	switch object.propertyValue
+	case 0
+	case 1
+	case 2
+		// Standard Platform
+		DrawSprite(object.propertyValue)
+		break
+		
+	// These below 3 are Conveyor Platforms, so they need the Conveyor overlay Sprite drawn ontop of them too
+	case 3
+		DrawSprite(0)
+		DrawSprite(3)
+		break
+
+	case 4
+		DrawSprite(1)
+		DrawSprite(4)
+		break
+
+	case 5
+		DrawSprite(2)
+		DrawSprite(5)
+		break
+
+	end switch
+end event
+
+
+event ObjectStartup
+	// Order of Sprite Frames:
+	
+	// 0 - Small Platform Frame
+	// 1 - Normal Sized Platform Frame
+	// 2 - Large Platform Frame
+	
+	// 3 - Small Conveyor Belt Frame
+	// 4 - Medium Sized Conveyor Belt Frame
+	// 5 - Large Conveyor Belt Frame
+	
+	// The Conveyor Belt Frames are overlayed ontop of the normal Platform Frames
+	
+	// Load the corresponding sprites for each Time Period
+	switch HUD.currentTimePeriod
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 51)
+		SpriteFrame(-32, -16, 64, 32, 34, 51)
+		SpriteFrame(-48, -16, 96, 32, 1, 84)
+		SpriteFrame(-16, -16, 32, 16, 65, 208)
+		SpriteFrame(-32, -16, 64, 16, 1, 208)
+		SpriteFrame(-48, -16, 96, 16, 1, 191)
+		break
+
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 148)
+		SpriteFrame(-32, -16, 64, 16, 159, 148)
+		SpriteFrame(-48, -16, 96, 16, 159, 131)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 182)
+		SpriteFrame(-32, -16, 64, 16, 159, 182)
+		SpriteFrame(-48, -16, 96, 16, 159, 165)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 216)
+		SpriteFrame(-32, -16, 64, 16, 159, 216)
+		SpriteFrame(-48, -16, 96, 16, 159, 199)
+		break
+
+	end switch
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+	if editor.returnVariable == true
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			checkResult = object.propertyValue
+			break
+
+		case 0 // Type
+			checkResult = object.propertyValue
+			break
+
+		end switch
+	else
+		switch editor.variableID
+		case EDIT_VAR_PROPVAL // Property Value
+			object.propertyValue = editor.variableValue
+			break
+
+		case 0 // Type
+			object.propertyValue = editor.variableValue
+			break
+
+		end switch
+	end if
+end event
+
+
+event RSDKDraw
+	if object.propertyValue >= 3
+		temp0 = -3
+		temp0 += object.propertyValue
+		DrawSprite(temp0)
+	end if
+	
+	DrawSprite(object.propertyValue)
+end event
+
+
+event RSDKLoad
+	CallFunction(EditorHelpers_FindTimePeriod)
+
+	// Load the corresponding sprites for each Time Period
+	switch checkResult
+	case TIME_PRESENT
+		LoadSpriteSheet("R5/Objects.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 51)
+		SpriteFrame(-32, -16, 64, 32, 34, 51)
+		SpriteFrame(-48, -16, 96, 32, 1, 84)
+		SpriteFrame(-16, -16, 32, 16, 65, 208)
+		SpriteFrame(-32, -16, 64, 16, 1, 208)
+		SpriteFrame(-48, -16, 96, 16, 1, 191)
+		break
+
+	case TIME_PAST
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 148)
+		SpriteFrame(-32, -16, 64, 16, 159, 148)
+		SpriteFrame(-48, -16, 96, 16, 159, 131)
+		break
+
+	case TIME_GOOD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 182)
+		SpriteFrame(-32, -16, 64, 16, 159, 182)
+		SpriteFrame(-48, -16, 96, 16, 159, 165)
+		break
+
+	case TIME_BAD_FUTURE
+		LoadSpriteSheet("R5/Objects3.gif")
+		SpriteFrame(-16, -16, 32, 32, 1, 170)
+		SpriteFrame(-32, -16, 64, 32, 34, 170)
+		SpriteFrame(-48, -16, 96, 32, 1, 203)
+		SpriteFrame(-16, -16, 32, 16, 223, 216)
+		SpriteFrame(-32, -16, 64, 16, 159, 216)
+		SpriteFrame(-48, -16, 96, 16, 159, 199)
+		break
+
+	end switch
+
+	AddEditorVariable("Type")
+	SetActiveVariable("Type")
+	AddEnumVariable("Small", 0)
+	AddEnumVariable("Medium", 1)
+	AddEnumVariable("Large", 2)
+	AddEnumVariable("Small Conveyor", 3)
+	AddEnumVariable("Medium Conveyor", 4)
+	AddEnumVariable("Large Conveyor", 5)
+end event

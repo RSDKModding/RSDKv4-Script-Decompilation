@@ -1,0 +1,478 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Boss Leg Joint Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.bodyEntity
+private alias object.value1 : object.legsEntity
+private alias object.value1 : object.legREntity // Alt. for Right leg joint
+private alias object.value4 : object.legSide
+private alias object.value5 : object.offset.y
+private alias object.value6 : object.velocity.x
+private alias object.value7 : object.velocity.y
+
+// Boss Body aliases
+private alias object.value0 : body.faceEntity
+private alias object.state  : body.state
+private alias object.xpos   : body.xpos
+private alias object.ypos   : body.ypos
+private alias object.value1 : body.legJointREntity
+private alias object.value2 : body.legJointLEntity
+
+// Boss Face aliases
+private alias object.xpos : face.xpos
+private alias object.ypos : face.ypos
+
+// Boss Foot aliases
+private alias object.xpos   : foot.xpos
+private alias object.ypos   : foot.ypos
+private alias object.state  : foot.state
+private alias object.value2 : foot.offset.x
+private alias object.value4 : foot.legSide
+
+// Boss Legs aliases
+private alias object.value1 : legs.FootEntity
+private alias object.State  : legs.State
+
+// Boss Foot (Right) aliases
+private alias object.xpos   : footR.xpos
+private alias object.ypos   : footR.ypos
+private alias object.state  : footR.state
+private alias object.value4 : footR.legSide
+
+// Boss Legs (Right) aliases
+private alias object.value1 : legR.footREntity
+private alias object.State  : legR.state
+
+// Boss Leg Joint (Right) Aliases
+private alias object.priority : legJointR.priority
+private alias object.angle    : legJointR.angle
+private alias object.value0   : legJointR.bodyEntity
+private alias object.value1   : legJointR.legREntity
+private alias object.value4   : legJointR.legSide
+private alias object.xpos     : legJointR.xpos
+private alias object.ypos     : legJointR.ypos
+
+// Boss Leg Joint (Left) Aliases
+private alias object.priority  : legJointL.priority
+private alias object.drawOrder : legJointL.drawOrder
+private alias object.value0    : legJointL.bodyEntity
+private alias object.value1    : legJointL.legLEntity
+
+// States
+private alias 0  : BOSSLEGJOINT_SETUP
+private alias 1  : BOSSLEGJOINT_STEP_START
+private alias 2  : BOSSLEGJOINT_STEP
+private alias 3  : BOSSLEGJOINT_STEP_END
+private alias 4  : BOSSLEGJOINT_WAIT_LEG
+private alias 5  : BOSSLEGJOINT_LANDING
+private alias 6  : BOSSLEGJOINT_DESCEND
+private alias 7  : BOSSLEGJOINT_STAND
+private alias 8  : BOSSLEGJOINT_MIMIC_RIGHT
+private alias 9  : BOSSLEGJOINT_STEP_START_BW
+private alias 10 : BOSSLEGJOINT_STEP_BW
+private alias 11 : BOSSLEGJOINT_WAIT_LEG_BW
+private alias 12 : BOSSLEGJOINT_DESTROYED
+
+// Boss Foot States
+private alias 1 : BOSSFOOT_STEP
+private alias 2 : BOSSFOOT_HANDLE_STEP
+private alias 3 : BOSSFOOT_STEP_OPPOSITE
+private alias 4 : BOSSFOOT_HANDLE_STEP_OPPOSITE
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function BossLegJoint_JointRotation
+reserve function BossLegJoint_HandleMovement
+reserve function BossLegJoint_HandleLanding
+
+// ========================
+// Function Definitions
+// ========================
+
+public function BossLegJoint_JointRotation
+    arrayPos0 = object.bodyEntity
+    object.xpos = body[arrayPos0].xpos
+    object.xpos += 0xC0000
+    object.xpos += temp7
+    if object.drawOrder == 2
+        object.xpos -= 0xA0000
+    end if
+    object.ypos = body[arrayPos0].ypos
+    object.ypos += 0x140000
+    object.ypos += temp6
+end function
+
+
+public function BossLegJoint_HandleMovement
+    Sin256(temp6, object.angle)
+    temp6 <<= 12
+
+    Cos256(temp7, object.angle)
+    temp7 <<= 12
+
+    GetBit(temp0, object.legSide, 4)
+    if temp0 == false
+        SetBit(object.legSide, 1, 0)
+        CallFunction(BossLegJoint_JointRotation)
+    else
+        GetBit(temp0, object.legSide, 5)
+        if temp0 == false
+            CallFunction(BossLegJoint_JointRotation)
+        else
+            GetBit(temp0, object.legSide, 1)
+            if temp0 == false
+                SetBit(object.legSide, 1, 1)
+                object.velocity.x = temp6
+                object.velocity.y = temp7
+            else
+                arrayPos0 = object.bodyEntity
+                arrayPos1 = body[arrayPos0].faceEntity
+
+                temp0 = temp7
+                temp0 -= object.velocity.y
+                object.velocity.y = temp7
+
+                body[arrayPos0].xpos -= temp0
+                face[arrayPos1].xpos -= temp0
+
+                temp0 = temp6
+                temp0 -= object.velocity.x
+                object.velocity.x = temp6
+
+                body[arrayPos0].ypos -= temp0
+                face[arrayPos1].ypos -= temp0
+            end if
+        end if
+    end if
+end function
+
+
+public function BossLegJoint_HandleLanding
+    arrayPos0 = object.legsEntity
+    arrayPos1 = legs[arrayPos0].footEntity
+    if foot[arrayPos1].state == BOSSFOOT_HANDLE_STEP
+        if object.angle >= 88
+            GetBit(temp0, foot[arrayPos1].legSide, 0)
+
+            if temp0 == true
+                SetBit(foot[arrayPos1].legSide, 0, 0)
+                SetBit(object.legSide, 0, 1)
+            end if
+
+            CallFunction(BossLegJoint_HandleMovement)
+        end if
+    else
+        foot[arrayPos1].state = BOSSFOOT_STEP
+        if object.angle < 88
+            object.angle += object.offset.y
+        end if
+
+        CallFunction(BossLegJoint_HandleMovement)
+    end if
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.state
+    case BOSSLEGJOINT_SETUP
+        object.angle = 88
+        object.offset.y = 2
+        object.state = BOSSLEGJOINT_DESCEND
+        break
+
+    case BOSSLEGJOINT_STEP_START
+        arrayPos0 = object.legsEntity
+        arrayPos1 = legs[arrayPos0].footEntity
+        if foot[arrayPos1].state != BOSSFOOT_STEP_OPPOSITE
+            if foot[arrayPos1].state != BOSSFOOT_HANDLE_STEP_OPPOSITE
+                SetBit(foot[arrayPos1].legSide, 0, 0)
+                foot[arrayPos1].state = BOSSFOOT_STEP_OPPOSITE
+            end if
+        end if
+
+        temp0 = false
+        if object.angle > 0
+            object.angle -= object.offset.y
+            if object.angle > 0
+                CallFunction(BossLegJoint_HandleMovement)
+                temp0 = true
+            end if
+        end if
+
+        if temp0 == false
+            object.angle = 0
+            if foot[arrayPos1].state != BOSSFOOT_HANDLE_STEP_OPPOSITE
+                GetBit(temp0, foot[arrayPos1].legSide, 0)
+                if temp0 == false
+                    CallFunction(BossLegJoint_HandleMovement)
+                else
+                    SetBit(foot[arrayPos1].legSide, 0, 0)
+                    object.state = BOSSLEGJOINT_STEP
+                    CallFunction(BossLegJoint_HandleMovement)
+                end if
+            else
+                object.state = BOSSLEGJOINT_STEP
+                CallFunction(BossLegJoint_HandleMovement)
+            end if
+        end if
+        break
+
+    case BOSSLEGJOINT_STEP
+        arrayPos0 = object.legsEntity
+        arrayPos1 = legs[arrayPos0].footEntity
+        object.angle += object.offset.y
+        if object.angle >= 88
+            object.angle = 88
+            object.state = BOSSLEGJOINT_STEP_END
+            foot[arrayPos1].state = BOSSFOOT_STEP
+        end if
+        CallFunction(BossLegJoint_HandleMovement)
+        break
+
+    case BOSSLEGJOINT_STEP_END
+        arrayPos0 = object.legsEntity
+        arrayPos1 = legs[arrayPos0].footEntity
+        GetBit(temp0, foot[arrayPos1].legSide, 4)
+        if temp0 == 1
+            SetBit(object.legSide, 0, 1)
+        end if
+        CallFunction(BossLegJoint_HandleMovement)
+        break
+
+    case BOSSLEGJOINT_WAIT_LEG // wait for the other leg to move
+        GetBit(temp0, object.legSide, 0)
+        if temp0 == 0
+            object.angle -= object.offset.y
+            if object.angle < 24
+                object.angle = 24
+                SetBit(object.legSide, 0, 1)
+            end if
+        end if
+        CallFunction(BossLegJoint_HandleMovement)
+        break
+
+    case BOSSLEGJOINT_LANDING // Only the right onse uses this, the left mimics
+        arrayPos0 = object.legREntity
+        arrayPos1 = legR[arrayPos0].footREntity
+        if footR[arrayPos1].state == BOSSFOOT_HANDLE_STEP_OPPOSITE
+            if object.angle == 0
+                GetBit(temp0, footR[arrayPos1].legSide, 0)
+                if temp0 == true
+                    SetBit(footR[arrayPos1].legSide, 0, 0)
+                    SetBit(object.legSide, 0, 1)
+                end if
+
+                CallFunction(BossLegJoint_HandleMovement)
+            else
+                if object.angle != 0
+                    object.angle -= object.offset.y
+                end if
+
+                CallFunction(BossLegJoint_HandleMovement)
+            end if
+        else
+            footR[arrayPos1].state = BOSSFOOT_STEP_OPPOSITE
+
+            if object.angle != 0
+                object.angle -= object.offset.y
+            end if
+
+            CallFunction(BossLegJoint_HandleMovement)
+        end if
+        break
+
+    case BOSSLEGJOINT_DESCEND // Only the right onse uses this, the left mimics
+        CallFunction(BossLegJoint_HandleLanding)
+        break
+
+    case BOSSLEGJOINT_STAND
+        if object.angle < 24
+            object.angle += object.offset.y
+
+            arrayPos0 = object.legsEntity
+            arrayPos1 = legs[arrayPos0].footEntity
+            SetBit(foot[arrayPos1].legSide, 7, 1)
+
+            arrayPos0 = object.bodyEntity
+            arrayPos1 = body[arrayPos0].legJointLEntity
+
+            arrayPos0 = legJointL[arrayPos1].legLEntity
+            arrayPos1 = body[arrayPos0].legJointREntity
+            SetBit(legJointR[arrayPos1].legSide, 7, 1)
+
+            CallFunction(BossLegJoint_HandleLanding)
+        else
+            if object.angle > 24
+                object.angle -= object.offset.y
+
+                arrayPos0 = object.legsEntity
+                arrayPos1 = legs[arrayPos0].footEntity
+                if foot[arrayPos1].state == BOSSFOOT_HANDLE_STEP_OPPOSITE
+                    if object.angle == 0
+                        GetBit(temp0, foot[arrayPos1].legSide, 0)
+                        if temp0 == true
+                            SetBit(foot[arrayPos1].legSide, 0, 0)
+                            SetBit(object.legSide, 0, 1)
+                        end if
+
+                        CallFunction(BossLegJoint_HandleMovement)
+                    else
+                        if object.angle != 0
+                            object.angle -= object.offset.y
+                        end if
+
+                        CallFunction(BossLegJoint_HandleMovement)
+                    end if
+                else
+                    foot[arrayPos1].state = BOSSFOOT_STEP_OPPOSITE
+                    if object.angle != 0
+                        object.angle -= object.offset.y
+                    end if
+
+                    CallFunction(BossLegJoint_HandleMovement)
+                end if
+            else
+                arrayPos0 = object.legsEntity
+                arrayPos1 = legs[arrayPos0].footEntity
+                GetBit(temp0, foot[arrayPos1].legSide, 0)
+                if temp0 == true
+                    SetBit(object.legSide, 0, 1)
+                end if
+
+                CallFunction(BossLegJoint_HandleMovement)
+            end if
+        end if
+        break
+
+    case BOSSLEGJOINT_MIMIC_RIGHT // only the left leg uses this
+        arrayPos0 = object.bodyEntity
+        arrayPos1 = body[arrayPos0].legJointREntity
+        object.xpos = legJointR[arrayPos1].xpos
+        object.xpos -= 0xA0000
+        object.ypos = legJointR[arrayPos1].ypos
+        object.angle = legJointR[arrayPos1].angle
+        break
+
+    case BOSSLEGJOINT_STEP_START_BW
+        arrayPos0 = object.legsEntity
+        arrayPos1 = legs[arrayPos0].footEntity
+        temp1 = false
+        if foot[arrayPos1].state != BOSSFOOT_STEP_OPPOSITE
+            if foot[arrayPos1].state != BOSSFOOT_HANDLE_STEP_OPPOSITE
+                SetBit(foot[arrayPos1].legSide, 0, 0)
+                foot[arrayPos1].state = BOSSFOOT_STEP_OPPOSITE
+            else
+                if object.angle != 32
+                    object.angle -= object.offset.y
+                    if object.angle > 0
+                        temp1 = true
+                    end if
+                end if
+
+                if temp1 == false
+                    object.angle = 32
+                    SetBit(foot[arrayPos1].legSide, 0, 0)
+                    object.state = BOSSLEGJOINT_STEP_BW
+                end if
+            end if
+        end if
+
+        CallFunction(BossLegJoint_HandleMovement)
+        break
+
+    case BOSSLEGJOINT_STEP_BW
+        arrayPos0 = object.legsEntity
+        arrayPos1 = legs[arrayPos0].footEntity
+
+        object.angle += object.offset.y
+        if object.angle >= 48
+            object.angle = 48
+            object.state = BOSSLEGJOINT_STEP_END
+            foot[arrayPos1].state = BOSSFOOT_STEP
+        end if
+
+        CallFunction(BossLegJoint_HandleMovement)
+        break
+
+    case BOSSLEGJOINT_WAIT_LEG_BW
+        GetBit(temp0, object.legSide, 0)
+        if temp0 == false
+            arrayPos0 = object.legsEntity
+            arrayPos1 = legs[arrayPos0].footEntity
+            if foot[arrayPos1].state != BOSSFOOT_STEP
+                if foot[arrayPos1].state != BOSSFOOT_HANDLE_STEP
+                    foot[arrayPos1].state = BOSSFOOT_STEP
+                else
+                    object.angle += object.offset.y
+                    if object.angle >= 80
+                        SetBit(object.legSide, 0, 1)
+                    end if
+                end if
+            end if
+        end if
+
+        CallFunction(BossLegJoint_HandleMovement)
+        break
+
+    case BOSSLEGJOINT_DESTROYED
+        GetBit(temp0, object.legSide, 4)
+        if temp0 == false
+            object.xvel -= 0x600
+        else
+            object.xvel += 0x600
+        end if
+
+        object.yvel += 0x1860
+
+        object.xpos += object.xvel
+        object.ypos += object.yvel
+
+        if object.outOfBounds == true
+            object.type = TypeName[Blank Object]
+            object.priority = PRIORITY_BOUNDS
+        end if
+        break
+    end switch
+end event
+
+
+event ObjectDraw
+    DrawSprite(0)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-8, -8, 16, 16, 74, 42) // #0 - Leg Joint
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+    DrawSprite(0)
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R1/Objects3.gif")
+    SpriteFrame(-8, -8, 16, 16, 74, 42) // #0 - Leg Joint
+    
+    SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

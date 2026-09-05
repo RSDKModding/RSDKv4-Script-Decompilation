@@ -1,0 +1,99 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Pod Seed Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value1 : object.parentPod
+
+// Player Aliases
+private alias object.controlMode : player.controlMode
+
+// Flower States
+private alias 2 : FLOWER_SEED_PLANTED_1
+
+// Property Values
+private alias 1 : TRIGGER_RESULTS
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	// Animate the seed
+	object.frame = object.timer
+	object.frame /= 3
+	object.timer++
+	object.timer %= 18
+
+	// Update movements
+	object.xpos += object.xvel
+	object.ypos += object.yvel
+	object.yvel += 0x4000
+
+	// Before landing, the object has to be going at a rate of at least 6px per frame
+	if object.yvel > 0x60000
+		ObjectTileCollision(0, 0, 8, 0)
+		if checkResult == true
+			if object.propertyValue == TRIGGER_RESULTS
+				arrayPos0 = object.parentPod
+				object[arrayPos0].state++
+				player[SLOT_PLAYER1].controlMode = CONTROLMODE_NONE
+			end if
+
+			// Grow into a Flower
+			ResetObjectEntity(object.entityPos, flowerType, 0, object.xpos, object.ypos)
+			object.ypos += 0x80000
+			object.state = FLOWER_SEED_PLANTED_1
+			object.frame = 2
+			object.drawOrder = 4
+		end if
+	end if
+end event
+
+
+event ObjectDraw
+	DrawSprite(object.frame)
+end event
+
+
+event ObjectStartup
+	if stage.playerListPos == 0
+		LoadSpriteSheet("Global/Items2.gif")
+	else
+		LoadSpriteSheet("Global/Items2_t.gif")
+	end if
+
+	// Seed Frames
+	SpriteFrame(-8, -8, 16, 16, 83, 66)
+	SpriteFrame(-8, -8, 16, 16, 83, 83)
+	SpriteFrame(-8, -8, 16, 16, 83, 100)
+	SpriteFrame(-8, -8, 16, 16, 83, 117)
+	SpriteFrame(-8, -8, 16, 16, 83, 83)
+	SpriteFrame(-8, -8, 16, 16, 83, 134)
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Global/Items2.gif")
+	SpriteFrame(-8, -8, 16, 16, 83, 66)
+
+	// Although used by the object, it's not to be set from the editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

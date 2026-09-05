@@ -1,0 +1,805 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Stage Finish Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Aliases
+private alias object.value0 : object.timer
+private alias object.value5 : object.timeBonus
+private alias object.value6 : object.ringBonus
+
+// This can be Coins bonus too, depending on the current mode
+// For simplicity's sake, we're just going to continue calling it ExtraLives
+private alias object.value7 : object.extraLives
+
+// All texts have their own X position values
+private alias object.xpos   : object.lineXPos0
+private alias object.value1 : object.lineXPos1
+private alias object.value2 : object.lineXPos2
+private alias object.value3 : object.lineXPos3
+private alias object.value4 : object.lineXPos4
+
+// HUD Aliases
+private alias object[4].value1 : HUD.timeSeconds
+private alias object[4].value3 : HUD.rings
+
+// Player Aliases
+private alias object.direction   : player.direction
+private alias object.controlMode : player.controlMode
+
+// States
+private alias 0 : STAGEFINISH_INIT
+private alias 1 : STAGEFINISH_FADEOUT
+private alias 2 : STAGEFINISH_FADEIN
+private alias 3 : STAGEFINISH_SCROLLTEXT
+private alias 4 : STAGEFINISH_DISPLAYTALLY
+private alias 5 : STAGEFINISH_TALLYDOWN
+private alias 6 : STAGEFINISH_DISPLAYFINAL
+private alias 7 : STAGEFINISH_LOADNORMAL
+private alias 8 : STAGEFINISH_LOADTIMEATTACK
+private alias 9 : STAGEFINISH_LOADLEVELSELECT
+
+// Property Value - Results Type
+// Changed by this object, as well as the things that may spawn it
+private alias object.propertyValue : object.resultsType
+
+// Character limit is rearing its head here, which is why we can only stick in a "T" to distinguish it from states
+// Not what was planned, but not much we can do...
+private alias 0 : STAGEFINISH_T_FAILURE
+private alias 1 : STAGEFINISH_T_STONEOBTAINED
+private alias 2 : STAGEFINISH_T_ALLSTONESOBTAINED
+
+// Reserved Object Slot Aliases
+private alias 2 : SLOT_PLAYER1
+
+// Game Mode Aliases
+private alias 2 : MODE_TIMEATTACK
+
+// Language Aliases
+private alias 0 : LANG_ENGLISH
+private alias 1 : LANG_FRENCH
+private alias 2 : LANG_ITALIAN
+private alias 3 : LANG_DEUTSCH
+private alias 4 : LANG_SPANISH
+private alias 5 : LANG_JAPANESE
+private alias 6 : LANG_PORTUGUESE
+private alias 7 : LANG_RUSSIAN
+
+// Soundtrack
+private alias 0 : OST_JP
+
+// Stage Aliases
+private alias 0 : STAGE_P_TITLESCREEN
+private alias 2 : STAGE_P_TIMEATTACK
+private alias 4 : STAGE_P_SOUNDTEST
+private alias 7 : STAGE_P_CREDITS
+
+// Game Mode Aliases
+private alias 1 : MODE_SAVEGAME
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+	switch object.state
+	case STAGEFINISH_INIT
+		// Setup the initial text line positions
+		object.lineXPos0 = -799
+		object.lineXPos1 = 1255
+		object.lineXPos2 = 1319
+		object.lineXPos3 = 1402
+		object.lineXPos4 = 1466
+
+		object.state = STAGEFINISH_FADEOUT
+		object.timer = 0
+
+		// Setup alpha, used for fading in the Time Stones
+		object.alpha = 0
+		object.inkEffect = INK_ALPHA
+
+		// Don't wanna reward the Player if they just lost!
+		if object.resultsType > STAGEFINISH_T_FAILURE
+			// Setup the Time Bonus
+			object.timeBonus = HUD.timeSeconds
+			object.timeBonus *= 200
+
+			// Set the corresponding Time Stone bit for this stage
+			temp0 = stage.actNum
+			temp0--
+
+			SetBit(specialStage.timeStones, temp0, true)
+		else
+			object.timeBonus = 0
+		end if
+
+		// Setup the Ring Bonus
+		object.ringBonus = HUD.rings
+		object.ringBonus *= 200
+
+		stage.listPos = specialStage.nextZone
+		stage.activeList = REGULAR_STAGE
+
+		if specialStage.timeStones < 127
+			temp0 = 0
+			while temp0 == 0
+				specialStage.listPos++
+				if specialStage.listPos > 6
+					specialStage.listPos = 0
+				end if
+
+				GetBit(temp1, specialStage.timeStones, specialStage.listPos)
+				if temp1 == false
+					temp0 = true
+				end if
+			loop
+		else
+			temp0 = stage.listPos
+			temp0 %= 10
+			if temp0 == 9
+				stage.listPos--
+			end if
+
+			goodFuture.count = 2
+
+			if stage.playerListPos == PLAYER_SONIC_A
+				// We would normally unlock the "Treasure Hunter" achievement here if all stones are collected
+			end if
+		end if
+
+		if options.gameMode == MODE_SAVEGAME
+			// Save the Player's progress
+			arrayPos1 = options.saveSlot
+			arrayPos1 <<= 3
+			saveRAM[arrayPos1] = stage.playerListPos
+
+			arrayPos1++
+			saveRAM[arrayPos1] = player.lives
+
+			arrayPos1++
+			saveRAM[arrayPos1] = player.score
+
+			arrayPos1++
+			saveRAM[arrayPos1] = stage.listPos
+			saveRAM[arrayPos1]++
+
+			arrayPos1++
+			saveRAM[arrayPos1] = specialStage.timeStones
+
+			arrayPos1++
+			saveRAM[arrayPos1] = specialStage.listPos
+
+			arrayPos1++
+			saveRAM[arrayPos1] = player.scoreBonus
+
+			arrayPos1++
+			WriteSaveRAM()
+		end if
+		break
+
+	case STAGEFINISH_FADEOUT
+		if object.timer == 120
+			object.state = STAGEFINISH_FADEIN
+			object.timer = 256
+
+			if specialStage.timeStones > 126 // 0b01111110, each '1' bit represents an obtained time stone
+				// If the player has all Stones, then turn this object into the "Got 'em all!!" variant
+				object.resultsType = STAGEFINISH_T_ALLSTONESOBTAINED
+			end if
+
+			PlayMusic(1)
+		else
+			object.timer++
+			music.volume--
+
+			if object.timer == 24
+				// Clear all game objects (aside from this one)
+
+				// First do all the reserved object slots
+				temp0 = 0
+				while temp0 < 30
+					ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
+					temp0++
+				loop
+
+				// Then do all the game object slots
+				temp0++
+				while temp0 < 1184
+					ResetObjectEntity(temp0, TypeName[Blank Object], 0, 0, 0)
+					temp0++
+				loop
+
+				// Set all layers to not draw
+				stage[0].activeLayer = 9
+				stage[1].activeLayer = 9
+				stage[2].activeLayer = 9
+				stage[3].activeLayer = 9
+
+				// Lock the player from doing stuff too
+				player[SLOT_PLAYER1].controlMode = CONTROLMODE_P1
+				keyDown[0].left     = false
+				keyDown[0].right    = false
+				player[SLOT_PLAYER1].direction = FACING_RIGHT
+			end if
+		end if
+
+		temp0 = object.timer
+		temp0 <<= 4
+		if temp0 > 255
+			temp0 = 255
+		end if
+		SetScreenFade(208, 255, 224, temp0)
+		break
+
+	case STAGEFINISH_FADEIN
+		object.timer -= 16
+		if object.timer == 0
+			object.state = STAGEFINISH_SCROLLTEXT
+		end if
+
+		SetScreenFade(208, 255, 224, object.timer)
+
+		// Move in all the texts
+		temp0 = screen.xcenter
+		temp0 -= 88
+		if object.lineXPos0 < temp0
+			object.lineXPos0 += 16
+			if object.lineXPos0 > temp0
+				object.lineXPos0 = temp0
+			end if
+		else
+			object.lineXPos0 = temp0
+		end if
+
+		temp0++
+		if object.lineXPos1 > temp0
+			object.lineXPos1 -= 16
+			if object.lineXPos1 < temp0
+				object.lineXPos1 = temp0
+			end if
+		else
+			object.lineXPos1 = temp0
+		end if
+
+		if object.lineXPos2 > temp0
+			object.lineXPos2 -= 16
+			if object.lineXPos2 < temp0
+				object.lineXPos2 = temp0
+			end if
+		else
+			object.lineXPos2 = temp0
+		end if
+
+		if object.lineXPos3 > temp0
+			object.lineXPos3 -= 16
+			if object.lineXPos3 < temp0
+				object.lineXPos3 = temp0
+			end if
+		else
+			object.lineXPos3 = temp0
+		end if
+
+		if object.lineXPos4 > temp0
+			object.lineXPos4 -= 16
+			if object.lineXPos4 < temp0
+				object.lineXPos4 = temp0
+			end if
+		else
+			object.lineXPos4 = temp0
+
+			// All the texts are in place, proceed
+			// It should never happen, but if this is reached before the screen is fully faded in (see start of this state) then
+			// the screen will stay faded the entire durration of the results screen
+
+			object.state = STAGEFINISH_DISPLAYTALLY
+			object.timer = 0
+		end if
+		break
+
+	case STAGEFINISH_SCROLLTEXT
+		// Moving the text in
+		temp0 = screen.xcenter
+		temp0 -= 88
+		if object.lineXPos0 < temp0
+			object.lineXPos0 += 16
+			if object.lineXPos0 > temp0
+				object.lineXPos0 = temp0
+			end if
+		else
+			object.lineXPos0 = temp0
+		end if
+
+		temp0++
+		if object.lineXPos1 > temp0
+			object.lineXPos1 -= 16
+			if object.lineXPos1 < temp0
+				object.lineXPos1 = temp0
+			end if
+		else
+			object.lineXPos1 = temp0
+		end if
+
+		if object.lineXPos2 > temp0
+			object.lineXPos2 -= 16
+			if object.lineXPos2 < temp0
+				object.lineXPos2 = temp0
+			end if
+		else
+			object.lineXPos2 = temp0
+		end if
+
+		if object.lineXPos3 > temp0
+			object.lineXPos3 -= 16
+			if object.lineXPos3 < temp0
+				object.lineXPos3 = temp0
+			end if
+		else
+			object.lineXPos3 = temp0
+		end if
+
+		if object.lineXPos4 > temp0
+			object.lineXPos4 -= 16
+			if object.lineXPos4 < temp0
+				object.lineXPos4 = temp0
+			end if
+		else
+			object.lineXPos4 = temp0
+			object.state = STAGEFINISH_DISPLAYTALLY
+			object.timer = 0
+		end if
+		break
+
+	case STAGEFINISH_DISPLAYTALLY
+		// Waiting for a bit, to let the player see what they got
+
+		// Fade in the Stones
+		if object.alpha < 255
+			// temp0 is used to hold the target value since Object.Alpha is a byte, and therefore prone to overflowing if too much is added
+
+			temp0 = object.alpha
+			temp0 += 8
+			if temp0 > 255
+				temp0 = 255
+			end if
+
+			object.alpha = temp0
+		end if
+
+		// The different soundtrack jingles have different lenghts, so account for that
+		if options.soundtrack == OST_JP
+			object.timer++
+			if object.timer > 299
+				object.timer = 0
+				object.state = STAGEFINISH_TALLYDOWN
+			end if
+		else
+			object.timer++
+			if object.timer > 429
+				object.timer = 0
+				object.state = STAGEFINISH_TALLYDOWN
+			end if
+		end if
+		break
+
+	case STAGEFINISH_TALLYDOWN
+		// Tally up the bonuses, rings first then time
+		if object.ringBonus > 0
+			object.ringBonus -= 200
+			player.score += 200
+
+			if object.ringBonus < 0
+				player.score += object.ringBonus
+				object.ringBonus = 0
+			end if
+		else
+			if object.timeBonus > 0
+				object.timeBonus -= 200
+				player.score += 200
+
+				if object.timeBonus < 0
+					player.score += object.timeBonus
+					object.timeBonus = 0
+				end if
+			end if
+		end if
+
+		if player.score >= player.scoreBonus
+			object.extraLives++
+			player.lives++
+			player.scoreBonus += 0xC350
+
+			if stage.playerListPos == PLAYER_SONIC_A
+				PlaySfx(SfxName[1 Up], false)
+			else
+				PlaySfx(SfxName[Achievement], false)
+			end if
+		end if
+
+		CheckGreater(object.ringBonus, 0)
+		temp0 = checkResult
+		CheckGreater(object.timeBonus, 0)
+		temp0 |= checkResult
+
+		if temp0 == true
+			object.timer++
+			if object.timer == 2
+				PlaySfx(SfxName[Score Add], false)
+				object.timer = 0
+			end if
+		else
+			// The tally's done, proceed
+			object.state = STAGEFINISH_DISPLAYFINAL
+			object.timer = 0
+
+			// And of course, the signature ka-ching!
+			PlaySfx(SfxName[Score Total], false)
+		end if
+		break
+
+	case STAGEFINISH_DISPLAYFINAL
+		// Wait some more, letting the player see what they *really* got
+		object.timer++
+		if object.timer == 160
+			object.timer = 0
+			object.state = STAGEFINISH_LOADNORMAL
+			if object[0].type == TypeName[Blank Object]
+				PlaySfx(SfxName[Special Warp], false)
+			end if
+		end if
+		break
+
+	case STAGEFINISH_LOADNORMAL
+		if object[0].type == TypeName[Blank Object]
+			object.timer += 8
+			SetScreenFade(208, 255, 224, object.timer)
+
+			if object.timer == 1024
+				if options.gameMode == MODE_SAVEGAME
+					// Save the Player's progress
+					arrayPos1 = options.saveSlot
+					arrayPos1 <<= 3
+					saveRAM[arrayPos1] = stage.playerListPos
+
+					arrayPos1++
+					saveRAM[arrayPos1] = player.lives
+
+					arrayPos1++
+					saveRAM[arrayPos1] = player.score
+
+					arrayPos1++
+					saveRAM[arrayPos1] = stage.listPos
+					saveRAM[arrayPos1]++
+
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.timeStones
+
+					arrayPos1++
+					saveRAM[arrayPos1] = specialStage.listPos
+
+					arrayPos1++
+					saveRAM[arrayPos1] = player.scoreBonus
+
+					arrayPos1++
+					WriteSaveRAM()
+				end if
+
+				// Write the correct colors to fadeColor so that the maingame fades back in with the same white
+				// (This is setting fadeColor to 0xD0FFE0, in hex form)
+				fadeColor = 208
+				fadeColor <<= 16
+				temp0 = 255
+				temp0 <<= 8
+				fadeColor += temp0
+				fadeColor += 224
+
+				if stage.listPos < stage.listSize
+					LoadStage()
+				else
+					// This should never happen, but you're somehow supposed to go to a stage that doesn't exist, so
+					// just go back to the title screen instead
+					stage.activeList = PRESENTATION_STAGE
+					stage.listPos = STAGE_P_TITLESCREEN
+					LoadStage()
+				end if
+			end if
+		end if
+		break
+
+	case STAGEFINISH_LOADTIMEATTACK
+		if object.timer < 480
+			object.timer += 4
+			music.volume--
+		else
+			StopMusic()
+
+			// Save the Time Attack results
+			timeAttack.result = stage.seconds
+			timeAttack.result *= 100
+
+			temp0 = stage.minutes
+			temp0 *= 6000
+
+			timeAttack.result += temp0
+			timeAttack.result += stage.milliSeconds
+
+			// Load the Time Attack Menu
+			stage.listPos = STAGE_P_TIMEATTACK
+			stage.activeList = PRESENTATION_STAGE
+			LoadStage()
+		end if
+
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+
+	case STAGEFINISH_LOADLEVELSELECT
+		// Used when exiting the hidden Robotnik stage
+		if object.timer < 480
+			// Fade out the screen and the music
+			object.timer += 4
+			music.volume--
+		else
+			StopMusic()
+
+			// Load the credits scene
+			stage.listPos = STAGE_P_CREDITS
+			stage.activeList = PRESENTATION_STAGE
+			LoadStage()
+		end if
+
+		SetScreenFade(0, 0, 0, object.timer)
+		break
+
+	end switch
+end event
+
+
+event ObjectDraw
+	if object.state > STAGEFINISH_FADEOUT
+		// Draw the Background
+		temp0 = 0
+		while temp0 < 240
+			temp1 = 0
+			while temp1 < 360
+				DrawSpriteScreenXY(0, temp1, temp0)
+				temp1 += 224
+			loop
+
+			temp0 += 48
+		loop
+
+		// Draw all the Time Stones the player has so far
+		// - temp0 is the current Stone
+		// - temp1 is the starting Sprite Frame ID for the Stones
+		// - temp2 is the draw position for the Stones
+		// - temp3 is either true or false based if the current Time Stone is obtained
+		temp0 = 0
+		temp1 = 20
+		temp2 = screen.xcenter
+		temp2 -= 79
+
+		while temp0 < 7
+			// See if the Player has the current Time Stone
+			GetBit(temp3, specialStage.timeStones, temp0)
+
+			// Bump up the index, for next loop around
+			temp0++
+
+			// If the Player has the Time Stone, then draw it
+			if temp3 == true
+				DrawSpriteScreenFX(temp1, FX_INK, temp2, 81)
+			end if
+
+			temp1++
+
+			// Each Stone is drawn 24 px apart from each other's center
+			temp2 += 24
+		loop
+	end if
+
+	// Draw the main text, depending on what the current results type is
+	switch object.resultsType
+	case STAGEFINISH_T_FAILURE
+		// "SPECIAL ZONE"
+		DrawSpriteScreenXY(1, object.lineXPos0, 50)
+		break
+
+	case STAGEFINISH_T_STONEOBTAINED
+		// "TIME STONES"
+		DrawSpriteScreenXY(2, object.lineXPos0, 50)
+		break
+
+	case STAGEFINISH_T_ALLSTONESOBTAINED
+		// "GOT THEM ALL!!"
+		DrawSpriteScreenXY(3, object.lineXPos0, 50)
+		break
+
+	end switch
+
+	// Draw the Score text
+	DrawSpriteScreenXY(4, object.lineXPos1, 105)
+
+	// Draw the Player's Score
+	temp0 = object.lineXPos1
+	temp0 += 176
+	DrawNumbers(10, temp0, 105, player.score, 6, 8, 0)
+
+	// Then, the Ring Bonus line
+
+	// First, draw the "RING" sprite
+	DrawSpriteScreenXY(5, object.lineXPos2, 129)
+
+	temp0 = object.lineXPos2
+	temp0 += 40
+
+	// Then, 40 pixels to the right of that, draw the "BONUS" sprite
+	DrawSpriteScreenXY(7, temp0, 129)
+
+	// And at the end of the line, draw the Ring Bonus count
+	temp0 += 136
+	DrawNumbers(10, temp0, 129, object.ringBonus, 5, 8, 0)
+
+	// Line 3, holds the Time Bonus text
+
+	// First, the "TIME" sprite
+	DrawSpriteScreenXY(6, object.lineXPos3, 153)
+
+	temp0 = object.lineXPos3
+	temp0 += 40
+
+	// Then, 40 pixels to the right, the "BONUS" frame
+	DrawSpriteScreenXY(7, temp0, 153)
+
+	// And at the end of this line too, draw the Time Bonus numbers
+	temp0 += 136
+	DrawNumbers(10, temp0, 153, object.timeBonus, 5, 8, 0)
+
+	// Draw the "EXTRA LIVES" text
+
+	// First, is "EXTRA"
+	DrawSpriteScreenXY(8, object.lineXPos4, 177)
+
+	temp0 = object.lineXPos4
+	temp0 += 49
+
+	// Then after than of course, comes "LIVES"
+	DrawSpriteScreenXY(9, temp0, 177)
+
+	// Move to the end of the line
+	temp0 += 86
+
+	// Animate the mini-character
+	object.frame++
+	object.frame &= 15
+
+	// Get the base frame the mini-character should use
+	temp1 = object.frame
+	temp1 >>= 3
+
+	// Bump it up to match its corresponding Sprite Frame ID
+	temp1 += 27
+
+	temp2 = object.extraLives
+
+	// Just draw Continues, we don't use Coins in Standalone
+	while temp2 > 0
+		DrawSpriteScreenXY(temp1, temp0, 177)
+		temp2--
+		temp0 += 24
+	loop
+end event
+
+
+event ObjectStartup
+	// Load the correct sheet based on the current language
+	switch engine.language
+	case LANG_ENGLISH
+	case LANG_JAPANESE
+	case LANG_PORTUGUESE
+	case LANG_RUSSIAN
+		LoadSpriteSheet("Special/Scorescreen.gif")
+		break
+
+	case LANG_FRENCH
+		LoadSpriteSheet("Special/ScoreScreen_FR.gif")
+		break
+
+	case LANG_ITALIAN
+		LoadSpriteSheet("Special/ScoreScreen_IT.gif")
+		break
+
+	case LANG_DEUTSCH
+		LoadSpriteSheet("Special/ScoreScreen_DE.gif")
+		break
+
+	case LANG_SPANISH
+		LoadSpriteSheet("Special/ScoreScreen_ES.gif")
+		break
+
+	end switch
+
+	// 0 - Background
+	SpriteFrame(0, 0, 224, 48, 0, 63)
+
+	// 1 - "SPECIAL ZONE" Text
+	SpriteFrame(0, 0, 184, 14, 1, 1)
+
+	// 2 - "TIME STONES" Text
+	SpriteFrame(9, 0, 167, 14, 1, 16)
+
+	// 3 - "GOT THEM ALL!!" Text
+	SpriteFrame(-16, 0, 205, 14, 1, 48)
+
+	// 4 - "SCORE" Text
+	SpriteFrame(0, 0, 39, 11, 1, 112)
+
+	// 5 - "RING" Text
+	SpriteFrame(0, 0, 31, 11, 41, 112)
+
+	// 6 - "TIME" Text
+	SpriteFrame(0, 0, 31, 11, 73, 112)
+
+	// 7 - "BONUS" Text
+	SpriteFrame(0, 0, 41, 11, 105, 112)
+
+	// 8 - "EXTRA" Text
+	SpriteFrame(0, 0, 40, 11, 147, 112)
+
+	// 9 - "LIVES" Text
+	SpriteFrame(0, 0, 36, 11, 188, 112)
+
+	// 10-19 - Numbers 0-9
+	SpriteFrame(0, 0, 8, 11, 220, 1)
+	SpriteFrame(0, 0, 8, 11, 229, 1)
+	SpriteFrame(0, 0, 8, 11, 238, 1)
+	SpriteFrame(0, 0, 8, 11, 247, 1)
+	SpriteFrame(0, 0, 8, 11, 220, 13)
+	SpriteFrame(0, 0, 8, 11, 229, 13)
+	SpriteFrame(0, 0, 8, 11, 238, 13)
+	SpriteFrame(0, 0, 8, 11, 247, 13)
+	SpriteFrame(0, 0, 8, 11, 238, 25)
+	SpriteFrame(0, 0, 8, 11, 247, 25)
+
+	// 20-26 - Time Stones
+	SpriteFrame(0, 0, 16, 16, 1, 31)
+	SpriteFrame(0, 0, 16, 16, 18, 31)
+	SpriteFrame(0, 0, 16, 16, 35, 31)
+	SpriteFrame(0, 0, 16, 16, 52, 31)
+	SpriteFrame(0, 0, 16, 16, 69, 31)
+	SpriteFrame(0, 0, 16, 16, 86, 31)
+	SpriteFrame(0, 0, 16, 16, 103, 31)
+
+	// 27-28 - Small Foot-Tapping Player Icons
+	if stage.playerListPos == PLAYER_SONIC_A
+		// Do note, these are separate from the ones used in the Pause Menu
+		// These ones are bluer, as well as having a hole in Sonic's head...
+		SpriteFrame(0, 0, 16, 23, 169, 24)
+		SpriteFrame(0, 0, 16, 23, 186, 24)
+	else
+		SpriteFrame(0, 0, 16, 23, 139, 203)
+		SpriteFrame(0, 0, 16, 23, 156, 203)
+	end if
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKDraw
+	DrawSprite(0)
+end event
+
+
+event RSDKLoad
+	LoadSpriteSheet("Special/ScoreScreen.gif")
+	SpriteFrame(0, 0, 184, 14, 1, 1)
+
+	// Although used, it's not to be set from editor
+	SetVariableAlias(ALIAS_VAR_PROPVAL, "unused")
+end event

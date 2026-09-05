@@ -1,0 +1,197 @@
+// ----------------------------------
+// RSDK Project: Sonic CD
+// Script Description: Static Rock Object
+// Script Author: Christian Whitehead/Hunter Bridges
+// Unpacked by Rubberduckycooly's script unpacker
+// ----------------------------------
+
+// ========================
+// Aliases
+// ========================
+
+// Player Aliases
+private alias object.xpos            : player.xpos
+private alias object.ypos            : player.ypos
+private alias object.speed           : player.speed
+private alias object.collisionMode   : player.collisionMode
+private alias object.collisionLeft   : player.collisionLeft
+private alias object.collisionTop    : player.collisionTop
+private alias object.collisionRight  : player.collisionRight
+private alias object.collisionBottom : player.collisionBottom
+
+// ========================
+// Function Declarations
+// ========================
+
+reserve function StaticRock_DebugDraw
+reserve function StaticRock_DebugSpawn
+
+// ========================
+// Function Definitions
+// ========================
+
+public function StaticRock_DebugDraw
+    DrawSprite(0)
+end function
+
+
+public function StaticRock_DebugSpawn
+    CreateTempObject(TypeName[Static Rock], 0, object.xpos, object.ypos)
+end function
+
+
+// ========================
+// Events
+// ========================
+
+event ObjectUpdate
+    switch object.propertyValue
+    case 0
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_SOLID, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+        next
+        break
+
+    case 1
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            BoxCollisionTest(C_TOUCH, object.entityPos, -16, -14, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+            if checkResult == true
+                if player[currentPlayer].xpos < object.xpos
+                    // Move the player to be 16 pixels to the left of the object
+                    player[currentPlayer].xpos = player[currentPlayer].collisionLeft
+                    player[currentPlayer].xpos <<= 16
+                    player[currentPlayer].xpos += object.xpos
+                    player[currentPlayer].xpos -= 0x100000
+                else
+                    // Move the player to be 16 pixels to the right of the object
+                    player[currentPlayer].xpos = player[currentPlayer].collisionRight
+                    player[currentPlayer].xpos <<= 16
+                    player[currentPlayer].xpos += object.xpos
+                    player[currentPlayer].xpos += 0x100000
+                end if
+            end if
+        next
+        break
+
+    case 2
+        foreach (GROUP_PLAYERS, currentPlayer, ACTIVE_ENTITIES)
+            // Some cases for Wall Collision Modes
+            if player[currentPlayer].collisionMode == CMODE_LWALL
+                BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    player[currentPlayer].ypos = player[currentPlayer].collisionBottom
+                    player[currentPlayer].ypos <<= 16
+                    player[currentPlayer].ypos += object.ypos
+                    player[currentPlayer].ypos += 0x100000
+                    player[currentPlayer].speed = 0
+                end if
+            end if
+
+            if player[currentPlayer].collisionMode == CMODE_RWALL
+                BoxCollisionTest(C_TOUCH, object.entityPos, -16, -16, 16, 16, currentPlayer, C_BOX, C_BOX, C_BOX, C_BOX)
+                if checkResult == true
+                    player[currentPlayer].ypos = player[currentPlayer].collisionBottom
+                    player[currentPlayer].ypos <<= 16
+                    player[currentPlayer].ypos += object.ypos
+                    player[currentPlayer].ypos += 0x100000
+                    player[currentPlayer].speed = 0
+                end if
+            end if
+        next
+        break
+
+    end switch
+end event
+
+
+event ObjectDraw
+    DrawSprite(object.propertyValue)
+end event
+
+
+event ObjectStartup
+    LoadSpriteSheet("R5/Objects.gif")
+
+    // 0 - Rock Frame
+    SpriteFrame(-16, -16, 32, 32, 92, 18)
+
+    // 1-2 - Invisible Frames
+    // (here for ease in drawing)
+    SpriteFrame(0, 0, 0, 0, 1, 1)
+    SpriteFrame(0, 0, 0, 0, 1, 1)
+
+    SetTableValue(TypeName[Static Rock], DebugMode_ObjCount, DebugMode_TypesTable)
+    SetTableValue(StaticRock_DebugDraw, DebugMode_ObjCount, DebugMode_DrawTable)
+    SetTableValue(StaticRock_DebugSpawn, DebugMode_ObjCount, DebugMode_SpawnTable)
+    DebugMode_ObjCount++
+end event
+
+
+// ========================
+// Editor Events
+// ========================
+
+event RSDKEdit
+    if editor.returnVariable == true
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            checkResult = object.propertyValue
+            break
+
+        case 0 // Type
+            checkResult = object.propertyValue
+            break
+
+        end switch
+    else
+        switch editor.variableID
+        case EDIT_VAR_PROPVAL // Property Value
+            object.propertyValue = editor.variableValue
+            break
+
+        case 0 // Type
+            object.propertyValue = editor.variableValue
+            break
+
+        end switch
+    end if
+end event
+
+
+event RSDKDraw
+    CheckGreater(object.propertyValue, 0)
+    object.inkEffect = checkResult
+    DrawSprite(object.propertyValue, FX_INK, object.xpos, object.ypos)
+
+    temp0 = 16
+    switch object.propertyValue
+    case 1
+        // Slightly different box size makes everything wonky - can't draw a blend version of the box since then it'd technically be representing the wrong size...
+        temp0 = 14
+        // [Fallthrough]
+
+    case 2
+        temp1 = temp0
+        temp1 += 16
+        temp2 = object.ixpos
+        temp2 -= temp0
+        temp3 = object.iypos
+        temp3 -= 16
+        DrawRectOutline(temp2, temp3, 32, temp1, 255, 255, 255, 255)
+        break
+    end switch
+end event
+
+
+event RSDKLoad
+    LoadSpriteSheet("R5/Objects.gif")
+    SpriteFrame(-16, -16, 32, 32, 92, 18)
+    SpriteFrame(-16, -14, 32, 30, 94, 18)
+    SpriteFrame(-16, -16, 32, 32, 92, 18)
+
+    AddEditorVariable("type")
+    SetActiveVariable("type")
+    AddEnumVariable("Normal Block", 0)
+    AddEnumVariable("Invsible (Floor)", 1)
+    AddEnumVariable("Invisible (Roof)", 2)
+end event
