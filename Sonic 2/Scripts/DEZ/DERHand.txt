@@ -60,14 +60,25 @@ event ObjectUpdate
 		if object.timer < 0
 			object.timer = 32
 
+			// Bug Details:
+			// In the original Sonic 2, the hand actually gets the xpos of both the player and the hand object to
+			// -> get the distance between the two.
+			// Here, however... it's the ypos of both.
 			temp0 = object.ypos
 			temp0 -= player[SLOT_PLAYER1].ypos
 			Abs(temp0)
 			if temp0 >= 0x1000000
 				temp0 = 0xFF0000
 			end if
-			temp0 >>= 6
 
+			// Additionally, this shift is actually not enough to properly get the velocity data from the table
+			// ->  with the function call below this.
+			// It causes temp0 to still be WAY out of range, so nothing gets set...
+			// -> but there's still leftover data from the previous use of y velocity, in the else section below.
+			// If the above ypos is changed to be xpos instead, and this shift to be 22 instead of 6,
+			// -> it works properly, exactly as it does on the original game.
+			temp0 >>= 6
+			
 			GetTableValue(object.yvel, temp0, DERHand_velocities)
 			if player[SLOT_PLAYER1].ypos < object.ypos
 				FlipSign(object.yvel)
@@ -82,7 +93,7 @@ event ObjectUpdate
 			PlaySfx(SfxName[Release], false)
 			object.state = DERHAND_FIRED
 		else
-			object.yvel += 0x2000
+			object.yvel += 0x2000 // as mentioned by the above Bug Details, this line is the sole reason the arm even goes down when thrown.
 			object.ypos += object.yvel
 		end if
 		break
